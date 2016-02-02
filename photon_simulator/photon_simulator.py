@@ -24,7 +24,7 @@ http://adsabs.harvard.edu/abs/2013MNRAS.428.1395B
 #
 # The full license is in the file COPYING.txt, distributed with this software.
 #-----------------------------------------------------------------------------
-from yt.extern.six import string_types
+from six import string_types
 from collections import defaultdict
 import numpy as np
 from yt.funcs import mylog, get_pbar, iterable, ensure_list
@@ -36,10 +36,11 @@ from yt.utilities.parallel_tools.parallel_analysis_interface import \
     communication_system, parallel_root_only, get_mpi_type, \
     parallel_capable
 from yt.units.yt_array import YTQuantity, YTArray, uconcatenate
-from yt.utilities.on_demand_imports import _h5py as h5py
-from yt.utilities.on_demand_imports import _astropy
+import astropy.io.fits as pyfits
+import astropy.wcs as pywcs
 import warnings
 import os
+import h5py
 
 comm = communication_system.communicators[-1]
 
@@ -535,7 +536,7 @@ class PhotonList(object):
 
         # If we use an RMF, figure out where the response matrix actually is.
         if "RMF" in parameters:
-            rmf = _astropy.pyfits.open(parameters["RMF"])
+            rmf = pyfits.open(parameters["RMF"])
             if "MATRIX" in rmf:
                 mat_key = "MATRIX"
             elif "SPECRESP MATRIX" in rmf:
@@ -563,7 +564,7 @@ class PhotonList(object):
             elif isinstance(area_new, string_types):
                 if comm.rank == 0:
                     mylog.info("Using energy-dependent effective area: %s" % (parameters["ARF"]))
-                f = _astropy.pyfits.open(area_new)
+                f = pyfits.open(area_new)
                 earf = 0.5*(f["SPECRESP"].data.field("ENERG_LO")+f["SPECRESP"].data.field("ENERG_HI"))
                 eff_area = np.nan_to_num(f["SPECRESP"].data.field("SPECRESP"))
                 if "RMF" in parameters:
@@ -719,7 +720,7 @@ class PhotonList(object):
         return EventList(events, parameters)
 
     def _normalize_arf(self, respfile, mat_key):
-        rmf = _astropy.pyfits.open(respfile)
+        rmf = pyfits.open(respfile)
         table = rmf[mat_key]
         weights = np.array([w.sum() for w in table.data["MATRIX"]])
         rmf.close()
@@ -731,7 +732,7 @@ class PhotonList(object):
         """
         mylog.info("Reading response matrix file (RMF): %s" % (respfile))
 
-        hdulist = _astropy.pyfits.open(respfile)
+        hdulist = pyfits.open(respfile)
 
         tblhdu = hdulist[mat_key]
         n_de = len(tblhdu.data["ENERG_LO"])
@@ -930,7 +931,7 @@ class EventList(object):
         self.events = events
         self.parameters = parameters
         self.num_events = events["xpix"].shape[0]
-        self.wcs = _astropy.pywcs.WCS(naxis=2)
+        self.wcs = pywcs.WCS(naxis=2)
         self.wcs.wcs.crpix = parameters["pix_center"]
         self.wcs.wcs.crval = parameters["sky_center"].d
         self.wcs.wcs.cdelt = [-parameters["dtheta"].value, parameters["dtheta"].value]
@@ -1046,7 +1047,7 @@ class EventList(object):
         """
         Initialize an EventList from a FITS file with filename *fitsfile*.
         """
-        hdulist = _astropy.pyfits.open(fitsfile)
+        hdulist = pyfits.open(fitsfile)
 
         tblhdu = hdulist["EVENTS"]
 
@@ -1091,9 +1092,7 @@ class EventList(object):
         Write events to a FITS binary table file with filename *fitsfile*.
         Set *clobber* to True if you need to overwrite a previous file.
         """
-        pyfits = _astropy.pyfits
-        Time = _astropy.time.Time
-        TimeDelta = _astropy.time.TimeDelta
+        from astropy.time import Time, TimeDelta
 
         exp_time = float(self.parameters["ExposureTime"])
 
@@ -1229,7 +1228,6 @@ class EventList(object):
         e_max : float, optional
             The maximum energy of the photons to save in keV.
         """
-        pyfits = _astropy.pyfits
         if isinstance(self.parameters["Area"], string_types):
              mylog.error("Writing SIMPUT files is only supported if you didn't convolve with responses.")
              raise TypeError("Writing SIMPUT files is only supported if you didn't convolve with responses.")
@@ -1378,7 +1376,7 @@ class EventList(object):
                                            self["ypix"][mask],
                                            bins=[xbins,ybins])
 
-        hdu = _astropy.pyfits.PrimaryHDU(H.T)
+        hdu = pyfits.PrimaryHDU(H.T)
 
         hdu.header["MTYPE1"] = "EQPOS"
         hdu.header["MFORM1"] = "RA,DEC"
@@ -1424,7 +1422,6 @@ class EventList(object):
             bin_type = "energy"
             warnings.warn("The energy_bins keyword is deprecated. Please use "
                           "the bin_type keyword instead. Setting bin_type == 'energy'.")
-        pyfits = _astropy.pyfits
         if bin_type == "channel" and "ChannelType" in self.parameters:
             spectype = self.parameters["ChannelType"]
             f = pyfits.open(self.parameters["RMF"])

@@ -11,13 +11,13 @@ photon simulator.
 # The full license is in the file COPYING.txt, distributed with this software.
 #-----------------------------------------------------------------------------
 
-from yt.utilities.on_demand_imports import _h5py as h5py
 import numpy as np
 import os
+import h5py
+import astropy.io.fits as pyfits
 
 from yt.funcs import mylog
 from yt.units.yt_array import YTArray, YTQuantity
-from yt.utilities.on_demand_imports import _astropy
 from yt.utilities.physical_constants import hcgs, clight
 from yt.utilities.physical_ratios import erg_per_keV, amu_grams
 from yt.analysis_modules.photon_simulator.utils import broaden_lines
@@ -232,12 +232,12 @@ class TableApecModel(SpectralModel):
         Prepare the thermal model for execution.
         """
         try:
-            self.line_handle = _astropy.pyfits.open(self.linefile)
+            self.line_handle = pyfits.open(self.linefile)
         except IOError:
             mylog.error("LINE file %s does not exist" % self.linefile)
             raise IOError("LINE file %s does not exist" % self.linefile)
         try:
-            self.coco_handle = _astropy.pyfits.open(self.cocofile)
+            self.coco_handle = pyfits.open(self.cocofile)
         except IOError:
             mylog.error("COCO file %s does not exist" % self.cocofile)
             raise IOError("COCO file %s does not exist" % self.cocofile)

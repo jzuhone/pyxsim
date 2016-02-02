@@ -22,7 +22,7 @@ http://adsabs.harvard.edu/abs/2013MNRAS.428.1395B
 # The full license is in the file COPYING.txt, distributed with this software.
 #-----------------------------------------------------------------------------
 
-from yt.extern.six import string_types
+from six import string_types
 import numpy as np
 from yt.funcs import get_pbar, iterable
 from yt.units.yt_array import YTArray, YTQuantity, uconcatenate
