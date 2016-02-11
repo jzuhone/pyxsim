@@ -92,6 +92,9 @@ class ThermalPhotonModel(PhotonModel):
         A pseudo-random number generator. Typically will only be specified
         if you have a reason to generate the same set of random numbers, such as for a
         test. Default is the numpy.random module.
+    velocity_fields : list of field names
+        The fields to use from the data object as the velocity fields for Doppler
+        broadening. Default is ["velocity_x","velocity_y","velocity_z"].
 
     Examples
     --------
@@ -101,13 +104,17 @@ class ThermalPhotonModel(PhotonModel):
     """
     def __init__(self, spectral_model, X_H=0.75, Zmet=0.3,
                  photons_per_chunk=10000000, method="invert_cdf",
-                 prng=np.random):
+                 prng=np.random, velocity_fields=None):
         self.X_H = X_H
         self.Zmet = Zmet
         self.spectral_model = spectral_model
         self.photons_per_chunk = photons_per_chunk
         self.method = method
         self.prng = prng
+        if velocity_fields is None:
+            self.velocity_fields = ["velocity_x","velocity_y", "velocity_z"]
+        else:
+            self.velocity_fields = velocity_fields
 
     def __call__(self, data_source, parameters):
 
@@ -253,9 +260,9 @@ class ThermalPhotonModel(PhotonModel):
             photons["x"].append((chunk["x"][idxs]-src_ctr[0]).in_units("kpc"))
             photons["y"].append((chunk["y"][idxs]-src_ctr[1]).in_units("kpc"))
             photons["z"].append((chunk["z"][idxs]-src_ctr[2]).in_units("kpc"))
-            photons["vx"].append(chunk["velocity_x"][idxs].in_units("km/s"))
-            photons["vy"].append(chunk["velocity_y"][idxs].in_units("km/s"))
-            photons["vz"].append(chunk["velocity_z"][idxs].in_units("km/s"))
+            photons["vx"].append(chunk[self.velocity_fields[0]][idxs].in_units("km/s"))
+            photons["vy"].append(chunk[self.velocity_fields[1]][idxs].in_units("km/s"))
+            photons["vz"].append(chunk[self.velocity_fields[2]][idxs].in_units("km/s"))
             photons["dx"].append(chunk["dx"][idxs].in_units("kpc"))
 
         pbar.finish()
@@ -292,6 +299,9 @@ class PowerLawModel(PhotonModel):
         A pseudo-random number generator. Typically will only be specified
         if you have a reason to generate the same set of random numbers,
         such as for a test. Default is the numpy.random module.
+    velocity_fields : list of field names
+        The fields to use from the data object as the velocity fields for Doppler
+        broadening. Default is ["velocity_x","velocity_y","velocity_z"].
 
     Examples
     --------
@@ -300,13 +310,18 @@ class PowerLawModel(PhotonModel):
     >>> emax = (100., "keV")
     >>> plaw_model = PowerLawModel(e0, emin, emax, ("gas", "norm"), ("gas", "index"))
     """
-    def __init__(self, e0, emin, emax, norm_field, index, prng=np.random):
+    def __init__(self, e0, emin, emax, norm_field, index, prng=np.random,
+                 velocity_fields=None):
         self.e0 = parse_value(e0, "keV")
         self.emin = parse_value(emin, "keV")
         self.emax = parse_value(emax, "keV")
         self.norm_field = norm_field
         self.index = index
         self.prng = prng
+        if velocity_fields is None:
+            self.velocity_fields = ["velocity_x","velocity_y", "velocity_z"]
+        else:
+            self.velocity_fields = velocity_fields
 
     def __call__(self, data_source, parameters):
         exp_time = parameters["FiducialExposureTime"]
@@ -353,9 +368,9 @@ class PowerLawModel(PhotonModel):
             photons["x"].append((chunk["x"][active_cells]-src_ctr[0]).in_units("kpc"))
             photons["y"].append((chunk["y"][active_cells]-src_ctr[1]).in_units("kpc"))
             photons["z"].append((chunk["z"][active_cells]-src_ctr[2]).in_units("kpc"))
-            photons["vx"].append(chunk["velocity_x"][active_cells].in_units("km/s"))
-            photons["vy"].append(chunk["velocity_y"][active_cells].in_units("km/s"))
-            photons["vz"].append(chunk["velocity_z"][active_cells].in_units("km/s"))
+            photons["vx"].append(chunk[self.velocity_fields[0]][active_cells].in_units("km/s"))
+            photons["vy"].append(chunk[self.velocity_fields[1]][active_cells].in_units("km/s"))
+            photons["vz"].append(chunk[self.velocity_fields[2]][active_cells].in_units("km/s"))
             photons["dx"].append(chunk["dx"][active_cells].in_units("kpc"))
 
         concatenate_photons(photons)
@@ -386,6 +401,9 @@ class LineEmissionModel(PhotonModel):
         A pseudo-random number generator. Typically will only be specified
         if you have a reason to generate the same set of random numbers,
         such as for a test. Default is the numpy.random module.
+    velocity_fields : list of field names
+        The fields to use from the data object as the velocity fields for Doppler
+        broadening. Default is ["velocity_x","velocity_y","velocity_z"].
 
     Examples
     --------
@@ -393,7 +411,8 @@ class LineEmissionModel(PhotonModel):
     >>> sigma = (1000., "km/s")
     >>> line_model = LineEmissionModel(location, "dark_matter_density_squared", sigma=sigma)
     """
-    def __init__(self, location, amplitude_field, sigma=None, prng=np.random):
+    def __init__(self, location, amplitude_field, sigma=None, prng=np.random,
+                 velocity_fields=None):
         self.location = parse_value(location, "keV")
         if isinstance(sigma, (float, YTQuantity)) or (isinstance(sigma, tuple) and isinstance(sigma[0], float)):
             # The broadening is constant
@@ -412,6 +431,10 @@ class LineEmissionModel(PhotonModel):
             self.sigma = sigma
         self.amplitude_field = amplitude_field
         self.prng = prng
+        if velocity_fields is None:
+            self.velocity_fields = ["velocity_x","velocity_y","velocity_z"]
+        else:
+            self.velocity_fields = velocity_fields
 
     def __call__(self, data_source, parameters):
         exp_time = parameters["FiducialExposureTime"]
@@ -459,9 +482,9 @@ class LineEmissionModel(PhotonModel):
             photons["x"].append((chunk["x"][active_cells]-src_ctr[0]).in_units("kpc"))
             photons["y"].append((chunk["y"][active_cells]-src_ctr[1]).in_units("kpc"))
             photons["z"].append((chunk["z"][active_cells]-src_ctr[2]).in_units("kpc"))
-            photons["vx"].append(chunk["velocity_x"][active_cells].in_units("km/s"))
-            photons["vy"].append(chunk["velocity_y"][active_cells].in_units("km/s"))
-            photons["vz"].append(chunk["velocity_z"][active_cells].in_units("km/s"))
+            photons["vx"].append(chunk[self.velocity_fields[0]][active_cells].in_units("km/s"))
+            photons["vy"].append(chunk[self.velocity_fields[1]][active_cells].in_units("km/s"))
+            photons["vz"].append(chunk[self.velocity_fields[2]][active_cells].in_units("km/s"))
             photons["dx"].append(chunk["dx"][active_cells].in_units("kpc"))
 
         concatenate_photons(photons)
