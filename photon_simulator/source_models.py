@@ -25,7 +25,7 @@ http://adsabs.harvard.edu/abs/2013MNRAS.428.1395B
 from six import string_types
 import numpy as np
 from yt.units.yt_array import YTQuantity
-from yt.utilities.physical_constants import mp, clight
+from yt.utilities.physical_constants import mp, clight, kboltz
 from yt.analysis_modules.photon_simulator.photon_simulator import \
     parse_value
 from yt.utilities.exceptions import YTUnitConversionError
@@ -61,8 +61,6 @@ class ThermalSourceModel(SourceModel):
     spectral_model : `SpectralModel`
         A thermal spectral model instance, either of `XSpecThermalModel`
         or `TableApecModel`.
-    X_H : float, optional
-        The hydrogen mass fraction.
     Zmet : float or string, optional
         The metallicity. If a float, assumes a constant metallicity throughout.
         If a string, is taken to be the name of the metallicity field.
@@ -88,12 +86,11 @@ class ThermalSourceModel(SourceModel):
     >>> source_model = ThermalSourceModel(mekal_model, X_H=0.76,
     ...                                   Zmet="metallicity")
     """
-    def __init__(self, spectral_model, temperature_field="kT",
-                 X_H=0.75, Zmet=0.3,
-                 photons_per_chunk=10000000, method="invert_cdf",
-                 prng=np.random):
+    def __init__(self, spectral_model, temperature_field="K",
+                 emission_measure_field="emission_measure",
+                 Zmet=0.3, photons_per_chunk=10000000,
+                 method="invert_cdf", prng=np.random):
         self.temperature_field = temperature_field
-        self.X_H = X_H
         self.Zmet = Zmet
         self.spectral_model = spectral_model
         self.photons_per_chunk = photons_per_chunk
@@ -103,6 +100,7 @@ class ThermalSourceModel(SourceModel):
         self.pbar = None
         self.kT_bins = None
         self.dkT = None
+        self.emission_measure_field = emission_measure_field
 
     def setup_model(self, data_source, redshift, spectral_norm, pbar):
         my_kT_min, my_kT_max = data_source.quantities.extrema("kT")
@@ -118,13 +116,11 @@ class ThermalSourceModel(SourceModel):
         ebins = self.spectral_model.ebins
         nchan = len(emid)
 
-        kT = chunk[self.temperature_field].v
+        kT = kboltz*chunk[self.temperature_field].in_units("keV").v
         num_cells = len(kT)
         if num_cells == 0:
             return
-        vol = chunk["cell_volume"].in_cgs().v
-        EM = (chunk["density"]/mp).v**2
-        EM *= 0.5*(1.+self.X_H)*self.X_H*vol
+        EM = chunk[self.emission_measure_field].v
 
         if isinstance(self.Zmet, string_types):
             metalZ = chunk[self.Zmet].v
