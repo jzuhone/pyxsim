@@ -44,9 +44,9 @@ import h5py
 
 comm = communication_system.communicators[-1]
 
-axes_lookup = {"x":("y","z"),
-               "y":("z","x"),
-               "z":("x","y")}
+axes_lookup = {"x": ("y","z"),
+               "y": ("z","x"),
+               "z": ("x","y")}
 
 photon_units = {"Energy": "keV",
                 "dx": "kpc"}
@@ -104,7 +104,7 @@ def concatenate_photons(photons):
 
 class PhotonList(object):
 
-    def __init__(self, photons, parameters, cosmo):
+    def __init__(self, photons, parameters, cosmo, data_type):
         self.photons = photons
         self.parameters = parameters
         self.cosmo = cosmo
@@ -112,6 +112,8 @@ class PhotonList(object):
 
         p_bins = np.cumsum(photons["NumberOfPhotons"])
         self.p_bins = np.insert(p_bins, 0, [np.uint64(0)])
+
+        self.data_type = data_type
 
     def keys(self):
         return self.photons.keys()
@@ -168,6 +170,7 @@ class PhotonList(object):
         parameters["HubbleConstant"] = p["hubble"].value
         parameters["OmegaMatter"] = p["omega_matter"].value
         parameters["OmegaLambda"] = p["omega_lambda"].value
+        parameters["DataType"] = p["data_type"].value
 
         d = f["/data"]
 
@@ -255,25 +258,6 @@ class PhotonList(object):
         >>> sp = ds.sphere("c", (500., "kpc"))
         >>> my_photons = PhotonList.from_data_source(sp, redshift, area,
         ...                                          time, thermal_model)
-
-        If you wish to make your own source model function, it must take as its
-        arguments the *data_source* and the *parameters* dictionary. However you
-        determine them, the *photons* dict needs to have the following items, corresponding
-        to cells which have photons:
-
-        "x" : the x-position of the cell relative to the source center in kpc, YTArray
-        "y" : the y-position of the cell relative to the source center in kpc, YTArray
-        "z" : the z-position of the cell relative to the source center in kpc, YTArray
-        "vx" : the x-velocity of the cell in km/s, YTArray
-        "vy" : the y-velocity of the cell in km/s, YTArray
-        "vz" : the z-velocity of the cell in km/s, YTArray
-        "dx" : the width of the cell in kpc, YTArray
-        "NumberOfPhotons" : the number of photons in the cell, NumPy array of unsigned 64-bit integers
-        "Energy" : the source rest-frame energies of the photons, YTArray
-
-        The last array is not the same size as the others because it contains the energies in all of
-        the cells in a single 1-D array. The first photons["NumberOfPhotons"][0] elements are
-        for the first cell, the next photons["NumberOfPhotons"][1] are for the second cell, and so on.
         """
         ds = data_source.ds
 
@@ -334,6 +318,11 @@ class PhotonList(object):
         parameters["HubbleConstant"] = cosmo.hubble_constant
         parameters["OmegaMatter"] = cosmo.omega_matter
         parameters["OmegaLambda"] = cosmo.omega_lambda
+
+        if p_fields[0] == "x":
+            parameters["DataType"] = "cells"
+        else:
+            parameters["DataType"] = "particles"
 
         dimension = 0
         width = 0.0
@@ -479,6 +468,7 @@ class PhotonList(object):
             p.create_dataset("fid_d_a", data=float(self.parameters["FiducialAngularDiameterDistance"]))
             p.create_dataset("dimension", data=self.parameters["Dimension"])
             p.create_dataset("width", data=float(self.parameters["Width"]))
+            p.create_dataset("data_type", data=self.parameters["DataType"])
 
             # Data
 
@@ -678,8 +668,12 @@ class PhotonList(object):
 
         if isinstance(normal, string_types):
 
-            xsky = prng.uniform(low=-0.5,high=0.5,size=my_n_obs)
-            ysky = prng.uniform(low=-0.5,high=0.5,size=my_n_obs)
+            if parameters["DataType"] == "cells":
+                xsky = prng.uniform(low=-0.5, high=0.5, size=my_n_obs)
+                ysky = prng.uniform(low=-0.5, high=0.5, size=my_n_obs)
+            elif parameters["DataType"] == "particles":
+                xsky = prng.normal(loc=0.0, scale=1.0, size=my_n_obs)
+                ysky = prng.normal(loc=0.0, scale=1.0, size=my_n_obs)
             xsky *= delta
             ysky *= delta
             xsky += self.photons[axes_lookup[normal][0]].d[obs_cells]
@@ -690,9 +684,14 @@ class PhotonList(object):
 
         else:
 
-            x = prng.uniform(low=-0.5,high=0.5,size=my_n_obs)
-            y = prng.uniform(low=-0.5,high=0.5,size=my_n_obs)
-            z = prng.uniform(low=-0.5,high=0.5,size=my_n_obs)
+            if parameters["DataType"] == "cells":
+                x = prng.uniform(low=-0.5, high=0.5, size=my_n_obs)
+                y = prng.uniform(low=-0.5, high=0.5, size=my_n_obs)
+                z = prng.uniform(low=-0.5, high=0.5, size=my_n_obs)
+            elif parameters["DataType"] == "particles":
+                x = prng.normal(loc=0.0, scale=1.0, size=my_n_obs)
+                y = prng.normal(loc=0.0, scale=1.0, size=my_n_obs)
+                z = prng.normal(loc=0.0, scale=1.0, size=my_n_obs)
 
             if not no_shifting:
                 vz = self.photons["vx"]*z_hat[0] + \
