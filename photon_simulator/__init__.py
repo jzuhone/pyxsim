@@ -1,8 +1,8 @@
-from photon_simulator.photon_models import \
-     PhotonModel, \
-     ThermalPhotonModel, \
-     LineEmissionModel, \
-     PowerLawModel
+from photon_simulator.source_models import \
+     SourceModel, \
+     ThermalSourceModel, \
+     LineEmissionSourceModel, \
+     PowerLawSourceModel
 
 from photon_simulator.main import \
      PhotonList, \

@@ -34,7 +34,7 @@ from yt.utilities.orientation import Orientation
 from yt.utilities.fits_image import assert_same_wcs
 from yt.utilities.parallel_tools.parallel_analysis_interface import \
     communication_system, parallel_root_only, get_mpi_type, \
-    parallel_capable
+    parallel_capable, parallel_objects
 from yt.units.yt_array import YTQuantity, YTArray, uconcatenate
 import astropy.io.fits as pyfits
 import astropy.wcs as pywcs
@@ -48,6 +48,11 @@ axes_lookup = {"x":("y","z"),
                "y":("z","x"),
                "z":("x","y")}
 
+photon_units = {"Energy": "keV",
+                "dx": "kpc"}
+for ax in "xyz":
+    photon_units[ax] = "kpc"
+    photon_units["v"+ax] = "km/s"
 
 def parse_value(value, default_units):
     if isinstance(value, YTQuantity):
@@ -56,7 +61,6 @@ def parse_value(value, default_units):
         return YTQuantity(value[0], value[1]).in_units(default_units)
     else:
         return YTQuantity(value, default_units)
-
 
 def validate_parameters(first, second, skip=[]):
     keys1 = list(first.keys())
@@ -77,6 +81,26 @@ def validate_parameters(first, second, skip=[]):
                 raise RuntimeError("The values for the parameter '%s' in the two inputs" % k1 +
                                    " are not identical (%s vs. %s)!" % (v1, v2))
 
+def determine_fields(ds):
+    ds_type = ds.index.__class__.__bases__[0].__name__
+    if ds_type == "GridIndex":
+        position_fields = list("xyz")
+        velocity_fields = ["velocity_%s" % ax for ax in "xyz"]
+        width_field = "dx"
+    elif ds_type == "ParticleIndex":
+        position_fields = ["particle_position_%s" % ax for ax in "xyz"]
+        velocity_fields = ["particle_velocity_%s" % ax for ax in "xyz"]
+        width_field = "smoothing_length"
+    return position_fields, velocity_fields, width_field
+
+def concatenate_photons(photons):
+    for key in photons:
+        if len(photons[key]) > 0:
+            photons[key] = uconcatenate(photons[key])
+        elif key == "NumberOfPhotons":
+            photons[key] = np.array([])
+        else:
+            photons[key] = YTArray([], photon_units[key])
 
 class PhotonList(object):
 
@@ -179,9 +203,10 @@ class PhotonList(object):
         return cls(photons, parameters, cosmo)
 
     @classmethod
-    def from_scratch(cls, data_source, redshift, area,
-                     exp_time, photon_model, parameters=None,
-                     center=None, dist=None, cosmology=None):
+    def from_data_source(cls, data_source, redshift, area,
+                         exp_time, source_model, parameters=None,
+                         center=None, dist=None, cosmology=None,
+                         velocity_fields=None):
         r"""
         Initialize a PhotonList from a photon model. The redshift, collecting area,
         exposure time, and cosmology are stored in the *parameters* dictionary which
@@ -201,7 +226,7 @@ class PhotonList(object):
         exp_time : float, (value, unit) tuple, or YTQuantity.
             The exposure time to determine the number of photons. If units are
             not specified, it is assumed to be in seconds.
-        photon_model : function
+        source_model : function
             A function that takes the *data_source* and the *parameters*
             dictionary and returns a *photons* dictionary. Must be of the
             form: photon_model(data_source, parameters)
@@ -223,15 +248,15 @@ class PhotonList(object):
         --------
         This is the simplest possible example, where we call the built-in thermal model:
 
-        >>> thermal_model = ThermalPhotonModel(apec_model, Zmet=0.3)
+        >>> thermal_model = ThermalSourceModel(apec_model, Zmet=0.3)
         >>> redshift = 0.05
         >>> area = 6000.0 # assumed here in cm**2
         >>> time = 2.0e5 # assumed here in seconds
         >>> sp = ds.sphere("c", (500., "kpc"))
-        >>> my_photons = PhotonList.from_user_model(sp, redshift, area,
-        ...                                         time, thermal_model)
+        >>> my_photons = PhotonList.from_data_source(sp, redshift, area,
+        ...                                          time, thermal_model)
 
-        If you wish to make your own photon model function, it must take as its
+        If you wish to make your own source model function, it must take as its
         arguments the *data_source* and the *parameters* dictionary. However you
         determine them, the *photons* dict needs to have the following items, corresponding
         to cells which have photons:
@@ -251,6 +276,11 @@ class PhotonList(object):
         for the first cell, the next photons["NumberOfPhotons"][1] are for the second cell, and so on.
         """
         ds = data_source.ds
+
+        p_fields, v_fields, w_field = determine_fields(ds)
+
+        if velocity_fields is not None:
+            v_fields = velocity_fields
 
         if parameters is None:
              parameters = {}
@@ -317,7 +347,39 @@ class PhotonList(object):
         parameters["Dimension"] = 2*dimension
         parameters["Width"] = 2.*width.in_units("kpc")
 
-        photons = photon_model(data_source, parameters)
+        D_A = parameters["FiducialAngularDiameterDistance"].in_cgs()
+        dist_fac = 1.0/(4.*np.pi*D_A.value*D_A.value*(1.+redshift)**2)
+        spectral_norm = parameters["FiducialArea"].v*parameters["FiducialExposureTime"].v*dist_fac
+
+        citer = data_source.chunks([], "io")
+
+        photons = defaultdict(list)
+
+        tot_num_cells = data_source.ires.shape[0]
+
+        pbar = get_pbar("Generating photons ", tot_num_cells)
+
+        source_model.setup_model(data_source, redshift, spectral_norm, pbar)
+
+        for chunk in parallel_objects(citer):
+
+            number_of_photons, idxs, energies = source_model(chunk)
+
+            photons["NumberOfPhotons"].append(number_of_photons)
+            photons["Energy"].append(ds.arr(energies, "keV"))
+            photons["x"].append((chunk[p_fields[0]][idxs]-parameters["center"][0]).in_units("kpc"))
+            photons["y"].append((chunk[p_fields[1]][idxs]-parameters["center"][1]).in_units("kpc"))
+            photons["z"].append((chunk[p_fields[2]][idxs]-parameters["center"][2]).in_units("kpc"))
+            photons["vx"].append(chunk[v_fields[0]][idxs].in_units("km/s"))
+            photons["vy"].append(chunk[v_fields[1]][idxs].in_units("km/s"))
+            photons["vz"].append(chunk[v_fields[2]][idxs].in_units("km/s"))
+            photons["dx"].append(chunk[w_field][idxs].in_units("kpc"))
+
+        pbar.finish()
+
+        source_model.cleanup_model()
+
+        concatenate_photons(photons)
 
         mylog.info("Finished generating photons.")
         mylog.info("Number of photons generated: %d" % int(np.sum(photons["NumberOfPhotons"])))
@@ -605,10 +667,10 @@ class PhotonList(object):
 
         n_obs_all = comm.mpi_allreduce(my_n_obs)
         if comm.rank == 0:
-            mylog.info("Total number of photons to use: %d" % (n_obs_all))
+            mylog.info("Total number of photons to use: %d" % n_obs_all)
 
         if my_n_obs == n_ph_tot:
-            idxs = np.arange(my_n_obs,dtype='uint64')
+            idxs = np.arange(my_n_obs, dtype='uint64')
         else:
             idxs = prng.permutation(n_ph_tot)[:my_n_obs].astype("uint64")
         obs_cells = np.searchsorted(self.p_bins, idxs, side='right')-1
@@ -755,7 +817,7 @@ class PhotonList(object):
         fcurr = 0
         last = len(phEE)
 
-        pbar = get_pbar("Scattering energies with RMF:", last)
+        pbar = get_pbar("Scattering energies with RMF", last)
 
         for low,high in zip(tblhdu.data["ENERG_LO"],tblhdu.data["ENERG_HI"]):
             # weight function for probabilities from RMF
