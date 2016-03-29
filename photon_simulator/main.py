@@ -104,7 +104,7 @@ def concatenate_photons(photons):
 
 class PhotonList(object):
 
-    def __init__(self, photons, parameters, cosmo, data_type):
+    def __init__(self, photons, parameters, cosmo):
         self.photons = photons
         self.parameters = parameters
         self.cosmo = cosmo
@@ -112,8 +112,6 @@ class PhotonList(object):
 
         p_bins = np.cumsum(photons["NumberOfPhotons"])
         self.p_bins = np.insert(p_bins, 0, [np.uint64(0)])
-
-        self.data_type = data_type
 
     def keys(self):
         return self.photons.keys()
@@ -668,10 +666,10 @@ class PhotonList(object):
 
         if isinstance(normal, string_types):
 
-            if parameters["DataType"] == "cells":
+            if self.parameters["DataType"] == "cells":
                 xsky = prng.uniform(low=-0.5, high=0.5, size=my_n_obs)
                 ysky = prng.uniform(low=-0.5, high=0.5, size=my_n_obs)
-            elif parameters["DataType"] == "particles":
+            elif self.parameters["DataType"] == "particles":
                 xsky = prng.normal(loc=0.0, scale=1.0, size=my_n_obs)
                 ysky = prng.normal(loc=0.0, scale=1.0, size=my_n_obs)
             xsky *= delta
@@ -684,11 +682,11 @@ class PhotonList(object):
 
         else:
 
-            if parameters["DataType"] == "cells":
+            if self.parameters["DataType"] == "cells":
                 x = prng.uniform(low=-0.5, high=0.5, size=my_n_obs)
                 y = prng.uniform(low=-0.5, high=0.5, size=my_n_obs)
                 z = prng.uniform(low=-0.5, high=0.5, size=my_n_obs)
-            elif parameters["DataType"] == "particles":
+            elif self.parameters["DataType"] == "particles":
                 x = prng.normal(loc=0.0, scale=1.0, size=my_n_obs)
                 y = prng.normal(loc=0.0, scale=1.0, size=my_n_obs)
                 z = prng.normal(loc=0.0, scale=1.0, size=my_n_obs)

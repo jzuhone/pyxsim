@@ -216,8 +216,9 @@ class ThermalSourceModel(SourceModel):
             start_e = end_e
 
         active_cells = number_of_photons > 0
+        idxs = idxs[active_cells]
 
-        return number_of_photons[active_cells], active_cells, energies[:end_e].copy()
+        return number_of_photons[active_cells], idxs, energies[:end_e].copy()
 
     def cleanup_model(self):
         self.spectral_model.cleanup_spectrum()
