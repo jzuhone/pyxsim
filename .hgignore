@@ -1,0 +1,5 @@
+syntax: glob
+*.so
+*.o
+photon_simulator.egg-info
+utils.c
