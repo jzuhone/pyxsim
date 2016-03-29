@@ -86,7 +86,7 @@ class ThermalSourceModel(SourceModel):
     >>> source_model = ThermalSourceModel(mekal_model, X_H=0.76,
     ...                                   Zmet="metallicity")
     """
-    def __init__(self, spectral_model, temperature_field="K",
+    def __init__(self, spectral_model, temperature_field="temperature",
                  emission_measure_field="emission_measure",
                  Zmet=0.3, photons_per_chunk=10000000,
                  method="invert_cdf", prng=np.random):
@@ -116,7 +116,7 @@ class ThermalSourceModel(SourceModel):
         ebins = self.spectral_model.ebins
         nchan = len(emid)
 
-        kT = kboltz*chunk[self.temperature_field].in_units("keV").v
+        kT = (kboltz*chunk[self.temperature_field]).in_units("keV").v
         num_cells = len(kT)
         if num_cells == 0:
             return
