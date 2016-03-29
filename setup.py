@@ -1,12 +1,29 @@
 #!/usr/bin/env python
+from setuptools import setup
+from setuptools.extension import Extension
+import numpy as np
 
+cython_extensions = [
+    Extension("photon_simulator.utils",
+              sources=["photon_simulator/utils.pyx"],
+              language="c", libraries=["m"],
+              include_dirs=[np.get_include()])]
 
-def configuration(parent_package='', top_path=None):
-    from numpy.distutils.misc_util import Configuration
-    config = Configuration('photon_simulator', parent_package, top_path)
-    config.add_extension("utils",
-                         ["yt/analysis_modules/photon_simulator/utils.pyx"])
-    config.add_subpackage("tests")
-    config.make_config_py()  # installs __config__.py
-    #config.make_svn_version_py()
-    return config
+setup(name='photon_simulator',
+      packages=['photon_simulator'],
+      version='0.1.0',
+      description='Python tools for ACIS Ops',
+      author='John ZuHone',
+      author_email='jzuhone@gmail.com',
+      url='http://bitbucket.org/jzuhone/photon_simulator',
+      install_requires=["six","numpy","astropy","h5py","yt"],
+      classifiers=[
+          'Intended Audience :: Science/Research',
+          'Operating System :: OS Independent',
+          'Programming Language :: Python :: 2.7',
+          'Programming Language :: Python :: 3.4',
+          'Programming Language :: Python :: 3.5',
+          'Topic :: Scientific/Engineering :: Visualization',
+      ],
+      ext_modules=cython_extensions,
+      )
