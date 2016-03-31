@@ -88,15 +88,15 @@ def validate_parameters(first, second, skip=[]):
                                    " are not identical (%s vs. %s)!" % (v1, v2))
 
 def determine_fields(ds):
-    ds_type = ds.index.__class__.__bases__[0].__name__
-    if ds_type == "GridIndex":
-        position_fields = list("xyz")
-        velocity_fields = ["velocity_%s" % ax for ax in "xyz"]
-        width_field = "dx"
-    elif ds_type == "ParticleIndex":
+    ds_type = ds.index.__class__.__name__
+    if ds_type == "ParticleIndex":
         position_fields = ["particle_position_%s" % ax for ax in "xyz"]
         velocity_fields = ["particle_velocity_%s" % ax for ax in "xyz"]
         width_field = "smoothing_length"
+    else:
+        position_fields = list("xyz")
+        velocity_fields = ["velocity_%s" % ax for ax in "xyz"]
+        width_field = "dx"
     return position_fields, velocity_fields, width_field
 
 def concatenate_photons(photons):
