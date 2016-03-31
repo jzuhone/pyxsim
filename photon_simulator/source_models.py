@@ -76,9 +76,6 @@ class ThermalSourceModel(SourceModel):
         A pseudo-random number generator. Typically will only be specified
         if you have a reason to generate the same set of random numbers, such as for a
         test. Default is the numpy.random module.
-    velocity_fields : list of field names
-        The fields to use from the data object as the velocity fields for Doppler
-        broadening. Default is ["velocity_x","velocity_y","velocity_z"].
 
     Examples
     --------
@@ -107,7 +104,8 @@ class ThermalSourceModel(SourceModel):
         self.spectral_model.prepare_spectrum(redshift)
         self.spectral_norm = spectral_norm
         self.pbar = pbar
-        self.kT_bins = np.linspace(kT_min, max(my_kT_max.v, kT_max), num=n_kT+1)
+        self.kT_bins = np.linspace(min(0.9*my_kT_min.v, kT_min), 
+                                   min(1.1*my_kT_max.v, kT_max), num=n_kT+1)
         self.dkT = self.kT_bins[1]-self.kT_bins[0]
 
     def __call__(self, chunk):
