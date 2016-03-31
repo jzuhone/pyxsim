@@ -1341,8 +1341,9 @@ class EventList(object):
         col6 = pyfits.Column(name='FLUX', format='D', array=np.array([flux.value]))
         col7 = pyfits.Column(name='SPECTRUM', format='80A', array=np.array([phfile+"[PHLIST,1]"]))
         col8 = pyfits.Column(name='IMAGE', format='80A', array=np.array([phfile+"[PHLIST,1]"]))
+        col9 = pyfits.Column(name='SRC_NAME', format='80A', array=np.array(["yt_src"]))
 
-        coldefs = pyfits.ColDefs([col1, col2, col3, col4, col5, col6, col7, col8])
+        coldefs = pyfits.ColDefs([col1, col2, col3, col4, col5, col6, col7, col8, col9])
 
         wrhdu = pyfits.BinTableHDU.from_columns(coldefs)
         wrhdu.update_ext_name("SRC_CAT")
