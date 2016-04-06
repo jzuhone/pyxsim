@@ -1,16 +1,14 @@
-from yt.analysis_modules.photon_simulator.api import \
+from photon_simulator import \
     TableApecModel, XSpecThermalModel
-from yt.testing import requires_module, fake_random_ds
 from yt.utilities.answer_testing.framework import \
     GenericArrayTest
+from yt.testing import requires_module
 from yt.config import ytcfg
 
 def setup():
     ytcfg["yt", "__withintesting"] = "True"
 
 xray_data_dir = ytcfg.get("yt", "xray_data_dir")
-
-ds = fake_random_ds(64)
 
 @requires_module("xspec")
 @requires_module("astropy")

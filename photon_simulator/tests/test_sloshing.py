@@ -10,10 +10,10 @@ Answer test the photon_simulator analysis module.
 # The full license is in the file COPYING.txt, distributed with this software.
 #-----------------------------------------------------------------------------
 
-from yt.analysis_modules.photon_simulator.api import \
+from photon_simulator import \
     TableApecModel, TableAbsorbModel, \
-    ThermalPhotonModel, PhotonList, EventList, \
-    convert_old_file, merge_files
+    ThermalSourceModel, PhotonList, EventList, \
+    merge_files
 from yt.config import ytcfg
 from yt.testing import requires_file
 from yt.utilities.answer_testing.framework import requires_ds, \
@@ -42,8 +42,6 @@ arfs = ["pn-med.arf", "acisi_aimpt_cy17.arf",
 gslr = "GasSloshingLowRes/sloshing_low_res_hdf5_plt_cnt_0300"
 APEC = xray_data_dir
 TBABS = os.path.join(xray_data_dir, "tbabs_table.h5")
-old_photon_file = os.path.join(xray_data_dir, "old_photons.h5")
-old_event_file = os.path.join(xray_data_dir, "old_events.h5")
 
 def return_data(data):
     def _return_data(name):
@@ -53,8 +51,6 @@ def return_data(data):
 @requires_ds(gslr)
 @requires_file(APEC)
 @requires_file(TBABS)
-@requires_file(old_photon_file)
-@requires_file(old_event_file)
 def test_sloshing():
 
     tmpdir = tempfile.mkdtemp()
@@ -72,10 +68,11 @@ def test_sloshing():
     tbabs_model = TableAbsorbModel(TBABS, 0.1)
 
     sphere = ds.sphere("c", (0.1, "Mpc"))
+    sphere.set_field_parameter("X_H", 0.75)
 
-    thermal_model = ThermalPhotonModel(apec_model, Zmet=0.3, prng=prng)
-    photons1 = PhotonList.from_scratch(sphere, redshift, A, exp_time,
-                                       thermal_model)
+    thermal_model = ThermalSourceModel(apec_model, Zmet=0.3, prng=prng)
+    photons1 = PhotonList.from_data_source(sphere, redshift, A, exp_time,
+                                           thermal_model)
 
     return_photons = return_data(photons1.photons)
 
@@ -85,8 +82,8 @@ def test_sloshing():
         arf = os.path.join(xray_data_dir, a)
         rmf = os.path.join(xray_data_dir, r)
         events1 = photons1.project_photons([1.0,-0.5,0.2], responses=[arf,rmf],
-                                          absorb_model=tbabs_model, 
-                                          convolve_energies=True, prng=prng)
+                                           absorb_model=tbabs_model,
+                                           convolve_energies=True, prng=prng)
 
         return_events = return_data(events1.events)
 
@@ -102,12 +99,6 @@ def test_sloshing():
     photons2 = PhotonList.from_file("test_photons.h5")
     events2 = EventList.from_h5_file("test_events.h5")
 
-    convert_old_file(old_photon_file, "converted_photons.h5")
-    convert_old_file(old_event_file, "converted_events.h5")
-
-    photons3 = PhotonList.from_file("converted_photons.h5")
-    events3 = EventList.from_h5_file("converted_events.h5")
-
     for k in photons1.keys():
         if k == "Energy":
             arr1 = uconcatenate(photons1[k])
@@ -118,18 +109,16 @@ def test_sloshing():
             arr2 = photons2[k]
             arr3 = photons3[k]
         yield assert_array_equal, arr1, arr2
-        yield assert_array_equal, arr1, arr3
     for k in events1.keys():
         yield assert_array_equal, events1[k], events2[k]
-        yield assert_array_equal, events1[k], events3[k]
 
     nevents = 0
 
     for i in range(4):
         events = photons1.project_photons([1.0,-0.5,0.2],
-                                         exp_time_new=0.25*exp_time,
-                                         absorb_model=tbabs_model,
-                                         prng=prng)
+                                          exp_time_new=0.25*exp_time,
+                                          absorb_model=tbabs_model,
+                                          prng=prng)
         events.write_h5_file("split_events_%d.h5" % i)
         nevents += len(events["xsky"])
 
