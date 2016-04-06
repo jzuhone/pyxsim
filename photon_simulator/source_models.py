@@ -24,33 +24,28 @@ http://adsabs.harvard.edu/abs/2013MNRAS.428.1395B
 
 from six import string_types
 import numpy as np
+from yt.funcs import get_pbar
 from yt.units.yt_array import YTQuantity
 from yt.utilities.physical_constants import mp, clight, kboltz
 from yt.analysis_modules.photon_simulator.photon_simulator import \
     parse_value
 from yt.utilities.exceptions import YTUnitConversionError
 
-n_kT = 10000
-kT_min = 8.08e-2
-kT_max = 50.
 sqrt_two = np.sqrt(2.)
 
 class SourceModel(object):
 
     def __init__(self):
         self.spectral_norm = None
-        self.pbar = None
 
     def __call__(self, chunk):
         pass
 
-    def setup_model(self, data_source, redshift, spectral_norm, pbar):
+    def setup_model(self, data_source, redshift, spectral_norm):
         self.spectral_norm = spectral_norm
-        self.pbar = pbar
 
     def cleanup_model(self):
         self.spectral_norm = None
-        self.pbar = None
 
 class ThermalSourceModel(SourceModel):
     r"""
@@ -83,52 +78,84 @@ class ThermalSourceModel(SourceModel):
     >>> source_model = ThermalSourceModel(mekal_model, X_H=0.76,
     ...                                   Zmet="metallicity")
     """
-    def __init__(self, spectral_model, temperature_field="temperature",
-                 emission_measure_field="emission_measure",
-                 Zmet=0.3, photons_per_chunk=10000000,
+    def __init__(self, spectral_model, temperature_field=None,
+                 emission_measure_field=None, kT_min=0.0808,
+                 kT_max=50.0, n_kT=10000, Zmet=0.3,
                  method="invert_cdf", prng=np.random):
         self.temperature_field = temperature_field
         self.Zmet = Zmet
         self.spectral_model = spectral_model
-        self.photons_per_chunk = photons_per_chunk
         self.method = method
         self.prng = prng
+        self.kT_min = kT_min
+        self.kT_max = kT_max
+        self.n_kT = n_kT
         self.spectral_norm = None
         self.pbar = None
         self.kT_bins = None
         self.dkT = None
         self.emission_measure_field = emission_measure_field
 
-    def setup_model(self, data_source, redshift, spectral_norm, pbar):
-        my_kT_min, my_kT_max = data_source.quantities.extrema("kT")
+    def setup_model(self, data_source, redshift, spectral_norm):
+        if self.emission_measure_field is None:
+            if ('PartType0', 'Density') in data_source.ds.field_list:
+                def _emission_measure(field, data):
+                    nenh = data['PartType0','Density']*data['PartType0','particle_mass']
+                    nenh /= mp*mp
+                    nenh.convert_to_units("cm**-3")
+                    if data.has_field_parameter("X_H"):
+                        X_H = data.get_field_parameter("X_H")
+                    else:
+                        X_H = 0.76
+                    if ('PartType0', 'ElectronAbundance') in data_source.ds.field_list:
+                        nenh *= X_H * data['PartType0','ElectronAbundance']
+                        nenh *= X_H * (1.-data['PartType0','NeutralHydrogenAbundance'])
+                    else:
+                        nenh *= 0.5*(1.+X_H)*X_H
+                    return nenh
+                data_source.ds.add_field(('PartType0', 'EmissionMeasure'),
+                                         function=_emission_measure,
+                                         particle_type=True,
+                                         units="cm**-3")
+                self.emission_measure_field = ('PartType0', 'EmissionMeasure')
+            else:
+                self.emission_measure_field = ('gas', 'emission_measure')
+        if self.temperature_field is None:
+            if ('PartType0', 'Temperature') in data_source.ds.derived_field_list:
+                self.temperature_field = ('PartType0', 'Temperature')
+            else:
+                self.temperature_field = ('gas', 'temperature')
         self.spectral_model.prepare_spectrum(redshift)
         self.spectral_norm = spectral_norm
-        self.pbar = pbar
-        self.kT_bins = np.linspace(min(0.9*my_kT_min.v, kT_min), 
-                                   min(1.1*my_kT_max.v, kT_max), num=n_kT+1)
+        self.kT_bins = np.linspace(self.kT_min, self.kT_max, num=self.n_kT+1)
         self.dkT = self.kT_bins[1]-self.kT_bins[0]
+        kT = (kboltz*data_source[self.temperature_field]).in_units("keV").v
+        num_cells = np.logical_and(kT > self.kT_min, kT < self.kT_max).sum()
+        self.pbar = get_pbar("Generating photons ", num_cells)
 
     def __call__(self, chunk):
 
+        num_photons_max = 10000000
         emid = self.spectral_model.emid
         ebins = self.spectral_model.ebins
         nchan = len(emid)
 
         kT = (kboltz*chunk[self.temperature_field]).in_units("keV").v
-        num_cells = len(kT)
-        if num_cells == 0:
+        if len(kT) == 0:
             return
         EM = chunk[self.emission_measure_field].v
 
-        if isinstance(self.Zmet, string_types):
-            metalZ = chunk[self.Zmet].v
-        else:
-            metalZ = self.Zmet*np.ones(num_cells)
-
         idxs = np.argsort(kT)
 
-        kT_idxs = np.digitize(kT[idxs], self.kT_bins)
-        kT_idxs = np.minimum(np.maximum(1, kT_idxs), n_kT) - 1
+        kT_sorted = kT[idxs]
+        idx_min = np.searchsorted(kT_sorted, self.kT_min)
+        idx_max = np.searchsorted(kT_sorted, self.kT_max)
+        idxs = idxs[idx_min:idx_max]
+        num_cells = len(idxs)
+        if num_cells == 0:
+            return
+
+        kT_idxs = np.digitize(kT[idxs], self.kT_bins)-1
         bcounts = np.bincount(kT_idxs).astype("int")
         bcounts = bcounts[bcounts > 0]
         n = int(0)
@@ -142,8 +169,13 @@ class ThermalSourceModel(SourceModel):
 
         cell_em = EM[idxs]*self.spectral_norm
 
+        if isinstance(self.Zmet, float):
+            metalZ = self.Zmet*np.ones(num_cells)
+        else:
+            metalZ = chunk[self.Zmet].v[idxs]
+
         number_of_photons = np.zeros(num_cells, dtype="uint64")
-        energies = np.zeros(self.photons_per_chunk)
+        energies = np.zeros(num_photons_max)
 
         start_e = 0
         end_e = 0
@@ -172,10 +204,9 @@ class ThermalSourceModel(SourceModel):
 
             end_e += int(cell_n.sum())
 
-            if end_e > self.photons_per_chunk:
-                raise RuntimeError("Number of photons generated for this chunk "+
-                                   "exceeds photons_per_chunk (%d)! " % self.photons_per_chunk +
-                                   "Increase photons_per_chunk!")
+            if end_e > num_photons_max:
+                num_photons_max *= 2
+                energies.resize(num_photons_max, refcheck=False)
 
             if self.method == "invert_cdf":
                 cumspec_c = np.cumsum(cspec.d)
@@ -219,6 +250,7 @@ class ThermalSourceModel(SourceModel):
         return number_of_photons[active_cells], idxs, energies[:end_e].copy()
 
     def cleanup_model(self):
+        self.pbar.finish()
         self.spectral_model.cleanup_spectrum()
         self.pbar = None
         self.spectral_norm = None
@@ -269,10 +301,9 @@ class PowerLawSourceModel(SourceModel):
         self.pbar = None
         self.redshift = None
 
-    def setup_model(self, data_source, redshift, spectral_norm, pbar):
+    def setup_model(self, data_source, redshift, spectral_norm):
         self.spectral_norm = spectral_norm
         self.redshift = redshift
-        self.pbar = pbar
 
     def __call__(self, chunk):
 
@@ -299,7 +330,6 @@ class PowerLawSourceModel(SourceModel):
                 e **= 1./(1.-index[i])
                 energies[start_e:end_e] = e / (1.+self.redshift)
                 start_e = end_e
-            self.pbar.update()
 
         active_cells = number_of_photons > 0
 
@@ -307,7 +337,6 @@ class PowerLawSourceModel(SourceModel):
 
     def cleanup_model(self):
         self.redshift = None
-        self.pbar = None
         self.spectral_norm = None
 
 class LineEmissionSourceModel(SourceModel):
@@ -360,13 +389,11 @@ class LineEmissionSourceModel(SourceModel):
         self.amplitude_field = amplitude_field
         self.prng = prng
         self.spectral_norm = None
-        self.pbar = None
         self.redshift = None
 
-    def setup_model(self, data_source, redshift, spectral_norm, pbar):
+    def setup_model(self, data_source, redshift, spectral_norm):
         self.spectral_norm = spectral_norm
         self.redshift = redshift
-        self.pbar = pbar
 
     def __call__(self, chunk):
         num_cells = len(chunk["x"])
@@ -390,7 +417,6 @@ class LineEmissionSourceModel(SourceModel):
                                           size=number_of_photons[i])*self.location.uq
                     energies[start_e:end_e] += dE
                     start_e = end_e
-            self.pbar.update()
 
         energies = energies / (1.+self.redshift)
 
@@ -400,5 +426,4 @@ class LineEmissionSourceModel(SourceModel):
 
     def cleanup_model(self):
         self.redshift = None
-        self.pbar = None
         self.spectral_norm = None

@@ -351,11 +351,7 @@ class PhotonList(object):
 
         photons = defaultdict(list)
 
-        tot_num_cells = data_source.ires.shape[0]
-
-        pbar = get_pbar("Generating photons ", tot_num_cells)
-
-        source_model.setup_model(data_source, redshift, spectral_norm, pbar)
+        source_model.setup_model(data_source, redshift, spectral_norm)
 
         for chunk in parallel_objects(citer):
 
@@ -370,8 +366,6 @@ class PhotonList(object):
             photons["vy"].append(chunk[v_fields[1]][idxs].in_units("km/s"))
             photons["vz"].append(chunk[v_fields[2]][idxs].in_units("km/s"))
             photons["dx"].append(chunk[w_field][idxs].in_units("kpc"))
-
-        pbar.finish()
 
         source_model.cleanup_model()
 
