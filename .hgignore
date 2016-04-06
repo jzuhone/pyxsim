@@ -1,5 +1,6 @@
 syntax: glob
 *.so
 *.o
+*.pyc
 photon_simulator.egg-info
 utils.c
