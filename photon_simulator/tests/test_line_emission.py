@@ -1,6 +1,6 @@
-from yt.analysis_modules.photon_simulator.api import \
-    LineEmissionModel, PhotonList
-from yt.analysis_modules.photon_simulator.tests.beta_model_source import \
+from photon_simulator import \
+    LineEmissionSourceModel, PhotonList
+from photon_simulator.tests.beta_model_source import \
     BetaModelSource
 from yt.units.yt_array import YTQuantity, uconcatenate
 import numpy as np
@@ -29,10 +29,10 @@ def test_line_emission():
 
     sphere = ds.sphere("c", (100.,"kpc"))
 
-    line_model = LineEmissionModel(location, "dm_emission", sigma="dark_matter_dispersion", prng=bms.prng)
+    line_model = LineEmissionSourceModel(location, "dm_emission", sigma="dark_matter_dispersion", prng=bms.prng)
 
-    photons = PhotonList.from_scratch(sphere, redshift, A, exp_time,
-                                      line_model)
+    photons = PhotonList.from_data_source(sphere, redshift, A, exp_time,
+                                          line_model)
 
     D_A = photons.parameters["FiducialAngularDiameterDistance"]
     dist_fac = 1.0/(4.*np.pi*D_A*D_A*(1.+redshift)**2)

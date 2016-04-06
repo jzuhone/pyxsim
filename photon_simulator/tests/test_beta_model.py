@@ -10,10 +10,10 @@ A unit test for the photon_simulator analysis module.
 # The full license is in the file COPYING.txt, distributed with this software.
 #-----------------------------------------------------------------------------
 
-from yt.analysis_modules.photon_simulator.api import \
+from photon_simulator import \
     XSpecThermalModel, XSpecAbsorbModel, \
-    ThermalPhotonModel, PhotonList
-from yt.analysis_modules.photon_simulator.tests.beta_model_source import \
+    ThermalSourceModel, PhotonList
+from photon_simulator.tests.beta_model_source import \
     BetaModelSource
 from yt.config import ytcfg
 from yt.testing import requires_file, requires_module
@@ -75,10 +75,10 @@ def test_beta_model():
     kT_sim = bms.kT
     Z_sim = bms.Z
 
-    thermal_model = ThermalPhotonModel(apec_model, Zmet=Z_sim, X_H=X_H,
+    thermal_model = ThermalSourceModel(apec_model, Zmet=Z_sim, X_H=X_H,
                                        prng=bms.prng)
-    photons = PhotonList.from_scratch(sphere, redshift, A, exp_time,
-                                      thermal_model)
+    photons = PhotonList.from_data_source(sphere, redshift, A, exp_time,
+                                          thermal_model)
 
     D_A = photons.parameters["FiducialAngularDiameterDistance"]
 
