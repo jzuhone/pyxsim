@@ -404,15 +404,16 @@ class LineEmissionSourceModel(SourceModel):
         energies = self.location*np.ones(number_of_photons.sum())
 
         if isinstance(self.sigma, YTQuantity):
-            dE = self.prng.normal(loc=0.0, scale=self.sigma.v,
+            dE = self.prng.normal(loc=0.0, scale=float(self.sigma),
                                   size=number_of_photons.sum())*self.location.uq
             energies += dE
         elif self.sigma is not None:
+            sigma = (chunk[self.sigma]*self.location/clight).in_units("keV")
             start_e = 0
             for i in range(num_cells):
                 if number_of_photons[i] > 0:
                     end_e = start_e+number_of_photons[i]
-                    dE = self.prng.normal(loc=0.0, scale=chunk[self.sigma][i].v,
+                    dE = self.prng.normal(loc=0.0, scale=float(sigma[i]),
                                           size=number_of_photons[i])*self.location.uq
                     energies[start_e:end_e] += dE
                     start_e = end_e
