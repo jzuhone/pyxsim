@@ -88,7 +88,7 @@ def validate_parameters(first, second, skip=[]):
 
 def determine_fields(ds):
     ds_type = ds.index.__class__.__name__
-    if ds_type == "ParticleIndex":
+    if "ParticleIndex" in ds_type:
         position_fields = ["particle_position_%s" % ax for ax in "xyz"]
         velocity_fields = ["particle_velocity_%s" % ax for ax in "xyz"]
         width_field = "smoothing_length"

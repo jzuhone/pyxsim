@@ -23,7 +23,7 @@ http://adsabs.harvard.edu/abs/2013MNRAS.428.1395B
 #-----------------------------------------------------------------------------
 
 import numpy as np
-from yt.funcs import get_pbar
+from yt.funcs import get_pbar, mylog
 from yt.units.yt_array import YTQuantity
 from yt.utilities.physical_constants import mp, clight, kboltz
 from yt.analysis_modules.photon_simulator.photon_simulator import \
@@ -45,6 +45,11 @@ class SourceModel(object):
 
     def cleanup_model(self):
         self.spectral_norm = None
+
+particle_dens_fields = [("io", "density"),
+                        ("PartType0", "Density")]
+particle_temp_fields = [("io", "temperature"),
+                        ("PartType0", "Temperature")]
 
 class ThermalSourceModel(SourceModel):
     r"""
@@ -74,8 +79,7 @@ class ThermalSourceModel(SourceModel):
     Examples
     --------
     >>> mekal_model = XSpecThermalModel("mekal", 0.05, 50.0, 1000)
-    >>> source_model = ThermalSourceModel(mekal_model, X_H=0.76,
-    ...                                   Zmet="metallicity")
+    >>> source_model = ThermalSourceModel(mekal_model, Zmet="metallicity")
     """
     def __init__(self, spectral_model, temperature_field=None,
                  emission_measure_field=None, kT_min=0.0808,
@@ -97,9 +101,10 @@ class ThermalSourceModel(SourceModel):
 
     def setup_model(self, data_source, redshift, spectral_norm):
         if self.emission_measure_field is None:
-            if ('PartType0', 'Density') in data_source.ds.field_list:
+            found_dfield = [fd for fd in particle_dens_fields if fd in data_source.ds.field_list]
+            if len(found_dfield) > 0:
                 def _emission_measure(field, data):
-                    nenh = data['PartType0','Density']*data['PartType0','particle_mass']
+                    nenh = data[found_dfield[0]]*data['particle_mass']
                     nenh /= mp*mp
                     nenh.convert_to_units("cm**-3")
                     if data.has_field_parameter("X_H"):
@@ -112,18 +117,21 @@ class ThermalSourceModel(SourceModel):
                     else:
                         nenh *= 0.5*(1.+X_H)*X_H
                     return nenh
-                data_source.ds.add_field(('PartType0', 'EmissionMeasure'),
+                data_source.ds.add_field(('io', 'emission_measure'),
                                          function=_emission_measure,
                                          particle_type=True,
                                          units="cm**-3")
-                self.emission_measure_field = ('PartType0', 'EmissionMeasure')
+                self.emission_measure_field = ('io', 'emission_measure')
             else:
                 self.emission_measure_field = ('gas', 'emission_measure')
+        mylog.info("Using emission measure field '(%s, %s)'." % self.emission_measure_field)
         if self.temperature_field is None:
-            if ('PartType0', 'Temperature') in data_source.ds.derived_field_list:
-                self.temperature_field = ('PartType0', 'Temperature')
+            found_tfield = [fd for fd in particle_temp_fields if fd in data_source.ds.field_list]
+            if len(found_tfield) > 0:
+                self.temperature_field = found_tfield[0]
             else:
                 self.temperature_field = ('gas', 'temperature')
+        mylog.info("Using temperature field '(%s, %s)'." % self.temperature_field)
         self.spectral_model.prepare_spectrum(redshift)
         self.spectral_norm = spectral_norm
         self.kT_bins = np.linspace(self.kT_min, self.kT_max, num=self.n_kT+1)
@@ -203,10 +211,6 @@ class ThermalSourceModel(SourceModel):
 
             end_e += int(cell_n.sum())
 
-            if end_e > num_photons_max:
-                num_photons_max *= 2
-                energies.resize(num_photons_max, refcheck=False)
-
             if self.method == "invert_cdf":
                 cumspec_c = np.cumsum(cspec.d)
                 cumspec_m = np.cumsum(mspec.d)
@@ -238,6 +242,9 @@ class ThermalSourceModel(SourceModel):
                     tot_spec *= norm_factor
                     eidxs = self.prng.choice(nchan, size=cn, p=tot_spec)
                     cell_e = emid[eidxs]
+                if ei+cn > num_photons_max:
+                    num_photons_max *= 2
+                    energies.resize(num_photons_max, refcheck=False)
                 energies[ei:ei+cn] = cell_e
                 ei += cn
 
