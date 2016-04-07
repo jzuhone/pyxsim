@@ -846,10 +846,10 @@ class PhotonList(object):
                     if phEE[q] >= low and phEE[q] < high:
                         channelInd = prng.choice(len(weights), p=weights)
                         fcurr += 1
+                        pbar.update(fcurr)
                         detectedChannels.append(trueChannel[channelInd])
                     if phEE[q] >= high:
                         break
-            pbar.update(fcurr)
             k += 1
         pbar.finish()
 
