@@ -36,8 +36,7 @@ from yt.utilities.parallel_tools.parallel_analysis_interface import \
     communication_system, parallel_root_only, get_mpi_type, \
     parallel_capable, parallel_objects
 from yt.units.yt_array import YTQuantity, YTArray, uconcatenate
-import astropy.io.fits as pyfits
-import astropy.wcs as pywcs
+from yt.utilities.on_demand_imports import _astropy
 import warnings
 import os
 import h5py
@@ -355,17 +354,19 @@ class PhotonList(object):
 
         for chunk in parallel_objects(citer):
 
-            number_of_photons, idxs, energies = source_model(chunk)
+            chunk_data = source_model(chunk)
 
-            photons["NumberOfPhotons"].append(number_of_photons)
-            photons["Energy"].append(ds.arr(energies, "keV"))
-            photons["x"].append((chunk[p_fields[0]][idxs]-parameters["center"][0]).in_units("kpc"))
-            photons["y"].append((chunk[p_fields[1]][idxs]-parameters["center"][1]).in_units("kpc"))
-            photons["z"].append((chunk[p_fields[2]][idxs]-parameters["center"][2]).in_units("kpc"))
-            photons["vx"].append(chunk[v_fields[0]][idxs].in_units("km/s"))
-            photons["vy"].append(chunk[v_fields[1]][idxs].in_units("km/s"))
-            photons["vz"].append(chunk[v_fields[2]][idxs].in_units("km/s"))
-            photons["dx"].append(chunk[w_field][idxs].in_units("kpc"))
+            if chunk_data is not None:
+                number_of_photons, idxs, energies = chunk_data
+                photons["NumberOfPhotons"].append(number_of_photons)
+                photons["Energy"].append(ds.arr(energies, "keV"))
+                photons["x"].append((chunk[p_fields[0]][idxs]-parameters["center"][0]).in_units("kpc"))
+                photons["y"].append((chunk[p_fields[1]][idxs]-parameters["center"][1]).in_units("kpc"))
+                photons["z"].append((chunk[p_fields[2]][idxs]-parameters["center"][2]).in_units("kpc"))
+                photons["vx"].append(chunk[v_fields[0]][idxs].in_units("km/s"))
+                photons["vy"].append(chunk[v_fields[1]][idxs].in_units("km/s"))
+                photons["vz"].append(chunk[v_fields[2]][idxs].in_units("km/s"))
+                photons["dx"].append(chunk[w_field][idxs].in_units("kpc"))
 
         source_model.cleanup_model()
 
@@ -589,7 +590,7 @@ class PhotonList(object):
 
         # If we use an RMF, figure out where the response matrix actually is.
         if "RMF" in parameters:
-            rmf = pyfits.open(parameters["RMF"])
+            rmf = _astropy.pyfits.open(parameters["RMF"])
             if "MATRIX" in rmf:
                 mat_key = "MATRIX"
             elif "SPECRESP MATRIX" in rmf:
@@ -617,7 +618,7 @@ class PhotonList(object):
             elif isinstance(area_new, string_types):
                 if comm.rank == 0:
                     mylog.info("Using energy-dependent effective area: %s" % (parameters["ARF"]))
-                f = pyfits.open(area_new)
+                f = _astropy.pyfits.open(area_new)
                 earf = 0.5*(f["SPECRESP"].data.field("ENERG_LO")+f["SPECRESP"].data.field("ENERG_HI"))
                 eff_area = np.nan_to_num(f["SPECRESP"].data.field("SPECRESP"))
                 if "RMF" in parameters:
@@ -782,7 +783,7 @@ class PhotonList(object):
         return EventList(events, parameters)
 
     def _normalize_arf(self, respfile, mat_key):
-        rmf = pyfits.open(respfile)
+        rmf = _astropy.pyfits.open(respfile)
         table = rmf[mat_key]
         weights = np.array([w.sum() for w in table.data["MATRIX"]])
         rmf.close()
@@ -794,7 +795,7 @@ class PhotonList(object):
         """
         mylog.info("Reading response matrix file (RMF): %s" % (respfile))
 
-        hdulist = pyfits.open(respfile)
+        hdulist = _astropy.pyfits.open(respfile)
 
         tblhdu = hdulist[mat_key]
         n_de = len(tblhdu.data["ENERG_LO"])
@@ -993,7 +994,7 @@ class EventList(object):
         self.events = events
         self.parameters = parameters
         self.num_events = events["xpix"].shape[0]
-        self.wcs = pywcs.WCS(naxis=2)
+        self.wcs = _astropy.pywcs.WCS(naxis=2)
         self.wcs.wcs.crpix = parameters["pix_center"]
         self.wcs.wcs.crval = parameters["sky_center"].d
         self.wcs.wcs.cdelt = [-parameters["dtheta"].value, parameters["dtheta"].value]
@@ -1110,7 +1111,7 @@ class EventList(object):
         """
         Initialize an EventList from a FITS file with filename *fitsfile*.
         """
-        hdulist = pyfits.open(fitsfile)
+        hdulist = _astropy.pyfits.open(fitsfile)
 
         tblhdu = hdulist["EVENTS"]
 
@@ -1156,6 +1157,7 @@ class EventList(object):
         Set *clobber* to True if you need to overwrite a previous file.
         """
         from astropy.time import Time, TimeDelta
+        pyfits = _astropy.pyfits
 
         exp_time = float(self.parameters["ExposureTime"])
 
@@ -1291,6 +1293,7 @@ class EventList(object):
         e_max : float, optional
             The maximum energy of the photons to save in keV.
         """
+        pyfits = _astropy.pyfits
         if isinstance(self.parameters["Area"], string_types):
              mylog.error("Writing SIMPUT files is only supported if you didn't convolve with responses.")
              raise TypeError("Writing SIMPUT files is only supported if you didn't convolve with responses.")
@@ -1440,7 +1443,7 @@ class EventList(object):
                                            self["ypix"][mask],
                                            bins=[xbins,ybins])
 
-        hdu = pyfits.PrimaryHDU(H.T)
+        hdu = _astropy.pyfits.PrimaryHDU(H.T)
 
         hdu.header["MTYPE1"] = "EQPOS"
         hdu.header["MFORM1"] = "RA,DEC"
@@ -1482,6 +1485,7 @@ class EventList(object):
         energy_bins : boolean, optional
             Bin on energy or channel. Deprecated in favor of *bin_type*. 
         """
+        pyfits = _astropy.pyfits
         if energy_bins:
             bin_type = "energy"
             warnings.warn("The energy_bins keyword is deprecated. Please use "
