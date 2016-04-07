@@ -130,12 +130,6 @@ def do_beta_model(source, v_field, em_field):
     dsigma = m.bapec.Velocity.sigma
     dnorm = m.bapec.norm.sigma
 
-    print(mu, mu_sim, dmu)
-    print(kT, kT_sim, dkT)
-    print(Z, Z_sim, dZ)
-    print(sigma, sigma_sim, dsigma)
-    print(norm, norm_sim, dnorm)
-
     assert np.abs(mu-mu_sim) < 1.645*dmu
     assert np.abs(kT-kT_sim) < 1.645*dkT
     assert np.abs(Z-Z_sim) < 1.645*dZ
