@@ -314,26 +314,30 @@ class PowerLawSourceModel(SourceModel):
 
     def __call__(self, chunk):
 
+        num_cells = len(chunk[self.norm_field])
+
         if isinstance(self.index, float):
-            index = self.index
+            index = self.index*np.ones(num_cells)
         else:
             index = chunk[self.index].v
-        norm_fac = (self.emax**(1.-index)-self.emin**(1.-index))*self.spectral_norm
-        num_cells = len(norm_fac)
 
-        norm = norm_fac*chunk[self.norm_field]*self.e0**index/(1.-index)
+        norm_fac = (self.emax**(1.-index)-self.emin**(1.-index)).v
+        norm = norm_fac*chunk[self.norm_field]*chunk["cell_volume"]*self.e0.v**index/(1.-index)
+        norm *= self.spectral_norm
         norm = np.modf(norm.in_cgs().v)
+
         u = self.prng.uniform(size=num_cells)
         number_of_photons = np.uint64(norm[1]) + np.uint64(norm[0] >= u)
 
         energies = np.zeros(number_of_photons.sum())
 
         start_e = 0
+        end_e = 0
         for i in range(num_cells):
             if number_of_photons[i] > 0:
                 end_e = start_e+number_of_photons[i]
                 u = self.prng.uniform(size=number_of_photons[i])
-                e = self.emin**(1.-index[i]) + u*norm[i]
+                e = self.emin.v**(1.-index[i]) + u*norm_fac[i]
                 e **= 1./(1.-index[i])
                 energies[start_e:end_e] = e / (1.+self.redshift)
                 start_e = end_e
