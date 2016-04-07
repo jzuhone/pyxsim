@@ -322,9 +322,9 @@ class PowerLawSourceModel(SourceModel):
             index = chunk[self.index].v
 
         norm_fac = (self.emax**(1.-index)-self.emin**(1.-index)).v
-        norm = norm_fac*chunk[self.norm_field]*chunk["cell_volume"]*self.e0.v**index/(1.-index)
+        norm = norm_fac*chunk[self.norm_field]*chunk["cell_volume"].in_cgs().v*self.e0.v**index/(1.-index)
         norm *= self.spectral_norm
-        norm = np.modf(norm.in_cgs().v)
+        norm = np.modf(norm.v)
 
         u = self.prng.uniform(size=num_cells)
         number_of_photons = np.uint64(norm[1]) + np.uint64(norm[0] >= u)
