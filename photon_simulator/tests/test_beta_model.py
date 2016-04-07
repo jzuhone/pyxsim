@@ -55,8 +55,6 @@ def test_beta_model():
 
     ds = bms.ds
 
-    X_H = 0.76
-
     A = 3000.
     exp_time = 1.0e5
     redshift = 0.05
@@ -67,16 +65,11 @@ def test_beta_model():
     abs_model = XSpecAbsorbModel("TBabs", nH_sim)
 
     sphere = ds.sphere("c", (0.5, "Mpc"))
-    sphere.set_field_parameter("X_H", X_H)
-
-    mu_sim = -bms.v_shift / 1.0e5
-    sigma_sim = bms.v_width / 1.0e5
 
     kT_sim = bms.kT
     Z_sim = bms.Z
 
-    thermal_model = ThermalSourceModel(apec_model, Zmet=Z_sim, X_H=X_H,
-                                       prng=bms.prng)
+    thermal_model = ThermalSourceModel(apec_model, Zmet=Z_sim, prng=bms.prng)
     photons = PhotonList.from_data_source(sphere, redshift, A, exp_time,
                                           thermal_model)
 
@@ -85,6 +78,10 @@ def test_beta_model():
     norm_sim = sphere.quantities.total_quantity("emission_measure")
     norm_sim *= 1.0e-14/(4*np.pi*D_A*D_A*(1.+redshift)*(1.+redshift))
     norm_sim = float(norm_sim.in_cgs())
+
+    v1, v2 = sphere.quantities.weighted_variance("velocity_z", "emission_measure")
+    sigma_sim = float(v1.in_units("km/s"))
+    mu_sim = -float(v2.in_units("km/s"))
 
     events = photons.project_photons("z", responses=[arf,rmf],
                                      absorb_model=abs_model,
@@ -124,14 +121,17 @@ def test_beta_model():
     dsigma = m.bapec.Velocity.sigma
     dnorm = m.bapec.norm.sigma
 
-    assert np.abs(mu-mu_sim) < dmu
-    assert np.abs(kT-kT_sim) < dkT
-    assert np.abs(Z-Z_sim) < dZ
-    assert np.abs(sigma-sigma_sim) < dsigma
-    assert np.abs(norm-norm_sim) < dnorm
+    assert np.abs(mu-mu_sim) < 1.5*dmu
+    assert np.abs(kT-kT_sim) < 1.5*dkT
+    assert np.abs(Z-Z_sim) < 1.5*dZ
+    assert np.abs(sigma-sigma_sim) < 1.5*dsigma
+    assert np.abs(norm-norm_sim) < 1.5*dnorm
 
     xspec.AllModels.clear()
     xspec.AllData.clear()
 
     os.chdir(curdir)
     shutil.rmtree(tmpdir)
+
+if __name__ == "__main__":
+    test_beta_model()
