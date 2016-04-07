@@ -46,6 +46,9 @@ def test_line_emission():
     loc = location/(1.+redshift)
     sig = sigma_E/(1.+redshift)
 
-    assert np.abs(loc-E.mean()) < sig/np.sqrt(n_E)
-    assert np.abs(E.std()**2-sig*sig) < np.sqrt((3*(n_E-1)**2-(n_E-1)*(n_E-3))/n_E**3)*sig**2
-    assert np.abs(n_E-n_E_pred) < np.sqrt(n_E)
+    assert np.abs(loc-E.mean()) < 1.5*sig/np.sqrt(n_E)
+    assert np.abs(E.std()**2-sig*sig) < 1.5*np.sqrt(2*(n_E-1))*sig**2/n_E
+    assert np.abs(n_E-n_E_pred) < 1.5*np.sqrt(n_E)
+
+if __name__ == "__main__":
+    test_line_emission()
