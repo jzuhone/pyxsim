@@ -22,7 +22,6 @@ http://adsabs.harvard.edu/abs/2013MNRAS.428.1395B
 # The full license is in the file COPYING.txt, distributed with this software.
 #-----------------------------------------------------------------------------
 
-from six import string_types
 import numpy as np
 from yt.funcs import get_pbar
 from yt.units.yt_array import YTQuantity
@@ -216,6 +215,7 @@ class ThermalSourceModel(SourceModel):
 
             ei = start_e
             for cn, Z in zip(number_of_photons[ibegin:iend], metalZ[ibegin:iend]):
+                self.pbar.update()
                 if cn == 0:
                     continue
                 # The rather verbose form of the few next statements is a
@@ -239,7 +239,6 @@ class ThermalSourceModel(SourceModel):
                     eidxs = self.prng.choice(nchan, size=cn, p=tot_spec)
                     cell_e = emid[eidxs]
                 energies[ei:ei+cn] = cell_e
-                self.pbar.update()
                 ei += cn
 
             start_e = end_e
