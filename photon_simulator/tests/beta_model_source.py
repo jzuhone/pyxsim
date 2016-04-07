@@ -19,12 +19,10 @@ Z = 0.3
 r_s = 0.350 # Mpc
 rho_s = 9.0e-26 # g/cm**3
 
-prng = RandomState(24)
-
 class BetaModelSource(object):
     def __init__(self):
 
-        self.prng = prng
+        self.prng = RandomState(54)
         self.kT = kT
         self.Z = Z
 
@@ -64,7 +62,7 @@ class BetaModelSource(object):
 class ParticleBetaModelSource(object):
     def __init__(self):
 
-        self.prng = prng
+        self.prng = RandomState(24)
         self.kT = kT
         self.Z = Z
 
