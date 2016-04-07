@@ -281,7 +281,7 @@ class PowerLawSourceModel(SourceModel):
         are not given, they are assumed to be in keV.
     norm_field : string or (ftype, fname) tuple
         The field which serves as the normalization for the power law. Must be in units
-        of counts/s/cm**3/keV.
+        of counts/s/keV.
     index : float, string, or (ftype, fname) tuple
         The power-law index of the spectrum. Either a float for a single power law or
         the name of a field that corresponds to the power law.
@@ -322,9 +322,9 @@ class PowerLawSourceModel(SourceModel):
             index = chunk[self.index].v
 
         norm_fac = (self.emax**(1.-index)-self.emin**(1.-index)).v
-        norm = norm_fac*chunk[self.norm_field]*chunk["cell_volume"].in_cgs().v*self.e0.v**index/(1.-index)
+        norm = norm_fac*chunk[self.norm_field].v*self.e0.v**index/(1.-index)
         norm *= self.spectral_norm
-        norm = np.modf(norm.v)
+        norm = np.modf(norm)
 
         u = self.prng.uniform(size=num_cells)
         number_of_photons = np.uint64(norm[1]) + np.uint64(norm[0] >= u)
@@ -360,8 +360,8 @@ class LineEmissionSourceModel(SourceModel):
         The location of the emission line in energy in the rest frame of the
         object. If units are not given, they are assumed to be in keV.
     amplitude_field : string or (ftype, fname) tuple
-        The field which serves as the normalization for the linej. Must be in
-        counts/s/cm**3.
+        The field which serves as the normalization for the line. Must be in
+        counts/s.
     sigma : float, (value, unit) tuple, YTQuantity, or field name, optional
         The standard intrinsic deviation of the emission line (not from Doppler
         broadening, which is handled in the projection step). Units of
@@ -408,7 +408,7 @@ class LineEmissionSourceModel(SourceModel):
 
     def __call__(self, chunk):
         num_cells = len(chunk["x"])
-        F = chunk[self.amplitude_field]*chunk["cell_volume"]*self.spectral_norm
+        F = chunk[self.amplitude_field]*self.spectral_norm
         norm = np.modf(F.in_cgs().v)
         u = self.prng.uniform(size=num_cells)
         number_of_photons = np.uint64(norm[1]) + np.uint64(norm[0] >= u)

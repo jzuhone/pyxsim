@@ -42,8 +42,8 @@ def test_power_law():
     ds = bms.ds
 
     def _hard_emission(field, data):
-        return YTQuantity(1.0e-19, "s**-1*keV**-1")*data["density"]/mp
-    ds.add_field(("gas","hard_emission"), function=_hard_emission, units="keV**-1*s**-1*cm**-3")
+        return YTQuantity(1.0e-19, "s**-1*keV**-1")*data["density"]*data["cell_volume"]/mp
+    ds.add_field(("gas","hard_emission"), function=_hard_emission, units="keV**-1*s**-1")
 
     nH_sim = 0.02
     index_sim = 1.1
@@ -62,7 +62,7 @@ def test_power_law():
 
     D_A = photons.parameters["FiducialAngularDiameterDistance"]
     dist_fac = 1.0/(4.*np.pi*D_A*D_A*(1.+redshift)**2).in_cgs()
-    norm_sim = float((sphere["hard_emission"]*sphere["cell_volume"].in_cgs()).sum()*dist_fac.in_cgs())
+    norm_sim = float((sphere["hard_emission"]).sum()*dist_fac.in_cgs())
 
     events = photons.project_photons("z", responses=[arf,rmf],
                                      absorb_model=abs_model,
@@ -95,8 +95,8 @@ def test_power_law():
     dnorm = m.zpowerlw.norm.sigma
     dindex = m.zpowerlw.PhoIndex.sigma
 
-    print(norm, norm_sim, dnorm)
-    print(index, index_sim, dindex)
+    assert np.abs(index-index_sim) < 1.645*dindex
+    assert np.abs(norm-norm_sim) < 1.645*dnorm
 
     xspec.AllModels.clear()
     xspec.AllData.clear()
