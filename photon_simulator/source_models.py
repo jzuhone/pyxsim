@@ -103,6 +103,7 @@ class ThermalSourceModel(SourceModel):
         if self.emission_measure_field is None:
             found_dfield = [fd for fd in particle_dens_fields if fd in data_source.ds.field_list]
             if len(found_dfield) > 0:
+                ptype = found_dfield[0][0]
                 def _emission_measure(field, data):
                     nenh = data[found_dfield[0]]*data['particle_mass']
                     nenh /= mp*mp
@@ -117,16 +118,16 @@ class ThermalSourceModel(SourceModel):
                     else:
                         nenh *= 0.5*(1.+X_H)*X_H
                     return nenh
-                data_source.ds.add_field(('io', 'emission_measure'),
+                data_source.ds.add_field((ptype, 'emission_measure'),
                                          function=_emission_measure,
                                          particle_type=True,
                                          units="cm**-3")
-                self.emission_measure_field = ('io', 'emission_measure')
+                self.emission_measure_field = (ptype, 'emission_measure')
             else:
                 self.emission_measure_field = ('gas', 'emission_measure')
         mylog.info("Using emission measure field '(%s, %s)'." % self.emission_measure_field)
         if self.temperature_field is None:
-            found_tfield = [fd for fd in particle_temp_fields if fd in data_source.ds.field_list]
+            found_tfield = [fd for fd in particle_temp_fields if fd in data_source.ds.derived_field_list]
             if len(found_tfield) > 0:
                 self.temperature_field = found_tfield[0]
             else:
