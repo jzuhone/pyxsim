@@ -10,7 +10,12 @@ Contents:
 
 .. toctree::
    :maxdepth: 2
-
+   
+   installing
+   source_models   
+   generating_events
+   generating_photons
+   api/photon_simulator
 
 
 Indices and tables

@@ -4,3 +4,4 @@ syntax: glob
 *.pyc
 photon_simulator.egg-info
 utils.c
+doc/build
