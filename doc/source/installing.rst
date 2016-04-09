@@ -54,7 +54,7 @@ Using PyXspec for Spectral Models
 +++++++++++++++++++++++++++++++++
 
 For this to work, XSPEC and PyXspec must be compiled with the same Python distribution that 
-``photon_simulator`` and its dependencies are in. 
+``photon_simulator`` and its dependencies are in. Currently, PyXspec only works with Python 2.7. 
 
 Issues on Mac OS X
 ==================

@@ -491,10 +491,10 @@ class PhotonList(object):
 
     def project_photons(self, normal, area_new=None, exp_time_new=None,
                         redshift_new=None, dist_new=None,
-                        absorb_model=None, psf_sigma=None,
-                        sky_center=None, responses=None,
-                        convolve_energies=False, no_shifting=False,
-                        north_vector=None, prng=np.random):
+                        absorb_model=None, sky_center=None,
+                        responses=None, convolve_energies=False, 
+                        no_shifting=False, north_vector=None, 
+                        prng=np.random):
         r"""
         Projects photons onto an image plane given a line of sight.
 
@@ -520,9 +520,6 @@ class PhotonList(object):
             cosmology. If units are not specified, it is assumed to be in Mpc.
         absorb_model : 'yt.analysis_modules.photon_simulator.PhotonModel`, optional
             A model for galactic absorption.
-        psf_sigma : float, optional
-            Quick-and-dirty psf simulation using Gaussian smoothing with
-            standard deviation *psf_sigma* in degrees. 
         sky_center : array_like, optional
             Center RA, Dec of the events in degrees.
         responses : list of strings, optional
@@ -560,8 +557,6 @@ class PhotonList(object):
 
         dx = self.photons["dx"].d
         nx = self.parameters["Dimension"]
-        if psf_sigma is not None:
-             psf_sigma = parse_value(psf_sigma, "degree")
 
         if not isinstance(normal, string_types):
             L = np.array(normal)
@@ -751,10 +746,6 @@ class PhotonList(object):
 
         events = comm.par_combine_object(events, datatype="dict", op="cat")
 
-        if psf_sigma is not None:
-            events["xpix"] += prng.normal(sigma=psf_sigma/dtheta)
-            events["ypix"] += prng.normal(sigma=psf_sigma/dtheta)
-
         num_events = len(events["xpix"])
 
         if comm.rank == 0:
@@ -763,8 +754,7 @@ class PhotonList(object):
         if "RMF" in parameters and convolve_energies:
             events, info = self._convolve_with_rmf(parameters["RMF"], events, 
                                                    mat_key, prng)
-            for k, v in info.items():
-                parameters[k] = v
+            parameters.update(info)
 
         if exp_time_new is None:
             parameters["ExposureTime"] = self.parameters["FiducialExposureTime"]
@@ -868,126 +858,6 @@ class PhotonList(object):
 
         return events, info
 
-
-class PointSourcePhotonList(PhotonList):
-    r"""
-    A model for a set of point sources.
-
-    Parameters
-    ----------
-    redshift : float
-        The cosmological redshift for the photons.
-    area : float, (value, unit) tuple, or YTQuantity
-        The collecting area to determine the number of photons. If units
-        are not specified, it is assumed to be in cm**2.
-    exp_time : float, (value, unit) tuple, or YTQuantity
-        The exposure time to determine the number of photons. If units are
-        not specified, it is assumed to be in seconds.
-    positions : YTArray with units of kpc, shape 3xN
-        The positions of the point sources, in units of kpc, where N is the
-        number of point sources
-    velocities : YTArray with units of km/s, shape 3xN
-        The velocities of the point sources, in units of km/s, where N is the
-        number of point sources
-    energy_bins : YTArray with units of keV, shape M+1
-        The edges of the energy bins for the spectra, where M is the number of
-        bins
-    spectra : list (size N) of YTArrays with units of photons/s/cm^2, each with shape M
-        The spectra for the point sources, where M is the number of bins and N is
-        the number of point sources
-    center : YTArray (units of kpc), or NumPy array, optional
-        The reference point for the point sources. If not set, the mean position of
-        the point sources will be used.
-    dist : float, YTQuantity, or (value, unit) tuple
-        The distance to the center of the point sources. If this is set, the cosmology
-        will be ignored. Should only be used for nearby sources. If units are not
-        specified, it is assumed to be in Mpc. 
-    cosmology : `yt.utilities.cosmology.Cosmology`, optional
-        Cosmological information. If not supplied, \LambdaCDM with the default yt
-        parameters is assumed.
-    method : string, optional
-        The method used to generate the photon energies from the spectrum:
-        "invert_cdf": Invert the cumulative distribution function of the spectrum.
-        "accept_reject": Acceptance-rejection method using the spectrum. 
-        The first method should be sufficient for most cases. 
-    prng : NumPy `RandomState` object or numpy.random
-        A pseudo-random number generator. Typically will only be specified
-        if you have a reason to generate the same set of random numbers, such as for a
-        test. Default is the numpy.random module.
-    """
-    def __init__(self, redshift, area, exp_time, positions, velocities, energy_bins,
-                 spectra, center=None, dist=None, cosmology=None, method="invert_cdf",
-                 prng=np.random):
-
-        spectra = ensure_list(spectra)
-
-        if positions.shape == (3,):
-            positions = positions.reshape(3,1)
-            velocities = velocities.reshape(3,1)
-
-        num_sources = positions.shape[1]
-
-        if cosmology is None:
-            cosmo = Cosmology()
-        else:
-            cosmo = cosmology
-
-        if center is None:
-            center = positions.mean(axis=1)
-
-        mylog.info("Cosmology: h = %g, omega_matter = %g, omega_lambda = %g" %
-                   (cosmo.hubble_constant, cosmo.omega_matter, cosmo.omega_lambda))
-
-        if dist is None:
-            D_A = cosmo.angular_diameter_distance(0.0,redshift).in_units("Mpc")
-        else:
-            D_A = parse_value(dist, "Mpc")
-            redshift = 0.0
-
-        parameters = dict(FiducialExposureTime=parse_value(exp_time, "s"),
-                          FiducialArea=parse_value(area, "cm**2"),
-                          FiducialRedshift=redshift,
-                          FiducialAngularDiameterDistance=D_A,
-                          HubbleConstant=cosmo.hubble_constant,
-                          OmegaMatter=cosmo.omega_matter,
-                          OmegaLambda=cosmo.omega_lambda)
-
-        nchan = energy_bins.shape[0]
-        number_of_photons = np.zeros(num_sources, dtype="uint64")
-
-        e = []
-
-        for i, spectrum in enumerate(spectra):
-            flux = spectrum.sum()
-            num_photons = np.uint64(exp_time*area*flux)
-            if method == "invert_cdf":
-                cumspec = np.cumsum(spectrum)
-                cumspec = np.insert(cumspec, 0, 0.0)
-                cumspec /= cumspec[-1]
-                randvec = prng.uniform(size=num_photons)
-                randvec.sort()
-                energies = np.interp(randvec, cumspec, energy_bins)
-            elif method == "accept_reject":
-                nspec = spectrum / flux
-                eidxs = prng.choice(nchan, size=num_photons, p=nspec)
-                energies = energy_bins[eidxs]
-            number_of_photons[i] = num_photons
-            e.append(energies)
-
-        photons = {}
-        photons["x"] = (positions[0,:]-center[0]).in_units("kpc")
-        photons["y"] = (positions[1,:]-center[1]).in_units("kpc")
-        photons["z"] = (positions[2,:]-center[2]).in_units("kpc")
-        photons["vx"] = velocities[0,:].in_units("km/s")
-        photons["vy"] = velocities[1,:].in_units("km/s")
-        photons["vz"] = velocities[2,:].in_units("km/s")
-        photons["dx"] = YTArray(np.zeros(num_sources), "kpc")
-        photons["Energy"] = YTArray(np.concatenate(e), "keV")
-        photons["NumberOfPhotons"] = number_of_photons
-
-        super(PointSourcePhotonList, self).__init__(photons, parameters, cosmo)
-
-
 class EventList(object):
 
     def __init__(self, events, parameters):
@@ -1056,6 +926,15 @@ class EventList(object):
         new_events = {}
         for k, v in self.items():
             new_events[k] = v[idxs]
+        return EventList(new_events, self.parameters)
+
+    def convolve_with_psf(self, psf, prng=np.random):
+        dtheta = self.parameters['dtheta']
+        new_events = self.events.deepcopy()
+        if isinstance(psf, float):
+            psf = lambda n: prng.normal(scale=psf/dtheta, size=n)
+        new_events["xpix"] += psf(self.num_events)
+        new_events["ypix"] += psf(self.num_events)
         return EventList(new_events, self.parameters)
 
     @classmethod
