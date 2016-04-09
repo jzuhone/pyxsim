@@ -14,13 +14,13 @@ photon simulator.
 import numpy as np
 import os
 import h5py
-import astropy.io.fits as pyfits
 
 from yt.funcs import mylog
 from yt.units.yt_array import YTArray, YTQuantity
 from yt.utilities.physical_constants import hcgs, clight
 from yt.utilities.physical_ratios import erg_per_keV, amu_grams
-from yt.analysis_modules.photon_simulator.utils import broaden_lines
+from photon_simulator.utils import broaden_lines
+from yt.utilities.on_demand_imports import _astropy
 
 hc = (hcgs*clight).in_units("keV*angstrom").v
 # NOTE: XSPEC has hc = 12.39854 keV*A, so there may be slight differences in
@@ -83,6 +83,10 @@ class XSpecThermalModel(SpectralModel):
         """
         import xspec
         xspec.Xset.chatter = 0
+        if self.thermal_broad:
+            xspec.Xset.addModelString("APECTHERMAL","yes")
+        for k,v in self.settings.items():
+            xspec.Xset.addModelString(k,v)
         xspec.AllModels.setEnergies("%f %f %d lin" %
                                     (self.emin.value, self.emax.value, self.nchan))
         self.model = xspec.Model(self.model_name)
@@ -93,10 +97,6 @@ class XSpecThermalModel(SpectralModel):
             self.norm = 1.0e-14
         self.thermal_comp.norm = 1.0
         self.thermal_comp.Redshift = zobs
-        if self.thermal_broad:
-            xspec.Xset.addModelString("APECTHERMAL","yes")
-        for k,v in self.settings.items():
-            xspec.Xset.addModelString(k,v)
 
     def get_spectrum(self, kT):
         """
@@ -232,12 +232,12 @@ class TableApecModel(SpectralModel):
         Prepare the thermal model for execution.
         """
         try:
-            self.line_handle = pyfits.open(self.linefile)
+            self.line_handle = _astropy.pyfits.open(self.linefile)
         except IOError:
             mylog.error("LINE file %s does not exist" % self.linefile)
             raise IOError("LINE file %s does not exist" % self.linefile)
         try:
-            self.coco_handle = pyfits.open(self.cocofile)
+            self.coco_handle = _astropy.pyfits.open(self.cocofile)
         except IOError:
             mylog.error("COCO file %s does not exist" % self.cocofile)
             raise IOError("COCO file %s does not exist" % self.cocofile)

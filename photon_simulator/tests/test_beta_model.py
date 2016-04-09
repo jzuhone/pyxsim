@@ -14,7 +14,7 @@ from photon_simulator import \
     XSpecThermalModel, XSpecAbsorbModel, \
     ThermalSourceModel, PhotonList
 from photon_simulator.tests.beta_model_source import \
-    BetaModelSource
+    BetaModelSource, ParticleBetaModelSource
 from yt.config import ytcfg
 from yt.testing import requires_file, requires_module
 import numpy as np
@@ -38,6 +38,17 @@ rmf = os.path.join(xray_data_dir,"ah_sxs_5ev_basefilt_20100712.rmf")
 @requires_file(arf)
 @requires_file(rmf)
 def test_beta_model():
+    bms = BetaModelSource()
+    do_beta_model(bms, "velocity_z", "emission_measure")
+
+@requires_module("xspec")
+@requires_file(arf)
+@requires_file(rmf)
+def test_particle_beta_model():
+    bms = ParticleBetaModelSource()
+    do_beta_model(bms, "particle_velocity_z", ("io","emission_measure"))
+
+def do_beta_model(source, v_field, em_field):
     import xspec
 
     xspec.Fit.statMethod = "cstat"
@@ -51,11 +62,7 @@ def test_beta_model():
     curdir = os.getcwd()
     os.chdir(tmpdir)
 
-    bms = BetaModelSource()
-
-    ds = bms.ds
-
-    X_H = 0.76
+    ds = source.ds
 
     A = 3000.
     exp_time = 1.0e5
@@ -67,28 +74,27 @@ def test_beta_model():
     abs_model = XSpecAbsorbModel("TBabs", nH_sim)
 
     sphere = ds.sphere("c", (0.5, "Mpc"))
-    sphere.set_field_parameter("X_H", X_H)
 
-    mu_sim = -bms.v_shift / 1.0e5
-    sigma_sim = bms.v_width / 1.0e5
+    kT_sim = source.kT
+    Z_sim = source.Z
 
-    kT_sim = bms.kT
-    Z_sim = bms.Z
-
-    thermal_model = ThermalSourceModel(apec_model, Zmet=Z_sim, X_H=X_H,
-                                       prng=bms.prng)
+    thermal_model = ThermalSourceModel(apec_model, Zmet=Z_sim, prng=source.prng)
     photons = PhotonList.from_data_source(sphere, redshift, A, exp_time,
                                           thermal_model)
 
     D_A = photons.parameters["FiducialAngularDiameterDistance"]
 
-    norm_sim = sphere.quantities.total_quantity("emission_measure")
+    norm_sim = sphere.quantities.total_quantity(em_field)
     norm_sim *= 1.0e-14/(4*np.pi*D_A*D_A*(1.+redshift)*(1.+redshift))
     norm_sim = float(norm_sim.in_cgs())
 
+    v1, v2 = sphere.quantities.weighted_variance(v_field, em_field)
+    sigma_sim = float(v1.in_units("km/s"))
+    mu_sim = -float(v2.in_units("km/s"))
+
     events = photons.project_photons("z", responses=[arf,rmf],
                                      absorb_model=abs_model,
-                                     convolve_energies=True, prng=bms.prng)
+                                     convolve_energies=True, prng=source.prng)
     events.write_spectrum("beta_model_evt.pi", clobber=True)
 
     s = xspec.Spectrum("beta_model_evt.pi")
@@ -124,14 +130,18 @@ def test_beta_model():
     dsigma = m.bapec.Velocity.sigma
     dnorm = m.bapec.norm.sigma
 
-    assert np.abs(mu-mu_sim) < dmu
-    assert np.abs(kT-kT_sim) < dkT
-    assert np.abs(Z-Z_sim) < dZ
-    assert np.abs(sigma-sigma_sim) < dsigma
-    assert np.abs(norm-norm_sim) < dnorm
+    assert np.abs(mu-mu_sim) < 1.645*dmu
+    assert np.abs(kT-kT_sim) < 1.645*dkT
+    assert np.abs(Z-Z_sim) < 1.645*dZ
+    assert np.abs(sigma-sigma_sim) < 1.645*dsigma
+    assert np.abs(norm-norm_sim) < 1.645*dnorm
 
     xspec.AllModels.clear()
     xspec.AllData.clear()
 
     os.chdir(curdir)
     shutil.rmtree(tmpdir)
+
+if __name__ == "__main__":
+    test_beta_model()
+    test_particle_beta_model()

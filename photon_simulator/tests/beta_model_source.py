@@ -1,28 +1,30 @@
 import numpy as np
 from yt.utilities.physical_ratios import \
-    K_per_keV, mass_hydrogen_grams
-from yt.frontends.stream.api import load_uniform_grid
+    K_per_keV, mass_hydrogen_grams, cm_per_mpc
+from yt.frontends.stream.api import \
+    load_uniform_grid, load_particles
 from numpy.random import RandomState
 
-my_prng = RandomState(24)
+# Gas parameters
+R = 1.0 # Mpc
+r_c = 0.05 # Mpc
+rho_c = 0.04*mass_hydrogen_grams # g/cm**3
+beta = 2./3.
+kT = 6.0 # keV
+v_shift = 4.0e7 # cm/s
+v_width = 4.0e7 # cm/s
+Z = 0.3
+
+# Dark matter parameters
+r_s = 0.350 # Mpc
+rho_s = 9.0e-26 # g/cm**3
 
 class BetaModelSource(object):
     def __init__(self):
 
-        self.prng = RandomState(24)
-
-        # Gas parameters
-        R = 1.0 # Mpc
-        r_c = 0.05 # Mpc
-        rho_c = 0.04*mass_hydrogen_grams # g/cm**3
-        beta = 1.
-        self.kT = 6.0 # keV
-        self.v_shift = 4.0e7 # cm/s
-        self.v_width = 4.0e7 # cm/s
-
-        # Dark matter parameters
-        r_s = 0.350 # Mpc
-        rho_s = 9.0e-26 # g/cm**3
+        self.prng = RandomState(54)
+        self.kT = kT
+        self.Z = Z
 
         nx = 128
         ddims = (nx,nx,nx)
@@ -42,7 +44,7 @@ class BetaModelSource(object):
         pden[r > R] = 0.0
         temp = self.kT*K_per_keV*np.ones(ddims)
         bbox = np.array([[-0.5,0.5],[-0.5,0.5],[-0.5,0.5]])
-        velz = self.prng.normal(loc=self.v_shift,scale=self.v_width,size=ddims)
+        velz = self.prng.normal(loc=v_shift,scale=v_width,size=ddims)
         dm_disp = 1000.*np.ones(ddims) # km/s
 
         data = {}
@@ -57,3 +59,45 @@ class BetaModelSource(object):
         self.ds = load_uniform_grid(data, ddims, length_unit=(2*R, "Mpc"),
                                     nprocs=64, bbox=bbox)
 
+class ParticleBetaModelSource(object):
+    def __init__(self):
+
+        self.prng = RandomState(24)
+        self.kT = kT
+        self.Z = Z
+
+        num_particles = 1000000
+
+        rr = np.linspace(0.0, R, 10000)
+        # This formula assumes beta = 2/3
+        M_r = 4*np.pi*rho_c*r_c*r_c*(rr-r_c*np.arctan(rr/r_c))
+        M_r *= cm_per_mpc**3
+
+        pmass = M_r[-1]*np.ones(num_particles)/num_particles
+        M_r /= M_r[-1]
+        u = self.prng.uniform(size=num_particles)
+
+        radius = np.interp(u, M_r, rr, left=0.0, right=1.0)
+        dens = rho_c*(1.+(radius/r_c)**2)**(-1.5*beta)
+        radius /= (2.*R)
+        theta = np.arccos(self.prng.uniform(low=-1.,high=1.,size=num_particles))
+        phi = 2.*np.pi*self.prng.uniform(size=num_particles)
+
+        temp = self.kT*K_per_keV*np.ones(num_particles)
+        velz = self.prng.normal(loc=v_shift,scale=v_width,size=num_particles)
+
+        bbox = np.array([[-0.5,0.5],[-0.5,0.5],[-0.5,0.5]])
+
+        data = {}
+        data["io", "density"] = (dens, "g/cm**3")
+        data["io", "temperature"] = (temp, "K")
+        data["io", "particle_position_x"] = (radius*np.sin(theta)*np.cos(phi), "code_length")
+        data["io", "particle_position_y"] = (radius*np.sin(theta)*np.sin(phi), "code_length")
+        data["io", "particle_position_z"] = (radius*np.cos(theta), "code_length")
+        data["io", "particle_velocity_x"] = (np.zeros(num_particles), "cm/s")
+        data["io", "particle_velocity_y"] = (np.zeros(num_particles), "cm/s")
+        data["io", "particle_velocity_z"] = (velz, "cm/s")
+        data["io", "particle_mass"] = (pmass, "g")
+        data["io", "smoothing_length"] = (0.02/(2.*R)*np.ones(num_particles), "code_length")
+
+        self.ds = load_particles(data, length_unit=(2*R, "Mpc"), bbox=bbox)

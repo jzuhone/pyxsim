@@ -22,9 +22,8 @@ http://adsabs.harvard.edu/abs/2013MNRAS.428.1395B
 # The full license is in the file COPYING.txt, distributed with this software.
 #-----------------------------------------------------------------------------
 
-from six import string_types
 import numpy as np
-from yt.funcs import get_pbar
+from yt.funcs import get_pbar, mylog
 from yt.units.yt_array import YTQuantity
 from yt.utilities.physical_constants import mp, clight, kboltz
 from yt.analysis_modules.photon_simulator.photon_simulator import \
@@ -46,6 +45,11 @@ class SourceModel(object):
 
     def cleanup_model(self):
         self.spectral_norm = None
+
+particle_dens_fields = [("io", "density"),
+                        ("PartType0", "Density")]
+particle_temp_fields = [("io", "temperature"),
+                        ("PartType0", "Temperature")]
 
 class ThermalSourceModel(SourceModel):
     r"""
@@ -75,8 +79,7 @@ class ThermalSourceModel(SourceModel):
     Examples
     --------
     >>> mekal_model = XSpecThermalModel("mekal", 0.05, 50.0, 1000)
-    >>> source_model = ThermalSourceModel(mekal_model, X_H=0.76,
-    ...                                   Zmet="metallicity")
+    >>> source_model = ThermalSourceModel(mekal_model, Zmet="metallicity")
     """
     def __init__(self, spectral_model, temperature_field=None,
                  emission_measure_field=None, kT_min=0.0808,
@@ -98,9 +101,11 @@ class ThermalSourceModel(SourceModel):
 
     def setup_model(self, data_source, redshift, spectral_norm):
         if self.emission_measure_field is None:
-            if ('PartType0', 'Density') in data_source.ds.field_list:
+            found_dfield = [fd for fd in particle_dens_fields if fd in data_source.ds.field_list]
+            if len(found_dfield) > 0:
+                ptype = found_dfield[0][0]
                 def _emission_measure(field, data):
-                    nenh = data['PartType0','Density']*data['PartType0','particle_mass']
+                    nenh = data[found_dfield[0]]*data['particle_mass']
                     nenh /= mp*mp
                     nenh.convert_to_units("cm**-3")
                     if data.has_field_parameter("X_H"):
@@ -113,18 +118,21 @@ class ThermalSourceModel(SourceModel):
                     else:
                         nenh *= 0.5*(1.+X_H)*X_H
                     return nenh
-                data_source.ds.add_field(('PartType0', 'EmissionMeasure'),
+                data_source.ds.add_field((ptype, 'emission_measure'),
                                          function=_emission_measure,
                                          particle_type=True,
                                          units="cm**-3")
-                self.emission_measure_field = ('PartType0', 'EmissionMeasure')
+                self.emission_measure_field = (ptype, 'emission_measure')
             else:
                 self.emission_measure_field = ('gas', 'emission_measure')
+        mylog.info("Using emission measure field '(%s, %s)'." % self.emission_measure_field)
         if self.temperature_field is None:
-            if ('PartType0', 'Temperature') in data_source.ds.derived_field_list:
-                self.temperature_field = ('PartType0', 'Temperature')
+            found_tfield = [fd for fd in particle_temp_fields if fd in data_source.ds.derived_field_list]
+            if len(found_tfield) > 0:
+                self.temperature_field = found_tfield[0]
             else:
                 self.temperature_field = ('gas', 'temperature')
+        mylog.info("Using temperature field '(%s, %s)'." % self.temperature_field)
         self.spectral_model.prepare_spectrum(redshift)
         self.spectral_norm = spectral_norm
         self.kT_bins = np.linspace(self.kT_min, self.kT_max, num=self.n_kT+1)
@@ -204,10 +212,6 @@ class ThermalSourceModel(SourceModel):
 
             end_e += int(cell_n.sum())
 
-            if end_e > num_photons_max:
-                num_photons_max *= 2
-                energies.resize(num_photons_max, refcheck=False)
-
             if self.method == "invert_cdf":
                 cumspec_c = np.cumsum(cspec.d)
                 cumspec_m = np.cumsum(mspec.d)
@@ -216,6 +220,7 @@ class ThermalSourceModel(SourceModel):
 
             ei = start_e
             for cn, Z in zip(number_of_photons[ibegin:iend], metalZ[ibegin:iend]):
+                self.pbar.update()
                 if cn == 0:
                     continue
                 # The rather verbose form of the few next statements is a
@@ -238,8 +243,10 @@ class ThermalSourceModel(SourceModel):
                     tot_spec *= norm_factor
                     eidxs = self.prng.choice(nchan, size=cn, p=tot_spec)
                     cell_e = emid[eidxs]
+                if ei+cn > num_photons_max:
+                    num_photons_max *= 2
+                    energies.resize(num_photons_max, refcheck=False)
                 energies[ei:ei+cn] = cell_e
-                self.pbar.update()
                 ei += cn
 
             start_e = end_e
@@ -274,7 +281,7 @@ class PowerLawSourceModel(SourceModel):
         are not given, they are assumed to be in keV.
     norm_field : string or (ftype, fname) tuple
         The field which serves as the normalization for the power law. Must be in units
-        of counts/s/cm**3/keV.
+        of counts/s/keV.
     index : float, string, or (ftype, fname) tuple
         The power-law index of the spectrum. Either a float for a single power law or
         the name of a field that corresponds to the power law.
@@ -307,26 +314,30 @@ class PowerLawSourceModel(SourceModel):
 
     def __call__(self, chunk):
 
+        num_cells = len(chunk[self.norm_field])
+
         if isinstance(self.index, float):
-            index = self.index
+            index = self.index*np.ones(num_cells)
         else:
             index = chunk[self.index].v
-        norm_fac = (self.emax**(1.-index)-self.emin**(1.-index))*self.spectral_norm
-        num_cells = len(norm_fac)
 
-        norm = norm_fac*chunk[self.norm_field]*self.e0**index/(1.-index)
-        norm = np.modf(norm.in_cgs().v)
+        norm_fac = (self.emax**(1.-index)-self.emin**(1.-index)).v
+        norm = norm_fac*chunk[self.norm_field].v*self.e0.v**index/(1.-index)
+        norm *= self.spectral_norm
+        norm = np.modf(norm)
+
         u = self.prng.uniform(size=num_cells)
         number_of_photons = np.uint64(norm[1]) + np.uint64(norm[0] >= u)
 
         energies = np.zeros(number_of_photons.sum())
 
         start_e = 0
+        end_e = 0
         for i in range(num_cells):
             if number_of_photons[i] > 0:
                 end_e = start_e+number_of_photons[i]
                 u = self.prng.uniform(size=number_of_photons[i])
-                e = self.emin**(1.-index[i]) + u*norm[i]
+                e = self.emin.v**(1.-index[i]) + u*norm_fac[i]
                 e **= 1./(1.-index[i])
                 energies[start_e:end_e] = e / (1.+self.redshift)
                 start_e = end_e
@@ -349,8 +360,8 @@ class LineEmissionSourceModel(SourceModel):
         The location of the emission line in energy in the rest frame of the
         object. If units are not given, they are assumed to be in keV.
     amplitude_field : string or (ftype, fname) tuple
-        The field which serves as the normalization for the linej. Must be in
-        counts/s/cm**3.
+        The field which serves as the normalization for the line. Must be in
+        counts/s.
     sigma : float, (value, unit) tuple, YTQuantity, or field name, optional
         The standard intrinsic deviation of the emission line (not from Doppler
         broadening, which is handled in the projection step). Units of
@@ -397,7 +408,7 @@ class LineEmissionSourceModel(SourceModel):
 
     def __call__(self, chunk):
         num_cells = len(chunk["x"])
-        F = chunk[self.amplitude_field]*chunk["cell_volume"]*self.spectral_norm
+        F = chunk[self.amplitude_field]*self.spectral_norm
         norm = np.modf(F.in_cgs().v)
         u = self.prng.uniform(size=num_cells)
         number_of_photons = np.uint64(norm[1]) + np.uint64(norm[0] >= u)
@@ -405,15 +416,16 @@ class LineEmissionSourceModel(SourceModel):
         energies = self.location*np.ones(number_of_photons.sum())
 
         if isinstance(self.sigma, YTQuantity):
-            dE = self.prng.normal(loc=0.0, scale=self.sigma.v,
+            dE = self.prng.normal(loc=0.0, scale=float(self.sigma),
                                   size=number_of_photons.sum())*self.location.uq
             energies += dE
         elif self.sigma is not None:
+            sigma = (chunk[self.sigma]*self.location/clight).in_units("keV")
             start_e = 0
             for i in range(num_cells):
                 if number_of_photons[i] > 0:
                     end_e = start_e+number_of_photons[i]
-                    dE = self.prng.normal(loc=0.0, scale=chunk[self.sigma][i].v,
+                    dE = self.prng.normal(loc=0.0, scale=float(sigma[i]),
                                           size=number_of_photons[i])*self.location.uq
                     energies[start_e:end_e] += dE
                     start_e = end_e
