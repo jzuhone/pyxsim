@@ -4,7 +4,7 @@ from setuptools.extension import Extension
 import numpy as np
 
 cython_extensions = [
-    Extension("photon_simulator.utils",
+    Extension("photon_simulator.cutils",
               sources=["photon_simulator/cutils.pyx"],
               language="c", libraries=["m"],
               include_dirs=[np.get_include()])]
