@@ -36,7 +36,7 @@ def test_line_emission():
 
     D_A = photons.parameters["FiducialAngularDiameterDistance"]
     dist_fac = 1.0/(4.*np.pi*D_A*D_A*(1.+redshift)**2)
-    dm_E = (sphere["dm_emission"]*sphere["cell_volume"]).sum()
+    dm_E = (sphere["dm_emission"]).sum()
 
     E = uconcatenate(photons["Energy"])
     n_E = len(E)
