@@ -113,7 +113,7 @@ class XSpecThermalModel(SpectralModel):
         cosmic_spec *= self.norm
         metal_spec *= self.norm
         return YTArray(cosmic_spec, "cm**3/s"), YTArray(metal_spec, "cm**3/s")
-    
+
     def cleanup_spectrum(self):
         del self.thermal_comp
         del self.model

@@ -1,8 +1,8 @@
 Installing ``photon_simulator``
--------------------------------
+===============================
 
 Dependencies
-++++++++++++
+------------
 
 ``photon_simulator`` is compatible with Python 2.7 or 3.5, and requires the following Python packages:
 
@@ -18,7 +18,7 @@ Dependencies
 - `PyXspec <http://heasarc.gsfc.nasa.gov/xanadu/xspec/python/html/>`_ (for generating certain types of spectral models)
 
 Installing
-++++++++++
+----------
 
 ``photon_simulator`` can be installed using pip. pip will attempt to download the dependencies and 
 install them, if they are not already installed in your Python distribution. For an easy
@@ -51,13 +51,13 @@ Or, to install to a local directory, use:
 Then make sure your ``PYTHONPATH`` points to this location.
 
 Using PyXspec for Spectral Models
-+++++++++++++++++++++++++++++++++
+---------------------------------
 
 For this to work, XSPEC and PyXspec must be compiled with the same Python distribution that 
 ``photon_simulator`` and its dependencies are in. Currently, PyXspec only works with Python 2.7. 
 
 Issues on Mac OS X
-==================
+++++++++++++++++++
 
 There may be additional issues with compiling and using ``photon_simulator`` and PyXspec on 
 your Mac OS X system. 
