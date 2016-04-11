@@ -297,12 +297,12 @@ class PowerLawSourceModel(SourceModel):
     >>> emax = (100., "keV")
     >>> plaw_model = PowerLawSourceModel(e0, emin, emax, ("gas", "norm"), ("gas", "index"))
     """
-    def __init__(self, e0, emin, emax, norm_field, index, prng=np.random):
+    def __init__(self, e0, emin, emax, norm_field, alpha, prng=np.random):
         self.e0 = parse_value(e0, "keV")
         self.emin = parse_value(emin, "keV")
         self.emax = parse_value(emax, "keV")
         self.norm_field = norm_field
-        self.index = index
+        self.alpha = alpha
         self.prng = prng
         self.spectral_norm = None
         self.pbar = None
@@ -316,13 +316,13 @@ class PowerLawSourceModel(SourceModel):
 
         num_cells = len(chunk[self.norm_field])
 
-        if isinstance(self.index, float):
-            index = self.index*np.ones(num_cells)
+        if isinstance(self.alpha, float):
+            alpha = self.alpha*np.ones(num_cells)
         else:
-            index = chunk[self.index].v
-
-        norm_fac = (self.emax**(1.-index)-self.emin**(1.-index)).v
-        norm = norm_fac*chunk[self.norm_field].v*self.e0.v**index/(1.-index)
+            alpha = chunk[self.alpha].v
+            
+        norm_fac = (self.emax**(1.-alpha)-self.emin**(1.-alpha)).v
+        norm = norm_fac*chunk[self.norm_field].v*self.e0.v**alpha/(1.-alpha)
         norm *= self.spectral_norm
         norm = np.modf(norm)
 
@@ -337,8 +337,8 @@ class PowerLawSourceModel(SourceModel):
             if number_of_photons[i] > 0:
                 end_e = start_e+number_of_photons[i]
                 u = self.prng.uniform(size=number_of_photons[i])
-                e = self.emin.v**(1.-index[i]) + u*norm_fac[i]
-                e **= 1./(1.-index[i])
+                e = self.emin.v**(1.-alpha[i]) + u*norm_fac[i]
+                e **= 1./(1.-alpha[i])
                 energies[start_e:end_e] = e / (1.+self.redshift)
                 start_e = end_e
 
@@ -350,9 +350,9 @@ class PowerLawSourceModel(SourceModel):
         self.redshift = None
         self.spectral_norm = None
 
-class LineEmissionSourceModel(SourceModel):
+class LineSourceModel(SourceModel):
     r"""
-    Initialize a LineEmissionSourceModel from a single line.
+    Initialize a LineSourceModel from a single line.
 
     Parameters
     ----------

@@ -1,5 +1,5 @@
 from photon_simulator import \
-    LineEmissionSourceModel, PhotonList
+    LineSourceModel, PhotonList
 from photon_simulator.tests.beta_model_source import \
     BetaModelSource
 from yt.units.yt_array import YTQuantity, uconcatenate
@@ -29,7 +29,7 @@ def test_line_emission():
 
     sphere = ds.sphere("c", (100.,"kpc"))
 
-    line_model = LineEmissionSourceModel(location, "dm_emission", sigma="dark_matter_dispersion", prng=bms.prng)
+    line_model = LineSourceModel(location, "dm_emission", sigma="dark_matter_dispersion", prng=bms.prng)
 
     photons = PhotonList.from_data_source(sphere, redshift, A, exp_time,
                                           line_model)

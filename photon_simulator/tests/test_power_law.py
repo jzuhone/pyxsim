@@ -46,7 +46,7 @@ def test_power_law():
     ds.add_field(("gas","hard_emission"), function=_hard_emission, units="keV**-1*s**-1")
 
     nH_sim = 0.02
-    index_sim = 1.1
+    alpha_sim = 1.1
     abs_model = XSpecAbsorbModel("TBabs", nH_sim)
 
     A = YTQuantity(2000., "cm**2")
@@ -55,7 +55,7 @@ def test_power_law():
 
     sphere = ds.sphere("c", (100.,"kpc"))
 
-    plaw_model = PowerLawSourceModel(1.0, 0.01, 11.0, "hard_emission", index_sim, prng=bms.prng)
+    plaw_model = PowerLawSourceModel(1.0, 0.01, 11.0, "hard_emission", alpha_sim, prng=bms.prng)
 
     photons = PhotonList.from_data_source(sphere, redshift, A, exp_time,
                                           plaw_model)
@@ -89,13 +89,13 @@ def test_power_law():
     xspec.Fit.nIterations = 100
     xspec.Fit.perform()
 
-    index = m.zpowerlw.PhoIndex.values[0]
+    alpha = m.zpowerlw.PhoIndex.values[0]
     norm = m.zpowerlw.norm.values[0]
 
     dnorm = m.zpowerlw.norm.sigma
-    dindex = m.zpowerlw.PhoIndex.sigma
+    dalpha = m.zpowerlw.PhoIndex.sigma
 
-    assert np.abs(index-index_sim) < 1.645*dindex
+    assert np.abs(alpha-alpha_sim) < 1.645*dalpha
     assert np.abs(norm-norm_sim) < 1.645*dnorm
 
     xspec.AllModels.clear()
