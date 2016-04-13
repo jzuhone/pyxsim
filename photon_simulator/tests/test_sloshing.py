@@ -85,6 +85,7 @@ def test_sloshing():
                                            absorb_model=tbabs_model,
                                            convolve_energies=True, prng=prng)
 
+        events1["xsky"]
         return_events = return_data(events1.events)
 
         tests.append(GenericArrayTest(ds, return_events, args=[a]))

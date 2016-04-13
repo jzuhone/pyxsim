@@ -2,7 +2,7 @@ from photon_simulator import \
     TableApecModel, XSpecThermalModel
 from yt.utilities.answer_testing.framework import \
     GenericArrayTest
-from yt.testing import requires_module
+from yt.testing import requires_module, fake_random_ds
 from yt.config import ytcfg
 
 def setup():
@@ -10,6 +10,7 @@ def setup():
 
 xray_data_dir = ytcfg.get("yt", "xray_data_dir")
 
+ds = fake_random_ds(64)
 @requires_module("xspec")
 @requires_module("astropy")
 def test_apec():
