@@ -366,9 +366,9 @@ class EventList(object):
         flux = np.sum(self["eobs"][idxs].in_units("erg")) / \
                self.parameters["ExposureTime"]/self.parameters["Area"]
 
-        col1 = pyfits.Column(name='ENERGY', format='E', array=self["eobs"].d)
-        col2 = pyfits.Column(name='DEC', format='D', array=self["ysky"].d)
-        col3 = pyfits.Column(name='RA', format='D', array=self["xsky"].d)
+        col1 = pyfits.Column(name='ENERGY', format='E', array=self["eobs"][idxs].d)
+        col2 = pyfits.Column(name='RA', format='D', array=self["xsky"][idxs].d)
+        col3 = pyfits.Column(name='DEC', format='D', array=self["ysky"][idxs].d)
 
         coldefs = pyfits.ColDefs([col1, col2, col3])
 

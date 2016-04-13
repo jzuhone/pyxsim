@@ -320,7 +320,7 @@ class PowerLawSourceModel(SourceModel):
             alpha = self.alpha*np.ones(num_cells)
         else:
             alpha = chunk[self.alpha].v
-            
+
         norm_fac = (self.emax**(1.-alpha)-self.emin**(1.-alpha)).v
         norm = norm_fac*chunk[self.norm_field].v*self.e0.v**alpha/(1.-alpha)
         norm *= self.spectral_norm
