@@ -103,11 +103,9 @@ def test_sloshing():
         if k == "Energy":
             arr1 = uconcatenate(photons1[k])
             arr2 = uconcatenate(photons2[k])
-            arr3 = uconcatenate(photons3[k])
         else:
             arr1 = photons1[k]
             arr2 = photons2[k]
-            arr3 = photons3[k]
         yield assert_array_equal, arr1, arr2
     for k in events1.keys():
         yield assert_array_equal, events1[k], events2[k]
