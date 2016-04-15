@@ -15,6 +15,12 @@
 
 import sys
 import os
+import sphinx_readable_theme
+
+html_theme_path = [sphinx_readable_theme.get_html_theme_path()]
+html_theme = 'readable'
+
+sys.path.insert(0, os.path.abspath('../../photon_simulator'))
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -34,7 +40,11 @@ extensions = [
     'sphinx.ext.intersphinx',
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
+    'numpydoc',
+    'sphinx.ext.autosummary',
 ]
+
+numpydoc_show_class_members = False
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -113,7 +123,6 @@ todo_include_todos = False
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = 'alabaster'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -290,4 +299,14 @@ texinfo_documents = [
 
 
 # Example configuration for intersphinx: refer to the Python standard library.
-intersphinx_mapping = {'https://docs.python.org/': None}
+intersphinx_mapping = {'http://docs.python.org/': None,
+                       'http://yt-project.org/doc/': None,
+                       'http://docs.scipy.org/doc/numpy/': None,
+                       }
+
+def remove_module_docstring(app, what, name, obj, options, lines):
+    if what == "module" and name in ["photon_list","event_list"]:
+        del lines[:]
+
+def setup(app):
+    app.connect("autodoc-process-docstring", remove_module_docstring)

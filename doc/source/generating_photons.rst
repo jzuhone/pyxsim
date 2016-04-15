@@ -1,6 +1,8 @@
 Generating Photon Lists
 =======================
 
+The first step in creating synthetic X-ray observations with ``photon_simulator`` is 
+that of generating a ``PhotonList``. The 
 
 Generating Photons from a Data Source
 -------------------------------------
@@ -22,6 +24,7 @@ back from disk, use the ``from_file`` method of the ``PhotonList`` class:
 
     photons = PhotonList.from_file("cluster_photons.h5")
 
-
+Merging Photon Lists
+--------------------
 
 

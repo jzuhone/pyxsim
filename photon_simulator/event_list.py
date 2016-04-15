@@ -1,29 +1,6 @@
 """
-Classes for generating lists of photons and detected events
-
-The SciPy Proceeding that describes this module in detail may be found at:
-
-http://conference.scipy.org/proceedings/scipy2014/zuhone.html
-
-The algorithms used here are based off of the method used by the
-PHOX code (http://www.mpa-garching.mpg.de/~kdolag/Phox/),
-developed by Veronica Biffi and Klaus Dolag. References for
-PHOX may be found at:
-
-Biffi, V., Dolag, K., Bohringer, H., & Lemson, G. 2012, MNRAS, 420, 3545
-http://adsabs.harvard.edu/abs/2012MNRAS.420.3545B
-
-Biffi, V., Dolag, K., Bohringer, H. 2013, MNRAS, 428, 1395
-http://adsabs.harvard.edu/abs/2013MNRAS.428.1395B
+Classes for generating lists of detected events
 """
-
-#-----------------------------------------------------------------------------
-# Copyright (c) 2013, yt Development Team.
-#
-# Distributed under the terms of the Modified BSD License.
-#
-# The full license is in the file COPYING.txt, distributed with this software.
-#-----------------------------------------------------------------------------
 from six import string_types
 from collections import defaultdict
 import numpy as np
@@ -108,7 +85,9 @@ class EventList(object):
             new_events[k] = v[idxs]
         return EventList(new_events, self.parameters)
 
-    def convolve_with_psf(self, psf, prng=np.random):
+    def convolve_with_psf(self, psf, prng=None):
+        if prng is None:
+            prng = np.random
         dtheta = self.parameters['dtheta']
         new_events = self.events.deepcopy()
         if isinstance(psf, float):

@@ -1,27 +1,6 @@
 """
-Classes for specific photon models
-
-The algorithms used here are based off of the method used by the
-PHOX code (http://www.mpa-garching.mpg.de/~kdolag/Phox/),
-developed by Veronica Biffi and Klaus Dolag. References for
-PHOX may be found at:
-
-Biffi, V., Dolag, K., Bohringer, H., & Lemson, G. 2012, MNRAS, 420, 3545
-http://adsabs.harvard.edu/abs/2012MNRAS.420.3545B
-
-Biffi, V., Dolag, K., Bohringer, H. 2013, MNRAS, 428, 1395
-http://adsabs.harvard.edu/abs/2013MNRAS.428.1395B
-
+Classes for specific source models
 """
-
-#-----------------------------------------------------------------------------
-# Copyright (c) 2013, yt Development Team.
-#
-# Distributed under the terms of the Modified BSD License.
-#
-# The full license is in the file COPYING.txt, distributed with this software.
-#-----------------------------------------------------------------------------
-
 import numpy as np
 from yt.funcs import get_pbar, mylog
 from yt.units.yt_array import YTQuantity
@@ -84,12 +63,15 @@ class ThermalSourceModel(SourceModel):
     def __init__(self, spectral_model, temperature_field=None,
                  emission_measure_field=None, kT_min=0.0808,
                  kT_max=50.0, n_kT=10000, Zmet=0.3,
-                 method="invert_cdf", prng=np.random):
+                 method="invert_cdf", prng=None):
         self.temperature_field = temperature_field
         self.Zmet = Zmet
         self.spectral_model = spectral_model
         self.method = method
-        self.prng = prng
+        if prng is None:
+            self.prng = np.random
+        else:
+            self.prng = prng
         self.kT_min = kT_min
         self.kT_max = kT_max
         self.n_kT = n_kT
@@ -297,13 +279,16 @@ class PowerLawSourceModel(SourceModel):
     >>> emax = (100., "keV")
     >>> plaw_model = PowerLawSourceModel(e0, emin, emax, ("gas", "norm"), ("gas", "index"))
     """
-    def __init__(self, e0, emin, emax, norm_field, alpha, prng=np.random):
+    def __init__(self, e0, emin, emax, norm_field, alpha, prng=None):
         self.e0 = parse_value(e0, "keV")
         self.emin = parse_value(emin, "keV")
         self.emax = parse_value(emax, "keV")
         self.norm_field = norm_field
         self.alpha = alpha
-        self.prng = prng
+        if prng is None:
+            self.prng = np.random
+        else:
+            self.prng = prng
         self.spectral_norm = None
         self.pbar = None
         self.redshift = None
@@ -380,7 +365,7 @@ class LineSourceModel(SourceModel):
     >>> sigma = (1000., "km/s")
     >>> line_model = LineEmissionSourceModel(location, "dark_matter_density_squared", sigma=sigma)
     """
-    def __init__(self, location, amplitude_field, sigma=None, prng=np.random):
+    def __init__(self, location, amplitude_field, sigma=None, prng=None):
         self.location = parse_value(location, "keV")
         if isinstance(sigma, (float, YTQuantity)) or (isinstance(sigma, tuple) and isinstance(sigma[0], float)):
             # The broadening is constant
@@ -398,7 +383,10 @@ class LineSourceModel(SourceModel):
             # Either no broadening or a field name
             self.sigma = sigma
         self.amplitude_field = amplitude_field
-        self.prng = prng
+        if prng is None:
+            self.prng = np.random
+        else:
+            self.prng = prng
         self.spectral_norm = None
         self.redshift = None
 
