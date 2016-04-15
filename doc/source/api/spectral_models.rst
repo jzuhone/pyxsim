@@ -1,5 +1,5 @@
-photon_simulator.spectral_models module
-=======================================
+``SpectralModel`` API
+=====================
 
 .. automodule:: photon_simulator.spectral_models
     :members:

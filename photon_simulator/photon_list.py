@@ -97,7 +97,7 @@ class PhotonList(object):
     @classmethod
     def from_file(cls, filename):
         r"""
-        Initialize a PhotonList from the HDF5 file *filename*.
+        Initialize a :class:`PhotonList` from the HDF5 file *filename*.
         """
 
         photons = {}
@@ -159,40 +159,40 @@ class PhotonList(object):
                          center=None, dist=None, cosmology=None,
                          velocity_fields=None):
         r"""
-        Initialize a PhotonList from a photon model. The redshift, collecting area,
+        Initialize a :class:`PhotonList` from a data source. The redshift, collecting area,
         exposure time, and cosmology are stored in the *parameters* dictionary which
-        is passed to the *photon_model* function. 
+        is passed to the *source_model* function. 
 
         Parameters
         ----------
-        data_source : `yt.data_objects.data_containers.YTSelectionContainer`
+        data_source : :class:`yt.data_objects.data_containers.YTSelectionContainer`
             The data source from which the photons will be generated. NOTE: The
             PointSourceModel does not require a data_source, so *None* can be
             supplied here in that case.
         redshift : float
             The cosmological redshift for the photons.
-        area : float, (value, unit) tuple, or YTQuantity.
+        area : float, (value, unit) tuple, or :class:`yt.units.yt_array.YTQuantity`.
             The collecting area to determine the number of photons. If units are
             not specified, it is assumed to be in cm**2.
-        exp_time : float, (value, unit) tuple, or YTQuantity.
+        exp_time : float, (value, unit) tuple, or :class:`yt.units.yt_array.YTQuantity`.
             The exposure time to determine the number of photons. If units are
             not specified, it is assumed to be in seconds.
         source_model : function
             A function that takes the *data_source* and the *parameters*
             dictionary and returns a *photons* dictionary. Must be of the
-            form: photon_model(data_source, parameters)
+            form: source_model(data_source, parameters)
         parameters : dict, optional
             A dictionary of parameters to be passed to the user function.
         center : string or array_like, optional
             The origin of the photons. Accepts "c", "max", or a coordinate.
-        dist : float, (value, unit) tuple, or YTQuantity, optional
+        dist : float, (value, unit) tuple, or :class:`yt.units.yt_array.YTQuantity`, optional
             The angular diameter distance, used for nearby sources. This may be
             optionally supplied instead of it being determined from the *redshift*
             and given *cosmology*. If units are not specified, it is assumed to be
             in Mpc.
-        cosmology : `yt.utilities.cosmology.Cosmology`, optional
+        cosmology : :class:`yt.utilities.cosmology.Cosmology`, optional
             Cosmological information. If not supplied, we try to get
-            the cosmology from the dataset. Otherwise, \LambdaCDM with
+            the cosmology from the dataset. Otherwise, LCDM with
             the default yt parameters is assumed.
 
         Examples
@@ -442,25 +442,25 @@ class PhotonList(object):
 
         Parameters
         ----------
-        normal : character or array_like
+        normal : character or array-like
             Normal vector to the plane of projection. If "x", "y", or "z", will
             assume to be along that axis (and will probably be faster). Otherwise,
             should be an off-axis normal vector, e.g [1.0,2.0,-3.0]
-        area_new : float, (value, unit) tuple, YTQuantity, or string, optional
+        area_new : float, (value, unit) tuple, :class:`yt.units.yt_array.YTQuantity`, or string, optional
             New value for the effective area of the detector. A numeric value, if
             units are not specified, is assumed to be in cm**2. A string value
             indicates the name of an ARF file. If *responses* are specified the
             value of this keyword is ignored.
-        exp_time_new : float, (value, unit) tuple, or YTQuantity, optional
+        exp_time_new : float, (value, unit) tuple, or :class:`yt.units.yt_array.YTQuantity`, optional
             The new value for the exposure time. If units are not specified
             it is assumed to be in seconds.
         redshift_new : float, optional
             The new value for the cosmological redshift.
-        dist_new : float, (value, unit) tuple, or YTQuantity, optional
+        dist_new : float, (value, unit) tuple, or :class:`yt.units.yt_array.YTQuantity`, optional
             The new value for the angular diameter distance, used for nearby sources.
             This may be optionally supplied instead of it being determined from the
             cosmology. If units are not specified, it is assumed to be in Mpc.
-        absorb_model : 'yt.analysis_modules.photon_simulator.PhotonModel`, optional
+        absorb_model : :class:`photon_simulator.spectral_models.TableAbsorbModel` or :class:`photon_simulator.spectral_models.XSpecAbsorbModel`, optional
             A model for galactic absorption.
         sky_center : array_like, optional
             Center RA, Dec of the events in degrees.
@@ -471,7 +471,7 @@ class PhotonList(object):
         no_shifting : boolean, optional
             If set, the photon energies will not be Doppler shifted.
         north_vector : a sequence of floats
-            A vector defining the 'up' direction. This option sets the orientation of
+            A vector defining the "up" direction. This option sets the orientation of
             the plane of projection. If not set, an arbitrary grid-aligned north_vector
             is chosen. Ignored in the case where a particular axis (e.g., "x", "y", or
             "z") is explicitly specified.

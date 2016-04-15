@@ -1,6 +1,5 @@
 """
-Photon emission and absoprtion models for use with the
-photon simulator.
+Photon emission and absoprtion models.
 """
 
 #-----------------------------------------------------------------------------

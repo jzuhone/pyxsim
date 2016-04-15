@@ -66,8 +66,8 @@ class EventList(object):
 
     def filter_events(self, region):
         """
-        Filter events using a ds9 *region*. Requires the pyregion package.
-        Returns a new EventList.
+        Filter events using a ds9 *region*. Requires the ``pyregion`` package.
+        Returns a new :class:`EventList`.
         """
         import pyregion
         import os

@@ -1,5 +1,5 @@
-photon_simulator.photon_list module
-===================================
+``PhotonList`` API
+==================
 
 .. automodule:: photon_simulator.photon_list
     :members:

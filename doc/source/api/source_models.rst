@@ -1,5 +1,5 @@
-photon_simulator.source_models module
-=====================================
+``SourceModel`` API
+===================
 
 .. automodule:: photon_simulator.source_models
     :members:

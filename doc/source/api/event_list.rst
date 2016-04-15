@@ -1,5 +1,5 @@
-photon_simulator.event_list module
-==================================
+``EventList`` API
+=================
 
 .. automodule:: photon_simulator.event_list
     :members:
