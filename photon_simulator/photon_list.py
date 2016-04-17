@@ -15,6 +15,8 @@ from yt.utilities.on_demand_imports import _astropy
 import h5py
 from photon_simulator.utils import parse_value, force_unicode
 from photon_simulator.event_list import EventList
+from photon_simulator.responses import AuxiliaryResponseFile, \
+    RedistributionMatrixFile
 
 comm = communication_system.communicators[-1]
 
@@ -513,35 +515,24 @@ class PhotonList(object):
         n_ph = self.photons["NumberOfPhotons"]
         n_ph_tot = n_ph.sum()
 
-        eff_area = None
-
         parameters = {}
 
         if responses is not None:
             responses = ensure_list(responses)
             parameters["ARF"] = responses[0]
             if len(responses) == 2:
-                parameters["RMF"] = responses[1]
+                rmffile = responses[1]
+            else:
+                rmffile = None
             area_new = parameters["ARF"]
+
+        # Construct the ARF if we have it
+        if "ARF" in parameters:
+            arf = AuxiliaryResponseFile(parameters["ARF"], rmffile=rmffile)
 
         zobs0 = self.parameters["FiducialRedshift"]
         D_A0 = self.parameters["FiducialAngularDiameterDistance"]
         scale_factor = 1.0
-
-        # If we use an RMF, figure out where the response matrix actually is.
-        if "RMF" in parameters:
-            rmf = _astropy.pyfits.open(parameters["RMF"])
-            if "MATRIX" in rmf:
-                mat_key = "MATRIX"
-            elif "SPECRESP MATRIX" in rmf:
-                mat_key = "SPECRESP MATRIX"
-            else:
-                raise RuntimeError("Cannot find the response matrix in the RMF "
-                                   "file %s! " % parameters["RMF"]+"It should "
-                                   "be named \"MATRIX\" or \"SPECRESP MATRIX\".")
-            rmf.close()
-        else:
-            mat_key = None
 
         if (exp_time_new is None and area_new is None and
             redshift_new is None and dist_new is None):
@@ -558,18 +549,7 @@ class PhotonList(object):
             elif isinstance(area_new, string_types):
                 if comm.rank == 0:
                     mylog.info("Using energy-dependent effective area: %s" % (parameters["ARF"]))
-                f = _astropy.pyfits.open(area_new)
-                earf = 0.5*(f["SPECRESP"].data.field("ENERG_LO")+f["SPECRESP"].data.field("ENERG_HI"))
-                eff_area = np.nan_to_num(f["SPECRESP"].data.field("SPECRESP"))
-                if "RMF" in parameters:
-                    weights = self._normalize_arf(parameters["RMF"], mat_key)
-                    eff_area *= weights
-                else:
-                    mylog.warning("You specified an ARF but not an RMF. This is ok if the "+
-                                  "responses are normalized properly. If not, you may "+
-                                  "get inconsistent results.")
-                f.close()
-                Aratio = eff_area.max()/self.parameters["FiducialArea"].v
+                Aratio = arf.eff_area.max()/self.parameters["FiducialArea"].v
             else:
                 mylog.info("Using constant effective area.")
                 Aratio = parse_value(area_new, "cm**2")/self.parameters["FiducialArea"]
@@ -670,13 +650,11 @@ class PhotonList(object):
             not_abs = randvec < absorb
             absorb_model.cleanup_spectrum()
 
-        if eff_area is None:
+        if "ARF" not in parameters:
             detected = np.ones(eobs.shape, dtype='bool')
         else:
             mylog.info("Applying energy-dependent effective area.")
-            earea = np.interp(eobs, earf, eff_area, left=0.0, right=0.0)
-            randvec = eff_area.max()*prng.uniform(size=eobs.shape)
-            detected = randvec < earea
+            detected = arf.detect_events(eobs, prng=prng)
 
         detected = np.logical_and(not_abs, detected)
 
@@ -696,11 +674,6 @@ class PhotonList(object):
         if comm.rank == 0:
             mylog.info("Total number of observed photons: %d" % num_events)
 
-        if "RMF" in parameters and convolve_energies:
-            events, info = self._convolve_with_rmf(parameters["RMF"], events, 
-                                                   mat_key, prng)
-            parameters.update(info)
-
         if exp_time_new is None:
             parameters["ExposureTime"] = self.parameters["FiducialExposureTime"]
         else:
@@ -715,90 +688,7 @@ class PhotonList(object):
         parameters["pix_center"] = np.array([0.5*(nx+1)]*2)
         parameters["dtheta"] = dtheta
 
-        return EventList(events, parameters)
-
-    def _normalize_arf(self, respfile, mat_key):
-        rmf = _astropy.pyfits.open(respfile)
-        table = rmf[mat_key]
-        weights = np.array([w.sum() for w in table.data["MATRIX"]])
-        rmf.close()
-        return weights
-
-    def _convolve_with_rmf(self, respfile, events, mat_key, prng):
-        """
-        Convolve the events with a RMF file.
-        """
-        mylog.info("Reading response matrix file (RMF): %s" % (respfile))
-
-        hdulist = _astropy.pyfits.open(respfile)
-
-        tblhdu = hdulist[mat_key]
-        n_de = len(tblhdu.data["ENERG_LO"])
-        mylog.info("Number of energy bins in RMF: %d" % (n_de))
-        mylog.info("Energy limits: %g %g" % (min(tblhdu.data["ENERG_LO"]),
-                                             max(tblhdu.data["ENERG_HI"])))
-
-        tblhdu2 = hdulist["EBOUNDS"]
-        n_ch = len(tblhdu2.data["CHANNEL"])
-        mylog.info("Number of channels in RMF: %d" % (n_ch))
-
-        eidxs = np.argsort(events["eobs"])
-
-        phEE = events["eobs"][eidxs].d
-
-        detectedChannels = []
-
-        # run through all photon energies and find which bin they go in
-        k = 0
-        fcurr = 0
-        last = len(phEE)
-
-        pbar = get_pbar("Scattering energies with RMF", last)
-
-        for low,high in zip(tblhdu.data["ENERG_LO"],tblhdu.data["ENERG_HI"]):
-            # weight function for probabilities from RMF
-            weights = np.nan_to_num(np.float64(tblhdu.data[k]["MATRIX"][:]))
-            weights /= weights.sum()
-            # build channel number list associated to array value,
-            # there are groups of channels in rmfs with nonzero probabilities
-            trueChannel = []
-            f_chan = np.nan_to_num(tblhdu.data["F_CHAN"][k])
-            n_chan = np.nan_to_num(tblhdu.data["N_CHAN"][k])
-            n_grp = np.nan_to_num(tblhdu.data["N_CHAN"][k])
-            if not iterable(f_chan):
-                f_chan = [f_chan]
-                n_chan = [n_chan]
-                n_grp  = [n_grp]
-            for start,nchan in zip(f_chan, n_chan):
-                end = start + nchan
-                if start == end:
-                    trueChannel.append(start)
-                else:
-                    for j in range(start,end):
-                        trueChannel.append(j)
-            if len(trueChannel) > 0:
-                for q in range(fcurr,last):
-                    if phEE[q] >= low and phEE[q] < high:
-                        channelInd = prng.choice(len(weights), p=weights)
-                        fcurr += 1
-                        pbar.update(fcurr)
-                        detectedChannels.append(trueChannel[channelInd])
-                    if phEE[q] >= high:
-                        break
-            k += 1
-        pbar.finish()
-
-        dchannel = np.array(detectedChannels)
-
-        events["xpix"] = events["xpix"][eidxs]
-        events["ypix"] = events["ypix"][eidxs]
-        events["eobs"] = YTArray(phEE, "keV")
-        events[tblhdu.header["CHANTYPE"]] = dchannel.astype(int)
-
-        info = {"ChannelType" : tblhdu.header["CHANTYPE"],
-                "Telescope" : tblhdu.header["TELESCOP"],
-                "Instrument" : tblhdu.header["INSTRUME"]}
-
-        info["Mission"] = tblhdu.header.get("MISSION","")
-
-        return events, info
+        el = EventList(events, parameters)
+        if rmffile is not None and convolve_energies:
+            el.convolve_energies(rmffile, prng=prng)
+        return el

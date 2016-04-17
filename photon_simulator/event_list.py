@@ -4,7 +4,8 @@ Classes for generating lists of detected events
 from six import string_types
 from collections import defaultdict
 import numpy as np
-from yt.funcs import mylog
+from yt.funcs import mylog, ensure_list, get_pbar, ensure_numpy_array, \
+    iterable
 from yt.utilities.fits_image import assert_same_wcs
 from yt.utilities.parallel_tools.parallel_analysis_interface import \
     parallel_root_only
@@ -14,6 +15,7 @@ import warnings
 import os
 import h5py
 from photon_simulator.utils import force_unicode, validate_parameters
+from photon_simulator.responses import RedistributionMatrixFile
 
 class EventList(object):
 
@@ -63,6 +65,79 @@ class EventList(object):
             k2, v2 = item2
             events[k1] = uconcatenate([v1,v2])
         return EventList(events, self.parameters)
+
+    def convolve_energies(self, rmffile, prng=np.random, clobber_channels=False):
+        """
+        Convolve the events with a RMF file.
+        """
+        if ("PI" in self or "PHA" in self) and not clobber_channels:
+            raise RuntimeError("You've already convolved these events with "
+                               "an RMF! If you want to overwrite them, set "
+                               "clobber_channels=True!")
+
+        mylog.info("Reading response matrix file (RMF): %s" % (rmffile))
+
+        rmf = RedistributionMatrixFile(rmffile)
+        elo = rmf.data["ENERG_LO"]
+        ehi = rmf.data["ENERG_HI"]
+        n_de = elo.shape[0]
+        mylog.info("Number of energy bins in RMF: %d" % n_de)
+        mylog.info("Energy limits: %g %g" % (min(elo), max(ehi)))
+
+        n_ch = len(rmf.ebounds["CHANNEL"])
+        mylog.info("Number of channels in RMF: %d" % n_ch)
+
+        eidxs = np.argsort(self.events["eobs"])
+        sorted_e = self.events["eobs"][eidxs].d[eidxs]
+
+        detectedChannels = []
+
+        # run through all photon energies and find which bin they go in
+        k = 0
+        fcurr = 0
+        last = sorted_e.shape[0]
+
+        pbar = get_pbar("Scattering energies with RMF", last)
+
+        for (k, low), high in zip(enumerate(elo), ehi):
+            # weight function for probabilities from RMF
+            weights = np.nan_to_num(np.float64(rmf.data["MATRIX"][k]))
+            weights /= weights.sum()
+            # build channel number list associated to array value,
+            # there are groups of channels in rmfs with nonzero probabilities
+            trueChannel = []
+            f_chan = ensure_numpy_array(np.nan_to_num(rmf.data["F_CHAN"][k]))
+            n_chan = ensure_numpy_array(np.nan_to_num(rmf.data["N_CHAN"][k]))
+            if not iterable(f_chan):
+                f_chan = [f_chan]
+                n_chan = [n_chan]
+            for start, nchan in zip(f_chan, n_chan):
+                if nchan == 0:
+                    trueChannel.append(start)
+                else:
+                    trueChannel += list(range(start, start+nchan))
+            if len(trueChannel) > 0:
+                for q in range(fcurr,last):
+                    if low <= sorted_e[q] < high:
+                        channelInd = prng.choice(len(weights), p=weights)
+                        fcurr += 1
+                        pbar.update(fcurr)
+                        detectedChannels.append(trueChannel[channelInd])
+                    else:
+                        break
+        pbar.finish()
+
+
+        self.events["xpix"] = self.events["xpix"][eidxs]
+        self.events["ypix"] = self.events["ypix"][eidxs]
+        self.events["eobs"] = YTArray(sorted_e, "keV")
+        self.events[rmf.header["CHANTYPE"]] = np.array(detectedChannels, dtype="int")
+
+        self.parameters["RMF"] = rmffile
+        self.parameters["ChannelType"] = rmf.header["CHANTYPE"]
+        self.parameters["Telescope"] = rmf.header["TELESCOP"]
+        self.parameters["Instrument"] = rmf.header["INSTRUME"]
+        self.parameters["Mission"] = rmf.header.get("MISSION","")
 
     def filter_events(self, region):
         """
