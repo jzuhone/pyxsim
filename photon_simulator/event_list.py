@@ -4,7 +4,7 @@ Classes for generating lists of detected events
 from six import string_types
 from collections import defaultdict
 import numpy as np
-from yt.funcs import mylog, ensure_list, get_pbar, ensure_numpy_array, \
+from yt.funcs import mylog, get_pbar, ensure_numpy_array, \
     iterable
 from yt.utilities.fits_image import assert_same_wcs
 from yt.utilities.parallel_tools.parallel_analysis_interface import \

@@ -4,19 +4,17 @@ Classes for generating lists of photons
 from six import string_types
 from collections import defaultdict
 import numpy as np
-from yt.funcs import mylog, get_pbar, iterable, ensure_list
+from yt.funcs import mylog, iterable, ensure_list
 from yt.utilities.physical_constants import clight
 from yt.utilities.cosmology import Cosmology
 from yt.utilities.orientation import Orientation
 from yt.utilities.parallel_tools.parallel_analysis_interface import \
     communication_system, get_mpi_type, parallel_capable, parallel_objects
 from yt.units.yt_array import YTQuantity, YTArray, uconcatenate
-from yt.utilities.on_demand_imports import _astropy
 import h5py
 from photon_simulator.utils import parse_value, force_unicode
 from photon_simulator.event_list import EventList
-from photon_simulator.responses import AuxiliaryResponseFile, \
-    RedistributionMatrixFile
+from photon_simulator.responses import AuxiliaryResponseFile
 
 comm = communication_system.communicators[-1]
 
