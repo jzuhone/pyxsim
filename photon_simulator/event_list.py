@@ -88,7 +88,7 @@ class EventList(object):
         mylog.info("Number of channels in RMF: %d" % n_ch)
 
         eidxs = np.argsort(self.events["eobs"])
-        sorted_e = self.events["eobs"][eidxs].d[eidxs]
+        sorted_e = self.events["eobs"][eidxs].d
 
         detectedChannels = []
 

@@ -525,6 +525,8 @@ class PhotonList(object):
             else:
                 rmffile = None
             area_new = parameters["ARF"]
+        else:
+            rmffile = None
 
         # Construct the ARF if we have it
         if "ARF" in parameters:
