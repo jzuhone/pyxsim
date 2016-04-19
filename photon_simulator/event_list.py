@@ -5,7 +5,7 @@ from six import string_types
 from collections import defaultdict
 import numpy as np
 from yt.funcs import mylog, get_pbar, ensure_numpy_array, \
-    iterable, ensure_list
+    ensure_list
 from yt.utilities.fits_image import assert_same_wcs
 from yt.utilities.parallel_tools.parallel_analysis_interface import \
     parallel_root_only
@@ -70,7 +70,7 @@ class EventList(object):
         """
         Convolve the events with a RMF file.
         """
-        if "RMF" in self.parameters and rmf.filename != self.parameters:
+        if "RMF" in self.parameters and rmf.filename != self.parameters["RMF"]:
             err = "This EventList is already associated with an RMF: %s," % self.parameters["RMF"]
             err += "but you want to convolve with a different RMF: %s!" % rmf.filename
             raise RuntimeError(err)
@@ -111,9 +111,6 @@ class EventList(object):
             trueChannel = []
             f_chan = ensure_numpy_array(np.nan_to_num(rmf.data["F_CHAN"][k]))
             n_chan = ensure_numpy_array(np.nan_to_num(rmf.data["N_CHAN"][k]))
-            if not iterable(f_chan):
-                f_chan = [f_chan]
-                n_chan = [n_chan]
             for start, nchan in zip(f_chan, n_chan):
                 if nchan == 0:
                     trueChannel.append(start)
