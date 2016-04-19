@@ -16,8 +16,7 @@ by calling the :meth:`~pyxsim.event_list.EventList.write_h5_file` method:
     
 This writes the event data and associated parameters to disk in the convenient HDF5 
 file format. To read previously stored events back from disk, use the 
-:meth:`~pyxsim.event_list.EventList.from_h5_file` method of the :class:`~pyxsim.event_list.EventList`
-class:
+:meth:`~pyxsim.event_list.EventList.from_h5_file` method:
 
 .. code-block:: python
 

@@ -8,9 +8,9 @@ there is also the option to design your own source model.
 Thermal Sources
 ---------------
 
-``ThermalSourceModel`` assumes the emission of a hot thermal plasma can be described by a
-model that is only dependent on temperature and metallicity, and is proportional
-to the density squared:
+:class:`~pyxsim.source_models.ThermalSourceModel` assumes the emission of a hot 
+thermal plasma can be described by a model that is only dependent on temperature 
+and metallicity, and is proportional to the density squared:
 
 .. math::
 
@@ -20,7 +20,8 @@ to the density squared:
 Power-Law Sources
 -----------------
 
-``PowerLawSourceModel`` assumes that the emission can be described by a power law:
+:class:`~pyxsim.source_models.PowerLawSourceModel` assumes that the emission can be 
+described by a power law:
 
 .. math::
 
@@ -32,8 +33,8 @@ normalized by an emission field specified by the user.
 Line Emission Sources
 ---------------------
 
-``LineSourceModel`` assumes that the emission is occuring at a single energy, and that
-it may or may not be broadened by thermal or other motions:
+:class:`~pyxsim.source_models.LineSourceModel` assumes that the emission is occuring at a 
+single energy, and that it may or may not be broadened by thermal or other motions:
 
 .. math::
 
