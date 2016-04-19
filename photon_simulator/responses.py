@@ -69,8 +69,12 @@ class AuxiliaryResponseFile(object):
             test. Default is the numpy.random module.
         """
         earea = np.interp(energy, self.emid, self.eff_area, left=0.0, right=0.0)
-        randvec = self.eff_area.max()*prng.uniform(size=energy.shape)
+        randvec = self.max_area*prng.uniform(size=energy.shape)
         return randvec < earea
+
+    @property
+    def max_area(self):
+        return self.eff_area.max()
 
 class RedistributionMatrixFile(object):
     r"""

@@ -19,3 +19,7 @@ from photon_simulator.spectral_models import \
      XSpecAbsorbModel, \
      TableApecModel, \
      TableAbsorbModel
+
+from photon_simulator.responses import \
+     AuxiliaryResponseFile, \
+     RedistributionMatrixFile
