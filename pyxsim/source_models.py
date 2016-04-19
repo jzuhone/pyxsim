@@ -49,7 +49,7 @@ class ThermalSourceModel(SourceModel):
         "invert_cdf": Invert the cumulative distribution function of the spectrum.
         "accept_reject": Acceptance-rejection method using the spectrum. 
         The first method should be sufficient for most cases. 
-    prng : NumPy `RandomState` object or numpy.random
+    prng : :class:`~numpy.random.RandomState` object or numpy.random, optional
         A pseudo-random number generator. Typically will only be specified
         if you have a reason to generate the same set of random numbers, such as for a
         test. Default is the numpy.random module.

@@ -70,7 +70,7 @@ class EventList(object):
         """
         Convolve the events with a RMF file.
 
-                Parameters
+        Parameters
         ----------
         rmf : :class:`~pyxsim.responses.RedistributionMatrixFile`
             The RMF to use when convolving the energies.

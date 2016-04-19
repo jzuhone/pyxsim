@@ -53,7 +53,7 @@ class AuxiliaryResponseFile(object):
     def __str__(self):
         return self.filename
 
-    def detect_events(self, energy, prng=np.random):
+    def detect_events(self, energy, prng=None):
         """
         Use the ARF to determine a subset of photons which will be
         detected. Returns a boolean NumPy array which is the same
@@ -62,13 +62,15 @@ class AuxiliaryResponseFile(object):
 
         Parameters
         ----------
-        energy : YTArray
-            The energies of the photons to attempt to detect.
-        prng : NumPy `RandomState` object or numpy.random
-            A pseudo-random number generator. Typically will only be specified if you
-            have a reason to generate the same set of random numbers, such as for a
-            test. Default is the numpy.random module.
+        energy : :class:`~yt.units.yt_array.YTArray`
+            The energies of the photons to attempt to detect, in keV.
+        prng : :class:`~numpy.random.RandomState` object or :mod:`~numpy.random`, optional
+            A pseudo-random number generator. Typically will only be specified
+            if you have a reason to generate the same set of random numbers, such as for a
+            test. Default is the :mod:`~numpy.random` module.
         """
+        if prng is None:
+            prng = np.random
         earea = np.interp(energy, self.emid, self.eff_area, left=0.0, right=0.0)
         randvec = self.max_area*prng.uniform(size=energy.shape)
         return randvec < earea
