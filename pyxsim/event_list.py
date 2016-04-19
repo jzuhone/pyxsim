@@ -69,6 +69,25 @@ class EventList(object):
     def convolve_energies(self, rmf, prng=np.random, clobber_channels=False):
         """
         Convolve the events with a RMF file.
+
+                Parameters
+        ----------
+        rmf : :class:`~pyxsim.responses.RedistributionMatrixFile`
+            The RMF to use when convolving the energies.
+        prng : :class:`~numpy.random.RandomState` object or numpy.random, optional
+            A pseudo-random number generator. Typically will only be specified
+            if you have a reason to generate the same set of random numbers, such as for a
+            test. Default is the numpy.random module.
+        clobber_channels : boolean, optional
+            If channels have already been determined, set this to True to
+            re-calculate the channels.
+
+        Examples
+        --------
+        >>> from numpy.random import RandomState
+        >>> prng = RandomState(25)
+        >>> rmf = RedistributionMatrixFile("pn-med.rmf")
+        >>> events.convolve_energies(rmf, prng=prng, clobber_channels=True)
         """
         if "RMF" in self.parameters and rmf.filename != self.parameters:
             err = "This EventList is already associated with an RMF: %s," % self.parameters["RMF"]
@@ -147,31 +166,31 @@ class EventList(object):
         self.parameters["Mission"] = rmf.header.get("MISSION","")
 
     def add_point_sources(self, positions, energy_bins, spectra,
-                          prng=np.random, absorb_model=None):
+                          prng=None, absorb_model=None):
         r"""
-        A model for a set of point sources.
+        Add point sources to an :class:`~photon_simulator.event_list.EventList`.
 
         Parameters
         ----------
         positions : array of pixel positions, shape 2xN
             The positions of the point sources in pixel space, where N is the
             number of point sources
-        energy_bins : YTArray with units of keV, shape M+1
+        energy_bins : :class:`~yt.units.yt_array.YTArray` with units of keV, shape M+1
             The edges of the energy bins for the spectra, where M is the number of
             bins
         spectra : list (size N) of YTArrays with units of photons/s/cm^2, each with shape M
             The spectra for the point sources, where M is the number of bins and N is
             the number of point sources
-        method : string, optional
-            The method used to generate the photon energies from the spectrum:
-            "invert_cdf": Invert the cumulative distribution function of the spectrum.
-            "accept_reject": Acceptance-rejection method using the spectrum. 
-            The first method should be sufficient for most cases. 
-        prng : NumPy `RandomState` object or numpy.random
+        prng : :class:`~numpy.random.RandomState` object or numpy.random, optional
             A pseudo-random number generator. Typically will only be specified
             if you have a reason to generate the same set of random numbers, such as for a
             test. Default is the numpy.random module.
+        absorb_model : :class:`~photon_simulator.spectral_models.TableAbsorbModel` or :class:`~photon_simulator.spectral_models.XSpecAbsorbModel`, optional
+            A model for galactic absorption.
         """
+        if prng is None:
+            prng = np.random
+
         spectra = ensure_list(spectra)
         if positions.shape == (2,):
             positions = positions.reshape(2,1)
@@ -197,6 +216,8 @@ class EventList(object):
 
     def add_background(self, energy_bins, spectrum,
                        prng=np.random, absorb_model=None):
+        if prng is None:
+            prng = np.random
 
         eobs = self._add_events(energy_bins, spectrum, prng, absorb_model)
         ne = len(eobs)
@@ -249,7 +270,7 @@ class EventList(object):
     def filter_events(self, region):
         """
         Filter events using a ds9 *region*. Requires the ``pyregion`` package.
-        Returns a new :class:`EventList`.
+        Returns a new :class:`~pyxsim.event_list.EventList`.
         """
         import pyregion
         import os

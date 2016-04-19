@@ -1,15 +1,6 @@
 """
 Photon emission and absoprtion models.
 """
-
-#-----------------------------------------------------------------------------
-# Copyright (c) 2013, yt Development Team.
-#
-# Distributed under the terms of the Modified BSD License.
-#
-# The full license is in the file COPYING.txt, distributed with this software.
-#-----------------------------------------------------------------------------
-
 import numpy as np
 import os
 import h5py
@@ -36,15 +27,6 @@ class SpectralModel(object):
         self.ebins = YTArray(np.linspace(self.emin, self.emax, nchan+1), "keV")
         self.de = np.diff(self.ebins)
         self.emid = 0.5*(self.ebins[1:]+self.ebins[:-1])
-
-    def prepare_spectrum(self):
-        pass
-
-    def get_spectrum(self):
-        pass
-
-    def cleanup_spectrum(self):
-        pass
 
 class XSpecThermalModel(SpectralModel):
     r"""
@@ -151,7 +133,7 @@ class XSpecAbsorbModel(SpectralModel):
 
     def prepare_spectrum(self):
         """
-        Prepare the absorption model for execution given a redshift *zobs* for the spectrum.
+        Prepare the absorption model for execution.
         """
         import xspec
         xspec.Xset.chatter = 0
@@ -228,7 +210,7 @@ class TableApecModel(SpectralModel):
 
     def prepare_spectrum(self, zobs):
         """
-        Prepare the thermal model for execution.
+        Prepare the thermal model for execution given a redshift *zobs* for the spectrum.
         """
         try:
             self.line_handle = _astropy.pyfits.open(self.linefile)
