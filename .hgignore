@@ -2,6 +2,6 @@ syntax: glob
 *.so
 *.o
 *.pyc
-photon_simulator.egg-info
+pyxsim.egg-info
 cutils.c
 doc/build

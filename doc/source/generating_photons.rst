@@ -1,8 +1,8 @@
 Generating Photon Lists
 =======================
 
-The first step in creating synthetic X-ray observations with ``photon_simulator`` is 
-that of generating a ``PhotonList``. The 
+The first step in creating synthetic X-ray observations with pyXSIM is that of generating
+a ``PhotonList``. The 
 
 Generating Photons from a Data Source
 -------------------------------------

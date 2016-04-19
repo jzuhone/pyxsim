@@ -59,7 +59,7 @@ def merge_files(input_files, output_file, clobber=False,
 
     Examples
     --------
-    >>> from yt.analysis_modules.photon_simulator.api import merge_files
+    >>> from yt.analysis_modules.pyxsim.api import merge_files
     >>> merge_files(["events_0.h5","events_1.h5","events_3.h5"], "events.h5",
     ...             clobber=True, add_exposure_times=True)
 

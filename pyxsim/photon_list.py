@@ -12,9 +12,9 @@ from yt.utilities.parallel_tools.parallel_analysis_interface import \
     communication_system, get_mpi_type, parallel_capable, parallel_objects
 from yt.units.yt_array import YTQuantity, YTArray, uconcatenate
 import h5py
-from photon_simulator.utils import parse_value, force_unicode
-from photon_simulator.event_list import EventList
-from photon_simulator.responses import AuxiliaryResponseFile
+from pyxsim.utils import parse_value, force_unicode
+from pyxsim.event_list import EventList
+from pyxsim.responses import AuxiliaryResponseFile
 
 comm = communication_system.communicators[-1]
 
@@ -460,7 +460,7 @@ class PhotonList(object):
             The new value for the angular diameter distance, used for nearby sources.
             This may be optionally supplied instead of it being determined from the
             cosmology. If units are not specified, it is assumed to be in Mpc.
-        absorb_model : :class:`~photon_simulator.spectral_models.TableAbsorbModel` or :class:`~photon_simulator.spectral_models.XSpecAbsorbModel`, optional
+        absorb_model : :class:`~pyxsim.spectral_models.TableAbsorbModel` or :class:`~pyxsim.spectral_models.XSpecAbsorbModel`, optional
             A model for galactic absorption.
         sky_center : array_like, optional
             Center RA, Dec of the events in degrees.

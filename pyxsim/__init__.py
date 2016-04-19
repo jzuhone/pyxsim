@@ -1,25 +1,25 @@
-from photon_simulator.source_models import \
+from pyxsim.source_models import \
      SourceModel, \
      ThermalSourceModel, \
      LineSourceModel, \
      PowerLawSourceModel
 
-from photon_simulator.photon_list import \
+from pyxsim.photon_list import \
      PhotonList
 
-from photon_simulator.utils import \
+from pyxsim.utils import \
      merge_files
 
-from photon_simulator.event_list import \
+from pyxsim.event_list import \
      EventList
 
-from photon_simulator.spectral_models import \
+from pyxsim.spectral_models import \
      SpectralModel, \
      XSpecThermalModel, \
      XSpecAbsorbModel, \
      TableApecModel, \
      TableAbsorbModel
 
-from photon_simulator.responses import \
+from pyxsim.responses import \
      AuxiliaryResponseFile, \
      RedistributionMatrixFile

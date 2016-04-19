@@ -18,7 +18,7 @@ from yt.funcs import mylog
 from yt.units.yt_array import YTArray, YTQuantity
 from yt.utilities.physical_constants import hcgs, clight
 from yt.utilities.physical_ratios import erg_per_keV, amu_grams
-from photon_simulator.cutils import broaden_lines
+from pyxsim.cutils import broaden_lines
 from yt.utilities.on_demand_imports import _astropy
 
 hc = (hcgs*clight).in_units("keV*angstrom").v

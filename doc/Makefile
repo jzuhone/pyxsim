@@ -94,9 +94,9 @@ qthelp:
 	@echo
 	@echo "Build finished; now you can run "qcollectiongenerator" with the" \
 	      ".qhcp project file in $(BUILDDIR)/qthelp, like this:"
-	@echo "# qcollectiongenerator $(BUILDDIR)/qthelp/photon_simulator.qhcp"
+	@echo "# qcollectiongenerator $(BUILDDIR)/qthelp/pyxsim.qhcp"
 	@echo "To view the help file:"
-	@echo "# assistant -collectionFile $(BUILDDIR)/qthelp/photon_simulator.qhc"
+	@echo "# assistant -collectionFile $(BUILDDIR)/qthelp/pyxsim.qhc"
 
 .PHONY: applehelp
 applehelp:
@@ -113,8 +113,8 @@ devhelp:
 	@echo
 	@echo "Build finished."
 	@echo "To view the help file:"
-	@echo "# mkdir -p $$HOME/.local/share/devhelp/photon_simulator"
-	@echo "# ln -s $(BUILDDIR)/devhelp $$HOME/.local/share/devhelp/photon_simulator"
+	@echo "# mkdir -p $$HOME/.local/share/devhelp/pyxsim"
+	@echo "# ln -s $(BUILDDIR)/devhelp $$HOME/.local/share/devhelp/pyxsim"
 	@echo "# devhelp"
 
 .PHONY: epub

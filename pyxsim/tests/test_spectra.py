@@ -1,4 +1,4 @@
-from photon_simulator import \
+from pyxsim import \
     TableApecModel, XSpecThermalModel
 from yt.utilities.answer_testing.framework import \
     GenericArrayTest

@@ -1,5 +1,5 @@
-photon_simulator
-================
+pyXSIM API
+==========
 
 .. toctree::
    :maxdepth: 1

@@ -5,8 +5,7 @@ import numpy as np
 from yt.funcs import get_pbar, mylog
 from yt.units.yt_array import YTQuantity
 from yt.utilities.physical_constants import mp, clight, kboltz
-from yt.analysis_modules.photon_simulator.photon_simulator import \
-    parse_value
+from pyxsim.utils import parse_value
 from yt.utilities.exceptions import YTUnitConversionError
 
 sqrt_two = np.sqrt(2.)

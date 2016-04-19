@@ -14,8 +14,8 @@ from yt.utilities.on_demand_imports import _astropy
 import warnings
 import os
 import h5py
-from photon_simulator.utils import force_unicode, validate_parameters
-from photon_simulator.responses import AuxiliaryResponseFile
+from pyxsim.utils import force_unicode, validate_parameters
+from pyxsim.responses import AuxiliaryResponseFile
 
 class EventList(object):
 
@@ -807,7 +807,7 @@ def merge_files(input_files, output_file, clobber=False,
 
     Examples
     --------
-    >>> from yt.analysis_modules.photon_simulator.api import merge_files
+    >>> from yt.analysis_modules.pyxsim.api import merge_files
     >>> merge_files(["events_0.h5","events_1.h5","events_3.h5"], "events.h5",
     ...             clobber=True, add_exposure_times=True)
 
@@ -879,7 +879,7 @@ def convert_old_file(input_file, output_file, clobber=False):
 
     Examples
     --------
-    >>> from yt.analysis_modules.photon_simulator.api import convert_old_file
+    >>> from yt.analysis_modules.pyxsim.api import convert_old_file
     >>> convert_old_file("photons_old.h5", "photons_new.h5", clobber=True)
     """
     if os.path.exists(output_file) and not clobber:

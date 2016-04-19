@@ -4,18 +4,18 @@ from setuptools.extension import Extension
 import numpy as np
 
 cython_extensions = [
-    Extension("photon_simulator.cutils",
-              sources=["photon_simulator/cutils.pyx"],
+    Extension("pyxsim.cutils",
+              sources=["pyxsim/cutils.pyx"],
               language="c", libraries=["m"],
               include_dirs=[np.get_include()])]
 
-setup(name='photon_simulator',
-      packages=['photon_simulator'],
+setup(name='pyxsim',
+      packages=['pyxsim'],
       version='0.1.0',
       description='Python tools for ACIS Ops',
       author='John ZuHone',
       author_email='jzuhone@gmail.com',
-      url='http://bitbucket.org/jzuhone/photon_simulator',
+      url='http://bitbucket.org/jzuhone/pyxsim',
       install_requires=["six","numpy","astropy","h5py","yt"],
       classifiers=[
           'Intended Audience :: Science/Research',

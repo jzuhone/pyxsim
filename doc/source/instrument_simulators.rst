@@ -1,8 +1,17 @@
 Working with Instrument Simulators
 ==================================
 
+.. note::
+
+    If you want to export simulated events to an instrument simulator, DO NOT
+    convolve them with either an ARF or RMF from within ``pyxsim``. This will
+    be the job of the external programs to do. 
+
 MARX
 ----
+
+As of MARX version 5.3.1, simulated events can be read in via ``SIMPUT`` files. 
+
 
 SIMX
 ----

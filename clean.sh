@@ -1,1 +1,1 @@
-hg --config extensions.purge= purge --all photon_simulator
+hg --config extensions.purge= purge --all pyxsim

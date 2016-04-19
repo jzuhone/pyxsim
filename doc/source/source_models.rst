@@ -1,7 +1,7 @@
 Source Models for Generating Photons
 ====================================
 
-``photon_simulator`` comes with three pre-defined ``SourceModel`` types for 
+pyXSIM comes with three pre-defined ``SourceModel`` types for 
 generating photons. Though these should cover the vast majority of use cases, 
 there is also the option to design your own source model. 
 

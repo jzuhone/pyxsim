@@ -1,8 +1,8 @@
-from photon_simulator import \
+from pyxsim import \
     PowerLawSourceModel, PhotonList, \
     XSpecAbsorbModel, AuxiliaryResponseFile, \
     RedistributionMatrixFile
-from photon_simulator.tests.beta_model_source import \
+from pyxsim.tests.beta_model_source import \
     BetaModelSource
 from yt.units.yt_array import YTQuantity
 import numpy as np

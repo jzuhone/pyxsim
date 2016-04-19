@@ -1,16 +1,8 @@
 """
-Answer test the photon_simulator analysis module.
+Answer test pyxsim.
 """
 
-#-----------------------------------------------------------------------------
-# Copyright (c) 2013, yt Development Team.
-#
-# Distributed under the terms of the Modified BSD License.
-#
-# The full license is in the file COPYING.txt, distributed with this software.
-#-----------------------------------------------------------------------------
-
-from photon_simulator import \
+from pyxsim import \
     TableApecModel, TableAbsorbModel, \
     ThermalSourceModel, PhotonList, EventList, \
     merge_files, AuxiliaryResponseFile, \

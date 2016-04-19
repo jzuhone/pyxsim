@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# photon_simulator documentation build configuration file, created by
+# pyxsim documentation build configuration file, created by
 # sphinx-quickstart on Sat Apr  9 10:00:48 2016.
 #
 # This file is execfile()d with the current directory set to its
@@ -20,7 +20,7 @@ import sphinx_readable_theme
 html_theme_path = [sphinx_readable_theme.get_html_theme_path()]
 html_theme = 'readable'
 
-sys.path.insert(0, os.path.abspath('../../photon_simulator'))
+sys.path.insert(0, os.path.abspath('../../pyxsim'))
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -61,7 +61,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = 'photon_simulator'
+project = 'pyxsim'
 copyright = '2016, John ZuHone'
 author = 'John ZuHone'
 
@@ -214,7 +214,7 @@ html_static_path = ['_static']
 #html_search_scorer = 'scorer.js'
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'photon_simulatordoc'
+htmlhelp_basename = 'pyxsimdoc'
 
 # -- Options for LaTeX output ---------------------------------------------
 
@@ -236,7 +236,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'photon_simulator.tex', 'photon\\_simulator Documentation',
+    (master_doc, 'pyxsim.tex', 'pyxsim Documentation',
      'John ZuHone', 'manual'),
 ]
 
@@ -266,7 +266,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'photon_simulator', 'photon_simulator Documentation',
+    (master_doc, 'pyxsim', 'pyxsim Documentation',
      [author], 1)
 ]
 
@@ -280,8 +280,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'photon_simulator', 'photon_simulator Documentation',
-     author, 'photon_simulator', 'One line description of project.',
+    (master_doc, 'pyxsim', 'pyxsim Documentation',
+     author, 'pyxsim', 'One line description of project.',
      'Miscellaneous'),
 ]
 

@@ -1,10 +1,10 @@
-Installing ``photon_simulator``
-===============================
+Installing pyXSIM
+=================
 
 Dependencies
 ------------
 
-``photon_simulator`` is compatible with Python 2.7 or 3.5, and requires the following Python packages:
+pyXSIM is compatible with Python 2.7 or 3.5, and requires the following Python packages:
 
 - `yt <http://yt-project.org>`_
 - `NumPy <http://www.numpy.org>`_
@@ -12,7 +12,7 @@ Dependencies
 - `h5py <http://www.h5py.org>`_
 - `six <https://pythonhosted.org/six/>`_
 
-``photon_simulator`` also has the following optional dependencies:
+pyXSIM also has the following optional dependencies:
 
 - `mpi4py <http://pythonhosted.org/mpi4py/>`_ (for running in parallel)
 - `PyXspec <http://heasarc.gsfc.nasa.gov/xanadu/xspec/python/html/>`_ (for generating certain types of spectral models)
@@ -20,7 +20,7 @@ Dependencies
 Installing
 ----------
 
-``photon_simulator`` can be installed using pip. pip will attempt to download the dependencies and 
+pyXSIM can be installed using pip. pip will attempt to download the dependencies and 
 install them, if they are not already installed in your Python distribution. For an easy
 installation of the dependencies, using a Python package distribution is recommended. For
 example, using the `Anaconda Python Distribution <https://store.continuum.io/cshop/anaconda/>`_:
@@ -30,13 +30,13 @@ example, using the `Anaconda Python Distribution <https://store.continuum.io/csh
     [~]$ conda install yt astropy h5py
     
 Installing these three should be sufficient to get the remaining dependencies. In either case, install
-``photon_simulator`` using pip:
+pyXSIM using pip:
 
 .. code-block:: bash
 
-    [~]$ pip install photon_simulator
+    [~]$ pip install pyxsim
 
-Or, to install into your Python distribution from `source <http://bitbucket.org/jzuhone/photon_simulator>`_:
+Or, to install into your Python distribution from `source <http://bitbucket.org/jzuhone/pyxsim>`_:
 
 .. code-block:: bash
 
@@ -54,10 +54,10 @@ Using PyXspec for Spectral Models
 ---------------------------------
 
 For this to work, XSPEC and PyXspec must be compiled with the same Python distribution that 
-``photon_simulator`` and its dependencies are in. Currently, PyXspec only works with Python 2.7. 
+pyXSIM and its dependencies are in. Currently, PyXspec only works with Python 2.7. 
 
 Issues on Mac OS X
 ++++++++++++++++++
 
-There may be additional issues with compiling and using ``photon_simulator`` and PyXspec on 
-your Mac OS X system. 
+There may be additional issues with compiling and using pyXSIM and PyXspec on your Mac OS X 
+system. 
