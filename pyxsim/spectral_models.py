@@ -28,6 +28,9 @@ class SpectralModel(object):
         self.de = np.diff(self.ebins)
         self.emid = 0.5*(self.ebins[1:]+self.ebins[:-1])
 
+    def cleanup_spectrum(self):
+        pass
+
 class XSpecThermalModel(SpectralModel):
     r"""
     Initialize a thermal gas emission model from PyXspec.

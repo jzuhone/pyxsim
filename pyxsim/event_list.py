@@ -74,10 +74,10 @@ class EventList(object):
         ----------
         rmf : :class:`~pyxsim.responses.RedistributionMatrixFile`
             The RMF to use when convolving the energies.
-        prng : :class:`~numpy.random.RandomState` object or numpy.random, optional
+        prng : :class:`~numpy.random.RandomState` object or :mod:`~numpy.random`, optional
             A pseudo-random number generator. Typically will only be specified
             if you have a reason to generate the same set of random numbers, such as for a
-            test. Default is the numpy.random module.
+            test. Default is the :mod:`numpy.random` module.
         clobber_channels : boolean, optional
             If channels have already been determined, set this to True to
             re-calculate the channels.
@@ -89,7 +89,7 @@ class EventList(object):
         >>> rmf = RedistributionMatrixFile("pn-med.rmf")
         >>> events.convolve_energies(rmf, prng=prng, clobber_channels=True)
         """
-        if "RMF" in self.parameters and rmf.filename != self.parameters:
+        if "RMF" in self.parameters and rmf.filename != self.parameters["RMF"]:
             err = "This EventList is already associated with an RMF: %s," % self.parameters["RMF"]
             err += "but you want to convolve with a different RMF: %s!" % rmf.filename
             raise RuntimeError(err)
@@ -168,7 +168,7 @@ class EventList(object):
     def add_point_sources(self, positions, energy_bins, spectra,
                           prng=None, absorb_model=None):
         r"""
-        Add point sources to an :class:`~photon_simulator.event_list.EventList`.
+        Add point source events to an :class:`~photon_simulator.event_list.EventList`.
 
         Parameters
         ----------
@@ -178,13 +178,13 @@ class EventList(object):
         energy_bins : :class:`~yt.units.yt_array.YTArray` with units of keV, shape M+1
             The edges of the energy bins for the spectra, where M is the number of
             bins
-        spectra : list (size N) of YTArrays with units of photons/s/cm^2, each with shape M
+        spectra : list (size N) of :class:`~yt.units.yt_array.YTArray`s with units of photons/s/cm^2, each with shape M
             The spectra for the point sources, where M is the number of bins and N is
             the number of point sources
-        prng : :class:`~numpy.random.RandomState` object or numpy.random, optional
+        prng : :class:`~numpy.random.RandomState` object or :mod:`numpy.random`, optional
             A pseudo-random number generator. Typically will only be specified
             if you have a reason to generate the same set of random numbers, such as for a
-            test. Default is the numpy.random module.
+            test. Default is the :mod:`numpy.random` module.
         absorb_model : :class:`~photon_simulator.spectral_models.TableAbsorbModel` or :class:`~photon_simulator.spectral_models.XSpecAbsorbModel`, optional
             A model for galactic absorption.
         """
@@ -216,6 +216,23 @@ class EventList(object):
 
     def add_background(self, energy_bins, spectrum,
                        prng=np.random, absorb_model=None):
+        r"""
+        Add background events to an :class:`~photon_simulator.event_list.EventList`.
+
+        Parameters
+        ----------
+        energy_bins : :class:`~yt.units.yt_array.YTArray` with units of keV, size M+1
+            The edges of the energy bins for the spectra, where M is the number of
+            bins
+        spectrum : :class:`~yt.units.yt_array.YTArray` with units of photons/s/cm^2, size M
+            The spectrum for the background, where M is the number of bins.
+        prng : :class:`~numpy.random.RandomState` object or :mod:`numpy.random`, optional
+            A pseudo-random number generator. Typically will only be specified
+            if you have a reason to generate the same set of random numbers, such as for a
+            test. Default is the :mod:`numpy.random` module.
+        absorb_model : :class:`~photon_simulator.spectral_models.TableAbsorbModel` or :class:`~photon_simulator.spectral_models.XSpecAbsorbModel`, optional
+            A model for galactic absorption.
+        """
         if prng is None:
             prng = np.random
 
@@ -289,6 +306,23 @@ class EventList(object):
         return EventList(new_events, self.parameters)
 
     def convolve_with_psf(self, psf, prng=None):
+        r"""
+        Convolve the event positions with a PSF.
+
+        Parameters
+        ----------
+        psf : float or function
+            The PSF to convolve the photon positions with. If a function, it must take
+            the number of events as an argument. If a float, it will be assumed to be the
+            standard deviation of a Gaussian PSF.
+        prng : :class:`~numpy.random.RandomState` object or :mod:`numpy.random`, optional
+            A pseudo-random number generator. Typically will only be specified
+            if you have a reason to generate the same set of random numbers, such as for a
+            test. Default is the :mod:`numpy.random` module.
+
+        Examples
+        --------
+        """
         if prng is None:
             prng = np.random
         dtheta = self.parameters['dtheta']
@@ -302,7 +336,7 @@ class EventList(object):
     @classmethod
     def from_h5_file(cls, h5file):
         """
-        Initialize an EventList from a HDF5 file with filename *h5file*.
+        Initialize an :class:`~pyxsim.event_list.EventList` from a HDF5 file with filename *h5file*.
         """
         events = {}
         parameters = {}
@@ -346,7 +380,7 @@ class EventList(object):
     @classmethod
     def from_fits_file(cls, fitsfile):
         """
-        Initialize an EventList from a FITS file with filename *fitsfile*.
+        Initialize an :class:`~pyxsim.event_list.EventList` from a FITS file with filename *fitsfile*.
         """
         hdulist = _astropy.pyfits.open(fitsfile)
 
@@ -595,7 +629,7 @@ class EventList(object):
     @parallel_root_only
     def write_h5_file(self, h5file):
         """
-        Write an EventList to the HDF5 file given by *h5file*.
+        Write an :class:`~pyxsim.event_list.EventList` to the HDF5 file given by *h5file*.
         """
         f = h5py.File(h5file, "w")
 
@@ -691,7 +725,7 @@ class EventList(object):
 
     @parallel_root_only
     def write_spectrum(self, specfile, bin_type="channel", emin=0.1,
-                       emax=10.0, nchan=2000, clobber=False, energy_bins=False):
+                       emax=10.0, nchan=2000, clobber=False):
         r"""
         Bin event energies into a spectrum and write it to a FITS binary table. Can bin
         on energy or channel. In that case, the spectral binning will be determined by 
@@ -710,14 +744,8 @@ class EventList(object):
             The maximum energy of the spectral bins in keV. Only used if binning without an RMF.
         nchan : integer, optional
             The number of channels. Only used if binning without an RMF.
-        energy_bins : boolean, optional
-            Bin on energy or channel. Deprecated in favor of *bin_type*. 
         """
         pyfits = _astropy.pyfits
-        if energy_bins:
-            bin_type = "energy"
-            warnings.warn("The energy_bins keyword is deprecated. Please use "
-                          "the bin_type keyword instead. Setting bin_type == 'energy'.")
         if bin_type == "channel" and "ChannelType" in self.parameters:
             spectype = self.parameters["ChannelType"]
             f = pyfits.open(self.parameters["RMF"])
@@ -806,132 +834,3 @@ class EventList(object):
         hdulist = pyfits.HDUList([pyfits.PrimaryHDU(), tbhdu])
 
         hdulist.writeto(specfile, clobber=clobber)
-
-
-def merge_files(input_files, output_file, clobber=False,
-                add_exposure_times=False):
-    r"""
-    Helper function for merging PhotonList or EventList HDF5 files.
-
-    Parameters
-    ----------
-    input_files : list of strings
-        List of filenames that will be merged together.
-    output_file : string
-        Name of the merged file to be outputted.
-    clobber : boolean, default False
-        If a the output file already exists, set this to True to
-        overwrite it.
-    add_exposure_times : boolean, default False
-        If set to True, exposure times will be added together. Otherwise,
-        the exposure times of all of the files must be the same.
-
-    Examples
-    --------
-    >>> from yt.analysis_modules.pyxsim.api import merge_files
-    >>> merge_files(["events_0.h5","events_1.h5","events_3.h5"], "events.h5",
-    ...             clobber=True, add_exposure_times=True)
-
-    Notes
-    -----
-    Currently, to merge files it is mandated that all of the parameters have the
-    same values, with the possible exception of the exposure time parameter "exp_time"
-    if add_exposure_times=False.
-    """
-    if os.path.exists(output_file) and not clobber:
-        raise IOError("Cannot overwrite existing file %s. " % output_file +
-                      "If you want to do this, set clobber=True.")
-
-    f_in = h5py.File(input_files[0], "r")
-    f_out = h5py.File(output_file, "w")
-
-    exp_time_key = ""
-    p_out = f_out.create_group("parameters")
-    for key, param in f_in["parameters"].items():
-        if key.endswith("exp_time"):
-            exp_time_key = key
-        else:
-            p_out[key] = param.value
-
-    skip = [exp_time_key] if add_exposure_times else []
-    for fn in input_files[1:]:
-        f = h5py.File(fn, "r")
-        validate_parameters(f_in["parameters"], f["parameters"], skip=skip)
-        f.close()
-
-    f_in.close()
-
-    data = defaultdict(list)
-    tot_exp_time = 0.0
-
-    for i, fn in enumerate(input_files):
-        f = h5py.File(fn, "r")
-        if add_exposure_times:
-            tot_exp_time += f["/parameters"][exp_time_key].value
-        elif i == 0:
-            tot_exp_time = f["/parameters"][exp_time_key].value
-        for key in f["/data"]:
-            data[key].append(f["/data"][key][:])
-        f.close()
-
-    p_out["exp_time"] = tot_exp_time
-
-    d = f_out.create_group("data")
-    for k in data:
-        d.create_dataset(k, data=np.concatenate(data[k]))
-
-    f_out.close()
-
-
-def convert_old_file(input_file, output_file, clobber=False):
-    r"""
-    Helper function for converting old PhotonList or EventList HDF5
-    files (pre yt v3.3) to their new versions.
-
-    Parameters
-    ----------
-    input_file : list of strings
-        The filename of the old-versioned file to be converted.
-    output_file : string
-        Name of the new file to be outputted.
-    clobber : boolean, default False
-        If a the output file already exists, set this to True to
-        overwrite it.
-
-    Examples
-    --------
-    >>> from yt.analysis_modules.pyxsim.api import convert_old_file
-    >>> convert_old_file("photons_old.h5", "photons_new.h5", clobber=True)
-    """
-    if os.path.exists(output_file) and not clobber:
-        raise IOError("Cannot overwrite existing file %s. " % output_file +
-                      "If you want to do this, set clobber=True.")
-
-    f_in = h5py.File(input_file, "r")
-
-    if "num_photons" in f_in:
-        params = ["fid_exp_time", "fid_area", "fid_d_a", "fid_redshift",
-                  "dimension", "width", "hubble", "omega_matter",
-                  "omega_lambda"]
-        data = ["x", "y", "z", "dx", "vx", "vy", "vz", "energy", "num_photons"]
-    elif "pix_center" in f_in:
-        params = ["exp_time", "area", "redshift", "d_a", "arf",
-                  "rmf", "channel_type", "mission", "telescope",
-                  "instrument", "sky_center", "pix_center", "dtheta"]
-        data = ["xsky", "ysky", "xpix", "ypix", "eobs", "pi", "pha"]
-
-    f_out = h5py.File(output_file, "w")
-
-    p = f_out.create_group("parameters")
-    d = f_out.create_group("data")
-
-    for key in params:
-        if key in f_in:
-            p.create_dataset(key, data=f_in[key].value)
-
-    for key in data:
-        if key in f_in:
-            d.create_dataset(key, data=f_in[key].value)
-
-    f_in.close()
-    f_out.close()
