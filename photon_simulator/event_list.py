@@ -5,7 +5,7 @@ from six import string_types
 from collections import defaultdict
 import numpy as np
 from yt.funcs import mylog, get_pbar, ensure_numpy_array, \
-    iterable
+    iterable, ensure_list
 from yt.utilities.fits_image import assert_same_wcs
 from yt.utilities.parallel_tools.parallel_analysis_interface import \
     parallel_root_only
@@ -15,6 +15,7 @@ import warnings
 import os
 import h5py
 from photon_simulator.utils import force_unicode, validate_parameters
+from photon_simulator.responses import AuxiliaryResponseFile
 
 class EventList(object):
 
@@ -69,6 +70,11 @@ class EventList(object):
         """
         Convolve the events with a RMF file.
         """
+        if "RMF" in self.parameters and rmf.filename != self.parameters:
+            err = "This EventList is already associated with an RMF: %s," % self.parameters["RMF"]
+            err += "but you want to convolve with a different RMF: %s!" % rmf.filename
+            raise RuntimeError(err)
+
         if ("PI" in self or "PHA" in self) and not clobber_channels:
             raise RuntimeError("You've already convolved these events with "
                                "an RMF! If you want to overwrite them, set "
@@ -139,6 +145,106 @@ class EventList(object):
         self.parameters["Telescope"] = rmf.header["TELESCOP"]
         self.parameters["Instrument"] = rmf.header["INSTRUME"]
         self.parameters["Mission"] = rmf.header.get("MISSION","")
+
+    def add_point_sources(self, positions, energy_bins, spectra,
+                          prng=np.random, absorb_model=None):
+        r"""
+        A model for a set of point sources.
+
+        Parameters
+        ----------
+        positions : array of pixel positions, shape 2xN
+            The positions of the point sources in pixel space, where N is the
+            number of point sources
+        energy_bins : YTArray with units of keV, shape M+1
+            The edges of the energy bins for the spectra, where M is the number of
+            bins
+        spectra : list (size N) of YTArrays with units of photons/s/cm^2, each with shape M
+            The spectra for the point sources, where M is the number of bins and N is
+            the number of point sources
+        method : string, optional
+            The method used to generate the photon energies from the spectrum:
+            "invert_cdf": Invert the cumulative distribution function of the spectrum.
+            "accept_reject": Acceptance-rejection method using the spectrum. 
+            The first method should be sufficient for most cases. 
+        prng : NumPy `RandomState` object or numpy.random
+            A pseudo-random number generator. Typically will only be specified
+            if you have a reason to generate the same set of random numbers, such as for a
+            test. Default is the numpy.random module.
+        """
+        spectra = ensure_list(spectra)
+        if positions.shape == (2,):
+            positions = positions.reshape(2,1)
+
+        x = [self.events["xpix"]]
+        y = [self.events["ypix"]]
+        e = [self.events["eobs"]]
+
+        for pos, spectrum in zip(positions, spectra):
+            eobs = self._add_events(energy_bins, spectrum, prng, absorb_model)
+            x, y = self.wcs.wcs_world2pix(pos[0], pos[1], 1)
+            ne = len(eobs)
+            x.append([x]*ne)
+            y.append([y]*ne)
+            e.append(eobs)
+
+        events = {}
+        events["xpix"] = uconcatenate(x)
+        events["ypix"] = uconcatenate(y)
+        events["eobs"] = uconcatenate(e)
+
+        return EventList(events, self.parameters)
+
+    def add_background(self, energy_bins, spectrum,
+                       prng=np.random, absorb_model=None):
+
+        eobs = self._add_events(energy_bins, spectrum, prng, absorb_model)
+        ne = len(eobs)
+        x = np.random.uniform(low=0.5, high=2.*self.parameters["pix_center"][0]-0.5, size=ne)
+        y = np.random.uniform(low=0.5, high=2.*self.parameters["pix_center"][1]-0.5, size=ne)
+
+        events = {}
+        events["xpix"] = uconcatenate([x, self.events["xpix"]])
+        events["ypix"] = uconcatenate([y, self.events["ypix"]])
+        events["eobs"] = uconcatenate([eobs, self.events["eobs"]])
+
+        return EventList(events, self.parameters)
+
+    def _add_events(self, ebins, spectrum, prng, absorb_model):
+        exp_time = self.parameters["exp_time"]
+        area = self.parameters["area"]
+        flux = spectrum.sum()
+        num_photons = np.uint64(exp_time*area*flux)
+        cumspec = np.cumsum(spectrum)
+        cumspec = np.insert(cumspec, 0, 0.0)
+        cumspec /= cumspec[-1]
+        randvec = prng.uniform(size=num_photons)
+        randvec.sort()
+        e = YTArray(np.interp(randvec, cumspec, ebins), "keV")
+
+        if absorb_model is None:
+            not_abs = np.ones(e.shape, dtype='bool')
+        else:
+            mylog.info("Absorbing.")
+            absorb_model.prepare_spectrum()
+            emid = absorb_model.emid
+            aspec = absorb_model.get_spectrum()
+            absorb = np.interp(e, emid, aspec, left=0.0, right=0.0)
+            randvec = aspec.max()*prng.uniform(size=e.shape)
+            not_abs = randvec < absorb
+            absorb_model.cleanup_spectrum()
+
+        if "ARF" in self.parameters:
+            rmffile = self.parameters.get("RMF", None)
+            arf = AuxiliaryResponseFile(self.parameters["ARF"],
+                                        rmffile=rmffile)
+            detected = arf.detect_events(e, prng=prng)
+        else:
+            detected = np.ones(e.shape, dtype='bool')
+
+        detected = np.logical_and(not_abs, detected)
+
+        return e[detected]
 
     def filter_events(self, region):
         """

@@ -43,6 +43,7 @@ class AuxiliaryResponseFile(object):
         if rmffile is not None:
             rmf = RedistributionMatrixFile(rmffile)
             self.eff_area *= rmf.weights
+            self.rmffile = rmffile
         else:
             mylog.warning("You specified an ARF but not an RMF. This is ok if you know "
                           "a priori that the responses are normalized properly. If not, "

@@ -536,6 +536,8 @@ class PhotonList(object):
                 area_new = arf.max_area
                 mylog.info("Using energy-dependent effective area: %s" % arf.filename)
                 parameters["ARF"] = arf.filename
+                if hasattr(arf, "rmffile"):
+                    parameters["RMF"] = arf.rmffile
                 Aratio = area_new/self.parameters["FiducialArea"]
             else:
                 mylog.info("Using constant effective area.")
