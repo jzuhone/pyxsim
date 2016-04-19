@@ -97,7 +97,7 @@ class PhotonList(object):
     @classmethod
     def from_file(cls, filename):
         r"""
-        Initialize a :class:`PhotonList` from the HDF5 file *filename*.
+        Initialize a :class:`~pyxsim.photon_list.PhotonList` from the HDF5 file *filename*.
         """
 
         photons = {}
@@ -159,46 +159,40 @@ class PhotonList(object):
                          center=None, dist=None, cosmology=None,
                          velocity_fields=None):
         r"""
-        Initialize a :class:`PhotonList` from a data source. The redshift, collecting area,
-        exposure time, and cosmology are stored in the *parameters* dictionary which
-        is passed to the *source_model* function. 
+        Initialize a :class:`~pyxsim.photon_list.PhotonList` from a yt data source.
+        The redshift, collecting area, exposure time, and cosmology are stored in the
+        *parameters* dictionary which is passed to the *source_model* function.
 
         Parameters
         ----------
-        data_source : :class:`yt.data_objects.data_containers.YTSelectionContainer`
-            The data source from which the photons will be generated. NOTE: The
-            PointSourceModel does not require a data_source, so *None* can be
-            supplied here in that case.
+        data_source : :class:`~yt.data_objects.data_containers.YTSelectionContainer`
+            The data source from which the photons will be generated.
         redshift : float
             The cosmological redshift for the photons.
-        area : float, (value, unit) tuple, or :class:`yt.units.yt_array.YTQuantity`.
+        area : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`.
             The collecting area to determine the number of photons. If units are
-            not specified, it is assumed to be in cm**2.
-        exp_time : float, (value, unit) tuple, or :class:`yt.units.yt_array.YTQuantity`.
+            not specified, it is assumed to be in cm^2.
+        exp_time : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`.
             The exposure time to determine the number of photons. If units are
             not specified, it is assumed to be in seconds.
-        source_model : function
-            A function that takes the *data_source* and the *parameters*
-            dictionary and returns a *photons* dictionary. Must be of the
-            form: source_model(data_source, parameters)
+        source_model : :class:`~pyxsim.source_models.SourceModel`
+            A source model used to generate the photons.
         parameters : dict, optional
             A dictionary of parameters to be passed to the user function.
         center : string or array_like, optional
             The origin of the photons. Accepts "c", "max", or a coordinate.
-        dist : float, (value, unit) tuple, or :class:`yt.units.yt_array.YTQuantity`, optional
+        dist : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`, optional
             The angular diameter distance, used for nearby sources. This may be
             optionally supplied instead of it being determined from the *redshift*
             and given *cosmology*. If units are not specified, it is assumed to be
             in Mpc.
-        cosmology : :class:`yt.utilities.cosmology.Cosmology`, optional
+        cosmology : :class:`~yt.utilities.cosmology.Cosmology`, optional
             Cosmological information. If not supplied, we try to get
             the cosmology from the dataset. Otherwise, LCDM with
             the default yt parameters is assumed.
 
         Examples
         --------
-        This is the simplest possible example, where we call the built-in thermal model:
-
         >>> thermal_model = ThermalSourceModel(apec_model, Zmet=0.3)
         >>> redshift = 0.05
         >>> area = 6000.0 # assumed here in cm**2
@@ -322,7 +316,7 @@ class PhotonList(object):
 
     def write_h5_file(self, photonfile):
         """
-        Write the photons to the HDF5 file *photonfile*.
+        Write the :class:`~pyxsim.photon_list.PhotonList` to the HDF5 file *photonfile*.
         """
 
         if parallel_capable:
@@ -434,11 +428,11 @@ class PhotonList(object):
     def project_photons(self, normal, area_new=None, exp_time_new=None,
                         redshift_new=None, dist_new=None,
                         absorb_model=None, sky_center=None,
-                        responses=None, convolve_energies=False, 
-                        no_shifting=False, north_vector=None, 
+                        no_shifting=False, north_vector=None,
                         prng=None):
         r"""
         Projects photons onto an image plane given a line of sight.
+        Returns a new :class:`~pyxsim.event_list.EventList`.
 
         Parameters
         ----------
@@ -446,12 +440,11 @@ class PhotonList(object):
             Normal vector to the plane of projection. If "x", "y", or "z", will
             assume to be along that axis (and will probably be faster). Otherwise,
             should be an off-axis normal vector, e.g [1.0,2.0,-3.0]
-        area_new : float, (value, unit) tuple, :class:`yt.units.yt_array.YTQuantity`, or string, optional
+        area_new : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~pyxsim.responses.AuxiliaryResponseFile`, optional
             New value for the effective area of the detector. A numeric value, if
-            units are not specified, is assumed to be in cm**2. A string value
-            indicates the name of an ARF file. If *responses* are specified the
-            value of this keyword is ignored.
-        exp_time_new : float, (value, unit) tuple, or :class:`yt.units.yt_array.YTQuantity`, optional
+            units are not specified, is assumed to be in cm**2. An ARF indicates that
+            the effective area is energy-dependent.
+        exp_time_new : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`, optional
             The new value for the exposure time. If units are not specified
             it is assumed to be in seconds.
         redshift_new : float, optional
@@ -462,10 +455,8 @@ class PhotonList(object):
             cosmology. If units are not specified, it is assumed to be in Mpc.
         absorb_model : :class:`~pyxsim.spectral_models.TableAbsorbModel` or :class:`~pyxsim.spectral_models.XSpecAbsorbModel`, optional
             A model for galactic absorption.
-        sky_center : array_like, optional
+        sky_center : array-like, optional
             Center RA, Dec of the events in degrees.
-        responses : list of strings, optional
-            The names of the ARF and/or RMF files to convolve the photons with.
         convolve_energies : boolean, optional
             If this is set, the photon energies will be convolved with the RMF.
         no_shifting : boolean, optional
@@ -475,17 +466,17 @@ class PhotonList(object):
             the plane of projection. If not set, an arbitrary grid-aligned north_vector
             is chosen. Ignored in the case where a particular axis (e.g., "x", "y", or
             "z") is explicitly specified.
-        prng : NumPy `RandomState` object or numpy.random
-            A pseudo-random number generator. Typically will only be specified if you
-            have a reason to generate the same set of random numbers, such as for a
-            test. Default is the numpy.random module.
+        prng : :class:`~numpy.random.RandomState` object or :mod:`~numpy.random`, optional
+            A pseudo-random number generator. Typically will only be specified
+            if you have a reason to generate the same set of random numbers, such as for a
+            test. Default is the :mod:`numpy.random` module.
 
         Examples
         --------
         >>> L = np.array([0.1,-0.2,0.3])
-        >>> events = my_photons.project_photons(L, area_new="sim_arf.fits",
-        ...                                     redshift_new=0.05,
-        ...                                     psf_sigma=0.01)
+        >>> arf = AuxiliaryResponseFile("sim_arf.fits")
+        >>> events = my_photons.project_photons(L, area_new=arf,
+        ...                                     redshift_new=0.05)
         """
 
         if prng is None:
