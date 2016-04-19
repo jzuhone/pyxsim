@@ -12,17 +12,24 @@ sqrt_two = np.sqrt(2.)
 
 class SourceModel(object):
 
-    def __init__(self):
+    def __init__(self, prng=None):
         self.spectral_norm = None
+        self.redshift = None
+        if prng is None:
+            self.prng = np.random
+        else:
+            self.prng = prng
 
     def __call__(self, chunk):
         pass
 
     def setup_model(self, data_source, redshift, spectral_norm):
         self.spectral_norm = spectral_norm
+        self.redshift = redshift
 
     def cleanup_model(self):
         self.spectral_norm = None
+        self.redshift = None
 
 particle_dens_fields = [("io", "density"),
                         ("PartType0", "Density")]
@@ -85,12 +92,14 @@ class ThermalSourceModel(SourceModel):
         self.kT_max = kT_max
         self.n_kT = n_kT
         self.spectral_norm = None
+        self.redshift = None
         self.pbar = None
         self.kT_bins = None
         self.dkT = None
         self.emission_measure_field = emission_measure_field
 
     def setup_model(self, data_source, redshift, spectral_norm):
+        self.redshift = redshift
         if self.emission_measure_field is None:
             found_dfield = [fd for fd in particle_dens_fields if fd in data_source.ds.field_list]
             if len(found_dfield) > 0:
@@ -249,6 +258,7 @@ class ThermalSourceModel(SourceModel):
 
     def cleanup_model(self):
         self.pbar.finish()
+        self.redshift = None
         self.spectral_model.cleanup_spectrum()
         self.pbar = None
         self.spectral_norm = None
@@ -299,7 +309,6 @@ class PowerLawSourceModel(SourceModel):
         else:
             self.prng = prng
         self.spectral_norm = None
-        self.pbar = None
         self.redshift = None
 
     def setup_model(self, data_source, redshift, spectral_norm):
