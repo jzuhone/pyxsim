@@ -31,28 +31,38 @@ particle_temp_fields = [("io", "temperature"),
 
 class ThermalSourceModel(SourceModel):
     r"""
-    Initialize a ThermalSourceModel from a thermal spectrum.
+    Initialize a source model from a thermal spectrum.
 
     Parameters
     ----------
-    spectral_model : `SpectralModel`
-        A thermal spectral model instance, either of `XSpecThermalModel`
-        or `TableApecModel`.
+    spectral_model : :class:`~pyxsim.spectral_models.SpectralModel`
+        A thermal spectral model instance, either of :class:`~pyxsim.spectral_models.XSpecThermalModel` or :class:`~pyxsim.spectral_models.TableApecModel`.
+    temperature_field : string or (ftype, fname) tuple, optional
+        The yt temperature field to use for the thermal modeling. Must have units
+        of Kelvin. If not specified, the default temperature field for the dataset
+        will be used.
+    emission_measure_field : string or (ftype, fname) tuple, optional
+        The yt emission measure field to use for the thermal modeling. Must have units
+        of cm^-3. If not specified, the default emission measure field for the dataset
+        will be used or derived.
+    kT_min : float, optional
+        The default minimum temperature in keV to compute emission for.
+    kT_min : float, optional
+        The default maximum temperature in keV to compute emission for.
+    n_kT : integer, optional
+        The number of temperature bins to use when computing emission.
     Zmet : float or string, optional
         The metallicity. If a float, assumes a constant metallicity throughout.
         If a string, is taken to be the name of the metallicity field.
-    photons_per_chunk : integer
-        The maximum number of photons that are allocated per chunk. Increase or decrease
-        as needed.
     method : string, optional
         The method used to generate the photon energies from the spectrum:
         "invert_cdf": Invert the cumulative distribution function of the spectrum.
         "accept_reject": Acceptance-rejection method using the spectrum. 
         The first method should be sufficient for most cases. 
-    prng : :class:`~numpy.random.RandomState` object or numpy.random, optional
+    prng : :class:`~numpy.random.RandomState` object or :mod:`~numpy.random`, optional
         A pseudo-random number generator. Typically will only be specified
         if you have a reason to generate the same set of random numbers, such as for a
-        test. Default is the numpy.random module.
+        test. Default is the :mod:`numpy.random` module.
 
     Examples
     --------
@@ -247,17 +257,17 @@ class ThermalSourceModel(SourceModel):
 
 class PowerLawSourceModel(SourceModel):
     r"""
-    Initialize a PowerLawSourceModel from a power-law spectrum.
+    Initialize a source model from a power-law spectrum.
 
     Parameters
     ----------
-    e0 : float, (value, unit) tuple, or YTQuantity
+    e0 : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`
         The reference energy of the power law. If units are not given,
         they are assumed to be in keV.
-    emin : float, (value, unit) tuple, or YTQuantity
+    emin : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`
         The minimum energy of the photons to be generated. If units
         are not given, they are assumed to be in keV.
-    emax : float, (value, unit) tuple, or YTQuantity
+    emax : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`
         The maximum energy of the photons to be generated. If units
         are not given, they are assumed to be in keV.
     norm_field : string or (ftype, fname) tuple
@@ -266,10 +276,10 @@ class PowerLawSourceModel(SourceModel):
     index : float, string, or (ftype, fname) tuple
         The power-law index of the spectrum. Either a float for a single power law or
         the name of a field that corresponds to the power law.
-    prng : NumPy `RandomState` object or numpy.random
+    prng : :class:`~numpy.random.RandomState` object or :mod:`~numpy.random`, optional
         A pseudo-random number generator. Typically will only be specified
-        if you have a reason to generate the same set of random numbers,
-        such as for a test. Default is the numpy.random module.
+        if you have a reason to generate the same set of random numbers, such as for a
+        test. Default is the :mod:`numpy.random` module.
 
     Examples
     --------
@@ -336,27 +346,27 @@ class PowerLawSourceModel(SourceModel):
 
 class LineSourceModel(SourceModel):
     r"""
-    Initialize a LineSourceModel from a single line.
+    Initialize a source model from a single line.
 
     Parameters
     ----------
-    location : float, (value, unit) tuple, or YTQuantity
+    location : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`
         The location of the emission line in energy in the rest frame of the
         object. If units are not given, they are assumed to be in keV.
     amplitude_field : string or (ftype, fname) tuple
         The field which serves as the normalization for the line. Must be in
         counts/s.
-    sigma : float, (value, unit) tuple, YTQuantity, or field name, optional
+    sigma : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or field name, optional
         The standard intrinsic deviation of the emission line (not from Doppler
         broadening, which is handled in the projection step). Units of
         velocity or energy are accepted. If units are not given, they
         are assumed to be in keV. If set to a field name, the line broadening
         is assumed to be based on this field (in units of velocity or energy).
         If set to None (the default), it is assumed that the line is unbroadened.
-    prng : NumPy `RandomState` object or numpy.random
+    prng : :class:`~numpy.random.RandomState` object or :mod:`~numpy.random`, optional
         A pseudo-random number generator. Typically will only be specified
-        if you have a reason to generate the same set of random numbers,
-        such as for a test. Default is the numpy.random module.
+        if you have a reason to generate the same set of random numbers, such as for a
+        test. Default is the :mod:`numpy.random` module.
 
     Examples
     --------
