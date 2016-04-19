@@ -2,7 +2,6 @@
 Classes for generating lists of detected events
 """
 from six import string_types
-from collections import defaultdict
 import numpy as np
 from yt.funcs import mylog, get_pbar, ensure_numpy_array, \
     iterable, ensure_list
@@ -11,8 +10,6 @@ from yt.utilities.parallel_tools.parallel_analysis_interface import \
     parallel_root_only
 from yt.units.yt_array import YTQuantity, YTArray, uconcatenate
 from yt.utilities.on_demand_imports import _astropy
-import warnings
-import os
 import h5py
 from pyxsim.utils import force_unicode, validate_parameters
 from pyxsim.responses import AuxiliaryResponseFile
@@ -66,7 +63,7 @@ class EventList(object):
             events[k1] = uconcatenate([v1,v2])
         return EventList(events, self.parameters)
 
-    def convolve_energies(self, rmf, prng=np.random, clobber_channels=False):
+    def convolve_energies(self, rmf, prng=None, clobber_channels=False):
         """
         Convolve the events with a RMF file.
 
@@ -89,6 +86,9 @@ class EventList(object):
         >>> rmf = RedistributionMatrixFile("pn-med.rmf")
         >>> events.convolve_energies(rmf, prng=prng, clobber_channels=True)
         """
+        if prng is None:
+            prng = np.random
+
         if "RMF" in self.parameters and rmf.filename != self.parameters["RMF"]:
             err = "This EventList is already associated with an RMF: %s," % self.parameters["RMF"]
             err += "but you want to convolve with a different RMF: %s!" % rmf.filename
@@ -168,24 +168,25 @@ class EventList(object):
     def add_point_sources(self, positions, energy_bins, spectra,
                           prng=None, absorb_model=None):
         r"""
-        Add point source events to an :class:`~photon_simulator.event_list.EventList`.
+        Add point source events to an :class:`~pyxsim.event_list.EventList`.
+        Returns a new :class:`~pyxsim.event_list.EventList`.
 
         Parameters
         ----------
         positions : array of pixel positions, shape 2xN
-            The positions of the point sources in pixel space, where N is the
+            The positions of the point sources in RA, Dec, where N is the
             number of point sources
         energy_bins : :class:`~yt.units.yt_array.YTArray` with units of keV, shape M+1
             The edges of the energy bins for the spectra, where M is the number of
             bins
-        spectra : list (size N) of :class:`~yt.units.yt_array.YTArray`s with units of photons/s/cm^2, each with shape M
+        spectra : list (size N) of :class:`~yt.units.yt_array.YTArray`\s with units of photons/s/cm^2, each with shape M
             The spectra for the point sources, where M is the number of bins and N is
             the number of point sources
         prng : :class:`~numpy.random.RandomState` object or :mod:`numpy.random`, optional
             A pseudo-random number generator. Typically will only be specified
             if you have a reason to generate the same set of random numbers, such as for a
             test. Default is the :mod:`numpy.random` module.
-        absorb_model : :class:`~photon_simulator.spectral_models.TableAbsorbModel` or :class:`~photon_simulator.spectral_models.XSpecAbsorbModel`, optional
+        absorb_model : :class:`~pyxsim.spectral_models.TableAbsorbModel` or :class:`~pyxsim.spectral_models.XSpecAbsorbModel`, optional
             A model for galactic absorption.
         """
         if prng is None:
@@ -215,9 +216,10 @@ class EventList(object):
         return EventList(events, self.parameters)
 
     def add_background(self, energy_bins, spectrum,
-                       prng=np.random, absorb_model=None):
+                       prng=None, absorb_model=None):
         r"""
-        Add background events to an :class:`~photon_simulator.event_list.EventList`.
+        Add background events to an :class:`~pyxsim.event_list.EventList`.
+        Returns a new :class:`~pyxsim.event_list.EventList`.
 
         Parameters
         ----------
@@ -230,7 +232,7 @@ class EventList(object):
             A pseudo-random number generator. Typically will only be specified
             if you have a reason to generate the same set of random numbers, such as for a
             test. Default is the :mod:`numpy.random` module.
-        absorb_model : :class:`~photon_simulator.spectral_models.TableAbsorbModel` or :class:`~photon_simulator.spectral_models.XSpecAbsorbModel`, optional
+        absorb_model : :class:`~pyxsim.spectral_models.TableAbsorbModel` or :class:`~pyxsim.spectral_models.XSpecAbsorbModel`, optional
             A model for galactic absorption.
         """
         if prng is None:
@@ -286,7 +288,7 @@ class EventList(object):
 
     def filter_events(self, region):
         """
-        Filter events using a ds9 *region*. Requires the ``pyregion`` package.
+        Filter events using a ds9 *region*. Requires the `pyregion <http://pyregion.readthedocs.org/en/latest/>`_ package.
         Returns a new :class:`~pyxsim.event_list.EventList`.
         """
         import pyregion
@@ -728,7 +730,7 @@ class EventList(object):
                        emax=10.0, nchan=2000, clobber=False):
         r"""
         Bin event energies into a spectrum and write it to a FITS binary table. Can bin
-        on energy or channel. In that case, the spectral binning will be determined by 
+        on energy or channel. In the latter case, the spectral binning will be determined by
         the RMF binning.
 
         Parameters
