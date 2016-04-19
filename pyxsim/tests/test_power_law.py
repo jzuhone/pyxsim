@@ -26,6 +26,11 @@ rmf_fn = os.path.join(xray_data_dir,"ah_sxs_5ev_basefilt_20100712.rmf")
 @requires_file(arf_fn)
 @requires_file(rmf_fn)
 def test_power_law():
+    plaw_fit(1.1)
+    plaw_fit(0.8)
+    plaw_fit(1.0)
+
+def plaw_fit(alpha_sim):
     import xspec
 
     xspec.Fit.statMethod = "cstat"
@@ -47,7 +52,6 @@ def test_power_law():
     ds.add_field(("gas","hard_emission"), function=_hard_emission, units="keV**-1*s**-1")
 
     nH_sim = 0.02
-    alpha_sim = 1.1
     abs_model = XSpecAbsorbModel("TBabs", nH_sim)
 
     A = YTQuantity(2000., "cm**2")
@@ -63,7 +67,7 @@ def test_power_law():
 
     D_A = photons.parameters["FiducialAngularDiameterDistance"]
     dist_fac = 1.0/(4.*np.pi*D_A*D_A*(1.+redshift)**2).in_cgs()
-    norm_sim = float((sphere["hard_emission"]).sum()*dist_fac.in_cgs())
+    norm_sim = float((sphere["hard_emission"]).sum()*dist_fac.in_cgs())*(1.+redshift)
 
     arf = AuxiliaryResponseFile(arf_fn, rmffile=rmf_fn)
     rmf = RedistributionMatrixFile(rmf_fn)

@@ -315,8 +315,10 @@ class PowerLawSourceModel(SourceModel):
         else:
             alpha = chunk[self.alpha].v
 
-        norm_fac = (self.emax**(1.-alpha)-self.emin**(1.-alpha)).v
-        norm = norm_fac*chunk[self.norm_field].v*self.e0.v**alpha/(1.-alpha)
+        norm_fac = (self.emax.v**(1.-alpha)-self.emin.v**(1.-alpha))
+        norm_fac[alpha == 1] = np.log(self.emax.v/self.emin.v)
+        norm = norm_fac*chunk[self.norm_field].v*self.e0.v**alpha
+        norm[alpha != 1] /= (1.-alpha[alpha != 1])
         norm *= self.spectral_norm
         norm = np.modf(norm)
 
@@ -331,8 +333,11 @@ class PowerLawSourceModel(SourceModel):
             if number_of_photons[i] > 0:
                 end_e = start_e+number_of_photons[i]
                 u = self.prng.uniform(size=number_of_photons[i])
-                e = self.emin.v**(1.-alpha[i]) + u*norm_fac[i]
-                e **= 1./(1.-alpha[i])
+                if alpha[i] == 1:
+                    e = self.emin.v*(self.emax.v/self.emin.v)**u
+                else:
+                    e = self.emin.v**(1.-alpha[i]) + u*norm_fac[i]
+                    e **= 1./(1.-alpha[i])
                 energies[start_e:end_e] = e / (1.+self.redshift)
                 start_e = end_e
 

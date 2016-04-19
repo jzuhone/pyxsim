@@ -93,7 +93,6 @@ class RedistributionMatrixFile(object):
     >>> rmf = RedistributionMatrixFile("acisi_aimpt_cy17.rmf")
     """
     def __init__(self, filename):
-        mylog.info("Reading response matrix file (RMF): %s" % filename)
         self.handle = _astropy.pyfits.open(filename)
         if "MATRIX" in self.handle:
             self.mat_key = "MATRIX"
