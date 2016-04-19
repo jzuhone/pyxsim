@@ -456,11 +456,11 @@ class PhotonList(object):
             it is assumed to be in seconds.
         redshift_new : float, optional
             The new value for the cosmological redshift.
-        dist_new : float, (value, unit) tuple, or :class:`yt.units.yt_array.YTQuantity`, optional
+        dist_new : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`, optional
             The new value for the angular diameter distance, used for nearby sources.
             This may be optionally supplied instead of it being determined from the
             cosmology. If units are not specified, it is assumed to be in Mpc.
-        absorb_model : :class:`photon_simulator.spectral_models.TableAbsorbModel` or :class:`photon_simulator.spectral_models.XSpecAbsorbModel`, optional
+        absorb_model : :class:`~photon_simulator.spectral_models.TableAbsorbModel` or :class:`~photon_simulator.spectral_models.XSpecAbsorbModel`, optional
             A model for galactic absorption.
         sky_center : array_like, optional
             Center RA, Dec of the events in degrees.
@@ -515,21 +515,6 @@ class PhotonList(object):
 
         parameters = {}
 
-        if responses is not None:
-            responses = ensure_list(responses)
-            parameters["ARF"] = responses[0]
-            if len(responses) == 2:
-                rmffile = responses[1]
-            else:
-                rmffile = None
-            area_new = parameters["ARF"]
-        else:
-            rmffile = None
-
-        # Construct the ARF if we have it
-        if "ARF" in parameters:
-            arf = AuxiliaryResponseFile(parameters["ARF"], rmffile=rmffile)
-
         zobs0 = self.parameters["FiducialRedshift"]
         D_A0 = self.parameters["FiducialAngularDiameterDistance"]
         scale_factor = 1.0
@@ -546,10 +531,12 @@ class PhotonList(object):
                 Tratio = parse_value(exp_time_new, "s")/self.parameters["FiducialExposureTime"]
             if area_new is None:
                 Aratio = 1.
-            elif isinstance(area_new, string_types):
-                if comm.rank == 0:
-                    mylog.info("Using energy-dependent effective area: %s" % (parameters["ARF"]))
-                Aratio = arf.eff_area.max()/self.parameters["FiducialArea"].v
+            elif isinstance(area_new, AuxiliaryResponseFile):
+                arf = area_new
+                area_new = arf.max_area
+                mylog.info("Using energy-dependent effective area: %s" % arf.filename)
+                parameters["ARF"] = arf.filename
+                Aratio = area_new/self.parameters["FiducialArea"]
             else:
                 mylog.info("Using constant effective area.")
                 Aratio = parse_value(area_new, "cm**2")/self.parameters["FiducialArea"]
@@ -688,7 +675,4 @@ class PhotonList(object):
         parameters["pix_center"] = np.array([0.5*(nx+1)]*2)
         parameters["dtheta"] = dtheta
 
-        el = EventList(events, parameters)
-        if rmffile is not None and convolve_energies:
-            el.convolve_energies(rmffile, prng=prng)
-        return el
+        return EventList(events, parameters)

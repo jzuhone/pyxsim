@@ -12,7 +12,8 @@ A unit test for the photon_simulator analysis module.
 
 from photon_simulator import \
     XSpecThermalModel, XSpecAbsorbModel, \
-    ThermalSourceModel, PhotonList
+    ThermalSourceModel, PhotonList, \
+    AuxiliaryResponseFile, RedistributionMatrixFile
 from photon_simulator.tests.beta_model_source import \
     BetaModelSource, ParticleBetaModelSource
 from yt.config import ytcfg
@@ -31,19 +32,19 @@ def setup():
 
 xray_data_dir = ytcfg.get("yt", "xray_data_dir")
 
-arf = os.path.join(xray_data_dir,"sxt-s_120210_ts02um_intallpxl.arf")
-rmf = os.path.join(xray_data_dir,"ah_sxs_5ev_basefilt_20100712.rmf")
+arf_fn = os.path.join(xray_data_dir,"sxt-s_120210_ts02um_intallpxl.arf")
+rmf_fn = os.path.join(xray_data_dir,"ah_sxs_5ev_basefilt_20100712.rmf")
 
 @requires_module("xspec")
-@requires_file(arf)
-@requires_file(rmf)
+@requires_file(arf_fn)
+@requires_file(rmf_fn)
 def test_beta_model():
     bms = BetaModelSource()
     do_beta_model(bms, "velocity_z", "emission_measure")
 
 @requires_module("xspec")
-@requires_file(arf)
-@requires_file(rmf)
+@requires_file(arf_fn)
+@requires_file(rmf_fn)
 def test_particle_beta_model():
     bms = ParticleBetaModelSource()
     do_beta_model(bms, "particle_velocity_z", ("io","emission_measure"))
@@ -92,9 +93,14 @@ def do_beta_model(source, v_field, em_field):
     sigma_sim = float(v1.in_units("km/s"))
     mu_sim = -float(v2.in_units("km/s"))
 
-    events = photons.project_photons("z", responses=[arf,rmf],
-                                     absorb_model=abs_model,
-                                     convolve_energies=True, prng=source.prng)
+    arf = AuxiliaryResponseFile(arf_fn, rmffile=rmf_fn)
+    rmf = RedistributionMatrixFile(rmf_fn)
+
+    events = photons.project_photons("z", absorb_model=abs_model,
+                                     area_new=arf,
+                                     prng=source.prng)
+    events.convolve_energies(rmf, prng=source.prng)
+
     events.write_spectrum("beta_model_evt.pi", clobber=True)
 
     s = xspec.Spectrum("beta_model_evt.pi")

@@ -13,7 +13,8 @@ Answer test the photon_simulator analysis module.
 from photon_simulator import \
     TableApecModel, TableAbsorbModel, \
     ThermalSourceModel, PhotonList, EventList, \
-    merge_files
+    merge_files, AuxiliaryResponseFile, \
+    RedistributionMatrixFile
 from yt.config import ytcfg
 from yt.testing import requires_file
 from yt.utilities.answer_testing.framework import requires_ds, \
@@ -79,13 +80,15 @@ def test_sloshing():
     tests = [GenericArrayTest(ds, return_photons, args=["photons"])]
 
     for a, r in zip(arfs, rmfs):
-        arf = os.path.join(xray_data_dir, a)
-        rmf = os.path.join(xray_data_dir, r)
-        events1 = photons1.project_photons([1.0,-0.5,0.2], responses=[arf,rmf],
-                                           absorb_model=tbabs_model,
-                                           convolve_energies=True, prng=prng)
+        arf_fn = os.path.join(xray_data_dir, a)
+        rmf_fn = os.path.join(xray_data_dir, r)
+        arf = AuxiliaryResponseFile(arf_fn, rmffile=rmf_fn)
+        rmf = RedistributionMatrixFile(rmf_fn)
+        events1 = photons1.project_photons([1.0,-0.5,0.2], area_new=arf,
+                                           absorb_model=tbabs_model, prng=prng)
 
         events1["xsky"]
+        events1.convolve_energies(rmf, prng=prng)
         return_events = return_data(events1.events)
 
         tests.append(GenericArrayTest(ds, return_events, args=[a]))

@@ -15,7 +15,6 @@ import warnings
 import os
 import h5py
 from photon_simulator.utils import force_unicode, validate_parameters
-from photon_simulator.responses import RedistributionMatrixFile
 
 class EventList(object):
 
@@ -66,7 +65,7 @@ class EventList(object):
             events[k1] = uconcatenate([v1,v2])
         return EventList(events, self.parameters)
 
-    def convolve_energies(self, rmffile, prng=np.random, clobber_channels=False):
+    def convolve_energies(self, rmf, prng=np.random, clobber_channels=False):
         """
         Convolve the events with a RMF file.
         """
@@ -75,9 +74,8 @@ class EventList(object):
                                "an RMF! If you want to overwrite them, set "
                                "clobber_channels=True!")
 
-        mylog.info("Reading response matrix file (RMF): %s" % (rmffile))
+        mylog.info("Reading response matrix file (RMF): %s" % rmf.filename)
 
-        rmf = RedistributionMatrixFile(rmffile)
         elo = rmf.data["ENERG_LO"]
         ehi = rmf.data["ENERG_HI"]
         n_de = elo.shape[0]
@@ -93,7 +91,6 @@ class EventList(object):
         detectedChannels = []
 
         # run through all photon energies and find which bin they go in
-        k = 0
         fcurr = 0
         last = sorted_e.shape[0]
 
@@ -117,7 +114,7 @@ class EventList(object):
                 else:
                     trueChannel += list(range(start, start+nchan))
             if len(trueChannel) > 0:
-                for q in range(fcurr,last):
+                for q in range(fcurr, last):
                     if low <= sorted_e[q] < high:
                         channelInd = prng.choice(len(weights), p=weights)
                         fcurr += 1
@@ -130,10 +127,14 @@ class EventList(object):
 
         self.events["xpix"] = self.events["xpix"][eidxs]
         self.events["ypix"] = self.events["ypix"][eidxs]
+        if "xsky" in self.events:
+            self.events["xsky"] = self.events["xsky"][eidxs]
+        if "ysky" in self.events:
+            self.events["ysky"] = self.events["ysky"][eidxs]
         self.events["eobs"] = YTArray(sorted_e, "keV")
         self.events[rmf.header["CHANTYPE"]] = np.array(detectedChannels, dtype="int")
 
-        self.parameters["RMF"] = rmffile
+        self.parameters["RMF"] = rmf.filename
         self.parameters["ChannelType"] = rmf.header["CHANTYPE"]
         self.parameters["Telescope"] = rmf.header["TELESCOP"]
         self.parameters["Instrument"] = rmf.header["INSTRUME"]
@@ -183,11 +184,7 @@ class EventList(object):
 
         p = f["/parameters"]
         parameters["ExposureTime"] = YTQuantity(p["exp_time"].value, "s")
-        area = force_unicode(p['area'].value)
-        if isinstance(area, string_types):
-            parameters["Area"] = area
-        else:
-            parameters["Area"] = YTQuantity(area, "cm**2")
+        parameters["Area"] = YTQuantity(p["area"].value, "cm**2")
         parameters["Redshift"] = p["redshift"].value
         parameters["AngularDiameterDistance"] = YTQuantity(p["d_a"].value, "Mpc")
         parameters["sky_center"] = YTArray(p["sky_center"][:], "deg")
@@ -232,10 +229,7 @@ class EventList(object):
         parameters = {}
 
         parameters["ExposureTime"] = YTQuantity(tblhdu.header["EXPOSURE"], "s")
-        if isinstance(tblhdu.header["AREA"], (string_types, bytes)):
-            parameters["Area"] = tblhdu.header["AREA"]
-        else:
-            parameters["Area"] = YTQuantity(tblhdu.header["AREA"], "cm**2")
+        parameters["Area"] = YTQuantity(tblhdu.header["AREA"], "cm**2")
         parameters["Redshift"] = tblhdu.header["REDSHIFT"]
         parameters["AngularDiameterDistance"] = YTQuantity(tblhdu.header["D_A"], "Mpc")
         if "RMF" in tblhdu.header:
@@ -332,10 +326,7 @@ class EventList(object):
         tbhdu.header["EXPOSURE"] = exp_time
         tbhdu.header["TSTART"] = 0.0
         tbhdu.header["TSTOP"] = exp_time
-        if isinstance(self.parameters["Area"], string_types):
-            tbhdu.header["AREA"] = self.parameters["Area"]
-        else:
-            tbhdu.header["AREA"] = float(self.parameters["Area"])
+        tbhdu.header["AREA"] = float(self.parameters["Area"])
         tbhdu.header["D_A"] = float(self.parameters["AngularDiameterDistance"])
         tbhdu.header["REDSHIFT"] = self.parameters["Redshift"]
         tbhdu.header["HDUVERS"] = "1.1.0"
@@ -483,10 +474,7 @@ class EventList(object):
 
         p = f.create_group("parameters")
         p.create_dataset("exp_time", data=float(self.parameters["ExposureTime"]))
-        area = self.parameters["Area"]
-        if not isinstance(area, string_types):
-            area = float(area)
-        p.create_dataset("area", data=area)
+        p.create_dataset("area", data=float(self.parameters["Area"]))
         p.create_dataset("redshift", data=self.parameters["Redshift"])
         p.create_dataset("d_a", data=float(self.parameters["AngularDiameterDistance"]))
         if "ARF" in self.parameters:
