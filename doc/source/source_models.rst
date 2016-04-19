@@ -2,7 +2,7 @@ Source Models for Generating Photons
 ====================================
 
 pyXSIM comes with three pre-defined ``SourceModel`` types for 
-generating photons. Though these should cover the vast majority of use cases, 
+generating photon energies. Though these should cover the vast majority of use cases,
 there is also the option to design your own source model. 
 
 Thermal Sources
@@ -82,9 +82,9 @@ The next method you need to specify is the ``setup_model`` method:
 
 .. code-block:: python
 
-        def setup_model(self, data_source, redshift, spectral_norm):
-            self.spectral_norm = spectral_norm
-            self.redshift = redshift
+    def setup_model(self, data_source, redshift, spectral_norm):
+        self.spectral_norm = spectral_norm
+        self.redshift = redshift
 
 ``setup_model`` should always have this exact method signature. It is called from :meth:`~pyxsim.photon_list.PhotonList.from_data_source`
 and is used to set up the distance, redshift, and other aspects of the source being simulated. This does not happen in
@@ -94,44 +94,44 @@ The next method is ``__call__``:
 
 .. code-block:: python
 
-        def __call__(self, chunk):
+    def __call__(self, chunk):
 
-            num_cells = len(chunk[self.norm_field])
+        num_cells = len(chunk[self.norm_field])
 
-            if isinstance(self.alpha, float):
-                alpha = self.alpha*np.ones(num_cells)
-            else:
-                alpha = chunk[self.alpha].v
+        if isinstance(self.alpha, float):
+            alpha = self.alpha*np.ones(num_cells)
+        else:
+            alpha = chunk[self.alpha].v
 
-            norm_fac = (self.emax.v**(1.-alpha)-self.emin.v**(1.-alpha))
-            norm_fac[alpha == 1] = np.log(self.emax.v/self.emin.v)
-            norm = norm_fac*chunk[self.norm_field].v*self.e0.v**alpha
-            norm[alpha != 1] /= (1.-alpha[alpha != 1])
-            norm *= self.spectral_norm
-            norm = np.modf(norm)
+        norm_fac = (self.emax.v**(1.-alpha)-self.emin.v**(1.-alpha))
+        norm_fac[alpha == 1] = np.log(self.emax.v/self.emin.v)
+        norm = norm_fac*chunk[self.norm_field].v*self.e0.v**alpha
+        norm[alpha != 1] /= (1.-alpha[alpha != 1])
+        norm *= self.spectral_norm
+        norm = np.modf(norm)
 
-            u = self.prng.uniform(size=num_cells)
-            number_of_photons = np.uint64(norm[1]) + np.uint64(norm[0] >= u)
+        u = self.prng.uniform(size=num_cells)
+        number_of_photons = np.uint64(norm[1]) + np.uint64(norm[0] >= u)
 
-            energies = np.zeros(number_of_photons.sum())
+        energies = np.zeros(number_of_photons.sum())
 
-            start_e = 0
-            end_e = 0
-            for i in range(num_cells):
-                if number_of_photons[i] > 0:
-                    end_e = start_e+number_of_photons[i]
-                    u = self.prng.uniform(size=number_of_photons[i])
-                    if alpha[i] == 1:
-                        e = self.emin.v*(self.emax.v/self.emin.v)**u
-                    else:
-                        e = self.emin.v**(1.-alpha[i]) + u*norm_fac[i]
-                        e **= 1./(1.-alpha[i])
-                    energies[start_e:end_e] = e / (1.+self.redshift)
-                    start_e = end_e
+        start_e = 0
+        end_e = 0
+        for i in range(num_cells):
+            if number_of_photons[i] > 0:
+                end_e = start_e+number_of_photons[i]
+                u = self.prng.uniform(size=number_of_photons[i])
+                if alpha[i] == 1:
+                    e = self.emin.v*(self.emax.v/self.emin.v)**u
+                else:
+                    e = self.emin.v**(1.-alpha[i]) + u*norm_fac[i]
+                    e **= 1./(1.-alpha[i])
+                energies[start_e:end_e] = e / (1.+self.redshift)
+                start_e = end_e
 
-            active_cells = number_of_photons > 0
+        active_cells = number_of_photons > 0
 
-            return number_of_photons[active_cells], active_cells, energies[:end_e].copy()
+        return number_of_photons[active_cells], active_cells, energies[:end_e].copy()
 
 ``__call__`` is where the action really happens and the photon energies are generated. In this case,
 ``__call__`` takes a chunk of data from the data source, and for this chunk determines the emission
@@ -145,6 +145,6 @@ to generate photons for a different redshift, distance, etc. The ``cleanup_model
 
 .. code-block:: python
 
-        def cleanup_model(self):
-            self.redshift = None
-            self.spectral_norm = None
+    def cleanup_model(self):
+        self.redshift = None
+        self.spectral_norm = None
