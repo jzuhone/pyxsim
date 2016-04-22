@@ -10,11 +10,12 @@ Contents:
 
 .. toctree::
    :maxdepth: 2
-   
+
+   physics
    installing
-   source_models   
-   generating_events
    generating_photons
+   source_models
+   generating_events
 
 
 Indices and tables

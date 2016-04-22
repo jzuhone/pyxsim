@@ -1,3 +1,5 @@
+.. _installing:
+
 Installing pyXSIM
 =================
 
@@ -53,8 +55,14 @@ Then make sure your ``PYTHONPATH`` points to this location.
 Using PyXspec for Spectral Models
 ---------------------------------
 
-For this to work, XSPEC and PyXspec must be compiled with the same Python distribution that 
-pyXSIM and its dependencies are in. Currently, PyXspec only works with Python 2.7. 
+pyXSIM provides the capability of using thermal and foreground absorption models from
+`XSPEC <https://heasarc.gsfc.nasa.gov/xanadu/xspec/>`_ using the
+`PyXspec <https://heasarc.gsfc.nasa.gov/xanadu/xspec/python/html/>`_ package. For this to
+work, you must compile XSPEC and PyXspec with the same Python distribution that
+pyXSIM and its dependencies are in. This can be done by simply compiling in an environment where
+the correct ``python`` executable is the first in the path. For more details on compiling XSPEC,
+visit the `"Installing HEASoft" <http://heasarc.gsfc.nasa.gov/docs/software/lheasoft/install.html>`_ page.
+Currently, PyXspec only works with Python 2.7.
 
 Issues on Mac OS X
 ++++++++++++++++++
