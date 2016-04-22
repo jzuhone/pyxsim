@@ -6,3 +6,7 @@ started, you can skip to installing_.
 
 Assumptions
 -----------
+
+Grid and Particle-Based Datasets
+--------------------------------
+
