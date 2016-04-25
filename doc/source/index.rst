@@ -26,9 +26,7 @@ pyXSIM had a previous life as the ``photon_simulator`` analysis module as a part
 `yt Project <http://yt-project.org>`_. pyXSIM still depends critically on yt to provide the
 link between the simulation data and the algorithm for generating the X-ray photons. For
 detailed information about the design of the algorithm in yt, check out
-`the SciPy 2014 Proceedings. <http://conference.scipy.org/proceedings/scipy2014/zuhone.html>`_.
-
-Contents:
+`the SciPy 2014 Proceedings. <http://conference.scipy.org/proceedings/scipy2014/zuhone.html>`_
 
 .. toctree::
    :maxdepth: 2
