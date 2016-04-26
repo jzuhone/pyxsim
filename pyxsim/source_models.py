@@ -280,7 +280,7 @@ class PowerLawSourceModel(SourceModel):
     emax : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`
         The maximum energy of the photons to be generated. If units
         are not given, they are assumed to be in keV.
-    norm_field : string or (ftype, fname) tuple
+    emission_field : string or (ftype, fname) tuple
         The field which serves as the normalization for the power law. Must be in units
         of counts/s/keV.
     index : float, string, or (ftype, fname) tuple
@@ -298,11 +298,11 @@ class PowerLawSourceModel(SourceModel):
     >>> emax = (100., "keV")
     >>> plaw_model = PowerLawSourceModel(e0, emin, emax, ("gas", "norm"), ("gas", "index"))
     """
-    def __init__(self, e0, emin, emax, norm_field, alpha, prng=None):
+    def __init__(self, e0, emin, emax, emission_field, alpha, prng=None):
         self.e0 = parse_value(e0, "keV")
         self.emin = parse_value(emin, "keV")
         self.emax = parse_value(emax, "keV")
-        self.norm_field = norm_field
+        self.emission_field = emission_field
         self.alpha = alpha
         if prng is None:
             self.prng = np.random
@@ -326,7 +326,7 @@ class PowerLawSourceModel(SourceModel):
 
         norm_fac = (self.emax.v**(1.-alpha)-self.emin.v**(1.-alpha))
         norm_fac[alpha == 1] = np.log(self.emax.v/self.emin.v)
-        norm = norm_fac*chunk[self.norm_field].v*self.e0.v**alpha
+        norm = norm_fac*chunk[self.emission_field].v*self.e0.v**alpha
         norm[alpha != 1] /= (1.-alpha[alpha != 1])
         norm *= self.spectral_norm
         norm = np.modf(norm)
@@ -364,10 +364,10 @@ class LineSourceModel(SourceModel):
 
     Parameters
     ----------
-    location : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`
+    e0 : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`
         The location of the emission line in energy in the rest frame of the
-        object. If units are not given, they are assumed to be in keV.
-    amplitude_field : string or (ftype, fname) tuple
+        source. If units are not given, they are assumed to be in keV.
+    emission_field : string or (ftype, fname) tuple
         The field which serves as the normalization for the line. Must be in
         counts/s.
     sigma : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or field name, optional
@@ -388,8 +388,8 @@ class LineSourceModel(SourceModel):
     >>> sigma = (1000., "km/s")
     >>> line_model = LineEmissionSourceModel(location, "dark_matter_density_squared", sigma=sigma)
     """
-    def __init__(self, location, amplitude_field, sigma=None, prng=None):
-        self.location = parse_value(location, "keV")
+    def __init__(self, e0, emission_field, sigma=None, prng=None):
+        self.e0 = parse_value(e0, "keV")
         if isinstance(sigma, (float, YTQuantity)) or (isinstance(sigma, tuple) and isinstance(sigma[0], float)):
             # The broadening is constant
             try:
@@ -397,7 +397,7 @@ class LineSourceModel(SourceModel):
             except YTUnitConversionError:
                 try:
                     self.sigma = parse_value(sigma, "km/s")
-                    self.sigma *= self.location/clight
+                    self.sigma *= self.e0/clight
                     self.sigma.convert_to_units("keV")
                 except YTUnitConversionError:
                     raise RuntimeError("Units for sigma must either be in dimensions of "
@@ -405,7 +405,7 @@ class LineSourceModel(SourceModel):
         else:
             # Either no broadening or a field name
             self.sigma = sigma
-        self.amplitude_field = amplitude_field
+        self.emission_field = emission_field
         if prng is None:
             self.prng = np.random
         else:
@@ -419,25 +419,25 @@ class LineSourceModel(SourceModel):
 
     def __call__(self, chunk):
         num_cells = len(chunk["x"])
-        F = chunk[self.amplitude_field]*self.spectral_norm
+        F = chunk[self.emission_field]*self.spectral_norm
         norm = np.modf(F.in_cgs().v)
         u = self.prng.uniform(size=num_cells)
         number_of_photons = np.uint64(norm[1]) + np.uint64(norm[0] >= u)
 
-        energies = self.location*np.ones(number_of_photons.sum())
+        energies = self.e0*np.ones(number_of_photons.sum())
 
         if isinstance(self.sigma, YTQuantity):
             dE = self.prng.normal(loc=0.0, scale=float(self.sigma),
-                                  size=number_of_photons.sum())*self.location.uq
+                                  size=number_of_photons.sum())*self.e0.uq
             energies += dE
         elif self.sigma is not None:
-            sigma = (chunk[self.sigma]*self.location/clight).in_units("keV")
+            sigma = (chunk[self.sigma]*self.e0/clight).in_units("keV")
             start_e = 0
             for i in range(num_cells):
                 if number_of_photons[i] > 0:
                     end_e = start_e+number_of_photons[i]
                     dE = self.prng.normal(loc=0.0, scale=float(sigma[i]),
-                                          size=number_of_photons[i])*self.location.uq
+                                          size=number_of_photons[i])*self.e0.uq
                     energies[start_e:end_e] += dE
                     start_e = end_e
 
