@@ -557,10 +557,6 @@ class PhotonList(object):
                                  "of photons.")
             my_n_obs = np.uint64(n_ph_tot*fak)
 
-        n_obs_all = comm.mpi_allreduce(my_n_obs)
-        if comm.rank == 0:
-            mylog.info("Total number of photons to use: %d" % n_obs_all)
-
         if my_n_obs == n_ph_tot:
             idxs = np.arange(my_n_obs, dtype='uint64')
         else:
