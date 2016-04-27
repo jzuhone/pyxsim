@@ -1,3 +1,5 @@
+.. _photon-lists:
+
 Generating Photon Lists
 =======================
 

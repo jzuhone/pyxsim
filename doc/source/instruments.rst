@@ -1,4 +1,5 @@
-Working with Instrument Simulators
+.. _instruments:
+
 ==================================
 
 .. note::

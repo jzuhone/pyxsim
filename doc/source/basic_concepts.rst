@@ -1,8 +1,57 @@
+.. _basic-concepts:
+
 Basic pyXSIM Concepts
 =====================
+
+In this section we will outline some basic concepts that you will need to familiarize yourself
+with in order to use pyXSIM effectively. Most of these concepts have to do with pyXSIM's heavy
+dependence on yt, so if you are familiar with how yt works, you can safely skip this section.
+
+Three-Dimensional Datasets
+--------------------------
+
+
 
 Unitful Quantities
 ------------------
 
+yt employs a symbolic unit system when dealing with physical quantities with units. pyXSIM
+uses yt's unit system to keep track of the units of various quantities such as exposure times, 
+effective areas, distances, energies, etc. You can read more about the yt unit system and 
+how it works `here <http://yt-project.org/doc/analyzing/units/index.html>`_. 
+
+Most routines in pyXSIM which ask for unitful quantities will accept them in one of 
+three forms:
+
+* A :class:`~yt.units.yt_array.YTArray` or :class:`~yt.units.yt_array.YTQuantity` 
+  with the correct dimensions, i.e. ``YTArray([30., 45.], "deg")``
+* A ``(value, unit)`` tuple with the correct dimensions, i.e. ``(3.0, "keV")``
+* A floating-point number, in which case default units will be assumed
+
+In the latter case, the default units for various dimensionful quantities are:
+
+* Length (for distances to sources): :math:`\rm{Mpc}`
+* Time: :math:`\rm{s}`
+* Velocity: :math:`\rm{km/s}`
+* Area: :math:`\rm{cm^2}`
+* Energy: :math:`\rm{keV}`
+* Angle: :math:`\rm{degree}`
+
+To be on the safe side, it's always recommended to provide some unit information, since
+the units will be checked for correct dimensionality and will be converted if necessary. 
+
 Field Specifications
 --------------------
+
+This means that whenever pyXSIM accepts a field specification as an argument, it will need
+to be in one of the following two forms:
+
+* A string (yt will look up the field by its name). Examples are: ``"density"``, 
+  ``"particle_velocity_x"``, ``"temperature"``, ``"emission_measure"``, etc.
+* A tuple of two strings, the first string specifying the field type and the second
+  specifying the field name. Examples are: ``("gas", "density")``, 
+  ``("PartType0", "Temperature")``, etc.
+  
+Either way of specifying fields is acceptable, but if you want to make absolutely sure you
+get the correct field, it is better to specify in the second form, since this will 
+correspond to a unique field. 

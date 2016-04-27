@@ -1,3 +1,5 @@
+.. _event-lists:
+
 Generating Event Lists
 ======================
 

@@ -1,3 +1,5 @@
+.. _source-models:
+
 Source Models for Generating Photons
 ====================================
 
@@ -17,11 +19,14 @@ and metallicity, and is proportional to the density squared:
 
     \varepsilon(E) = n_en_H\Lambda(T, Z)
 
+:class:`~pyxsim.source_models.ThermalSourceModel` requires the use of a 
 
 Examples
 ++++++++
 
+.. code-block:: python
 
+    
 Power-Law Sources
 -----------------
 
