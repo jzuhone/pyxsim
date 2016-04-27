@@ -317,7 +317,7 @@ class PowerLawSourceModel(SourceModel):
 
     def __call__(self, chunk):
 
-        num_cells = len(chunk[self.norm_field])
+        num_cells = len(chunk[self.emission_field])
 
         if isinstance(self.alpha, float):
             alpha = self.alpha*np.ones(num_cells)

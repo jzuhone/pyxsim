@@ -6,6 +6,7 @@ from yt.testing import requires_file, requires_module
 import os
 from yt.config import ytcfg
 from numpy.random import RandomState
+from yt.units.yt_array import YTQuantity
 
 prng = RandomState(24)
 
@@ -36,7 +37,7 @@ def test_point_source():
 
     apec_model.prepare_spectrum(0.05)
     cspec, mspec = apec_model.get_spectrum(6.0)
-    spec = 0.001*(cspec+0.5*mspec)
+    spec = (cspec+0.5*mspec)*YTQuantity(1.0e10, "cm**-5")
     ebins = apec_model.ebins
 
     params = {"ARF": arf_fn,

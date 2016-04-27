@@ -215,10 +215,10 @@ class EventList(object):
 
         for pos, spectrum in zip(positions, spectra):
             eobs = self._add_events(energy_bins, spectrum, prng, absorb_model)
-            x, y = self.wcs.wcs_world2pix(pos[0], pos[1], 1)
+            xpix, ypix = self.wcs.wcs_world2pix(pos[0], pos[1], 1)
             ne = len(eobs)
-            x.append([x]*ne)
-            y.append([y]*ne)
+            x.append([xpix]*ne)
+            y.append([ypix]*ne)
             e.append(eobs)
 
         events = {}
@@ -296,6 +296,8 @@ class EventList(object):
             detected = np.ones(e.shape, dtype='bool')
 
         detected = np.logical_and(not_abs, detected)
+
+        mylog.info("Adding %d new events." % detected.sum())
 
         return e[detected]
 
