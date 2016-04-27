@@ -11,8 +11,9 @@ from yt.utilities.parallel_tools.parallel_analysis_interface import \
 from yt.units.yt_array import YTQuantity, YTArray, uconcatenate
 from yt.utilities.on_demand_imports import _astropy
 import h5py
-from pyxsim.utils import force_unicode, validate_parameters
+from pyxsim.utils import force_unicode, validate_parameters, parse_value
 from pyxsim.responses import AuxiliaryResponseFile
+from collections import defaultdict
 
 class EventList(object):
 
@@ -26,6 +27,19 @@ class EventList(object):
         self.wcs.wcs.cdelt = [-parameters["dtheta"].value, parameters["dtheta"].value]
         self.wcs.wcs.ctype = ["RA---TAN","DEC--TAN"]
         self.wcs.wcs.cunit = ["deg"]*2
+
+    @classmethod
+    def create_empty_list(cls, exp_time, area, wcs):
+        events = {"xpix": np.array([]),
+                  "ypix": np.array([]),
+                  "eobs": YTArray([], "keV")}
+        parameters = {}
+        parameters["ExposureTime"] = parse_value(exp_time, "s")
+        parameters["Area"] = parse_value(area, "cm**2")
+        parameters["pix_center"] = wcs.wcs.crpix[:]
+        parameters["sky_center"] = YTArray(wcs.wcs.crval[:], "deg")
+        parameters["dtheta"] = YTQuantity(wcs.wcs.cdelt[0], "deg")
+        return cls(events, parameters)
 
     def keys(self):
         return self.events.keys()
@@ -348,8 +362,10 @@ class EventList(object):
         p = f["/parameters"]
         parameters["ExposureTime"] = YTQuantity(p["exp_time"].value, "s")
         parameters["Area"] = YTQuantity(p["area"].value, "cm**2")
-        parameters["Redshift"] = p["redshift"].value
-        parameters["AngularDiameterDistance"] = YTQuantity(p["d_a"].value, "Mpc")
+        if "redshift" in p:
+            parameters["Redshift"] = p["redshift"].value
+        if "d_a" in p:
+            parameters["AngularDiameterDistance"] = YTQuantity(p["d_a"].value, "Mpc")
         parameters["sky_center"] = YTArray(p["sky_center"][:], "deg")
         parameters["dtheta"] = YTQuantity(p["dtheta"].value, "deg")
         parameters["pix_center"] = p["pix_center"][:]
@@ -393,8 +409,10 @@ class EventList(object):
 
         parameters["ExposureTime"] = YTQuantity(tblhdu.header["EXPOSURE"], "s")
         parameters["Area"] = YTQuantity(tblhdu.header["AREA"], "cm**2")
-        parameters["Redshift"] = tblhdu.header["REDSHIFT"]
-        parameters["AngularDiameterDistance"] = YTQuantity(tblhdu.header["D_A"], "Mpc")
+        if "REDSHIFT" in tblhdu.header:
+            parameters["Redshift"] = tblhdu.header["REDSHIFT"]
+        if "D_A" in tblhdu.header:
+            parameters["AngularDiameterDistance"] = YTQuantity(tblhdu.header["D_A"], "Mpc")
         if "RMF" in tblhdu.header:
             parameters["RMF"] = tblhdu["RMF"]
         if "ARF" in tblhdu.header:
@@ -434,8 +452,6 @@ class EventList(object):
         t_begin = Time.now()
         dt = TimeDelta(exp_time, format='sec')
         t_end = t_begin + dt
-
-        cols = []
 
         col_e = pyfits.Column(name='ENERGY', format='E', unit='eV',
                               array=self["eobs"].in_units("eV").d)
@@ -490,8 +506,10 @@ class EventList(object):
         tbhdu.header["TSTART"] = 0.0
         tbhdu.header["TSTOP"] = exp_time
         tbhdu.header["AREA"] = float(self.parameters["Area"])
-        tbhdu.header["D_A"] = float(self.parameters["AngularDiameterDistance"])
-        tbhdu.header["REDSHIFT"] = self.parameters["Redshift"]
+        if "AngularDiameterDistance" in self.parameters:
+            tbhdu.header["D_A"] = float(self.parameters["AngularDiameterDistance"])
+        if "Redshift" in self.parameters:
+            tbhdu.header["REDSHIFT"] = self.parameters["Redshift"]
         tbhdu.header["HDUVERS"] = "1.1.0"
         tbhdu.header["RADECSYS"] = "FK5"
         tbhdu.header["EQUINOX"] = 2000.0
@@ -638,8 +656,10 @@ class EventList(object):
         p = f.create_group("parameters")
         p.create_dataset("exp_time", data=float(self.parameters["ExposureTime"]))
         p.create_dataset("area", data=float(self.parameters["Area"]))
-        p.create_dataset("redshift", data=self.parameters["Redshift"])
-        p.create_dataset("d_a", data=float(self.parameters["AngularDiameterDistance"]))
+        if "Redshift" in self.parameters:
+            p.create_dataset("redshift", data=self.parameters["Redshift"])
+        if "AngularDiameterDistance" in self.parameters:
+            p.create_dataset("d_a", data=float(self.parameters["AngularDiameterDistance"]))
         if "ARF" in self.parameters:
             p.create_dataset("arf", data=self.parameters["ARF"])
         if "RMF" in self.parameters:
