@@ -103,7 +103,7 @@ class ParticleBetaModelSource(object):
         self.ds = load_particles(data, length_unit=(2*R, "Mpc"), bbox=bbox)
 
 def create_dummy_wcs():
-    import astropy
+    import astropy.wcs
     wcs = astropy.wcs.WCS(naxis=2)
     wcs.wcs.crpix = [512.5, 512.5]
     wcs.wcs.crval = [30.0, 45.0]

@@ -28,11 +28,12 @@ class EventList(object):
         self.wcs.wcs.cunit = ["deg"]*2
 
     @classmethod
-    def create_empty_list(cls, exp_time, area, wcs):
+    def create_empty_list(cls, exp_time, area, wcs, parameters=None):
         events = {"xpix": np.array([]),
                   "ypix": np.array([]),
                   "eobs": YTArray([], "keV")}
-        parameters = {}
+        if parameters is None:
+            parameters = {}
         parameters["ExposureTime"] = parse_value(exp_time, "s")
         parameters["Area"] = parse_value(area, "cm**2")
         parameters["pix_center"] = wcs.wcs.crpix[:]
@@ -206,8 +207,7 @@ class EventList(object):
             prng = np.random
 
         spectra = ensure_list(spectra)
-        if positions.shape == (2,):
-            positions = positions.reshape(2,1)
+        positions = ensure_list(positions)
 
         x = [self.events["xpix"]]
         y = [self.events["ypix"]]
@@ -264,8 +264,8 @@ class EventList(object):
         return EventList(events, self.parameters)
 
     def _add_events(self, ebins, spectrum, prng, absorb_model):
-        exp_time = self.parameters["exp_time"]
-        area = self.parameters["area"]
+        exp_time = self.parameters["ExposureTime"]
+        area = self.parameters["Area"]
         flux = spectrum.sum()
         num_photons = np.uint64(exp_time*area*flux)
         cumspec = np.cumsum(spectrum)
