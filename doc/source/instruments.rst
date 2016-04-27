@@ -1,6 +1,7 @@
 .. _instruments:
 
-==================================
+Convolving Events with Instrumental Responses
+=============================================
 
 .. note::
 

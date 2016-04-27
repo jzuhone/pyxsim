@@ -12,6 +12,17 @@ Assumptions
 From Source to Detector: Three Basic Steps
 ------------------------------------------
 
+Step 1: Generate Photons
+++++++++++++++++++++++++
+
+Step 2: Project Photons
++++++++++++++++++++++++
+
+Once we have generated photons in three dimensions, we can create a set of simulated events
+
+Step 3: Convolve with Instrumental Responses
+++++++++++++++++++++++++++++++++++++++++++++
+
 Limitations
 -----------
 

@@ -39,9 +39,9 @@ detailed information about the design of the algorithm in yt, check out
    physics
    installing
    basic_concepts
-   generating_photons
+   photon_lists
    source_models
-   generating_events
+   event_lists
    instruments
 
 

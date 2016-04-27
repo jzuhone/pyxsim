@@ -439,7 +439,7 @@ class PhotonList(object):
         normal : character or array-like
             Normal vector to the plane of projection. If "x", "y", or "z", will
             assume to be along that axis (and will probably be faster). Otherwise,
-            should be an off-axis normal vector, e.g [1.0,2.0,-3.0]
+            should be an off-axis normal vector, e.g [1.0, 2.0, -3.0]
         area_new : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~pyxsim.responses.AuxiliaryResponseFile`, optional
             New value for the effective area of the detector. A numeric value, if
             units are not specified, is assumed to be in cm**2. An ARF indicates that
