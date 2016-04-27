@@ -12,7 +12,14 @@ What is pyXSIM?
 pyXSIM is a Python package for simulating X-ray observations from astrophysical sources.
 
 X-rays probe the high-energy universe, from hot galaxy clusters to compact objects such as
-neutron stars and black holes and many interesting sources in between. 
+neutron stars and black holes and many interesting sources in between. pyXSIM makes it
+possible to generate synthetic X-ray observations of these sources from a wide variety of 
+models, whether from grid-based simulation codes such as FLASH, Enzo, and Athena, to
+particle-based codes such as Gadget and AREPO, and even from datasets that have been created
+"by hand" such as from NumPy arrays. pyXSIM also provides facilities for manipulating the 
+synthetic observations it produces in various ways, as well as ways to export the simulated
+X-ray events to other software packages to simulate the end products of specific X-ray
+observatories. 
 
 The Heritage of pyXSIM
 ----------------------
@@ -36,9 +43,9 @@ detailed information about the design of the algorithm in yt, check out
 .. toctree::
    :maxdepth: 2
 
-   physics
    installing
-   basic_concepts
+   how_it_works
+   basic_yt_concepts
    photon_lists
    source_models
    event_lists

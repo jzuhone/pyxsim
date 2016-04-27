@@ -1,11 +1,11 @@
-.. _basic-concepts:
+.. _basic-yt-concepts:
 
-Basic pyXSIM Concepts
-=====================
+Basic yt Concepts
+=================
 
-In this section we will outline some basic concepts that you will need to familiarize yourself
-with in order to use pyXSIM effectively. Most of these concepts have to do with pyXSIM's heavy
-dependence on yt, so if you are familiar with how yt works, you can safely skip this section.
+In this section we will outline some basic yt concepts that you will need to familiarize yourself
+with in order to use pyXSIM effectively. If you are familiar with how yt works, you can safely 
+skip this section.
 
 Three-Dimensional Datasets
 --------------------------
