@@ -1,6 +1,6 @@
 from pyxsim import \
     LineSourceModel, PhotonList
-from pyxsim.tests.beta_model_source import \
+from pyxsim.tests.utils import \
     BetaModelSource
 from yt.units.yt_array import YTQuantity, uconcatenate
 import numpy as np

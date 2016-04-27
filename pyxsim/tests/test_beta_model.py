@@ -6,7 +6,7 @@ from pyxsim import \
     XSpecThermalModel, XSpecAbsorbModel, \
     ThermalSourceModel, PhotonList, \
     AuxiliaryResponseFile, RedistributionMatrixFile
-from pyxsim.tests.beta_model_source import \
+from pyxsim.tests.utils import \
     BetaModelSource, ParticleBetaModelSource
 from yt.config import ytcfg
 from yt.testing import requires_file, requires_module

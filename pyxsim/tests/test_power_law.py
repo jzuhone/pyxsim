@@ -2,7 +2,7 @@ from pyxsim import \
     PowerLawSourceModel, PhotonList, \
     XSpecAbsorbModel, AuxiliaryResponseFile, \
     RedistributionMatrixFile
-from pyxsim.tests.beta_model_source import \
+from pyxsim.tests.utils import \
     BetaModelSource
 from yt.units.yt_array import YTQuantity
 import numpy as np

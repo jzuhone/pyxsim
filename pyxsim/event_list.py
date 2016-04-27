@@ -13,7 +13,6 @@ from yt.utilities.on_demand_imports import _astropy
 import h5py
 from pyxsim.utils import force_unicode, validate_parameters, parse_value
 from pyxsim.responses import AuxiliaryResponseFile
-from collections import defaultdict
 
 class EventList(object):
 
