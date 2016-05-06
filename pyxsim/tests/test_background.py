@@ -103,10 +103,6 @@ def test_background():
     assert np.abs(Z-Z_sim) < 1.645*dZ
     assert np.abs(norm-norm_sim) < 1.645*dnorm
 
-    print kT, kT_sim, dkT
-    print Z, Z_sim, dZ
-    print norm, norm_sim, dnorm
-
     xspec.AllModels.clear()
     xspec.AllData.clear()
 
