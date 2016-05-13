@@ -16,7 +16,7 @@ neutron stars and black holes and many interesting sources in between. pyXSIM ma
 possible to generate synthetic X-ray observations of these sources from a wide variety of 
 models, whether from grid-based simulation codes such as FLASH, Enzo, and Athena, to
 particle-based codes such as Gadget and AREPO, and even from datasets that have been created
-"by hand" such as from NumPy arrays. pyXSIM also provides facilities for manipulating the 
+"by hand", such as from NumPy arrays. pyXSIM also provides facilities for manipulating the 
 synthetic observations it produces in various ways, as well as ways to export the simulated
 X-ray events to other software packages to simulate the end products of specific X-ray
 observatories. 

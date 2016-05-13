@@ -17,8 +17,16 @@ import sys
 import os
 import sphinx_readable_theme
 
-html_theme_path = [sphinx_readable_theme.get_html_theme_path()]
-html_theme = 'readable'
+import sphinx_bootstrap_theme
+
+html_theme = 'bootstrap'
+html_theme_path = sphinx_bootstrap_theme.get_html_theme_path()
+
+html_theme_options = dict(
+        bootswatch_theme = "readable",
+        navbar_sidebarrel = False,
+        globaltoc_depth = 2,
+)
 
 sys.path.insert(0, os.path.abspath('../../pyxsim'))
 
@@ -42,6 +50,8 @@ extensions = [
     'sphinx.ext.viewcode',
     'numpydoc',
     'sphinx.ext.autosummary',
+    'RunNotebook.notebook_sphinxext',
+    'RunNotebook.notebookcell_sphinxext',
 ]
 
 numpydoc_show_class_members = False
