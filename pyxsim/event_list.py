@@ -774,13 +774,17 @@ class EventList(object):
             f = pyfits.open(self.parameters["RMF"])
             nchan = int(f["EBOUNDS"].header["DETCHANS"])
             num = 0
-            for i in range(1,len(f["EBOUNDS"].columns)+1):
-                if f["EBOUNDS"].header["TTYPE%d" % i] == "CHANNEL":
+            if "MATRIX" in f:
+                mat_key = "MATRIX"
+            elif "SPECRESP MATRIX" in f:
+                mat_key = "SPECRESP MATRIX"
+            for i in range(1,len(f[mat_key].columns)+1):
+                if f[mat_key].header["TTYPE%d" % i] == "F_CHAN":
                     num = i
                     break
             if num > 0:
                 tlmin = "TLMIN%d" % num
-                cmin = int(f["EBOUNDS"].header[tlmin])
+                cmin = int(f[mat_key].header[tlmin])
             else:
                 mylog.warning("Cannot determine minimum allowed value for channel. " +
                               "Setting to 0, which may be wrong.")
