@@ -11,7 +11,7 @@ def broaden_lines(np.ndarray[np.float64_t, ndim=1] E0,
                   np.ndarray[np.float64_t, ndim=1] amp,
                   np.ndarray[np.float64_t, ndim=1] E):
 
-    cdef int i, j, n
+    cdef int i, j, n, m
     cdef double x
     cdef np.ndarray[np.float64_t, ndim=1] lines
 
