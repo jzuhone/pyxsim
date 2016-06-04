@@ -247,7 +247,9 @@ class TableApecModel(SpectralModel):
         emid = self.emid.d
         if self.thermal_broad:
             sigma = E0*np.sqrt(2.*kT*erg_per_keV/(self.A[element]*amu_grams))/cl
-            vec = broaden_lines(E0, sigma, amp, emid)*de
+            isigma = 1.0/sigma
+            amp *= K
+            vec = broaden_lines(E0, isigma, amp, emid)*de
         else:
             vec = np.histogram(E0, ebins, weights=amp)[0]
         tmpspec += vec
