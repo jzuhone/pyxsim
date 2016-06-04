@@ -16,7 +16,7 @@ hc = (hcgs*clight).in_units("keV*angstrom").v
 # NOTE: XSPEC has hc = 12.39854 keV*A, so there may be slight differences in
 # placement of spectral lines due to the above
 cl = clight.v
-K = 1.0/np.sqrt(2.*np.pi)
+K = 1.0/np.sqrt(np.pi)
 
 class SpectralModel(object):
 
