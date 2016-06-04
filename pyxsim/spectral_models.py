@@ -227,10 +227,26 @@ class TableApecModel(SpectralModel):
             raise IOError("COCO file %s does not exist" % self.cocofile)
 
         self.Tvals = self.line_handle[1].data.field("kT")
+        self.nT = len(self.Tvals)
         self.dTvals = np.diff(self.Tvals)
         self.minlam = self.wvbins.min()
         self.maxlam = self.wvbins.max()
         self.scale_factor = 1.0/(1.+zobs)
+
+        cosmic_spec = np.zeros((self.nT, self.nchan))
+        metal_spec = np.zeros((self.nT, self.nchan))
+
+        for ikT, kT in enumerate(self.Tvals):
+            line_fields, coco_fields = self._preload_data(ikT)
+            # First do H,He, and trace elements
+            for elem in self.cosmic_elem:
+                cosmic_spec[ikT,:] += self._make_spectrum(kT, elem, line_fields, coco_fields)
+            # Next do the metals
+            for elem in self.metal_elem:
+                metal_spec[ikT,:] += self._make_spectrum(kT, elem, line_fields, coco_fields)
+
+        self.cosmic_spec = YTArray(cosmic_spec, "cm**3/s")
+        self.metal_spec = YTArray(metal_spec, "cm**3/s")
 
     def _make_spectrum(self, kT, element, line_fields, coco_fields):
 
@@ -276,8 +292,8 @@ class TableApecModel(SpectralModel):
         return tmpspec
 
     def _preload_data(self, index):
-        line_data = self.line_handle[index].data
-        coco_data = self.coco_handle[index].data
+        line_data = self.line_handle[index+2].data
+        coco_data = self.coco_handle[index+2].data
         line_fields = ('element', 'lambda', 'epsilon')
         coco_fields = ('Z', 'rmJ', 'N_Cont', 'E_Cont', 'Continuum', 'N_Pseudo',
                        'E_Pseudo', 'Pseudo')
@@ -289,27 +305,16 @@ class TableApecModel(SpectralModel):
         """
         Get the thermal emission spectrum given a temperature *kT* in keV. 
         """
-        cspec_l = np.zeros(self.nchan)
-        mspec_l = np.zeros(self.nchan)
-        cspec_r = np.zeros(self.nchan)
-        mspec_r = np.zeros(self.nchan)
         tindex = np.searchsorted(self.Tvals, kT)-1
         if tindex >= self.Tvals.shape[0]-1 or tindex < 0:
-            return YTArray(cspec_l, "cm**3/s"), YTArray(mspec_l, "cm**3/s")
+            return (YTArray(np.zeros(self.nchan), "cm**3/s"),)*2
         dT = (kT-self.Tvals[tindex])/self.dTvals[tindex]
-        # preload data to avoid astropy IO in _make_spectrum
-        line_fields_l, coco_fields_l = self._preload_data(tindex+2)
-        line_fields_r, coco_fields_r = self._preload_data(tindex+3)
-        # First do H,He, and trace elements
-        for elem in self.cosmic_elem:
-            cspec_l += self._make_spectrum(kT, elem, line_fields_l, coco_fields_l)
-            cspec_r += self._make_spectrum(kT, elem, line_fields_r, coco_fields_r)
-        # Next do the metals
-        for elem in self.metal_elem:
-            mspec_l += self._make_spectrum(kT, elem, line_fields_l, coco_fields_l)
-            mspec_r += self._make_spectrum(kT, elem, line_fields_r, coco_fields_r)
-        cosmic_spec = YTArray(cspec_l*(1.-dT)+cspec_r*dT, "cm**3/s")
-        metal_spec = YTArray(mspec_l*(1.-dT)+mspec_r*dT, "cm**3/s")
+        cspec_l = self.cosmic_spec[tindex,:]
+        mspec_l = self.metal_spec[tindex,:]
+        cspec_r = self.cosmic_spec[tindex+1,:]
+        mspec_r = self.metal_spec[tindex+1,:]
+        cosmic_spec = cspec_l*(1.-dT)+cspec_r*dT
+        metal_spec = mspec_l*(1.-dT)+mspec_r*dT
         return cosmic_spec, metal_spec
 
 class TableAbsorbModel(SpectralModel):
