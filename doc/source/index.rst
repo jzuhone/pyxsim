@@ -48,6 +48,7 @@ detailed information about the design of the algorithm in yt, check out
    basic_yt_concepts
    photon_lists
    source_models
+   spectral_models    
    event_lists
    instruments
 
