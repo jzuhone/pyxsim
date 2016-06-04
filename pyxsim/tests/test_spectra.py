@@ -15,7 +15,6 @@ ds = fake_random_ds(64)
 @requires_module("astropy")
 def test_apec():
 
-    settings = {"APECROOT":xray_data_dir+"/apec_v2.0.2"}
     xmod = XSpecThermalModel("apec", 0.1, 10.0, 10000, thermal_broad=True,
                              settings=settings)
     xmod.prepare_spectrum(0.2)
