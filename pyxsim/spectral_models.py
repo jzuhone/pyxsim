@@ -11,6 +11,7 @@ from yt.utilities.physical_constants import hcgs, clight
 from yt.utilities.physical_ratios import erg_per_keV, amu_grams
 from pyxsim.cutils import broaden_lines
 from yt.utilities.on_demand_imports import _astropy
+from scipy import stats
 
 hc = (hcgs*clight).in_units("keV*angstrom").v
 # NOTE: XSPEC has hc = 12.39854 keV*A, so there may be slight differences in
@@ -263,9 +264,7 @@ class TableApecModel(SpectralModel):
         emid = self.emid.d
         if self.thermal_broad:
             sigma = E0*np.sqrt(2.*kT*erg_per_keV/(self.A[element]*amu_grams))/cl
-            isigma = 1.0/sigma
-            amp *= K
-            vec = broaden_lines(E0, isigma, amp, emid)*de
+            vec = broaden_lines(E0, sigma, amp, ebins)
         else:
             vec = np.histogram(E0, ebins, weights=amp)[0]
         tmpspec += vec
