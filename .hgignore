@@ -5,3 +5,5 @@ syntax: glob
 pyxsim.egg-info
 cutils.c
 doc/build
+build
+dist

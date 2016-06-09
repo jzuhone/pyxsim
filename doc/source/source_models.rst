@@ -8,6 +8,8 @@ generating photon energies. Though these should cover the vast majority of use c
 there is also the option to design your own source model. To produce a ``PhotonList``
 from a 3D data source, it is necessary to specify one of these source models.  
 
+.. _thermal_sources:
+
 Thermal Sources
 ---------------
 

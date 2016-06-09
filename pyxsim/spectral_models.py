@@ -11,7 +11,6 @@ from yt.utilities.physical_constants import hcgs, clight
 from yt.utilities.physical_ratios import erg_per_keV, amu_grams
 from pyxsim.cutils import broaden_lines
 from yt.utilities.on_demand_imports import _astropy
-from scipy import stats
 
 hc = (hcgs*clight).in_units("keV*angstrom").v
 # NOTE: XSPEC has hc = 12.39854 keV*A, so there may be slight differences in
@@ -46,6 +45,9 @@ class XSpecThermalModel(SpectralModel):
         The maximum energy for the spectral model.
     nchan : integer
         The number of channels in the spectral model.
+    thermal_broad : boolean, optional
+        Whether or not the spectral lines should be thermally
+        broadened.
     settings : dictionary, optional
         A dictionary of key, value pairs (must both be strings)
         that can be used to set various options in XSPEC.
@@ -181,9 +183,8 @@ class TableApecModel(SpectralModel):
         The version identifier string for the APEC files, e.g.
         "2.0.2"
     thermal_broad : boolean, optional
-        Whether to apply thermal broadening to spectral lines. Only should
-        be used if you are attemping to simulate a high-spectral resolution
-        detector.
+        Whether or not the spectral lines should be thermally
+        broadened.
 
     Examples
     --------
