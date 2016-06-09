@@ -12,8 +12,8 @@ by the end-user, but will be employed by methods of EventList.
 #-----------------------------------------------------------------------------
 import numpy as np
 from yt.utilities.on_demand_imports import _astropy
-from yt.funcs import mylog
 from yt.units.yt_array import YTArray
+from pyxsim.utils import mylog
 
 class AuxiliaryResponseFile(object):
     r"""

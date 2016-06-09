@@ -5,7 +5,7 @@ import numpy as np
 import os
 import h5py
 
-from yt.funcs import mylog
+from pyxsim.utils import mylog
 from yt.units.yt_array import YTArray, YTQuantity
 from yt.utilities.physical_constants import hcgs, clight
 from yt.utilities.physical_ratios import erg_per_keV, amu_grams

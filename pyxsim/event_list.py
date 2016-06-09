@@ -3,8 +3,9 @@ Classes for generating lists of detected events
 """
 from six import string_types
 import numpy as np
-from yt.funcs import mylog, get_pbar, ensure_numpy_array, \
+from yt.funcs import get_pbar, ensure_numpy_array, \
     iterable, ensure_list
+from pyxsim.utils import mylog
 from yt.utilities.fits_image import assert_same_wcs
 from yt.utilities.parallel_tools.parallel_analysis_interface import \
     parallel_root_only

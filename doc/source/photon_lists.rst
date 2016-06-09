@@ -10,8 +10,8 @@ and photon energies within each cell. Once created or restored from disk, a
 :class:`~pyxsim.photon_list.PhotonList` can be used to generated simulated X-ray events
 from a particular line of sight. 
 
-Generating a New ``PhotonList`` from a Data Source
---------------------------------------------------
+Generating a New Photon List from a Data Source
+-----------------------------------------------
 
 The typical starting point for a :class:`~pyxsim.photon_list.PhotonList` is to generate
 one from a data source, by which we mean any spatially extended object in three dimensions

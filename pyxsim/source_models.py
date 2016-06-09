@@ -2,7 +2,8 @@
 Classes for specific source models
 """
 import numpy as np
-from yt.funcs import get_pbar, mylog
+from yt.funcs import get_pbar
+from pyxsim.utils import mylog
 from yt.units.yt_array import YTQuantity
 from yt.utilities.physical_constants import mp, clight, kboltz
 from pyxsim.utils import parse_value

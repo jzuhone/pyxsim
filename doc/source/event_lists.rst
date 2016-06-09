@@ -44,7 +44,7 @@ FITS format by calling the :meth:`~pyxsim.event_list.EventList.write_fits_file`
 method:
 
 .. code-block:: python
-    
+
     events.write_fits_file("cluster_events.fits", clobber=True)
     
 The ``clobber`` keyword argument is used to allow (or prevent) overwrites of 

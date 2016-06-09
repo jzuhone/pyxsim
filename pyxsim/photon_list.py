@@ -4,7 +4,8 @@ Classes for generating lists of photons
 from six import string_types
 from collections import defaultdict
 import numpy as np
-from yt.funcs import mylog, iterable, ensure_list
+from yt.funcs import iterable
+from pyxsim.utils import mylog
 from yt.utilities.physical_constants import clight
 from yt.utilities.cosmology import Cosmology
 from yt.utilities.orientation import Orientation
