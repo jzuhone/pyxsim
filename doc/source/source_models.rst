@@ -3,10 +3,11 @@
 Source Models for Generating Photons
 ====================================
 
-pyXSIM comes with three pre-defined ``SourceModel`` types for 
-generating photon energies. Though these should cover the vast majority of use cases,
-there is also the option to design your own source model. To produce a ``PhotonList``
-from a 3D data source, it is necessary to specify one of these source models.  
+pyXSIM comes with three pre-defined ``SourceModel`` types for generating a new
+:class:`~pyxsim.photon_list.PhotonList`, for use with the 
+:meth:`~pyxsim.photon_list.PhotonList.from_data_source` method. Though these 
+should cover the vast majority of use cases, there is also the option to design
+your own source model. 
 
 .. _thermal_sources:
 
