@@ -24,7 +24,7 @@ from a model known to XSPEC, using PyXspec as a backend:
     emin = 0.01 # The minimum energy of the spectrum in keV
     emax = 20.0 # The maximum energy of the spectrum in keV
     nchan = 10000 # The number of spectral channels
-    spec_model = XSpecThermalModel(model, emin, emax, nchan, thermal_broad=True)
+    spec_model = pyxsim.XSpecThermalModel(model, emin, emax, nchan, thermal_broad=True)
 
 They keyword argument ``thermal_broad`` should be set to ``True`` or ``False`` depending on
 whether or not you want the spectral lines thermally broadened. 
@@ -39,11 +39,11 @@ from the APEC plasma emission tables available from `AtomDB <http://www.atomdb.o
     emax = 20.0 # The maximum energy of the spectrum in keV
     nchan = 10000 # The number of spectral channels
     apec_vers = "3.0.3" # The version identifier string for the APEC files.
-    spec_model = TableApecModel(model, emin, emax, nchan, apec_vers=apec_vers,
-                                thermal_broad=False)
+    spec_model = pyxsim.TableApecModel(model, emin, emax, nchan, apec_vers=apec_vers,
+                                       thermal_broad=False)
 
 You will need to set up one of these two models in your script and pass it as the first argument to
-:class:`~pyxsim.source_models.ThermalSourceModel` (see :ref:`thermal_sources` for details).
+:class:`~pyxsim.source_models.ThermalSourceModel` (see :ref:`thermal-sources` for details).
 
 Absorption Models
 -----------------
@@ -60,7 +60,7 @@ an XSpec model (must have PyXspec installed):
 
     model = "wabs" # or "phabs", or "TBabs", etc.
     N_H = 0.1 # galactic column density in 10^{22} cm^{-2}
-    abs_model = XSpecAbsorbModel(model, N_H)
+    abs_model = pyxsim.XSpecAbsorbModel(model, N_H)
 
 :class:`~pyxsim.spectral_models.TableAbsorbModel` generates an absorption spectrum from 
 an HDF5-based table of energy and cross section:
@@ -69,7 +69,7 @@ an HDF5-based table of energy and cross section:
 
     filename = "tbabs_table.h5" # file containing the table
     N_H = 0.1 # galactic column density in 10^{22} cm^{-2}
-    abs_model = XSpecAbsorbModel(model, N_H)
+    abs_model = pyxsim.XSpecAbsorbModel(model, N_H)
     
 The HDF5 file must have two top-level datasets:
  

@@ -71,7 +71,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = 'pyxsim'
+project = 'pyXSIM'
 copyright = '2016, John ZuHone'
 author = 'John ZuHone'
 
@@ -246,7 +246,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'pyxsim.tex', 'pyxsim Documentation',
+    (master_doc, 'pyxsim.tex', 'pyXSIM Documentation',
      'John ZuHone', 'manual'),
 ]
 

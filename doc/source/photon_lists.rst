@@ -31,7 +31,7 @@ dataset in yt and create a spherical data source centered on the cluster potenti
 This sphere object ``sp`` can then be used as input to the :meth:`~pyxsim.photon_list.PhotonList.from_data_source`
 method to create a new :class:`~pyxsim.photon_list.PhotonList`. 
 :meth:`~pyxsim.photon_list.PhotonList.from_data_source` requires a ``source_model`` argument; you
-can find out how to setup a source model in the section on :ref:`source_models`. For now, we'll
+can find out how to setup a source model in the section on :ref:`source-models`. For now, we'll
 assume we have created the ``source_model`` representing the thermal emission from the plasma. 
 
 .. code-block:: python
@@ -50,7 +50,6 @@ assume we have created the ``source_model`` representing the thermal emission fr
                                                  source_model, center=center, 
                                                  cosmology=cosmo)
 
-
 If you want to simulate photons from a a nearby object, set the redshift to zero
 and specify a distance using the ``dist`` keyword argument:
 
@@ -59,6 +58,19 @@ and specify a distance using the ``dist`` keyword argument:
     photons = pyxsim.PhotonList.from_data_source(sp, 0.0, area, exp_time,
                                                  source_model, center=center, 
                                                  dist=(4., "kpc"))
+
+By default, for computing the Doppler shifts of the photons, pyXSIM uses the default velocity 
+fields of the dataset, which are ``"velocity_x"``, ``"velocity_y"``, and ``"velocity_z"`` 
+for grid-based datasets and ``"particle_velocity_x"``, ``"particle_velocity_y"``, and 
+``"particle_velocity_z"`` for particle-based datasets. If you need to use other fields, you 
+can specify them using the ``velocity_fields`` keyword argument:
+
+.. code-block:: python
+
+    photons = pyxsim.PhotonList.from_data_source(sp, 0.0, area, exp_time,
+                                                 source_model, center=center, 
+                                                 dist=(4., "kpc"), 
+                                                 velocity_fields=["velx", "vely", "velz"])
 
 Saving/Reading Photons to/from Disk
 -----------------------------------

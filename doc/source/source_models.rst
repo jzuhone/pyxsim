@@ -9,7 +9,7 @@ pyXSIM comes with three pre-defined ``SourceModel`` types for generating a new
 should cover the vast majority of use cases, there is also the option to design
 your own source model. 
 
-.. _thermal_sources:
+.. _thermal-sources:
 
 Thermal Sources
 ---------------
@@ -20,16 +20,78 @@ and metallicity, and is proportional to the density squared:
 
 .. math::
 
-    \varepsilon(E) = n_en_H\Lambda(T, Z)
+    \varepsilon(E) = n_en_H\Lambda(T, Z, E)
 
-:class:`~pyxsim.source_models.ThermalSourceModel` requires the use of a 
+:class:`~pyxsim.source_models.ThermalSourceModel` requires the use of one of the
+two thermal spectral models, described in the section :ref:`spectral-models`. From this
+spectral model, which depends on temperature and metallicity, a spectrum of photon
+energies can be generated from each cell or particle. Since generating a new spectrum
+for each cell would be prohibitively expensive, the cells are binned into a 1-D 
+histogram of temperatures, and for each bin a spectrum is calculated. Provided the bins
+are finely spaced enough, the accuracy of this method is sufficient for most purposes. 
+
+There are a number of other optional parameters which can be set:
+
+* ``temperature_field``: The yt field to use as the temperature. Must have dimensions
+  of temperature. The default is ``("gas", "temperature")`` for grid-based datasets and
+  ``("PartType0", "Temperature")`` or ``("io", "temperature")`` for particle-based datasets,
+  depending on which is available.
+* ``emission_measure_field``: The yt field to use as the emission measure. Must have
+  dimensions of number density or per-volume. The default is ``("gas", "emission_measure")``
+  for grid-based datasets. For particle-based datasets, a new field is constructed, using
+  the default density and mass fields of the dataset, and the fields ``("PartType0", "ElectronAbundance")``
+  ``("PartType0", "NeutralHydrogenAbundance")`` to construct the electron and hydrogen ion
+  number densities if they are present in the dataset.
+* ``kT_min``: The minimum temperature in units of keV in the set of temperature bins. Default is 0.0808.
+* ``kT_max``: The maximum temperature in units of keV in the set of temperature bins. Default is 50.0.
+* ``n_kT``: The number of temperature bins to use. Default is 10000.
+* ``Zmet``: The metallicity. Either a floating-point number for a constant metallicity, or the name of 
+  a yt field for a spatially-varying metallicity. Default is 0.3.
+* ``method``: The method used to generate the photon energies from the spectrum. Either ``"invert_cdf"``,
+  which inverts the cumulative distribution function of the spectrum, or ``"accept_reject"``, which uses 
+  the acceptance-rejection method on the spectrum. The first method should be sufficient for most cases. 
+* ``prng``: A pseudo-random number generator. Typically will only be specified
+  if you have a reason to generate the same set of random numbers, such as for a 
+  test or a comparison. Default is the :mod:`numpy.random` module, but a 
+  :class:`~numpy.random.RandomState` object can also be used. 
 
 Examples
 ++++++++
 
+Here, we will show several examples of constructing :class:`~pyxsim.source_models.ThermalSourceModel`
+objects. We'll assume that a spectral model ``spec_model`` was constructed. See :ref:`spectral-models`
+for more details on how to do this. 
+
+An example where we use the default parameters, except we set a constant metallicity:
+
 .. code-block:: python
 
-    
+    thermal_model = pyxsim.ThermalSourceModel(spec_model, Zmet=0.5)
+
+An example where we use a metallicity field and change the temperature field:
+
+.. code-block:: python
+
+    thermal_model = pyxsim.ThermalSourceModel(spec_model, Zmet=("gas", "metallicity"),
+                                              temperature_field="hot_gas_temp")
+
+An example where we change the limits and number of the temperature bins:
+
+.. code-block:: python
+
+    thermal_model = pyxsim.ThermalSourceModel(spec_model, kT_min=0.1, kT_max=100.,
+                                              n_kT=50000)
+
+An example where we specify a random number generator:
+
+.. code-block:: python
+
+    from numpy.random import RandomState
+    prng = RandomState(25)
+    thermal_model = pyxsim.ThermalSourceModel(spec_model, prng=prng)
+
+.. _power-law-sources:
+
 Power-Law Sources
 -----------------
 
@@ -60,7 +122,7 @@ An example where the spectral index is the same everywhere:
     emission_field = "hard_emission" # The name of the field to use (normalization)
     alpha = 1.0 # The spectral index
     
-    plaw_model = PowerLawSourceModel(e0, emin, emax, emission_field, alpha)
+    plaw_model = pyxsim.PowerLawSourceModel(e0, emin, emax, emission_field, alpha)
     
 Another example where you have a spatially varying spectral index:
 
@@ -72,7 +134,9 @@ Another example where you have a spatially varying spectral index:
     emission_field = "inverse_compton_emission" # The name of the field to use (normalization)
     alpha = ("gas", "spectral_index") # The spectral index field
     
-    plaw_model = PowerLawSourceModel(e0, emin, emax, emission_field, alpha)
+    plaw_model = pyxsim.PowerLawSourceModel(e0, emin, emax, emission_field, alpha)
+
+.. _line-sources:
 
 Line Emission Sources
 ---------------------
@@ -113,11 +177,11 @@ Examples
 An example of an unbroadened line:
 
 .. code-block:: python
-    
+
     e0 = YTQuantity(5.0, "keV") # Rest-frame line energy
     emission_field = ("gas", "line_emission") # Line emission field (normalization)
-    line_model = LineSourceModel(e0, line_emission)
-    
+    line_model = pyxsim.LineSourceModel(e0, line_emission)
+
 An example of a line with a constant broadening in km/s:
 
 .. code-block:: python
@@ -125,7 +189,7 @@ An example of a line with a constant broadening in km/s:
     e0 = YTQuantity(6.0, "keV")
     emission_field = ("gas", "line_emission") # Line emission field (normalization)
     sigma = (500., "km/s")
-    line_model = LineSourceModel(e0, line_emission, sigma=sigma)
+    line_model = pyxsim.LineSourceModel(e0, line_emission, sigma=sigma)
 
 An example of a line with a spatially varying broadening field:
 
@@ -134,10 +198,11 @@ An example of a line with a spatially varying broadening field:
     e0 = YTQuantity(6.0, "keV")
     emission_field = ("gas", "line_emission") # Line emission field (normalization)
     sigma = "dark_matter_velocity_dispersion" # Has dimensions of velocity
-    line_model = LineSourceModel(e0, line_emission, sigma=sigma)
+    line_model = pyxsim.LineSourceModel(e0, line_emission, sigma=sigma)
 
 Designing Your Own Source Model
 -------------------------------
+
 Though the three source models above cover a wide variety of possible use cases for X-ray emission,
 you may find that you need to add a different source altogether. It is possible to create your own
 source model to generate photon energies and positions. We will outline in brief the required steps

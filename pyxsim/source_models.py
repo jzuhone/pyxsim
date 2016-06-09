@@ -54,7 +54,7 @@ class ThermalSourceModel(SourceModel):
         will be used or derived.
     kT_min : float, optional
         The default minimum temperature in keV to compute emission for.
-    kT_min : float, optional
+    kT_max : float, optional
         The default maximum temperature in keV to compute emission for.
     n_kT : integer, optional
         The number of temperature bins to use when computing emission.
