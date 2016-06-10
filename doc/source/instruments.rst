@@ -4,7 +4,7 @@ Convolving Events with Instrumental Responses
 =============================================
 
 .. note::
-
+-
     If you want to export simulated events to an instrument simulator, DO NOT
     convolve them with either an ARF or RMF from within ``pyxsim``. This will
     be the job of the external programs to do. 

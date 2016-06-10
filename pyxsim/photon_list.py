@@ -520,7 +520,8 @@ class PhotonList(object):
             if exp_time_new is None:
                 Tratio = 1.
             else:
-                Tratio = parse_value(exp_time_new, "s")/self.parameters["FiducialExposureTime"]
+                exp_time_new = parse_value(exp_time_new, "s")
+                Tratio = exp_time_new/self.parameters["FiducialExposureTime"]
             if area_new is None:
                 Aratio = 1.
             elif isinstance(area_new, AuxiliaryResponseFile):
@@ -532,8 +533,9 @@ class PhotonList(object):
                     parameters["RMF"] = arf.rmffile
                 Aratio = area_new/self.parameters["FiducialArea"]
             else:
+                area_new = parse_value(area_new, "cm**2")
                 mylog.info("Using constant effective area.")
-                Aratio = parse_value(area_new, "cm**2")/self.parameters["FiducialArea"]
+                Aratio = area_new/self.parameters["FiducialArea"]
             if redshift_new is None and dist_new is None:
                 Dratio = 1.
                 zobs = zobs0

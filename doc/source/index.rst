@@ -40,6 +40,9 @@ link between the simulation data and the algorithm for generating the X-ray phot
 detailed information about the design of the algorithm in yt, check out
 `the SciPy 2014 Proceedings. <http://conference.scipy.org/proceedings/scipy2014/zuhone.html>`_
 
+Table of Contents
+-----------------
+
 .. toctree::
    :maxdepth: 2
 
@@ -51,6 +54,7 @@ detailed information about the design of the algorithm in yt, check out
    spectral_models    
    event_lists
    instruments
+   examples
 
 
 Indices and tables

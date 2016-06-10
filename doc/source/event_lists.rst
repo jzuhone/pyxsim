@@ -3,6 +3,13 @@
 Event Lists
 ===========
 
+:class:`~pyxsim.event_list.EventList` objects are the main data products of pyXSIM, since
+they represent the synthetic observations that may be compared to and analyzed in the same
+fashion as real observed data. :class:`~pyxsim.event_list.EventList`\s can be produced from
+:class:`~pyxsim.photon_list.PhotonList`\s by projecting along a particular axis, or read in
+from disk from a previous projection. They can also be manipulated in a number of ways,
+combined with other sets of events, and used to produce other useful data products
+
 Creating a New Event List by Projecting from a Photon List
 ----------------------------------------------------------
 
