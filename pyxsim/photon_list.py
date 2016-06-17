@@ -458,8 +458,6 @@ class PhotonList(object):
             A model for galactic absorption.
         sky_center : array-like, optional
             Center RA, Dec of the events in degrees.
-        convolve_energies : boolean, optional
-            If this is set, the photon energies will be convolved with the RMF.
         no_shifting : boolean, optional
             If set, the photon energies will not be Doppler shifted.
         north_vector : a sequence of floats
