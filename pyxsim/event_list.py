@@ -17,16 +17,19 @@ from pyxsim.responses import AuxiliaryResponseFile
 
 class EventList(object):
 
-    def __init__(self, events, parameters):
+    def __init__(self, events, parameters, wcs=None):
         self.events = events
         self.parameters = parameters
         self.num_events = events["xpix"].shape[0]
-        self.wcs = _astropy.pywcs.WCS(naxis=2)
-        self.wcs.wcs.crpix = parameters["pix_center"]
-        self.wcs.wcs.crval = parameters["sky_center"].d
-        self.wcs.wcs.cdelt = [-parameters["dtheta"].value, parameters["dtheta"].value]
-        self.wcs.wcs.ctype = ["RA---TAN","DEC--TAN"]
-        self.wcs.wcs.cunit = ["deg"]*2
+        if wcs is None:
+            self.wcs = _astropy.pywcs.WCS(naxis=2)
+            self.wcs.wcs.crpix = parameters["pix_center"]
+            self.wcs.wcs.crval = parameters["sky_center"].d
+            self.wcs.wcs.cdelt = [-parameters["dtheta"].value, parameters["dtheta"].value]
+            self.wcs.wcs.ctype = ["RA---TAN","DEC--TAN"]
+            self.wcs.wcs.cunit = ["deg"]*2
+        else:
+            self.wcs = wcs
 
     @classmethod
     def create_empty_list(cls, exp_time, area, wcs, parameters=None):
@@ -77,6 +80,41 @@ class EventList(object):
             k2, v2 = item2
             events[k1] = uconcatenate([v1,v2])
         return EventList(events, self.parameters)
+
+    def reblock(self, dtheta, nx):
+        """
+        Reblock events to a new binning with the same celestial
+        coordinates. A new EventList is created.
+
+        Parameters
+        ----------
+        dtheta : float
+            The new width of the central pixel in degrees.
+        nx : integer
+            The number of pixels on a side.
+
+        Examples
+        --------
+        >>> new_events = events.reblock(1.0/3600., 300) # 1 arcsecond 
+        """
+        parameters = {}
+        parameters.update(self.parameters)
+        parameters["pix_center"] = np.array([0.5*(nx+1)]*2)
+        parameters["dtheta"] = YTQuantity(dtheta, "deg")
+        new_wcs = _astropy.pywcs.WCS(naxis=2)
+        new_wcs.wcs.crval = parameters["sky_center"].d
+        new_wcs.wcs.crpix = parameters["pix_center"]
+        new_wcs.wcs.cdelt = [-parameters["dtheta"].value, parameters["dtheta"].value]
+        new_wcs.wcs.ctype = ["RA---TAN","DEC--TAN"]
+        new_wcs.wcs.cunit = ["deg"]*2
+        xpix, ypix = new_wcs.wcs_world2pix(self["xsky"], self["ysky"], 1)
+        events = {}
+        events.update(self.events)
+        events["xpix"] = xpix
+        events["ypix"] = ypix
+        events.pop("xsky")
+        events.pop("ysky")
+        return EventList(events, parameters, wcs=new_wcs)
 
     def convolve_energies(self, rmf, prng=None, clobber_channels=False):
         """
