@@ -54,11 +54,14 @@ class ThermalSourceModel(SourceModel):
         of cm^-3. If not specified, the default emission measure field for the dataset
         will be used or derived.
     kT_min : float, optional
-        The default minimum temperature in keV to compute emission for.
+        The default minimum temperature in keV to compute emission for. Default: 0.008
     kT_max : float, optional
-        The default maximum temperature in keV to compute emission for.
+        The default maximum temperature in keV to compute emission for. Default: 64.0
     n_kT : integer, optional
-        The number of temperature bins to use when computing emission.
+        The number of temperature bins to use when computing emission. Default: 10000
+    kT_scale : string, optional
+        The scaling of the bins to use when computing emission, "linear" or "log". 
+        Default: "linear"
     Zmet : float or string, optional
         The metallicity. If a float, assumes a constant metallicity throughout.
         If a string, is taken to be the name of the metallicity field.
@@ -78,9 +81,9 @@ class ThermalSourceModel(SourceModel):
     >>> source_model = ThermalSourceModel(mekal_model, Zmet="metallicity")
     """
     def __init__(self, spectral_model, temperature_field=None,
-                 emission_measure_field=None, kT_min=0.0808,
-                 kT_max=50.0, n_kT=10000, Zmet=0.3,
-                 method="invert_cdf", prng=None):
+                 emission_measure_field=None, kT_min=0.008,
+                 kT_max=64.0, n_kT=10000, kT_scale="linear", 
+                 Zmet=0.3, method="invert_cdf", prng=None):
         self.temperature_field = temperature_field
         self.Zmet = Zmet
         self.spectral_model = spectral_model
@@ -91,6 +94,7 @@ class ThermalSourceModel(SourceModel):
             self.prng = prng
         self.kT_min = kT_min
         self.kT_max = kT_max
+        self.kT_scale = kT_scale
         self.n_kT = n_kT
         self.spectral_norm = None
         self.redshift = None
@@ -136,8 +140,12 @@ class ThermalSourceModel(SourceModel):
         mylog.info("Using temperature field '(%s, %s)'." % self.temperature_field)
         self.spectral_model.prepare_spectrum(redshift)
         self.spectral_norm = spectral_norm
-        self.kT_bins = np.linspace(self.kT_min, self.kT_max, num=self.n_kT+1)
-        self.dkT = self.kT_bins[1]-self.kT_bins[0]
+        if self.kT_scale == "linear":
+            self.kT_bins = np.linspace(self.kT_min, self.kT_max, num=self.n_kT+1)
+        elif self.kT_scale == "log":
+            self.kT_bins = np.logspace(np.log10(self.kT_min), np.log10(self.kT_max), 
+                                       num=self.n_kT+1)
+        self.dkT = np.diff(self.kT_bins)
         kT = (kboltz*data_source[self.temperature_field]).in_units("keV").v
         num_cells = np.logical_and(kT > self.kT_min, kT < self.kT_max).sum()
         self.pbar = get_pbar("Generating photons ", num_cells)
@@ -191,7 +199,7 @@ class ThermalSourceModel(SourceModel):
 
         for ibegin, iend, ikT in zip(bcell, ecell, kT_idxs):
 
-            kT = self.kT_bins[ikT] + 0.5*self.dkT
+            kT = self.kT_bins[ikT] + 0.5*self.dkT[ikT]
 
             n_current = iend-ibegin
 
