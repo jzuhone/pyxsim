@@ -13,7 +13,7 @@ from yt.units.yt_array import YTQuantity, YTArray, uconcatenate
 from yt.utilities.on_demand_imports import _astropy
 import h5py
 from pyxsim.utils import force_unicode, validate_parameters, parse_value
-from pyxsim.responses import AuxiliaryResponseFile
+from pyxsim.responses import AuxiliaryResponseFile, RedistributionMatrixFile
 
 class EventList(object):
 
@@ -95,7 +95,7 @@ class EventList(object):
 
         Examples
         --------
-        >>> new_events = events.reblock(1.0/3600., 300) # 1 arcsecond 
+        >>> new_events = events.reblock(1.0/3600., 300) # 1 arcsecond
         """
         parameters = {}
         parameters.update(self.parameters)
@@ -542,6 +542,15 @@ class EventList(object):
         tbhdu.header["TLMIN3"] = 0.5
         tbhdu.header["TLMAX2"] = 2.*self.parameters["pix_center"][0]-0.5
         tbhdu.header["TLMAX3"] = 2.*self.parameters["pix_center"][1]-0.5
+        if "ChannelType" in self.parameters:
+            rmf = RedistributionMatrixFile(self.parameters["RMF"])
+            num = 0
+            for i in range(1, rmf.num_mat_columns+1):
+                if rmf.header["TTYPE%d" % i] == "F_CHAN":
+                    num = i
+                    break
+            tbhdu.header["TLMIN4"] = rmf.header["TLMIN%d" % num]
+            tbhdu.header["TLMAX4"] = rmf.header["TLMAX%d" % num]
         tbhdu.header["EXPOSURE"] = exp_time
         tbhdu.header["TSTART"] = 0.0
         tbhdu.header["TSTOP"] = exp_time
@@ -810,25 +819,20 @@ class EventList(object):
         pyfits = _astropy.pyfits
         if bin_type == "channel" and "ChannelType" in self.parameters:
             spectype = self.parameters["ChannelType"]
-            f = pyfits.open(self.parameters["RMF"])
-            nchan = int(f["EBOUNDS"].header["DETCHANS"])
+            rmf = RedistributionMatrixFile(self.parameters["RMF"])
+            nchan = int(rmf.ebounds_header["DETCHANS"])
             num = 0
-            if "MATRIX" in f:
-                mat_key = "MATRIX"
-            elif "SPECRESP MATRIX" in f:
-                mat_key = "SPECRESP MATRIX"
-            for i in range(1,len(f[mat_key].columns)+1):
-                if f[mat_key].header["TTYPE%d" % i] == "F_CHAN":
+            for i in range(1, rmf.num_mat_columns+1):
+                if rmf.header["TTYPE%d" % i] == "F_CHAN":
                     num = i
                     break
             if num > 0:
                 tlmin = "TLMIN%d" % num
-                cmin = int(f[mat_key].header[tlmin])
+                cmin = int(rmf.header[tlmin])
             else:
                 mylog.warning("Cannot determine minimum allowed value for channel. " +
                               "Setting to 0, which may be wrong.")
                 cmin = 0
-            f.close()
             minlength = nchan
             if cmin == 1: minlength += 1
             spec = np.bincount(self[spectype],minlength=minlength)
