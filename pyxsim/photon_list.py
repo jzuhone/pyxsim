@@ -276,11 +276,21 @@ class PhotonList(object):
         else:
             parameters["DataType"] = "particles"
 
+        if hasattr(data_source, "left_edge"):
+            # Region
+            le = data_source.left_edge
+            re = data_source.right_edge
+        elif hasattr(data_source, "radius") and not hasattr(data_source, "height"):
+            # Sphere
+            le = -data_source.radius+data_source.center
+            re = data_source.radius+data_source.center
+        else:
+            # Compute rough boundaries of the object
+            le = ds.arr(np.zeros(3), "code_length")
+            re = ds.arr(np.zeros(3), "code_length")
+            for i, ax in enumerate("xyz"):
+                le[i], re[i] = data_source.quantities.extrema(ax)
         dds_min = get_smallest_dds(ds, parameters["DataType"])
-        le = ds.arr(np.zeros(3), "code_length")
-        re = ds.arr(np.zeros(3), "code_length")
-        for i, ax in enumerate("xyz"):
-            le[i], re[i] = data_source.quantities.extrema(ax)
         le = np.rint((le-ds.domain_left_edge)/dds_min)*dds_min+ds.domain_left_edge
         re = ds.domain_right_edge-np.rint((ds.domain_right_edge-re)/dds_min)*dds_min
         dmax = np.argmax(re-le)
