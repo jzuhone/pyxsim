@@ -293,10 +293,10 @@ class PhotonList(object):
         dds_min = get_smallest_dds(ds, parameters["DataType"])
         le = np.rint((le-ds.domain_left_edge)/dds_min)*dds_min+ds.domain_left_edge
         re = ds.domain_right_edge-np.rint((ds.domain_right_edge-re)/dds_min)*dds_min
-        dmax = np.argmax(re-le)
-        parameters["Width"] = (re-le)[dmax]
-        parameters["Dimension"] = int(parameters["Width"]/dds_min[dmax])
-        parameters["Width"].convert_to_units("kpc")
+        width = re-le
+        dmax = np.argmax(width)
+        parameters["Dimension"] = int(width[dmax]/dds_min[dmax])
+        parameters["Width"] = parameters["Dimension"]*dds_min[dmax].in_units("kpc")
 
         D_A = parameters["FiducialAngularDiameterDistance"].in_cgs()
         dist_fac = 1.0/(4.*np.pi*D_A.value*D_A.value*(1.+redshift)**2)
