@@ -289,7 +289,7 @@ class TableApecModel(SpectralModel):
 
         tmpspec += np.interp(emid, e_pseudo*self.scale_factor, pseudo)*de/self.scale_factor
 
-        return tmpspec
+        return tmpspec*self.scale_factor
 
     def _preload_data(self, index):
         line_data = self.line_handle[index+2].data
