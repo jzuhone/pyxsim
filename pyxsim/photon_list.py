@@ -41,6 +41,15 @@ def determine_fields(ds):
         width_field = "dx"
     return position_fields, velocity_fields, width_field
 
+def get_smallest_dds(ds, ds_type):
+    if ds_type == "cells":
+        dds = ds.index.select_grids(ds.index.grid_levels.max())[0].dds[:]
+    else:
+        ML = ds.index.oct_handler.max_level
+        dds = 1.0/(ds.domain_dimensions*2**ML)
+        dds = dds * (ds.domain_right_edge - ds.domain_left_edge)
+    return dds
+
 def concatenate_photons(photons):
     for key in photons:
         if len(photons[key]) > 0:
@@ -267,17 +276,17 @@ class PhotonList(object):
         else:
             parameters["DataType"] = "particles"
 
-        dimension = 0
-        width = 0.0
+        dds_min = get_smallest_dds(ds, parameters["DataType"])
+        le = ds.arr(np.zeros(3), "code_length")
+        re = ds.arr(np.zeros(3), "code_length")
         for i, ax in enumerate("xyz"):
-            le, re = data_source.quantities.extrema(ax)
-            delta_min, delta_max = data_source.quantities.extrema("d%s"%ax)
-            le -= 0.5*delta_max
-            re += 0.5*delta_max
-            width = max(width, re-parameters["center"][i], parameters["center"][i]-le)
-            dimension = max(dimension, int(width/delta_min))
-        parameters["Dimension"] = 2*dimension
-        parameters["Width"] = 2.*width.in_units("kpc")
+            le[i], re[i] = data_source.quantities.extrema(ax)
+        le = np.rint((le-ds.domain_left_edge)/dds_min)*dds_min+ds.domain_left_edge
+        re = ds.domain_right_edge-np.rint((ds.domain_right_edge-re)/dds_min)*dds_min
+        dmax = np.argmax(re-le)
+        parameters["Width"] = (re-le)[dmax]
+        parameters["Dimension"] = int(parameters["Width"]/dds_min[dmax])
+        parameters["Width"].convert_to_units("kpc")
 
         D_A = parameters["FiducialAngularDiameterDistance"].in_cgs()
         dist_fac = 1.0/(4.*np.pi*D_A.value*D_A.value*(1.+redshift)**2)
