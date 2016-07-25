@@ -1,1 +1,1 @@
-hg --config extensions.purge= purge --all pyxsim
+git clean -fx
