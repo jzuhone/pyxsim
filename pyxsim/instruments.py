@@ -7,6 +7,8 @@ from yt.funcs import get_pbar, ensure_numpy_array, \
 from yt.units.yt_array import YTQuantity, YTArray
 from yt.utilities.on_demand_imports import _astropy
 
+sigma_to_fwhm = 2.*np.sqrt(2.*np.log(2.))
+
 class InstrumentSimulator(object):
     def __init__(self, dtheta, nx, psf, arf,
                  rmf):
@@ -57,7 +59,7 @@ class InstrumentSimulator(object):
         Convolve the event positions with a PSF.
         """
         if isinstance(self.psf, float):
-            scale = self.psf
+            scale = self.psf/sigma_to_fwhm
             psf = lambda n: prng.normal(scale=scale, size=n)
         events.events["xsky"] += psf(events.num_events)
         events.events["ysky"] += psf(events.num_events)
@@ -140,10 +142,10 @@ class InstrumentSimulator(object):
         events.parameters["Instrument"] = self.rmf.header["INSTRUME"]
         events.parameters["Mission"] = self.rmf.header.get("MISSION","")
 
-ACIS_S = InstrumentSimulator(0.0001366666666, 8192, 0.0,
+ACIS_S = InstrumentSimulator(0.0001366667, 8192, 0.0001388889,
                              "aciss_aimpt_cy17.arf",
                              "aciss_aimpt_cy17.rmf")
-ACIS_I = InstrumentSimulator(0.0001366666666, 8192, 0.0,
+ACIS_I = InstrumentSimulator(0.0001366667, 8192, 0.0001388889,
                              "acisi_aimpt_cy17.arf",
                              "acisi_aimpt_cy17.rmf")
 Hitomi_SXS = InstrumentSimulator(0.0, 6, 0.0, 
