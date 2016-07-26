@@ -28,4 +28,5 @@ from pyxsim.responses import \
 from pyxsim.instruments import \
     ACIS_I, ACIS_S, \
     XRS_Imager, XRS_Calorimeter, \
-    AstroH_SXS
+    Hitomi_SXS, Athena_WFI, \
+    Athena_XIFU

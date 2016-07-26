@@ -142,6 +142,8 @@ class InstrumentSimulator(object):
         events.parameters["Instrument"] = self.rmf.header["INSTRUME"]
         events.parameters["Mission"] = self.rmf.header.get("MISSION","")
 
+# Specific instrument approximations
+
 ACIS_S = InstrumentSimulator(0.0001366667, 8192, 0.0001388889,
                              "aciss_aimpt_cy17.arf",
                              "aciss_aimpt_cy17.rmf")
@@ -151,8 +153,14 @@ ACIS_I = InstrumentSimulator(0.0001366667, 8192, 0.0001388889,
 Hitomi_SXS = InstrumentSimulator(0.0, 6, 0.0, 
                                  "sxt-s_140505_ts02um_intallpxl.arf",
                                  "ah_sxs_5ev_20130806.rmf")
-XRS_Imager = InstrumentSimulator(9.167325E-05, 4096, 0.0,
+Athena_WFI = InstrumentSimulator(0.0, 1024, 0.0,
+                                 "athena_wfi_1469_onaxis_w_filter_v20150326.arf", 
+                                 "athena_wfi_rmf_v20150326.rmf")
+Athena_XIFU = InstrumentSimulator(0.0, 66, 0.0,
+                                  "athena_xifu_1469_onaxis_pitch265um_v20150327.arf",
+                                  "athena_xifu_rmf_v20150327.rmf")
+XRS_Imager = InstrumentSimulator(9.167325E-05, 4096, 0.0001388889,
                                  "xrs_hdxi.arf", "xrs_hdxi.rmf")
-XRS_Calorimeter = InstrumentSimulator(0.0002864789, 300, 0.0,
+XRS_Calorimeter = InstrumentSimulator(0.0002864789, 300, 0.0002777778,
                                       "xrs_calorimeter.arf", 
                                       "xrs_calorimeter.rmf")
