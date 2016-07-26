@@ -56,9 +56,8 @@ class InstrumentSimulator(object):
         r"""
         Convolve the event positions with a PSF.
         """
-        dtheta = events.parameters['dtheta'].v
         if isinstance(self.psf, float):
-            scale = self.psf/dtheta
+            scale = self.psf
             psf = lambda n: prng.normal(scale=scale, size=n)
         events.events["xsky"] += psf(events.num_events)
         events.events["ysky"] += psf(events.num_events)
@@ -141,8 +140,17 @@ class InstrumentSimulator(object):
         events.parameters["Instrument"] = self.rmf.header["INSTRUME"]
         events.parameters["Mission"] = self.rmf.header.get("MISSION","")
 
-ACIS_S = InstrumentSimulator()
-ACIS_I = InstrumentSimulator()
-AstroH_SXS = InstrumentSimulator()
-XRS_Imager = InstrumentSimulator()
-XRS_Calorimeter = InstrumentSimulator()
+ACIS_S = InstrumentSimulator(0.0001366666666, 8192, 0.0,
+                             "aciss_aimpt_cy17.arf",
+                             "aciss_aimpt_cy17.rmf")
+ACIS_I = InstrumentSimulator(0.0001366666666, 8192, 0.0,
+                             "acisi_aimpt_cy17.arf",
+                             "acisi_aimpt_cy17.rmf")
+Hitomi_SXS = InstrumentSimulator(0.0, 6, 0.0, 
+                                 "sxt-s_140505_ts02um_intallpxl.arf",
+                                 "ah_sxs_5ev_20130806.rmf")
+XRS_Imager = InstrumentSimulator(9.167325E-05, 4096, 0.0,
+                                 "xrs_hdxi.arf", "xrs_hdxi.rmf")
+XRS_Calorimeter = InstrumentSimulator(0.0002864789, 300, 0.0,
+                                      "xrs_calorimeter.arf", 
+                                      "xrs_calorimeter.rmf")

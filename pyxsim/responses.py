@@ -14,6 +14,19 @@ import numpy as np
 from yt.utilities.on_demand_imports import _astropy
 from yt.units.yt_array import YTArray
 from pyxsim.utils import mylog
+import os
+
+pyxsim_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+
+def check_file_location(fn):
+    if os.path.exists(fn):
+        return os.path.abspath(fn)
+    else:
+        sto_fn = os.path.join(pyxsim_path, "responses", fn)
+        if not os.path.exists(sto_fn):
+            raise IOError("Response file %s does not exist.")
+        else:
+            return sto_fn
 
 class AuxiliaryResponseFile(object):
     r"""
@@ -34,16 +47,16 @@ class AuxiliaryResponseFile(object):
     ...                             rmffile="ah_sxs_5ev_basefilt_20100712.rmf")
     """
     def __init__(self, filename, rmffile=None):
-        f = _astropy.pyfits.open(filename)
+        self.filename = check_file_location(filename)
+        f = _astropy.pyfits.open(self.filename)
         self.elo = YTArray(f["SPECRESP"].data.field("ENERG_LO"), "keV")
         self.ehi = YTArray(f["SPECRESP"].data.field("ENERG_HI"), "keV")
         self.emid = 0.5*(self.elo+self.ehi)
         self.eff_area = YTArray(np.nan_to_num(f["SPECRESP"].data.field("SPECRESP")), "cm**2")
-        self.filename = filename
         if rmffile is not None:
             rmf = RedistributionMatrixFile(rmffile)
             self.eff_area *= rmf.weights
-            self.rmffile = rmffile
+            self.rmffile = rmf.filename
         else:
             mylog.warning("You specified an ARF but not an RMF. This is ok if you know "
                           "a priori that the responses are normalized properly. If not, "
@@ -93,7 +106,8 @@ class RedistributionMatrixFile(object):
     >>> rmf = RedistributionMatrixFile("acisi_aimpt_cy17.rmf")
     """
     def __init__(self, filename):
-        self.handle = _astropy.pyfits.open(filename)
+        self.filename = check_file_location(filename)
+        self.handle = _astropy.pyfits.open(self.filename)
         if "MATRIX" in self.handle:
             self.mat_key = "MATRIX"
         elif "SPECRESP MATRIX" in self.handle:
@@ -108,7 +122,6 @@ class RedistributionMatrixFile(object):
         self.ebounds = self.handle["EBOUNDS"].data
         self.ebounds_header = self.handle["EBOUNDS"].header
         self.weights = np.array([w.sum() for w in self.data["MATRIX"]])
-        self.filename = filename
 
     def __str__(self):
         return self.filename
