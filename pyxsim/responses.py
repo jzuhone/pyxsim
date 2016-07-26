@@ -22,7 +22,7 @@ def check_file_location(fn):
     if os.path.exists(fn):
         return os.path.abspath(fn)
     else:
-        sto_fn = os.path.join(pyxsim_path, "responses", fn)
+        sto_fn = os.path.join(pyxsim_path, "response_files", fn)
         if not os.path.exists(sto_fn):
             raise IOError("Response file %s does not exist.")
         else:
