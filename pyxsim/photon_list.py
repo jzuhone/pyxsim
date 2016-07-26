@@ -541,17 +541,8 @@ class PhotonList(object):
                 Tratio = exp_time_new/self.parameters["FiducialExposureTime"]
             if area_new is None:
                 Aratio = 1.
-            elif isinstance(area_new, AuxiliaryResponseFile):
-                arf = area_new
-                area_new = arf.max_area
-                mylog.info("Using energy-dependent effective area: %s" % arf.filename)
-                parameters["ARF"] = arf.filename
-                if hasattr(arf, "rmffile"):
-                    parameters["RMF"] = arf.rmffile
-                Aratio = area_new/self.parameters["FiducialArea"]
             else:
                 area_new = parse_value(area_new, "cm**2")
-                mylog.info("Using constant effective area.")
                 Aratio = area_new/self.parameters["FiducialArea"]
             if redshift_new is None and dist_new is None:
                 Dratio = 1.
@@ -635,7 +626,7 @@ class PhotonList(object):
         eobs *= scale_factor
 
         if absorb_model is None:
-            not_abs = np.ones(eobs.shape, dtype='bool')
+            detected = np.ones(eobs.shape, dtype='bool')
         else:
             mylog.info("Absorbing.")
             absorb_model.prepare_spectrum()
@@ -643,16 +634,8 @@ class PhotonList(object):
             aspec = absorb_model.get_spectrum()
             absorb = np.interp(eobs, emid, aspec, left=0.0, right=0.0)
             randvec = aspec.max()*prng.uniform(size=eobs.shape)
-            not_abs = randvec < absorb
+            detected = randvec < absorb
             absorb_model.cleanup_spectrum()
-
-        if "ARF" not in parameters:
-            detected = np.ones(eobs.shape, dtype='bool')
-        else:
-            mylog.info("Applying energy-dependent effective area.")
-            detected = arf.detect_events(eobs, prng=prng)
-
-        detected = np.logical_and(not_abs, detected)
 
         events = {}
 

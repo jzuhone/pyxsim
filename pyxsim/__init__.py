@@ -1,26 +1,31 @@
 __version__ = "1.0.0"
 from pyxsim.source_models import \
-     SourceModel, \
-     ThermalSourceModel, \
-     LineSourceModel, \
-     PowerLawSourceModel
+   SourceModel, \
+   ThermalSourceModel, \
+   LineSourceModel, \
+   PowerLawSourceModel
 
 from pyxsim.photon_list import \
-     PhotonList
+    PhotonList
 
 from pyxsim.utils import \
-     merge_files
+    merge_files
 
 from pyxsim.event_list import \
-     EventList
+    EventList
 
 from pyxsim.spectral_models import \
-     SpectralModel, \
-     XSpecThermalModel, \
-     XSpecAbsorbModel, \
-     TableApecModel, \
-     TableAbsorbModel
+    SpectralModel, \
+    XSpecThermalModel, \
+    XSpecAbsorbModel, \
+    TableApecModel, \
+    TableAbsorbModel
 
 from pyxsim.responses import \
-     AuxiliaryResponseFile, \
-     RedistributionMatrixFile
+    AuxiliaryResponseFile, \
+    RedistributionMatrixFile
+
+from pyxsim.instruments import \
+    ACIS_I, ACIS_S, \
+    XRS_Imager, XRS_Calorimeter, \
+    AstroH_SXS
