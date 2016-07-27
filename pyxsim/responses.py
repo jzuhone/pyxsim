@@ -66,7 +66,7 @@ class AuxiliaryResponseFile(object):
     def __str__(self):
         return self.filename
 
-    def detect_events(self, energy, prng=None):
+    def detect_events(self, energy, area, prng=None):
         """
         Use the ARF to determine a subset of photons which will be
         detected. Returns a boolean NumPy array which is the same
@@ -85,7 +85,7 @@ class AuxiliaryResponseFile(object):
         if prng is None:
             prng = np.random
         earea = np.interp(energy, self.emid, self.eff_area, left=0.0, right=0.0)
-        randvec = self.max_area*prng.uniform(size=energy.shape)
+        randvec = area.v*prng.uniform(size=energy.shape)
         return randvec < earea
 
     @property

@@ -72,7 +72,7 @@ class InstrumentSimulator(object):
         Convolve the events with a ARF file.
         """
         mylog.info("Applying energy-dependent effective area.")
-        detected = self.arf.detect_events(events["eobs"], prng=prng)
+        detected = self.arf.detect_events(events["eobs"], events.parameters["Area"], prng=prng)
         for key in ["xpix", "ypix", "xsky", "ysky", "eobs"]:
             events.events[key] = events[key][detected]
 
