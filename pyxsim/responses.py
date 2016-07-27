@@ -77,6 +77,9 @@ class AuxiliaryResponseFile(object):
         ----------
         energy : :class:`~yt.units.yt_array.YTArray`
             The energies of the photons to attempt to detect, in keV.
+        area : float, tuple, or YTQuantity
+            The collecting area associated with the event energies. If a floating-point
+            number, is assumed to be in cm^2. 
         prng : :class:`~numpy.random.RandomState` object or :mod:`~numpy.random`, optional
             A pseudo-random number generator. Typically will only be specified
             if you have a reason to generate the same set of random numbers, such as for a
