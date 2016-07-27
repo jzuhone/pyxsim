@@ -25,12 +25,12 @@ def setup():
 test_data_dir = ytcfg.get("yt", "test_data_dir")
 xray_data_dir = ytcfg.get("yt", "xray_data_dir")
 
-rmfs = ["pn-med.rmf", "acisi_aimpt_cy17.rmf",
-        "aciss_aimpt_cy17.rmf", "nustar.rmf",
-        "ah_sxs_5ev_basefilt_20100712.rmf"]
-arfs = ["pn-med.arf", "acisi_aimpt_cy17.arf",
-        "aciss_aimpt_cy17.arf", "nustar_3arcminA.arf",
-        "sxt-s_120210_ts02um_intallpxl.arf"]
+rmfs = ["acisi_aimpt_cy18.rmf",
+        "aciss_aimpt_cy18.rmf",
+        "ah_sxs_5ev_20130806.rmf"]
+arfs = ["acisi_aimpt_cy18.arf",
+        "aciss_aimpt_cy18.arf",
+        "sxt-s_140505_ts02um_intallpxl.arf"]
 
 gslr = "GasSloshingLowRes/sloshing_low_res_hdf5_plt_cnt_0300"
 APEC = xray_data_dir
