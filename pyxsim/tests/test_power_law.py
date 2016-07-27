@@ -106,8 +106,8 @@ def plaw_fit(alpha_sim):
     xspec.AllModels.clear()
     xspec.AllData.clear()
 
-    assert np.abs(alpha-alpha_sim) < 1.645*dalpha
-    assert np.abs(norm-norm_sim) < 1.645*dnorm
+    assert np.abs((alpha-alpha_sim)/alpha_sim) < 0.01
+    assert np.abs((norm-norm_sim)/norm_sim) < 0.01 
 
     os.chdir(curdir)
     shutil.rmtree(tmpdir)

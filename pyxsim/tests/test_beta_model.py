@@ -96,8 +96,8 @@ def do_beta_model(source, v_field, em_field):
     events.write_spectrum("beta_model_evt.pi", clobber=True)
 
     s = xspec.Spectrum("beta_model_evt.pi")
-    s.ignore("**-0.5")
-    s.ignore("10.0-**")
+    s.ignore("**-0.4")
+    s.ignore("9.0-**")
 
     m = xspec.Model("tbabs*bapec")
     m.bapec.kT = 5.5
@@ -122,20 +122,14 @@ def do_beta_model(source, v_field, em_field):
     sigma = m.bapec.Velocity.values[0]
     norm = m.bapec.norm.values[0]
 
-    dkT = m.bapec.kT.sigma
-    dmu = m.bapec.Redshift.sigma*ckms
-    dZ = m.bapec.Abundanc.sigma
-    dsigma = m.bapec.Velocity.sigma
-    dnorm = m.bapec.norm.sigma
-
     xspec.AllModels.clear()
     xspec.AllData.clear()
 
-    assert np.abs(mu-mu_sim) < 1.645*dmu
-    assert np.abs(kT-kT_sim) < 1.645*dkT
-    assert np.abs(Z-Z_sim) < 1.645*dZ
-    assert np.abs(sigma-sigma_sim) < 1.645*dsigma
-    assert np.abs(norm-norm_sim) < 1.645*dnorm
+    assert np.abs((mu-mu_sim)/mu_sim) < 0.05
+    assert np.abs(kT-kT_sim)/kT_sim < 0.05
+    assert np.abs(Z-Z_sim)/Z_sim < 0.05
+    assert np.abs(sigma-sigma_sim)/sigma_sim < 0.05
+    assert np.abs(norm-norm_sim)/norm_sim < 0.05
 
     os.chdir(curdir)
     shutil.rmtree(tmpdir)
