@@ -96,7 +96,7 @@ def do_beta_model(source, v_field, em_field):
     events.write_spectrum("beta_model_evt.pi", clobber=True)
 
     s = xspec.Spectrum("beta_model_evt.pi")
-    s.ignore("**-0.5")
+    s.ignore("**-0.4")
     s.ignore("9.0-**")
 
     m = xspec.Model("tbabs*bapec")
@@ -117,25 +117,19 @@ def do_beta_model(source, v_field, em_field):
     xspec.Fit.perform()
 
     kT  = m.bapec.kT.values[0]
-    mu = (m.bapec.Redshift.values[0]-redshift)*ckms
+    mu = ((1.0+m.bapec.Redshift.values[0])/(1.0+redshift)-1.)*ckms
     Z = m.bapec.Abundanc.values[0]
     sigma = m.bapec.Velocity.values[0]
     norm = m.bapec.norm.values[0]
 
-    dkT = m.bapec.kT.sigma
-    dmu = m.bapec.Redshift.sigma*ckms
-    dZ = m.bapec.Abundanc.sigma
-    dsigma = m.bapec.Velocity.sigma
-    dnorm = m.bapec.norm.sigma
-
-    assert np.abs(mu-mu_sim) < 1.645*dmu
-    assert np.abs(kT-kT_sim) < 1.645*dkT
-    assert np.abs(Z-Z_sim) < 1.645*dZ
-    assert np.abs(sigma-sigma_sim) < 1.645*dsigma
-    assert np.abs(norm-norm_sim) < 1.645*dnorm
-
     xspec.AllModels.clear()
     xspec.AllData.clear()
+
+    assert np.abs((mu-mu_sim)/mu_sim) < 0.05
+    assert np.abs(kT-kT_sim)/kT_sim < 0.05
+    assert np.abs(Z-Z_sim)/Z_sim < 0.05
+    assert np.abs(sigma-sigma_sim)/sigma_sim < 0.05
+    assert np.abs(norm-norm_sim)/norm_sim < 0.05
 
     os.chdir(curdir)
     shutil.rmtree(tmpdir)

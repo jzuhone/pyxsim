@@ -101,12 +101,12 @@ def test_point_source():
     dZ = m.apec.Abundanc.sigma
     dnorm = m.apec.norm.sigma
 
+    xspec.AllModels.clear()
+    xspec.AllData.clear()
+
     assert np.abs(kT-kT_sim) < 1.645*dkT
     assert np.abs(Z-Z_sim) < 1.645*dZ
     assert np.abs(norm-norm_sim) < 1.645*dnorm
-
-    xspec.AllModels.clear()
-    xspec.AllData.clear()
 
     os.chdir(curdir)
     shutil.rmtree(tmpdir)
