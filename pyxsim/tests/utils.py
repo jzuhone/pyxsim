@@ -22,7 +22,7 @@ rho_s = 9.0e-26 # g/cm**3
 class BetaModelSource(object):
     def __init__(self):
 
-        self.prng = RandomState(54)
+        self.prng = RandomState(24)
         self.kT = kT
         self.Z = Z
 
