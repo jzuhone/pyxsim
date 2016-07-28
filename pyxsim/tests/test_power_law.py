@@ -5,11 +5,10 @@ from pyxsim.tests.utils import \
     BetaModelSource
 from yt.units.yt_array import YTQuantity
 import numpy as np
-from yt.testing import requires_file, requires_module
+from yt.testing import requires_module
 import os
 import shutil
 import tempfile
-from yt.config import ytcfg
 from yt.utilities.physical_constants import mp
 
 def setup():
@@ -64,7 +63,7 @@ def plaw_fit(alpha_sim):
     events = photons.project_photons("z", absorb_model=abs_model,
                                      prng=bms.prng,
                                      no_shifting=True)
-    events = Hitomi_SXS(events, rebin=False, convolve_psf=False)
+    events = Hitomi_SXS(events, rebin=False, convolve_psf=False, prng=bms.prng)
     events.write_spectrum("plaw_model_evt.pi", clobber=True)
 
     s = xspec.Spectrum("plaw_model_evt.pi")
