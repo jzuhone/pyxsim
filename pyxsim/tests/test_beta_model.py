@@ -5,11 +5,10 @@ A unit test for the pyxsim analysis module.
 from pyxsim import \
     XSpecThermalModel, XSpecAbsorbModel, \
     ThermalSourceModel, PhotonList, \
-    AuxiliaryResponseFile, RedistributionMatrixFile
+    Hitomi_SXS
 from pyxsim.tests.utils import \
     BetaModelSource, ParticleBetaModelSource
-from yt.config import ytcfg
-from yt.testing import requires_file, requires_module
+from yt.testing import requires_module
 import numpy as np
 from yt.utilities.physical_constants import clight
 import os
@@ -22,21 +21,12 @@ def setup():
     from yt.config import ytcfg
     ytcfg["yt", "__withintesting"] = "True"
 
-xray_data_dir = ytcfg.get("yt", "xray_data_dir")
-
-arf_fn = os.path.join(xray_data_dir,"sxt-s_120210_ts02um_intallpxl.arf")
-rmf_fn = os.path.join(xray_data_dir,"ah_sxs_5ev_basefilt_20100712.rmf")
-
 @requires_module("xspec")
-@requires_file(arf_fn)
-@requires_file(rmf_fn)
 def test_beta_model():
     bms = BetaModelSource()
     do_beta_model(bms, "velocity_z", "emission_measure")
 
 @requires_module("xspec")
-@requires_file(arf_fn)
-@requires_file(rmf_fn)
 def test_particle_beta_model():
     bms = ParticleBetaModelSource()
     do_beta_model(bms, "particle_velocity_z", ("io","emission_measure"))
@@ -85,13 +75,9 @@ def do_beta_model(source, v_field, em_field):
     sigma_sim = float(v1.in_units("km/s"))
     mu_sim = -float(v2.in_units("km/s"))
 
-    arf = AuxiliaryResponseFile(arf_fn, rmffile=rmf_fn)
-    rmf = RedistributionMatrixFile(rmf_fn)
-
     events = photons.project_photons("z", absorb_model=abs_model,
-                                     area_new=arf,
                                      prng=source.prng)
-    events.convolve_energies(rmf, prng=source.prng)
+    events = Hitomi_SXS(events, rebin=False, convolve_psf=False, prng=source.prng)
 
     events.write_spectrum("beta_model_evt.pi", clobber=True)
 

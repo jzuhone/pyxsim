@@ -6,7 +6,8 @@ from pyxsim import \
     TableApecModel, TableAbsorbModel, \
     ThermalSourceModel, PhotonList, EventList, \
     merge_files, AuxiliaryResponseFile, \
-    RedistributionMatrixFile
+    RedistributionMatrixFile, ACIS_S, ACIS_I, \
+    Hitomi_SXS
 from yt.config import ytcfg
 from yt.testing import requires_file
 from yt.utilities.answer_testing.framework import requires_ds, \
@@ -31,6 +32,7 @@ rmfs = ["acisi_aimpt_cy18.rmf",
 arfs = ["acisi_aimpt_cy18.arf",
         "aciss_aimpt_cy18.arf",
         "sxt-s_140505_ts02um_intallpxl.arf"]
+instruments = [ACIS_I, ACIS_S, Hitomi_SXS]
 
 gslr = "GasSloshingLowRes/sloshing_low_res_hdf5_plt_cnt_0300"
 APEC = xray_data_dir
@@ -71,16 +73,14 @@ def test_sloshing():
 
     tests = [GenericArrayTest(ds, return_photons, args=["photons"])]
 
-    for a, r in zip(arfs, rmfs):
+    for a, r, i in zip(arfs, rmfs, instruments):
         arf_fn = os.path.join(xray_data_dir, a)
         rmf_fn = os.path.join(xray_data_dir, r)
         arf = AuxiliaryResponseFile(arf_fn, rmffile=rmf_fn)
-        rmf = RedistributionMatrixFile(rmf_fn)
-        events1 = photons1.project_photons([1.0,-0.5,0.2], area_new=arf,
+        events1 = photons1.project_photons([1.0,-0.5,0.2], area_new=arf.max_area,
                                            absorb_model=tbabs_model, prng=prng)
-
         events1["xsky"]
-        events1.convolve_energies(rmf, prng=prng)
+        events1 = i(events1, rebin=False, convolve_psf=False, prng=prng)
         return_events = return_data(events1.events)
 
         tests.append(GenericArrayTest(ds, return_events, args=[a]))

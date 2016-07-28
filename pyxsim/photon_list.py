@@ -460,10 +460,9 @@ class PhotonList(object):
             Normal vector to the plane of projection. If "x", "y", or "z", will
             assume to be along that axis (and will probably be faster). Otherwise,
             should be an off-axis normal vector, e.g [1.0, 2.0, -3.0]
-        area_new : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~pyxsim.responses.AuxiliaryResponseFile`, optional
-            New value for the effective area of the detector. A numeric value, if
-            units are not specified, is assumed to be in cm**2. An ARF indicates that
-            the effective area is energy-dependent.
+        area_new : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`, optional
+            New value for the (constant) collecting area of the detector. If
+            units are not specified, is assumed to be in cm**2.
         exp_time_new : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`, optional
             The new value for the exposure time. If units are not specified
             it is assumed to be in seconds.
@@ -492,8 +491,7 @@ class PhotonList(object):
         Examples
         --------
         >>> L = np.array([0.1,-0.2,0.3])
-        >>> arf = AuxiliaryResponseFile("sim_arf.fits")
-        >>> events = my_photons.project_photons(L, area_new=arf,
+        >>> events = my_photons.project_photons(L, area_new=10000.,
         ...                                     redshift_new=0.05)
         """
 
@@ -541,17 +539,8 @@ class PhotonList(object):
                 Tratio = exp_time_new/self.parameters["FiducialExposureTime"]
             if area_new is None:
                 Aratio = 1.
-            elif isinstance(area_new, AuxiliaryResponseFile):
-                arf = area_new
-                area_new = arf.max_area
-                mylog.info("Using energy-dependent effective area: %s" % arf.filename)
-                parameters["ARF"] = arf.filename
-                if hasattr(arf, "rmffile"):
-                    parameters["RMF"] = arf.rmffile
-                Aratio = area_new/self.parameters["FiducialArea"]
             else:
                 area_new = parse_value(area_new, "cm**2")
-                mylog.info("Using constant effective area.")
                 Aratio = area_new/self.parameters["FiducialArea"]
             if redshift_new is None and dist_new is None:
                 Dratio = 1.
@@ -635,7 +624,7 @@ class PhotonList(object):
         eobs *= scale_factor
 
         if absorb_model is None:
-            not_abs = np.ones(eobs.shape, dtype='bool')
+            detected = np.ones(eobs.shape, dtype='bool')
         else:
             mylog.info("Absorbing.")
             absorb_model.prepare_spectrum()
@@ -643,16 +632,8 @@ class PhotonList(object):
             aspec = absorb_model.get_spectrum()
             absorb = np.interp(eobs, emid, aspec, left=0.0, right=0.0)
             randvec = aspec.max()*prng.uniform(size=eobs.shape)
-            not_abs = randvec < absorb
+            detected = randvec < absorb
             absorb_model.cleanup_spectrum()
-
-        if "ARF" not in parameters:
-            detected = np.ones(eobs.shape, dtype='bool')
-        else:
-            mylog.info("Applying energy-dependent effective area.")
-            detected = arf.detect_events(eobs, prng=prng)
-
-        detected = np.logical_and(not_abs, detected)
 
         events = {}
 

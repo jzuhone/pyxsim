@@ -8,3 +8,5 @@ pyXSIM API
    event_list
    source_models
    spectral_models
+   instruments
+   

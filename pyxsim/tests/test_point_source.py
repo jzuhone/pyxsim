@@ -1,10 +1,9 @@
 from pyxsim.event_list import EventList
 from pyxsim.tests.utils import create_dummy_wcs
+from pyxsim.instruments import ACIS_I
 from pyxsim.spectral_models import XSpecAbsorbModel, XSpecThermalModel
-from pyxsim.responses import AuxiliaryResponseFile, RedistributionMatrixFile
-from yt.testing import requires_file, requires_module
+from yt.testing import requires_module
 import os
-from yt.config import ytcfg
 from numpy.random import RandomState
 from yt.units.yt_array import YTQuantity
 import tempfile
@@ -13,18 +12,11 @@ import numpy as np
 
 prng = RandomState(24)
 
-xray_data_dir = ytcfg.get("yt", "xray_data_dir")
-
 def setup():
     from yt.config import ytcfg
     ytcfg["yt", "__withintesting"] = "True"
 
-arf_fn = os.path.join(xray_data_dir, "acisi_aimpt_cy17.arf")
-rmf_fn = os.path.join(xray_data_dir, "acisi_aimpt_cy17.rmf")
-
 @requires_module("xspec")
-@requires_file(arf_fn)
-@requires_file(rmf_fn)
 def test_point_source():
 
     import xspec
@@ -45,10 +37,7 @@ def test_point_source():
     norm_sim = 4.0e-3
 
     exp_time = (200., "ks")
-
-    arf = AuxiliaryResponseFile(arf_fn)
-    rmf = RedistributionMatrixFile(rmf_fn)
-    area = arf.max_area
+    area = (1000., "cm**2")
 
     wcs = create_dummy_wcs()
 
@@ -61,17 +50,15 @@ def test_point_source():
     spec = (cspec+Z_sim*mspec)*YTQuantity(norm_sim*1.0e14, "cm**-5")
     ebins = apec_model.ebins
 
-    params = {"ARF": arf_fn,
-              "RMF": rmf_fn}
-    events = EventList.create_empty_list(exp_time, area, wcs, parameters=params)
+    events = EventList.create_empty_list(exp_time, area, wcs)
 
     positions = [(30.01, 45.0)]
 
     new_events = events.add_point_sources(positions, ebins, spec, prng=prng,
                                           absorb_model=abs_model)
 
-    new_events.convolve_energies(rmf, prng=prng)
-
+    new_events = ACIS_I(new_events, rebin=False, convolve_psf=False, prng=prng)
+    
     new_events.write_spectrum("point_source_evt.pi", clobber=True)
 
     s = xspec.Spectrum("point_source_evt.pi")

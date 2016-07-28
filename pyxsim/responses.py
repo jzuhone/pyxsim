@@ -1,19 +1,25 @@
 """
 Classes for response files. These generally will not be used
-by the end-user, but will be employed by methods of EventList.
+by the end-user, but will be employed by methods of InstrumentSimulators.
 """
 
-#-----------------------------------------------------------------------------
-# Copyright (c) 2015, yt Development Team.
-#
-# Distributed under the terms of the Modified BSD License.
-#
-# The full license is in the file COPYING.txt, distributed with this software.
-#-----------------------------------------------------------------------------
 import numpy as np
 from yt.utilities.on_demand_imports import _astropy
 from yt.units.yt_array import YTArray
 from pyxsim.utils import mylog
+import os
+
+pyxsim_path = os.path.abspath(os.path.dirname(__file__))
+
+def check_file_location(fn):
+    if os.path.exists(fn):
+        return os.path.abspath(fn)
+    else:
+        sto_fn = os.path.join(pyxsim_path, "response_files", fn)
+        if not os.path.exists(sto_fn):
+            raise IOError("Response file %s does not exist." % sto_fn)
+        else:
+            return sto_fn
 
 class AuxiliaryResponseFile(object):
     r"""
@@ -34,16 +40,16 @@ class AuxiliaryResponseFile(object):
     ...                             rmffile="ah_sxs_5ev_basefilt_20100712.rmf")
     """
     def __init__(self, filename, rmffile=None):
-        f = _astropy.pyfits.open(filename)
+        self.filename = check_file_location(filename)
+        f = _astropy.pyfits.open(self.filename)
         self.elo = YTArray(f["SPECRESP"].data.field("ENERG_LO"), "keV")
         self.ehi = YTArray(f["SPECRESP"].data.field("ENERG_HI"), "keV")
         self.emid = 0.5*(self.elo+self.ehi)
         self.eff_area = YTArray(np.nan_to_num(f["SPECRESP"].data.field("SPECRESP")), "cm**2")
-        self.filename = filename
         if rmffile is not None:
             rmf = RedistributionMatrixFile(rmffile)
             self.eff_area *= rmf.weights
-            self.rmffile = rmffile
+            self.rmffile = rmf.filename
         else:
             mylog.warning("You specified an ARF but not an RMF. This is ok if you know "
                           "a priori that the responses are normalized properly. If not, "
@@ -53,7 +59,7 @@ class AuxiliaryResponseFile(object):
     def __str__(self):
         return self.filename
 
-    def detect_events(self, energy, prng=None):
+    def detect_events(self, energy, area, prng=None):
         """
         Use the ARF to determine a subset of photons which will be
         detected. Returns a boolean NumPy array which is the same
@@ -64,6 +70,9 @@ class AuxiliaryResponseFile(object):
         ----------
         energy : :class:`~yt.units.yt_array.YTArray`
             The energies of the photons to attempt to detect, in keV.
+        area : float, tuple, or YTQuantity
+            The collecting area associated with the event energies. If a floating-point
+            number, is assumed to be in cm^2. 
         prng : :class:`~numpy.random.RandomState` object or :mod:`~numpy.random`, optional
             A pseudo-random number generator. Typically will only be specified
             if you have a reason to generate the same set of random numbers, such as for a
@@ -72,7 +81,7 @@ class AuxiliaryResponseFile(object):
         if prng is None:
             prng = np.random
         earea = np.interp(energy, self.emid, self.eff_area, left=0.0, right=0.0)
-        randvec = self.max_area*prng.uniform(size=energy.shape)
+        randvec = area.v*prng.uniform(size=energy.shape)
         return randvec < earea
 
     @property
@@ -93,7 +102,8 @@ class RedistributionMatrixFile(object):
     >>> rmf = RedistributionMatrixFile("acisi_aimpt_cy17.rmf")
     """
     def __init__(self, filename):
-        self.handle = _astropy.pyfits.open(filename)
+        self.filename = check_file_location(filename)
+        self.handle = _astropy.pyfits.open(self.filename)
         if "MATRIX" in self.handle:
             self.mat_key = "MATRIX"
         elif "SPECRESP MATRIX" in self.handle:
@@ -108,7 +118,6 @@ class RedistributionMatrixFile(object):
         self.ebounds = self.handle["EBOUNDS"].data
         self.ebounds_header = self.handle["EBOUNDS"].header
         self.weights = np.array([w.sum() for w in self.data["MATRIX"]])
-        self.filename = filename
 
     def __str__(self):
         return self.filename

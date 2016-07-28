@@ -8,7 +8,7 @@ Dependencies
 
 pyXSIM is compatible with Python 2.7 or 3.5+, and requires the following Python packages:
 
-- `yt <http://yt-project.org>`_ (version 3.3 or higher)
+- `yt <http://yt-project.org>`_ (version 3.3.1 or higher)
 - `NumPy <http://www.numpy.org>`_
 - `AstroPy <http://www.astropy.org>`_
 - `h5py <http://www.h5py.org>`_
@@ -38,7 +38,7 @@ pyXSIM using pip:
 
     [~]$ pip install pyxsim
 
-Or, to install into your Python distribution from `source <http://bitbucket.org/jzuhone/pyxsim>`_:
+Or, to install into your Python distribution from `source <http://github.com/jzuhone/pyxsim>`_:
 
 .. code-block:: bash
 
@@ -64,8 +64,22 @@ the correct ``python`` executable is the first in the path. For more details on 
 visit the `"Installing HEASoft" <http://heasarc.gsfc.nasa.gov/docs/software/lheasoft/install.html>`_ page.
 Currently, PyXspec only works with Python 2.7.
 
-Issues on Mac OS X
-++++++++++++++++++
+There are some issues you may encounter with generating spectral models using PyXspec. They are:
 
-There may be additional issues with compiling and using pyXSIM and PyXspec on your Mac OS X 
-system. 
+Conflicts with AstroPy
+++++++++++++++++++++++
+
+Both AstroPy and PyXspec use the CFITSIO library. Unfortunately, both of them also compile it as 
+a shared library themselves and link to it. This can result in conflicts between the two. You may see
+error messages like this:
+
+.. code-block::
+
+    ERROR: Mismatch in the CFITSIO_SONAME value in the fitsio.h include file
+    that was used to build the CFITSIO library, and the value in the include file
+    that was used when compiling the application program:
+        Version used to build the CFITSIO library   = 1
+        Version included by the application program = 5
+
+    Fix this by recompiling and then relinking this application program
+    with the CFITSIO library.

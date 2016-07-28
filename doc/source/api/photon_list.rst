@@ -1,5 +1,5 @@
-``PhotonList`` API
-==================
+Photon Lists API
+================
 
 .. automodule:: pyxsim.photon_list
     :members:

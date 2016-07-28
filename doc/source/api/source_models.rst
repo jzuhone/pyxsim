@@ -1,5 +1,5 @@
-``SourceModel`` API
-===================
+Source Models API
+=================
 
 .. automodule:: pyxsim.source_models
     :members:

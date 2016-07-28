@@ -81,143 +81,6 @@ class EventList(object):
             events[k1] = uconcatenate([v1,v2])
         return EventList(events, self.parameters)
 
-    def reblock(self, dtheta, nx):
-        """
-        Reblock events to a new binning with the same celestial
-        coordinates. A new EventList is created.
-
-        Parameters
-        ----------
-        dtheta : float
-            The new width of the central pixel in degrees.
-        nx : integer
-            The number of pixels on a side.
-
-        Examples
-        --------
-        >>> new_events = events.reblock(1.0/3600., 300) # 1 arcsecond
-        """
-        parameters = {}
-        parameters.update(self.parameters)
-        parameters["pix_center"] = np.array([0.5*(nx+1)]*2)
-        parameters["dtheta"] = YTQuantity(dtheta, "deg")
-        new_wcs = _astropy.pywcs.WCS(naxis=2)
-        new_wcs.wcs.crval = parameters["sky_center"].d
-        new_wcs.wcs.crpix = parameters["pix_center"]
-        new_wcs.wcs.cdelt = [-parameters["dtheta"].value, parameters["dtheta"].value]
-        new_wcs.wcs.ctype = ["RA---TAN","DEC--TAN"]
-        new_wcs.wcs.cunit = ["deg"]*2
-        xpix, ypix = new_wcs.wcs_world2pix(self["xsky"], self["ysky"], 1)
-        events = {}
-        events.update(self.events)
-        events["xpix"] = xpix
-        events["ypix"] = ypix
-        events.pop("xsky")
-        events.pop("ysky")
-        return EventList(events, parameters, wcs=new_wcs)
-
-    def convolve_energies(self, rmf, prng=None, clobber_channels=False):
-        """
-        Convolve the events with a RMF file.
-
-        Parameters
-        ----------
-        rmf : :class:`~pyxsim.responses.RedistributionMatrixFile`
-            The RMF to use when convolving the energies.
-        prng : :class:`~numpy.random.RandomState` object or :mod:`~numpy.random`, optional
-            A pseudo-random number generator. Typically will only be specified
-            if you have a reason to generate the same set of random numbers, such as for a
-            test. Default is the :mod:`numpy.random` module.
-        clobber_channels : boolean, optional
-            If channels have already been determined, set this to True to
-            re-calculate the channels.
-
-        Examples
-        --------
-        >>> from numpy.random import RandomState
-        >>> prng = RandomState(25)
-        >>> rmf = RedistributionMatrixFile("pn-med.rmf")
-        >>> events.convolve_energies(rmf, prng=prng, clobber_channels=True)
-        """
-        if prng is None:
-            prng = np.random
-
-        if "RMF" in self.parameters and rmf.filename != self.parameters["RMF"]:
-            err = "This EventList is already associated with an RMF: %s," % self.parameters["RMF"]
-            err += "but you want to convolve with a different RMF: %s!" % rmf.filename
-            raise RuntimeError(err)
-
-        if ("PI" in self or "PHA" in self) and not clobber_channels:
-            raise RuntimeError("You've already convolved these events with "
-                               "an RMF! If you want to overwrite them, set "
-                               "clobber_channels=True!")
-
-        mylog.info("Reading response matrix file (RMF): %s" % rmf.filename)
-
-        elo = rmf.data["ENERG_LO"]
-        ehi = rmf.data["ENERG_HI"]
-        n_de = elo.shape[0]
-        mylog.info("Number of energy bins in RMF: %d" % n_de)
-        mylog.info("Energy limits: %g %g" % (min(elo), max(ehi)))
-
-        n_ch = len(rmf.ebounds["CHANNEL"])
-        mylog.info("Number of channels in RMF: %d" % n_ch)
-
-        eidxs = np.argsort(self.events["eobs"])
-        sorted_e = self.events["eobs"][eidxs].d
-
-        detectedChannels = []
-
-        # run through all photon energies and find which bin they go in
-        fcurr = 0
-        last = sorted_e.shape[0]
-
-        pbar = get_pbar("Scattering energies with RMF", last)
-
-        for (k, low), high in zip(enumerate(elo), ehi):
-            # weight function for probabilities from RMF
-            weights = np.nan_to_num(np.float64(rmf.data["MATRIX"][k]))
-            weights /= weights.sum()
-            # build channel number list associated to array value,
-            # there are groups of channels in rmfs with nonzero probabilities
-            trueChannel = []
-            f_chan = ensure_numpy_array(np.nan_to_num(rmf.data["F_CHAN"][k]))
-            n_chan = ensure_numpy_array(np.nan_to_num(rmf.data["N_CHAN"][k]))
-            if not iterable(f_chan):
-                f_chan = [f_chan]
-                n_chan = [n_chan]
-            for start, nchan in zip(f_chan, n_chan):
-                if nchan == 0:
-                    trueChannel.append(start)
-                else:
-                    trueChannel += list(range(start, start+nchan))
-            if len(trueChannel) > 0:
-                for q in range(fcurr, last):
-                    if low <= sorted_e[q] < high:
-                        channelInd = prng.choice(len(weights), p=weights)
-                        fcurr += 1
-                        pbar.update(fcurr)
-                        detectedChannels.append(trueChannel[channelInd])
-                    else:
-                        break
-        pbar.finish()
-
-
-        self.events["xpix"] = self.events["xpix"][eidxs]
-        self.events["ypix"] = self.events["ypix"][eidxs]
-        if "xsky" in self.events:
-            self.events["xsky"] = self.events["xsky"][eidxs]
-        if "ysky" in self.events:
-            self.events["ysky"] = self.events["ysky"][eidxs]
-        self.events["eobs"] = YTArray(sorted_e, "keV")
-        self.events[rmf.header["CHANTYPE"]] = np.array(detectedChannels, dtype="int")
-
-        self.parameters["RMF"] = rmf.filename
-        self.parameters["ChannelType"] = rmf.header["CHANTYPE"]
-        self.parameters["Telescope"] = rmf.header["TELESCOP"]
-        self.parameters["Instrument"] = rmf.header["INSTRUME"]
-        self.parameters["Mission"] = rmf.header.get("MISSION","")
-
     def add_point_sources(self, positions, energy_bins, spectra,
                           prng=None, absorb_model=None):
         r"""
@@ -315,7 +178,7 @@ class EventList(object):
         e = YTArray(np.interp(randvec, cumspec, ebins), "keV")
 
         if absorb_model is None:
-            not_abs = np.ones(e.shape, dtype='bool')
+            detected = np.ones(e.shape, dtype='bool')
         else:
             mylog.info("Absorbing.")
             absorb_model.prepare_spectrum()
@@ -323,18 +186,8 @@ class EventList(object):
             aspec = absorb_model.get_spectrum()
             absorb = np.interp(e, emid, aspec, left=0.0, right=0.0)
             randvec = aspec.max()*prng.uniform(size=e.shape)
-            not_abs = randvec < absorb
+            detected = randvec < absorb
             absorb_model.cleanup_spectrum()
-
-        if "ARF" in self.parameters:
-            rmffile = self.parameters.get("RMF", None)
-            arf = AuxiliaryResponseFile(self.parameters["ARF"],
-                                        rmffile=rmffile)
-            detected = arf.detect_events(e, prng=prng)
-        else:
-            detected = np.ones(e.shape, dtype='bool')
-
-        detected = np.logical_and(not_abs, detected)
 
         mylog.info("Adding %d new events." % detected.sum())
 
@@ -359,34 +212,6 @@ class EventList(object):
         new_events = {}
         for k, v in self.items():
             new_events[k] = v[idxs]
-        return EventList(new_events, self.parameters)
-
-    def convolve_with_psf(self, psf, prng=None):
-        r"""
-        Convolve the event positions with a PSF.
-
-        Parameters
-        ----------
-        psf : float or function
-            The PSF to convolve the photon positions with. If a function, it must take
-            the number of events as an argument. If a float, it will be assumed to be the
-            standard deviation of a Gaussian PSF.
-        prng : :class:`~numpy.random.RandomState` object or :mod:`numpy.random`, optional
-            A pseudo-random number generator. Typically will only be specified
-            if you have a reason to generate the same set of random numbers, such as for a
-            test. Default is the :mod:`numpy.random` module.
-
-        Examples
-        --------
-        """
-        if prng is None:
-            prng = np.random
-        dtheta = self.parameters['dtheta']
-        new_events = self.events.deepcopy()
-        if isinstance(psf, float):
-            psf = lambda n: prng.normal(scale=psf/dtheta, size=n)
-        new_events["xpix"] += psf(self.num_events)
-        new_events["ypix"] += psf(self.num_events)
         return EventList(new_events, self.parameters)
 
     @classmethod
