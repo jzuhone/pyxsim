@@ -10,32 +10,58 @@ from yt.utilities.on_demand_imports import _astropy
 sigma_to_fwhm = 2.*np.sqrt(2.*np.log(2.))
 
 class InstrumentSimulator(object):
-    def __init__(self, dtheta, nx, psf, arf,
+    def __init__(self, dtheta, nx, psf_scale, arf,
                  rmf):
+        """
+        Construct an instrument simulator.
+
+        Parameters
+        ----------
+        dtheta : float
+            The width of the central pixel in degrees. 
+        nx : integer
+            The number of resolution elements on a side across
+            the field of view.
+        psf_scale : float
+            The FWHM of the Gaussian PSF in degrees. 
+        arf : string
+            The path to the ARF file that will be used for
+            the effective area.
+        rmf : string
+            The path to the RMF file that will be used for
+            the spectral response matrix. 
+
+        Examples
+        --------
+        >>> from pyxsim import InstrumentSimulator
+        >>> ACIS_S = InstrumentSimulator(0.0001366667, 8192, 0.0001388889,
+        ...                              "aciss_aimpt_cy18.arf",
+        ...                              "aciss_aimpt_cy18.rmf")
+        """
         self.dtheta = dtheta
         self.nx = nx
-        self.psf = psf
+        self.psf_scale = psf_scale
         self.arf = AuxiliaryResponseFile(arf, rmffile=rmf)
         self.rmf = RedistributionMatrixFile(rmf)
 
-    def __call__(self, events, reblock=True,
+    def __call__(self, events, rebin=True,
                  convolve_psf=True, convolve_arf=True, 
                  convolve_rmf=True, prng=None):
         if prng is None:
             prng = np.random
-        if reblock:
-            self.reblock(events)
+        if rebin:
+            self.rebin(events)
         if convolve_psf:
             self.convolve_with_psf(events, prng)
         if convolve_arf:
             self.apply_effective_area(events, prng)
-        if convolve_rmf:
-            self.convolve_energies(events, prng)
+            if convolve_rmf:
+                self.convolve_energies(events, prng)
         return events
 
-    def reblock(self, events):
+    def rebin(self, events):
         """
-        Reblock events to a new binning with the same celestial
+        Rebin event positions to a new binning with the same celestial
         coordinates.
         """
         new_wcs = _astropy.pywcs.WCS(naxis=2)
@@ -58,10 +84,8 @@ class InstrumentSimulator(object):
         r"""
         Convolve the event positions with a PSF.
         """
-        if isinstance(self.psf, float):
-            dtheta = events.parameters["dtheta"]
-            scale = self.psf/sigma_to_fwhm/dtheta
-            psf = lambda n: prng.normal(scale=scale, size=n)
+        dtheta = events.parameters["dtheta"]
+        psf = lambda n: prng.normal(scale=self.psf_scale/sigma_to_fwhm/dtheta, size=n)
         events.events["xpix"] += psf(events.num_events)
         events.events["ypix"] += psf(events.num_events)
         xsky, ysky = events.wcs.wcs_pix2world(events["xpix"], events["ypix"], 1)
@@ -157,7 +181,7 @@ Hitomi_SXS = InstrumentSimulator(0.0, 6, 0.0,
 Athena_WFI = InstrumentSimulator(0.0, 1024, 0.0,
                                  "athena_wfi_1469_onaxis_w_filter_v20150326.arf", 
                                  "athena_wfi_rmf_v20150326.rmf")
-Athena_XIFU = InstrumentSimulator(0.0, 66, 0.0,
+Athena_XIFU = InstrumentSimulator(1.265282E-03, 66, 0.0,
                                   "athena_xifu_1469_onaxis_pitch265um_v20150327.arf",
                                   "athena_xifu_rmf_v20150327.rmf")
 XRS_Imager = InstrumentSimulator(9.167325E-05, 4096, 0.0001388889,

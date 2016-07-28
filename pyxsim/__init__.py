@@ -1,4 +1,5 @@
 __version__ = "1.0.0"
+
 from pyxsim.source_models import \
    SourceModel, \
    ThermalSourceModel, \
@@ -26,6 +27,7 @@ from pyxsim.responses import \
     RedistributionMatrixFile
 
 from pyxsim.instruments import \
+    InstrumentSimulator, \
     ACIS_I, ACIS_S, \
     XRS_Imager, XRS_Calorimeter, \
     Hitomi_SXS, Athena_WFI, \

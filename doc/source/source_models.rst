@@ -45,6 +45,7 @@ There are a number of other optional parameters which can be set:
 * ``kT_min``: The minimum temperature in units of keV in the set of temperature bins. Default is 0.0808.
 * ``kT_max``: The maximum temperature in units of keV in the set of temperature bins. Default is 50.0.
 * ``n_kT``: The number of temperature bins to use. Default is 10000.
+* ``kT_scale``: The scaling of the temperature bins, either "linear" or "log". Default: "linear"
 * ``Zmet``: The metallicity. Either a floating-point number for a constant metallicity, or the name of 
   a yt field for a spatially-varying metallicity. Default is 0.3.
 * ``method``: The method used to generate the photon energies from the spectrum. Either ``"invert_cdf"``,
