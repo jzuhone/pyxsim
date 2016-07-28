@@ -41,8 +41,8 @@ class InstrumentSimulator(object):
         self.dtheta = dtheta
         self.nx = nx
         self.psf_scale = psf_scale
-        self.arf = AuxiliaryResponseFile(arf, rmffile=rmf)
-        self.rmf = RedistributionMatrixFile(rmf)
+        self.arf = arf
+        self.rmf = rmf
 
     def __call__(self, events, rebin=True,
                  convolve_psf=True, convolve_arf=True, 
@@ -97,7 +97,8 @@ class InstrumentSimulator(object):
         Convolve the events with a ARF file.
         """
         mylog.info("Applying energy-dependent effective area.")
-        detected = self.arf.detect_events(events["eobs"], events.parameters["Area"], prng=prng)
+        arf = AuxiliaryResponseFile(self.arf, rmffile=self.rmf)
+        detected = arf.detect_events(events["eobs"], events.parameters["Area"], prng=prng)
         for key in ["xpix", "ypix", "xsky", "ysky", "eobs"]:
             events.events[key] = events[key][detected]
 
@@ -105,15 +106,16 @@ class InstrumentSimulator(object):
         """
         Convolve the events with a RMF file.
         """
-        mylog.info("Reading response matrix file (RMF): %s" % self.rmf.filename)
+        mylog.info("Reading response matrix file (RMF): %s" % self.rmf)
+        rmf = RedistributionMatrixFile(self.rmf)
 
-        elo = self.rmf.data["ENERG_LO"]
-        ehi = self.rmf.data["ENERG_HI"]
+        elo = rmf.data["ENERG_LO"]
+        ehi = rmf.data["ENERG_HI"]
         n_de = elo.shape[0]
         mylog.info("Number of energy bins in RMF: %d" % n_de)
         mylog.info("Energy limits: %g %g" % (min(elo), max(ehi)))
 
-        n_ch = len(self.rmf.ebounds["CHANNEL"])
+        n_ch = len(rmf.ebounds["CHANNEL"])
         mylog.info("Number of channels in RMF: %d" % n_ch)
 
         eidxs = np.argsort(events["eobs"])
@@ -129,13 +131,13 @@ class InstrumentSimulator(object):
 
         for (k, low), high in zip(enumerate(elo), ehi):
             # weight function for probabilities from RMF
-            weights = np.nan_to_num(np.float64(self.rmf.data["MATRIX"][k]))
+            weights = np.nan_to_num(np.float64(rmf.data["MATRIX"][k]))
             weights /= weights.sum()
             # build channel number list associated to array value,
             # there are groups of channels in rmfs with nonzero probabilities
             trueChannel = []
-            f_chan = ensure_numpy_array(np.nan_to_num(self.rmf.data["F_CHAN"][k]))
-            n_chan = ensure_numpy_array(np.nan_to_num(self.rmf.data["N_CHAN"][k]))
+            f_chan = ensure_numpy_array(np.nan_to_num(rmf.data["F_CHAN"][k]))
+            n_chan = ensure_numpy_array(np.nan_to_num(rmf.data["N_CHAN"][k]))
             if not iterable(f_chan):
                 f_chan = [f_chan]
                 n_chan = [n_chan]
@@ -159,13 +161,13 @@ class InstrumentSimulator(object):
             events.events[key] = events[key][eidxs]
 
         events.events["eobs"] = YTArray(sorted_e, "keV")
-        events.events[self.rmf.header["CHANTYPE"]] = np.array(detectedChannels, dtype="int")
+        events.events[rmf.header["CHANTYPE"]] = np.array(detectedChannels, dtype="int")
 
-        events.parameters["RMF"] = self.rmf.filename
-        events.parameters["ChannelType"] = self.rmf.header["CHANTYPE"]
-        events.parameters["Telescope"] = self.rmf.header["TELESCOP"]
-        events.parameters["Instrument"] = self.rmf.header["INSTRUME"]
-        events.parameters["Mission"] = self.rmf.header.get("MISSION","")
+        events.parameters["RMF"] = rmf.filename
+        events.parameters["ChannelType"] = rmf.header["CHANTYPE"]
+        events.parameters["Telescope"] = rmf.header["TELESCOP"]
+        events.parameters["Instrument"] = rmf.header["INSTRUME"]
+        events.parameters["Mission"] = rmf.header.get("MISSION","")
 
 # Specific instrument approximations
 
