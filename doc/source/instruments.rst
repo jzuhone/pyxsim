@@ -46,7 +46,17 @@ this order.
 3. Using the effective area curve from the selected ARF, events are selected or rejected for observation.
 4. The observed event energies are convolved with the selected RMF to produce the observed energy channels. 
 
-These specific effects of the instrument simulator can be turned on or off, which are handled with the
+Assuming one has an :class:`~pyxsim.event_list.EventList` object handy, to generate a new event list
+passed through one of these :class:`~pyxsim.instruments.InstrumentSimulator` classes, one only needs to call
+the instrument simulator with the events as an argument:
+
+.. code-block:: python
+
+    >>> from pyxsim import ACIS_S, Hitomi_SXS
+    >>> aciss_events = ACIS_S(events)
+    >>> hitomi_events = Hitomi_SXS(events)
+
+The specific effects of the instrument simulator can be turned on or off, which are handled with the
 following boolean keyword arguments, all of which default to ``True``:
 
 * ``rebin``: Controls whether or not the events are rebinned.
@@ -54,6 +64,14 @@ following boolean keyword arguments, all of which default to ``True``:
 * ``convolve_arf``: Controls whether or not the events are selected according to the effective area curve.
 * ``convolve_rmf``: Controls whether or not the event energies are convolved with the spectral response. Note that
   if ``convolve_arf=False``, the energies will not be convolved either. 
+
+For example, if one only wanted to detect events using the ARF and convolve the energies with the RMF, one
+could do this:
+
+.. code-block:: python
+
+    >>> from pyxsim import ACIS_S
+    >>> new_events = ACIS_S(events, rebin=False, convolve_psf=False)
 
 Designing Your Own Instrument Simulator
 +++++++++++++++++++++++++++++++++++++++
