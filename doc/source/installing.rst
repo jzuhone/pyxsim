@@ -70,11 +70,16 @@ Conflicts with AstroPy
 ++++++++++++++++++++++
 
 Both AstroPy and PyXspec use the CFITSIO library. Unfortunately, both of them also compile it as 
-a shared library themselves and link to it. This can result in conflicts between the two, as
-illustrated by this simple script:
+a shared library themselves and link to it. This can result in conflicts between the two. You may see
+error messages like this:
 
-Issues on Mac OS X
-++++++++++++++++++
+.. code-block::
 
-There may be additional issues with compiling and using pyXSIM and PyXspec on your Mac OS X 
-system. The main one is that you may have diffi
+    ERROR: Mismatch in the CFITSIO_SONAME value in the fitsio.h include file
+    that was used to build the CFITSIO library, and the value in the include file
+    that was used when compiling the application program:
+        Version used to build the CFITSIO library   = 1
+        Version included by the application program = 5
+
+    Fix this by recompiling and then relinking this application program
+    with the CFITSIO library.
