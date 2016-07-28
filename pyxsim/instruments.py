@@ -59,13 +59,14 @@ class InstrumentSimulator(object):
         Convolve the event positions with a PSF.
         """
         if isinstance(self.psf, float):
-            scale = self.psf/sigma_to_fwhm
+            dtheta = events.parameters["dtheta"]
+            scale = self.psf/sigma_to_fwhm/dtheta
             psf = lambda n: prng.normal(scale=scale, size=n)
-        events.events["xsky"] += psf(events.num_events)
-        events.events["ysky"] += psf(events.num_events)
-        xpix, ypix = events.wcs.wcs_world2pix(events["xsky"], events["ysky"], 1)
-        events.events['xpix'] = xpix
-        events.events['ypix'] = ypix
+        events.events["xpix"] += psf(events.num_events)
+        events.events["ypix"] += psf(events.num_events)
+        xsky, ysky = events.wcs.wcs_pix2world(events["xpix"], events["ypix"], 1)
+        events.events['xsky'] = xsky
+        events.events['ysky'] = ysky
 
     def apply_effective_area(self, events, prng):
         """
