@@ -3,11 +3,7 @@
 How pyXSIM Works
 ================
 
-This section details the physical models and basic algorithms of pyXSIM. 
-
-Assumptions
------------
-
+This section details in brief the model, assumptions, and basic algorithms of pyXSIM.
 
 From Source to Detector: Three Basic Steps
 ------------------------------------------
@@ -36,7 +32,13 @@ them along a particular line of sight.
 Step 3: Convolve with Instrumental Responses
 ++++++++++++++++++++++++++++++++++++++++++++
 
-The implementation of this step is described in :ref:`instruments`. 
+Finally, the last step is to take the sky-projected event positions and energies and convolve them with
+instrumental responses to produce realistic images and spectra that can be processed with standard software
+tools for working with X-ray observations. pyXSIM provides a very simplified approach to convolving with
+instrumental responses, but also provides a way to export the simulated events for use with other packages
+which simulate X-ray observatories more accurately.
+
+The details on how to convolve with instrumental responses can be found in :ref:`instruments`. 
 
 Limitations
 -----------
