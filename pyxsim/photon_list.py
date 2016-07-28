@@ -491,8 +491,7 @@ class PhotonList(object):
         Examples
         --------
         >>> L = np.array([0.1,-0.2,0.3])
-        >>> arf = AuxiliaryResponseFile("sim_arf.fits")
-        >>> events = my_photons.project_photons(L, area_new=arf,
+        >>> events = my_photons.project_photons(L, area_new=10000.,
         ...                                     redshift_new=0.05)
         """
 
