@@ -1,15 +1,8 @@
 """
 Classes for response files. These generally will not be used
-by the end-user, but will be employed by methods of EventList.
+by the end-user, but will be employed by methods of InstrumentSimulators.
 """
 
-#-----------------------------------------------------------------------------
-# Copyright (c) 2015, yt Development Team.
-#
-# Distributed under the terms of the Modified BSD License.
-#
-# The full license is in the file COPYING.txt, distributed with this software.
-#-----------------------------------------------------------------------------
 import numpy as np
 from yt.utilities.on_demand_imports import _astropy
 from yt.units.yt_array import YTArray
@@ -24,7 +17,7 @@ def check_file_location(fn):
     else:
         sto_fn = os.path.join(pyxsim_path, "response_files", fn)
         if not os.path.exists(sto_fn):
-            raise IOError("Response file %s does not exist.")
+            raise IOError("Response file %s does not exist." % sto_fn)
         else:
             return sto_fn
 
