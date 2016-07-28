@@ -16,7 +16,7 @@ from yt.units.yt_array import YTArray
 from pyxsim.utils import mylog
 import os
 
-pyxsim_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+pyxsim_path = os.path.abspath(os.path.dirname(__file__))
 
 def check_file_location(fn):
     if os.path.exists(fn):

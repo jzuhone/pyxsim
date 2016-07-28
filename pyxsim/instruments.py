@@ -145,11 +145,11 @@ class InstrumentSimulator(object):
 # Specific instrument approximations
 
 ACIS_S = InstrumentSimulator(0.0001366667, 8192, 0.0001388889,
-                             "aciss_aimpt_cy17.arf",
-                             "aciss_aimpt_cy17.rmf")
+                             "aciss_aimpt_cy18.arf",
+                             "aciss_aimpt_cy18.rmf")
 ACIS_I = InstrumentSimulator(0.0001366667, 8192, 0.0001388889,
-                             "acisi_aimpt_cy17.arf",
-                             "acisi_aimpt_cy17.rmf")
+                             "acisi_aimpt_cy18.arf",
+                             "acisi_aimpt_cy18.rmf")
 Hitomi_SXS = InstrumentSimulator(0.0, 6, 0.0, 
                                  "sxt-s_140505_ts02um_intallpxl.arf",
                                  "ah_sxs_5ev_20130806.rmf")
