@@ -64,7 +64,7 @@ def plaw_fit(alpha_sim):
     events = photons.project_photons("z", absorb_model=abs_model,
                                      prng=bms.prng,
                                      no_shifting=True)
-    events = Hitomi_SXS(events)
+    events = Hitomi_SXS(events, rebin=False, convolve_psf=False)
     events.write_spectrum("plaw_model_evt.pi", clobber=True)
 
     s = xspec.Spectrum("plaw_model_evt.pi")

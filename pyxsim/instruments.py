@@ -54,6 +54,8 @@ class InstrumentSimulator(object):
         if convolve_psf:
             self.convolve_with_psf(events, prng)
         if convolve_arf:
+            events["xsky"]
+            events["ysky"]
             self.apply_effective_area(events, prng)
             if convolve_rmf:
                 self.convolve_energies(events, prng)
@@ -99,6 +101,7 @@ class InstrumentSimulator(object):
         mylog.info("Applying energy-dependent effective area.")
         arf = AuxiliaryResponseFile(self.arf, rmffile=self.rmf)
         detected = arf.detect_events(events["eobs"], events.parameters["Area"], prng=prng)
+        mylog.info("%s events detected." % detected.sum())
         for key in ["xpix", "ypix", "xsky", "ysky", "eobs"]:
             events.events[key] = events[key][detected]
 
