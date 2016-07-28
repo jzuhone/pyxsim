@@ -55,7 +55,7 @@ def test_background():
     new_events = events.add_background(ebins, spec, prng=prng,
                                        absorb_model=abs_model)
 
-    new_events = ACIS_I(new_events)
+    new_events = ACIS_I(new_events, rebin=False, convolve_psf=False, prng=prng)
 
     new_events.write_spectrum("background_evt.pi", clobber=True)
 
@@ -89,9 +89,9 @@ def test_background():
     xspec.AllModels.clear()
     xspec.AllData.clear()
 
-    assert np.abs(kT-kT_sim) < 1.645*dkT
-    assert np.abs(Z-Z_sim) < 1.645*dZ
-    assert np.abs(norm-norm_sim) < 1.645*dnorm
+    assert np.abs(kT-kT_sim)/kT_sim < 0.02
+    assert np.abs(Z-Z_sim) < 1.0e-10
+    assert np.abs(norm-norm_sim)/norm_sim < 0.02
 
     os.chdir(curdir)
     shutil.rmtree(tmpdir)
