@@ -1,5 +1,5 @@
-``SpectralModel`` API
-=====================
+Spectral Models API
+===================
 
 .. automodule:: pyxsim.spectral_models
     :members:

@@ -1,5 +1,5 @@
-``EventList`` API
-=================
+Event Lists API
+===============
 
 .. automodule:: pyxsim.event_list
     :members:

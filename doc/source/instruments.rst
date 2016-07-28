@@ -64,7 +64,7 @@ in this order:
 
 * ``dtheta``: The width of the reference (central) pixel in degrees.
 * ``nx``: The number of resolution elements (pixels) on a side across the field of view.
-* ``psf_scale``: 
+* ``psf_scale``: The FWHM of the Gaussian PSF in degrees. 
 * ``arf``: The path to the ARF file you want to use. 
 * ``rmf``: The path to the RMF file you want to use. 
 
