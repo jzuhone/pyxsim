@@ -184,10 +184,10 @@ ACIS_I = InstrumentSimulator(0.0001366667, 8192, 0.0001388889,
 Hitomi_SXS = InstrumentSimulator(8.512516E-03, 6, 0.021666667,
                                  "sxt-s_140505_ts02um_intallpxl.arf",
                                  "ah_sxs_5ev_20130806.rmf")
-Athena_WFI = InstrumentSimulator(6.207043E-04, 1024, 0.0,
+Athena_WFI = InstrumentSimulator(6.207043E-04, 1024, 0.001388888888888889,
                                  "athena_wfi_1469_onaxis_w_filter_v20150326.arf", 
                                  "athena_wfi_rmf_v20150326.rmf")
-Athena_XIFU = InstrumentSimulator(1.265282E-03, 66, 0.0,
+Athena_XIFU = InstrumentSimulator(1.265282E-03, 66, 0.001388888888888889,
                                   "athena_xifu_1469_onaxis_pitch265um_v20150327.arf",
                                   "athena_xifu_rmf_v20150327.rmf")
 XRS_Imager = InstrumentSimulator(9.167325E-05, 4096, 0.0001388889,
