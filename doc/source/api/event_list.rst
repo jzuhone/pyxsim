@@ -5,3 +5,6 @@ Event Lists API
     :members:
     :undoc-members:
     :exclude-members: keys, values, items, has_key
+
+.. automodule:: pyxsim.utils
+    :members: merge_files
