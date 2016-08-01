@@ -23,7 +23,7 @@ class InstrumentSimulator(object):
             The number of resolution elements on a side across
             the field of view.
         psf_scale : float
-            The FWHM of the Gaussian PSF in degrees. 
+            The FWHM of the Gaussian PSF in degrees.
         arf : string
             The path to the ARF file that will be used for
             the effective area.

@@ -84,15 +84,15 @@ def merge_files(input_files, output_file, clobber=False,
 
     Examples
     --------
-    >>> from yt.analysis_modules.pyxsim.api import merge_files
+    >>> from pyxsim import merge_files
     >>> merge_files(["events_0.h5","events_1.h5","events_3.h5"], "events.h5",
     ...             clobber=True, add_exposure_times=True)
 
     Notes
     -----
     Currently, to merge files it is mandated that all of the parameters have the
-    same values, with the possible exception of the exposure time parameter "exp_time"
-    if add_exposure_times=False.
+    same values, with the exception of the exposure time parameter "exp_time". If
+    add_exposure_times=False, the maximum exposure time will be used.
     """
     if os.path.exists(output_file) and not clobber:
         raise IOError("Cannot overwrite existing file %s. " % output_file +
@@ -124,8 +124,8 @@ def merge_files(input_files, output_file, clobber=False,
         f = h5py.File(fn, "r")
         if add_exposure_times:
             tot_exp_time += f["/parameters"][exp_time_key].value
-        elif i == 0:
-            tot_exp_time = f["/parameters"][exp_time_key].value
+        else:
+            tot_exp_time = max(tot_exp_time, f["/parameters"][exp_time_key].value)
         for key in f["/data"]:
             data[key].append(f["/data"][key][:])
         f.close()
