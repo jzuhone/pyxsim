@@ -192,6 +192,6 @@ Athena_XIFU = InstrumentSimulator(1.265282E-03, 66, 0.001388888888888889,
                                   "athena_xifu_rmf_v20150327.rmf")
 XRS_Imager = InstrumentSimulator(9.167325E-05, 4096, 0.0001388889,
                                  "xrs_hdxi.arf", "xrs_hdxi.rmf")
-XRS_Calorimeter = InstrumentSimulator(0.0002864789, 300, 0.0002777778,
-                                      "xrs_calorimeter.arf", 
+XRS_Calorimeter = InstrumentSimulator(0.0002864789, 300, 0.0001388889,
+                                      "xrs_calorimeter.arf",
                                       "xrs_calorimeter.rmf")
