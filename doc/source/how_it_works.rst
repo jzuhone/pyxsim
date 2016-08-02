@@ -48,3 +48,4 @@ lifted in the future:
 
 * pyXSIM is currently unable to simulate any sources with any optical thickness, absorption, or scattering.
 * pyXSIM is currently unable to simulate any sources with explicit time dependence.
+* pyXSIM is currently limited to datasets in Cartesian coordinates. 
