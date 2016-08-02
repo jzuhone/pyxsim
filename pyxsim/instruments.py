@@ -181,7 +181,7 @@ ACIS_S = InstrumentSimulator(0.0001366667, 8192, 0.0001388889,
 ACIS_I = InstrumentSimulator(0.0001366667, 8192, 0.0001388889,
                              "acisi_aimpt_cy18.arf",
                              "acisi_aimpt_cy18.rmf")
-Hitomi_SXS = InstrumentSimulator(8.512516E-03, 6, 0.021666667,
+Hitomi_SXS = InstrumentSimulator(8.512516E-03, 6, 0.02,
                                  "sxt-s_140505_ts02um_intallpxl.arf",
                                  "ah_sxs_5ev_20130806.rmf")
 Athena_WFI = InstrumentSimulator(6.207043E-04, 1024, 0.001388888888888889,
