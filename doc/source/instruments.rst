@@ -34,8 +34,8 @@ pyXSIM comes with the following built-in instrument simulators:
 * ``Hitomi_SXS``: Hitomi SXS ARF and RMF, with 
 * ``Athena_WFI``: 
 * ``Athena_XIFU``: 
-* ``XRS_Imager``:
-* ``XRS_Calorimeter``:
+* ``XRS_Imager``: X-ray Surveyor Imager ARF and RMF, with 0.33" central pixel and 0.5" FWHM PSF
+* ``XRS_Calorimeter``: X-ray Surveyor Calorimeter ARF and RMF, with 1.03" central pixel and 0.5" FWHM PSF
 
 When an instrument simulator is called, the following operations are applied to the input events, in
 this order.

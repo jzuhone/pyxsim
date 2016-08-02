@@ -101,6 +101,9 @@ Methods are provided for adding background and point source events to an existin
 
 .. code-block:: python
 
+    from numpy.random import RandomState
+    prng = RandomState(25)
+
     events.add_background(ebins, spec, prng=prng, absorb_model=tbabs_model)
 
 

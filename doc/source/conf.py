@@ -48,7 +48,7 @@ extensions = [
     'sphinx.ext.intersphinx',
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
-    'numpydoc',
+    'sphinx.ext.napoleon',
     'sphinx.ext.autosummary',
     'RunNotebook.notebook_sphinxext',
     'RunNotebook.notebookcell_sphinxext',

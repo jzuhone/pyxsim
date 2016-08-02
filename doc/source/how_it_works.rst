@@ -21,13 +21,22 @@ is understandable by yt. Examples of this may be:
 * A model of dark matter particles where line emission arises from annihilation or decay of the particles
 
 In any case, there is a fair amount of flexibility in the type of source and its emission that can be
-modeled. 
+modeled. The basic idea is that for each cell in a specified region of the source, photons are generated
+assuming the physical properties of the call and an emission model for X-rays based on those physical 
+properties. The number of photons to be generated is controlled by specifying a fiducial exposure time, 
+collecting area, and redshift and/or distance to the source. Typically, at this stage the values of these
+parameters are chosen such that they generate a large number of photons, much larger than would be actually
+observed, since the goal is to create an initial distribution that will be a statistically robust sample
+from which to draw events when creating synthetic observations. The photons are generated with three-dimensional
+positions in the rest frame of the source (except that their energies are potentially cosmologically redshifted
+with the given redshift), since the positions on the sky and the Doppler shifting of the photons are 
+taken into account in the next step when a line of sight is provided. 
 
 Step 2: Project Photons
 +++++++++++++++++++++++
 
-Once we have generated photons in three dimensions, we can create a set of simulated events by projecting 
-them along a particular line of sight. 
+Once we have generated our large sample of photons in the previous step, we can create a set of simulated 
+events by projecting them along a particular line of sight. 
 
 Step 3: Convolve with Instrumental Responses
 ++++++++++++++++++++++++++++++++++++++++++++
