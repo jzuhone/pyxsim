@@ -188,18 +188,24 @@ class PhotonList(object):
         source_model : :class:`~pyxsim.source_models.SourceModel`
             A source model used to generate the photons.
         parameters : dict, optional
-            A dictionary of parameters to be passed to the user function.
+            A dictionary of parameters to be passed for the source model to use, if necessary.
         center : string or array_like, optional
-            The origin of the photons. Accepts "c", "max", or a coordinate.
+            The origin of the photon spatial coordinates. Accepts "c", "max", or a coordinate. 
+            If not specified, pyxsim attempts to use the "center" field parameter of the data_source. 
         dist : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`, optional
             The angular diameter distance, used for nearby sources. This may be
             optionally supplied instead of it being determined from the *redshift*
             and given *cosmology*. If units are not specified, it is assumed to be
-            in Mpc.
+            in Mpc. To use this, the redshift must be set to zero. 
         cosmology : :class:`~yt.utilities.cosmology.Cosmology`, optional
             Cosmological information. If not supplied, we try to get
             the cosmology from the dataset. Otherwise, LCDM with
             the default yt parameters is assumed.
+        velocity_fields : list of fields
+            The yt fields to use for the velocity. If not specified, the following will
+            be assumed:
+            ['velocity_x', 'velocity_y', 'velocity_z'] for grid datasets
+            ['particle_velocity_x', 'particle_velocity_y', 'particle_velocity_z'] for particle datasets
 
         Examples
         --------
@@ -242,7 +248,9 @@ class PhotonList(object):
             D_A = cosmo.angular_diameter_distance(0.0,redshift).in_units("Mpc")
         else:
             D_A = parse_value(dist, "Mpc")
-            redshift = 0.0
+            if redshift > 0.0:
+                mylog.warning("Redshift must be zero for nearby sources. Resetting redshift to 0.0.")
+                redshift = 0.0
 
         if center in ("center", "c"):
             parameters["center"] = ds.domain_center
@@ -277,7 +285,7 @@ class PhotonList(object):
             parameters["DataType"] = "particles"
 
         if hasattr(data_source, "left_edge"):
-            # Region
+            # Region or grid
             le = data_source.left_edge
             re = data_source.right_edge
         elif hasattr(data_source, "radius") and not hasattr(data_source, "height"):
@@ -471,7 +479,8 @@ class PhotonList(object):
         dist_new : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`, optional
             The new value for the angular diameter distance, used for nearby sources.
             This may be optionally supplied instead of it being determined from the
-            cosmology. If units are not specified, it is assumed to be in Mpc.
+            cosmology. If units are not specified, it is assumed to be in Mpc. To use this, the 
+            redshift must be zero. 
         absorb_model : :class:`~pyxsim.spectral_models.TableAbsorbModel` or :class:`~pyxsim.spectral_models.XSpecAbsorbModel`, optional
             A model for galactic absorption.
         sky_center : array-like, optional
@@ -547,8 +556,10 @@ class PhotonList(object):
                 zobs = zobs0
                 D_A = D_A0
             else:
-                if redshift_new is None:
-                    zobs = 0.0
+                if dist_new is not None:
+                    if redshift_new is not None and redshift_new > 0.0:
+                        mylog.warning("Redshift must be zero for nearby sources. Resetting redshift to 0.0.")
+                        zobs = 0.0
                     D_A = parse_value(dist_new, "Mpc")
                 else:
                     zobs = redshift_new

@@ -29,21 +29,50 @@ dataset in yt and create a spherical data source centered on the cluster potenti
     sp = ds.sphere("c", (1.0, "Mpc"))
     
 This sphere object ``sp`` can then be used as input to the :meth:`~pyxsim.photon_list.PhotonList.from_data_source`
-method to create a new :class:`~pyxsim.photon_list.PhotonList`. 
-:meth:`~pyxsim.photon_list.PhotonList.from_data_source` requires a ``source_model`` argument; you
-can find out how to setup a source model in the section on :ref:`source-models`. For now, we'll
-assume we have created the ``source_model`` representing the thermal emission from the plasma. 
+method to create a new :class:`~pyxsim.photon_list.PhotonList`. The arguments taken by 
+:meth:`~pyxsim.photon_list.PhotonList.from_data_source` are as follows:
+
+* ``data_source``: A :class:`~yt.data_objects.data_containers.YTSelectionContainer`. The 
+  3D data source from which the photons will be generated.
+* ``redshift``: The cosmological redshift for the photons. Determines the angular diameter
+  and luminosity distances to the source given a ``cosmology``, which determines the number
+  of photons. 
+* ``area``: The collecting area to determine the number of photons. If units are
+  not specified, it is assumed to be in :math:`cm^2`.
+* ``exp_time``: The exposure time to determine the number of photons. If units are
+  not specified, it is assumed to be in seconds.
+* ``source_model`` : A :class:`~pyxsim.source_models.SourceModel` used to generate the
+  photons. see :ref:`source-models` for options.
+* ``parameters`` (optional): A dictionary of parameters to be passed to the source model if 
+  necessary.
+* ``center`` (optional): string or array-like object. The origin of the photon spatial 
+  coordinates. Accepts "c", "max", or a coordinate. If not specified, pyXSIM attempts to use 
+  the "center" field parameter of the data_source. 
+* ``dist`` (optional): The angular diameter distance, only should be used for nearby sources. 
+  This may be supplied instead of it being determined from the ``redshift`` and ``cosmology``.
+  If units are not specified, it is assumed to be in Mpc. To use this, the redshift must be 
+  set to zero. 
+* ``cosmology`` (optional): A :class:`~yt.utilities.cosmology.Cosmology` object which supplies 
+  cosmological informaton. If the ``data_source`` has cosmological parameters, they will be
+  used, otherwise a :math:`\Lambda{\rm CDM}` cosmology with the following parameters are assumed: 
+  :math:`H_0` = 71 km/s/Mpc, :math:`\Omega_m` = 0.27, :math:`\Omega_\Lambda` = 0.73. 
+* ``velocity_fields`` (optional): A list of fields to use for the velocity to Doppler-shift the 
+  photons. If not specified, the following will be assumed:   
+  ``['velocity_x', 'velocity_y', 'velocity_z']`` for grid datasets, and 
+  ``['particle_velocity_x', 'particle_velocity_y', 'particle_velocity_z']`` for particle datasets.
+
+As an example, we'll assume we have created a ``source_model`` representing the thermal emission 
+from the plasma (see :ref:`source-models` for more details on how to create one): 
 
 .. code-block:: python
 
     redshift = 0.05 # The redshift to the object. 
     area = (3000., "cm**2") # A constant effective area to generate the photons with.
     exp_time = (100., "ks") # The exposure time to generate the photons with. 
-    center = sp.center # A center in 3D for the photon positions. Can be anything. If
-                       # not specified, the center of the `data_source` will be chosen.
+    center = sp.center # A center in 3D for the photon positions. If not specified, 
+                       # the center of the `data_source` will be chosen.
     
-    # Optionally, construct a cosmology object. If you don't, then one will be chosen
-    # with hubble_constant=0.71, omega_matter=0.27, omega_lambda=0.73.
+    # Optionally, construct a cosmology object. 
     cosmo = Cosmology(hubble_constant=0.68, omega_matter=0.31, omega_lambda=0.69)
     
     photons = pyxsim.PhotonList.from_data_source(sp, redshift, area, exp_time,

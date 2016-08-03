@@ -32,7 +32,7 @@ arguments to customize the resulting projection. The arguments are:
 * ``dist_new`` (optional): The value of the angular diameter to assume for the observation. Use for nearby
   sources instead of the redshift. If units are not specified, it is assumed to be in Mpc. Used to reduce the
   of events from the initially large sample of photons. The default value is the value used when the 
-  :class:`~pyxsim.photon_list.PhotonList` was created.
+  :class:`~pyxsim.photon_list.PhotonList` was created. To use this, the redshift must be set to zero. 
 * ``absorb_model`` (optional): :class:`~pyxsim.spectral_models.TableAbsorbModel` or 
   :class:`~pyxsim.spectral_models.XSpecAbsorbModel`. A model for foreground galactic absorption.
 * ``sky_center`` (optional): Central RA, Dec of the events in degrees. Default ``(30.0, 45.0)``.
