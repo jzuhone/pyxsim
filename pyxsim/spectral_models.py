@@ -170,14 +170,16 @@ class TableApecModel(SpectralModel):
 
     Parameters
     ----------
-    apec_root : string
-        The directory root where the APEC model files are stored.
     emin : float
         The minimum energy for the spectral model.
     emax : float
         The maximum energy for the spectral model.
     nchan : integer
         The number of channels in the spectral model.
+    apec_root : string
+        The directory root where the APEC model files are stored. If 
+        not provided, the default is to look for them in the pyxsim
+        "spectral_files" directory.
     apec_vers : string, optional
         The version identifier string for the APEC files, e.g.
         "2.0.2"
@@ -187,17 +189,22 @@ class TableApecModel(SpectralModel):
 
     Examples
     --------
-    >>> apec_model = TableApecModel("$SPECTRAL_DATA/spectral/", 0.05, 50.0,
-    ...                             1000, apec_vers="3.0", thermal_broad=True)
+    >>> apec_model = TableApecModel(0.05, 50.0, 1000, apec_vers="3.0",
+    ...                             thermal_broad=True)
     """
-    def __init__(self, apec_root, emin, emax, nchan,
+    def __init__(self, emin, emax, nchan, apec_root=None,
                  apec_vers="2.0.2", thermal_broad=False):
-        self.apec_root = apec_root
-        self.apec_prefix = "apec_v"+apec_vers
-        self.cocofile = os.path.join(self.apec_root,
-                                     self.apec_prefix+"_coco.fits")
-        self.linefile = os.path.join(self.apec_root,
-                                     self.apec_prefix+"_line.fits")
+        if apec_root is None:
+            self.cocofile = check_file_location("apec_v_%s_coco.fits" % apec_vers,
+                                                "spectral_files")
+            self.linefile = check_file_location("apec_v_%s_line.fits" % apec_vers,
+                                                "spectral_files")
+        else:
+            self.cocofile = os.path.join(apec_root, "apec_v_%s_coco.fits" % apec_vers)
+            self.linefile = os.path.join(apec_root, "apec_v_%s_line.fits" % apec_vers)
+        if not os.path.exists(self.cocofile) or not os.path.exists(self.linefile):
+            raise IOError("Cannot find the APEC files!\n %s\n, %s" % (self.cocofile,
+                                                                      self.linefile))
         super(TableApecModel, self).__init__(emin, emax, nchan)
         self.wvbins = hc/self.ebins[::-1].d
         # H, He, and trace elements

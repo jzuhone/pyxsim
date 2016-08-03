@@ -34,13 +34,15 @@ from the APEC plasma emission tables available from `AtomDB <http://www.atomdb.o
 
 .. code-block:: python
 
-    apec_root = "/Users/jzuhone/atomdb" # The directory where the APEC model files are stored.
     emin = 0.01 # The minimum energy of the spectrum in keV
     emax = 20.0 # The maximum energy of the spectrum in keV
     nchan = 10000 # The number of spectral channels
-    apec_vers = "3.0.3" # The version identifier string for the APEC files.
-    spec_model = pyxsim.TableApecModel(model, emin, emax, nchan, apec_vers=apec_vers,
-                                       thermal_broad=False)
+    apec_vers = "3.0.3" # The version identifier string for the APEC files. Default: "2.0.2"
+    apec_root = "/Users/jzuhone/atomdb" # The directory where the APEC model files are stored.
+                                        # Optional, the native pyxsim files will be used if
+                                        # a location is not provided.
+    spec_model = pyxsim.TableApecModel(emin, emax, nchan, apec_root=apec_root,
+                                       apec_vers=apec_vers, thermal_broad=False)
 
 You will need to set up one of these two models in your script and pass it as the first argument to
 :class:`~pyxsim.source_models.ThermalSourceModel` (see :ref:`thermal-sources` for details).
