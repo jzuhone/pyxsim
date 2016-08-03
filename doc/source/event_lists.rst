@@ -126,9 +126,13 @@ use the :meth:`~pyxsim.event_list.EventList.from_fits_file` method:
 
     events = EventList.from_fits_file("cluster_events.fits")
 
-If convolved with responses using an instrument model (see :ref:`instruments` for more
-details), these FITS files are "standard" events files which may be read and analyzed 
-by other X-ray software tools such as ds9, CIAO, HEATOOLS, etc.
+.. note::
+
+    If the events have convolved with responses using a built-in instrument model (see 
+    :ref:`instruments` for more details), then the characteristics of the convolved events
+    are stored in the HDF5 or FITS file, including the spectral channels. In the case of the
+    FITS files, they are "standard" events files which may be read and analyzed by other X-ray 
+    software tools such as ds9, CIAO, HEATOOLS, etc.
 
 SIMPUT
 ++++++
@@ -166,6 +170,17 @@ Methods are provided for adding background and point source events to an existin
 Manipulating Event Lists
 ------------------------
 
+There are a couple of options for manipulating :class:`~pyxsim.event_list.EventList` objects. 
+
+If two :class:`~pyxsim.event_list.EventList` objects were created with the same parameters (e.g.
+exposure time, collecting area, etc.), and only the events are different, they can be simply added
+together to return a new :class:`~pyxsim.event_list.EventList`:
+
+.. code-block:: python
+
+    events = events1 + events2
+    
+An error will be thrown if the parameters do not match between the two lists. 
 
 Saving Derived Products from Event Lists
 ----------------------------------------
