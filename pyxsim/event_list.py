@@ -89,13 +89,13 @@ class EventList(object):
 
         Parameters
         ----------
-        positions : array of pixel positions, shape 2xN
+        positions : array of source positions, shape 2xN
             The positions of the point sources in RA, Dec, where N is the
-            number of point sources
+            number of point sources. Coordinates should be in degrees.
         energy_bins : :class:`~yt.units.yt_array.YTArray` with units of keV, shape M+1
             The edges of the energy bins for the spectra, where M is the number of
             bins
-        spectra : list (size N) of :class:`~yt.units.yt_array.YTArray`\s with units of photons/s/cm^2, each with shape M
+        spectra : list (size N) of :class:`~yt.units.yt_array.YTArray`\s with units of photons/s/cm**2, each with shape M
             The spectra for the point sources, where M is the number of bins and N is
             the number of point sources
         prng : :class:`~numpy.random.RandomState` object or :mod:`numpy.random`, optional
@@ -141,7 +141,7 @@ class EventList(object):
         energy_bins : :class:`~yt.units.yt_array.YTArray` with units of keV, size M+1
             The edges of the energy bins for the spectra, where M is the number of
             bins
-        spectrum : :class:`~yt.units.yt_array.YTArray` with units of photons/s/cm^2, size M
+        spectrum : :class:`~yt.units.yt_array.YTArray` with units of photons/s/cm**2, size M
             The spectrum for the background, where M is the number of bins.
         prng : :class:`~numpy.random.RandomState` object or :mod:`numpy.random`, optional
             A pseudo-random number generator. Typically will only be specified

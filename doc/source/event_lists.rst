@@ -157,15 +157,81 @@ Adding Background and Point Source Events
 
 Methods are provided for adding background and point source events to an existing 
 :class:`~pyxsim.event_list.EventList`. To add background photons, call
-:meth:`~pyxsim.event_list.EventList.add_background`:
+:meth:`~pyxsim.event_list.EventList.add_background`, which takes the following arguments:
+ 
+* ``energy_bins``: :class:`~yt.units.yt_array.YTArray` with units of keV, shape M+1. The edges of the 
+  energy bins for the spectra, where M is the number of bins.
+* ``spectrum``: :class:`~yt.units.yt_array.YTArray` with units of photons/s/cm**2, 
+  with shape M (the number of bins). This is the spectrum for the background. 
+* ``prng`` (optional): A pseudo-random number generator, :class:`~numpy.random.RandomState` object 
+  or simply :mod:`numpy.random` as the default. Typically will only be needed if you have a reason
+  to generate the same set of random numbers, such as for a test.
+* ``absorb_model`` (optional): :class:`~pyxsim.spectral_models.TableAbsorbModel` or 
+  :class:`~pyxsim.spectral_models.XSpecAbsorbModel`, a model for galactic foreground absorption.
+
+The background is assumed to be spatially constant over the entire region. A simple example: 
 
 .. code-block:: python
 
+    from yt import YTArray
+    import numpy as np
     from numpy.random import RandomState
+    
     prng = RandomState(25)
 
+    # Not terribly realistic, but this example simulates a constant background
+    # with respect to energy
+    
+    nbins = 10000 # The number of bins in the simulated background spectrum
+    ebins = YTArray(np.linspace(0.01, 50.0, nbins+1)) # The bin edges (note nbins+1 size)
+    spec = 1.0e-9*YTArray(np.ones(nbins), "photons/cm**2/s") # The spectrum itself
     events.add_background(ebins, spec, prng=prng, absorb_model=tbabs_model)
 
+Similarly, to add point sources, call :meth:`~pyxsim.event_list.EventList.add_point_sources`, which
+takes several arguments:
+
+* ``positions``: An array of source positions, shape 2xN, in RA, Dec, where N is the number of point
+  sources. Coordinates should be in degrees. 
+* ``energy_bins``: :class:`~yt.units.yt_array.YTArray` with units of keV, shape M+1. The edges of the 
+  energy bins for the spectra, where M is the number of bins.
+* ``spectra``: list (size N) of :class:`~yt.units.yt_array.YTArray`\s with units of photons/s/cm**2, 
+  each with shape M. The spectra for the point sources, where M is the number of bins and N is
+  the number of point sources.
+* ``prng`` (optional): A pseudo-random number generator, :class:`~numpy.random.RandomState` object 
+  or simply :mod:`numpy.random` as the default. Typically will only be needed if you have a reason
+  to generate the same set of random numbers, such as for a test.
+* ``absorb_model`` (optional): :class:`~pyxsim.spectral_models.TableAbsorbModel` or 
+  :class:`~pyxsim.spectral_models.XSpecAbsorbModel`, a model for galactic foreground absorption.
+
+A simple example: 
+
+.. code-block:: python
+
+    from yt import YTArray, YTQuantity
+    import numpy as np
+    from numpy.random import RandomState
+    
+    prng = RandomState(25)
+
+    # Simulate two point sources with power-law spectra
+
+    alpha1 = -1.0 # The power-law slopes of the two point sources
+    alpha2 = -1.5
+    E0 = YTQuantity(1.0, "keV") # The reference energy for the power-law spectrum
+    
+    nbins = 10000 # The number of bins in the simulated background spectrum
+    ebins = YTArray(np.linspace(0.01, 50.0, nbins+1)) # The bin edges (note nbins+1 size)
+    emid = 0.5*(ebins[1:]+ebins[:-1]) # Compute the bin centers
+    
+    spec1 = YTArray(1.0e-10*(emid/E0)**alpha1, "photons/cm**2/s") # The spectra
+    spec2 = YTArray(1.0e-10*(emid/E0)**alpha2, "photons/cm**2/s")
+
+    positions = np.array([[30.01, 44.99], [29.98, 45.03]]) # The RA, Dec positions of the two sources
+    
+    events.add_background(positions, ebins, [spec1, spec2], prng=prng, absorb_model=tbabs_model)
+
+For the ``absorb_model`` argument for either of these methods, it should be the same model that
+was provided when the :class:`~pyxsim.event_list.EventList` was created, for consistency.
 
 Manipulating Event Lists
 ------------------------
