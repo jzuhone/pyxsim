@@ -105,6 +105,7 @@ class InstrumentSimulator(object):
         for key in ["xpix", "ypix", "xsky", "ysky", "eobs"]:
             events.events[key] = events[key][detected]
         events.parameters["ARF"] = arf.filename
+        events.num_events = len(events.events["eobs"])
 
     def convolve_energies(self, events, prng):
         """
