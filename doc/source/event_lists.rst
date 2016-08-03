@@ -251,6 +251,17 @@ together to return a new :class:`~pyxsim.event_list.EventList`:
     
 An error will be thrown if the parameters do not match between the two lists. 
 
+The second way an :class:`~pyxsim.event_list.EventList` can be changed is by using a region file.
+This requires the `pyregion <http://pyregion.readthedocs.io/>`_ package to be installed. If you have
+a region file, simply provide it to the :meth:`~pyxsim.event_list.EventList.filter_events` method:
+
+.. code-block:: python
+
+    some_events = events.filter_events("annulus.reg")
+
+which creates a new :class:`~pyxsim.event_list.EventList` object with only the events which fall within
+the region. 
+
 Saving Derived Products from Event Lists
 ----------------------------------------
 
@@ -280,4 +291,18 @@ To produce a binned spectrum, call :meth:`~pyxsim.event_list.EventList.write_spe
 
 .. code-block:: python
 
-    events.write_spectrum()
+    events.write_spectrum("myspec.fits", bin_type="energy", emin=0.1,
+                          emax=10.0, nchan=2000, clobber=False)
+
+In this case, we have chosen ``"energy"`` as the ``bin_type``, which will bin the unconvolved
+event energies using the ``emin``, ``emax``, and ``nchan`` arguments into a histogram which
+will be written to the file as a spectrum. If ``bin_type="channel``:
+
+.. code-block:: python
+
+    events.write_spectrum("myspec.fits", bin_type="channel")
+
+the spectrum will be binned by channel instead. This is particularly useful if the events
+were convolved with an instrument simulator, as this spectrum can be read and fit using programs
+such as XSPEC. As usual, the ``clobber`` argument determines whether or not a file can
+be overwritten. 
