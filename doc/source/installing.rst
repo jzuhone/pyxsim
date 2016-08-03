@@ -73,7 +73,7 @@ Both AstroPy and PyXspec use the CFITSIO library. Unfortunately, both of them al
 a shared library themselves and link to it. This can result in conflicts between the two. You may see
 error messages like this:
 
-.. code-block::
+.. code-block:: console
 
     ERROR: Mismatch in the CFITSIO_SONAME value in the fitsio.h include file
     that was used to build the CFITSIO library, and the value in the include file
@@ -83,3 +83,6 @@ error messages like this:
 
     Fix this by recompiling and then relinking this application program
     with the CFITSIO library.
+    
+The only way to resolve this problem at present is to avoid importing the ``xspec`` and ``astropy``
+modules in the same Python environment, script, or notebook. 

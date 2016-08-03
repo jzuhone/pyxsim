@@ -184,7 +184,7 @@ The background is assumed to be spatially constant over the entire region. A sim
     
     nbins = 10000 # The number of bins in the simulated background spectrum
     ebins = YTArray(np.linspace(0.01, 50.0, nbins+1)) # The bin edges (note nbins+1 size)
-    spec = 1.0e-9*YTArray(np.ones(nbins), "photons/cm**2/s") # The spectrum itself
+    spec = YTArray(1.0e-9*np.ones(nbins), "photons/cm**2/s") # The spectrum itself
     events.add_background(ebins, spec, prng=prng, absorb_model=tbabs_model)
 
 Similarly, to add point sources, call :meth:`~pyxsim.event_list.EventList.add_point_sources`, which
