@@ -29,11 +29,11 @@ Using a Built-In Instrument Simulator
 
 pyXSIM comes with the following built-in instrument simulators:
 
-* ``ACIS_I``: ACIS-I Cycle 17 on-axis ARF and RMF, with 0.492" central pixel and 0.5" FWHM PSF
-* ``ACIS_S``: ACIS-S Cycle 17 on-axis ARF and RMF, with 0.492" central pixel and 0.5" FWHM PSF
-* ``Hitomi_SXS``: Hitomi SXS ARF and RMF, with 
-* ``Athena_WFI``: 
-* ``Athena_XIFU``: 
+* ``ACIS_I``: ACIS-I Cycle 18 on-axis ARF and RMF, with 0.492" central pixel and 0.5" FWHM PSF
+* ``ACIS_S``: ACIS-S Cycle 18 on-axis ARF and RMF, with 0.492" central pixel and 0.5" FWHM PSF
+* ``Hitomi_SXS``: Hitomi Soft X-ray Spectrometer ARF and RMF, with 30.64" central pixel and 1.2' FWHM PSF
+* ``Athena_WFI``: Athena Wide-Field Imager ARF and RMF, with 2.23" central pixel and 5.0" FWHM PSF
+* ``Athena_XIFU``: Athena X-ray Integral Field Unit ARF and RMF, with 4.56" central pixel and 5.0" FWHM PSF
 * ``XRS_Imager``: X-ray Surveyor Imager ARF and RMF, with 0.33" central pixel and 0.5" FWHM PSF
 * ``XRS_Calorimeter``: X-ray Surveyor Calorimeter ARF and RMF, with 1.03" central pixel and 0.5" FWHM PSF
 
