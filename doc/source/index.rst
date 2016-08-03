@@ -6,6 +6,18 @@
 pyXSIM Documentation
 ====================
 
+.. raw:: html
+
+   <figure style="display: table; float: right; margin: 0 0 20px 20px;">
+   <img src="_images/cluster_merger_events.png" width="400" style="float: right;"/>
+   <figcaption style="display: table-caption; caption-side: bottom;">
+   Simulated X-ray events from a binary cluster merger with mass ratio of 1:3, 
+   initial impact parameter of 0.5 Mpc, at an epoch of 2.0 Gyr. Events were convolved
+   with the <em>Chandra</em> ACIS-I responses. Image taken from the <a href="http://gcmc.hub.yt">
+   Galaxy Cluster Merger Catalog</a>.
+   </figcaption>
+   </figure>
+
 What is pyXSIM?
 ---------------
 
