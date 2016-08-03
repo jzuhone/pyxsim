@@ -38,19 +38,14 @@ pyXSIM using pip:
 
     [~]$ pip install pyxsim
 
-Or, to install into your Python distribution from `source <http://github.com/jzuhone/pyxsim>`_:
+If you have a different Python distribution than Anaconda, using ``pip install`` will also install
+all of the requisite dependencies. 
+
+Alternatively, to install into your Python distribution from `source <http://github.com/jzuhone/pyxsim>`_:
 
 .. code-block:: bash
 
     [~]$ python setup.py install
-
-Or, to install to a local directory, use:
-
-.. code-block:: bash
-
-    [~]$ python setup.py install --prefix=/path/to/location/
-
-Then make sure your ``PYTHONPATH`` points to this location.
 
 Using PyXspec for Spectral Models
 ---------------------------------

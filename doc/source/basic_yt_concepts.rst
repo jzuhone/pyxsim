@@ -26,7 +26,26 @@ generated from scratch, there are a number of ways to create in-memory datasets 
 Data Objects
 ++++++++++++
 
-Once you have a dataset object, it can be used to create geometrical "Data Objects" 
+Once you have a dataset object, it can be used to create geometrical "data objects" in three
+dimensions in yt. For example, to create a sphere, one would use:
+
+.. code-block:: 
+
+    sp = ds.sphere("c", (1.0, "Mpc"))
+    
+where the first argument is the center of the sphere (here ``"c"`` means the center of the simulation
+domain) and the second is the radius, which is given as a (value, unit) tuple. One could also have
+supplied a particular coordinate value such as ``[0.1, 0.3, 0.5]`` for the center. 
+
+As another example, to create an object containing all of the data in the simulation domain, use:
+
+.. code-block:: 
+
+    dd = ds.all_data()
+    
+Other data objects can be created--for more information about the various data objects and the options
+to use to create them, check out 
+`the yt documentation on data objects <http://yt-project.org/doc/analyzing/objects.html>`_.
 
 Unitful Quantities
 ------------------
