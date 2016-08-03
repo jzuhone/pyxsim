@@ -5,7 +5,7 @@ import numpy as np
 import os
 import h5py
 
-from pyxsim.utils import mylog
+from pyxsim.utils import mylog, check_file_location
 from yt.units.yt_array import YTArray, YTQuantity
 from yt.utilities.physical_constants import hcgs, clight
 from yt.utilities.physical_ratios import erg_per_keV, amu_grams
@@ -329,12 +329,10 @@ class TableAbsorbModel(SpectralModel):
 
     Examples
     --------
-    >>> abs_model = XSpecAbsorbModel("abs_table.h5", 0.1)
+    >>> abs_model = XSpecAbsorbModel("tbabs_table.h5", 0.1)
     """
     def __init__(self, filename, nH):
-        if not os.path.exists(filename):
-            raise IOError("File does not exist: %s." % filename)
-        self.filename = filename
+        self.filename = check_file_location(filename, "spectral_files")
         f = h5py.File(self.filename,"r")
         emin = f["energy"][:].min()
         emax = f["energy"][:].max()

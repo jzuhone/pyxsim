@@ -31,6 +31,18 @@ pyxsimLogger.propagate = False
 
 mylog = pyxsimLogger
 
+pyxsim_path = os.path.abspath(os.path.dirname(__file__))
+
+def check_file_location(fn, subdir):
+    if os.path.exists(fn):
+        return os.path.abspath(fn)
+    else:
+        sto_fn = os.path.join(pyxsim_path, subdir, fn)
+        if not os.path.exists(sto_fn):
+            raise IOError("File %s does not exist." % sto_fn)
+        else:
+            return sto_fn
+
 def force_unicode(value):
     if hasattr(value, 'decode'):
         return value.decode('utf8')

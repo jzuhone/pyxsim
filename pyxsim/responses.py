@@ -6,20 +6,8 @@ by the end-user, but will be employed by methods of InstrumentSimulators.
 import numpy as np
 from yt.utilities.on_demand_imports import _astropy
 from yt.units.yt_array import YTArray
-from pyxsim.utils import mylog
+from pyxsim.utils import mylog, check_file_location
 import os
-
-pyxsim_path = os.path.abspath(os.path.dirname(__file__))
-
-def check_file_location(fn):
-    if os.path.exists(fn):
-        return os.path.abspath(fn)
-    else:
-        sto_fn = os.path.join(pyxsim_path, "response_files", fn)
-        if not os.path.exists(sto_fn):
-            raise IOError("Response file %s does not exist." % sto_fn)
-        else:
-            return sto_fn
 
 class AuxiliaryResponseFile(object):
     r"""
@@ -40,7 +28,7 @@ class AuxiliaryResponseFile(object):
     ...                             rmffile="ah_sxs_5ev_basefilt_20100712.rmf")
     """
     def __init__(self, filename, rmffile=None):
-        self.filename = check_file_location(filename)
+        self.filename = check_file_location(filename, "response_files")
         f = _astropy.pyfits.open(self.filename)
         self.elo = YTArray(f["SPECRESP"].data.field("ENERG_LO"), "keV")
         self.ehi = YTArray(f["SPECRESP"].data.field("ENERG_HI"), "keV")
@@ -102,7 +90,7 @@ class RedistributionMatrixFile(object):
     >>> rmf = RedistributionMatrixFile("acisi_aimpt_cy17.rmf")
     """
     def __init__(self, filename):
-        self.filename = check_file_location(filename)
+        self.filename = check_file_location(filename, "response_files")
         self.handle = _astropy.pyfits.open(self.filename)
         if "MATRIX" in self.handle:
             self.mat_key = "MATRIX"
