@@ -71,7 +71,7 @@ an HDF5-based table of energy and cross section:
 
     filename = "tbabs_table.h5" # file containing the table
     N_H = 0.1 # galactic column density in 10^{22} cm^{-2}
-    abs_model = pyxsim.XSpecAbsorbModel(model, N_H)
+    abs_model = pyxsim.XSpecAbsorbModel(filename, N_H)
     
 The HDF5 file must have two top-level datasets:
  

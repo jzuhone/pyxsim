@@ -22,11 +22,67 @@ arguments to customize the resulting projection. The arguments are:
   ``"y"``, or ``"z"``), or a three-vector for an off-axis projection, e.g. ``[1.0, -0.3, 0.24]``. 
 * ``area_new`` (optional): The (constant) collecting area to assume for the observation. Used to reduce
   the number of events from the initially large sample of photons. The default value is the value used 
-  when the :class:`~pyxsim.photon_list.PhotonList` was created.
+  when the :class:`~pyxsim.photon_list.PhotonList` was created. Units are in :math:`cm^2`.
 * ``exp_time_new`` (optional): The exposure time to assume for the observation. Used to reduce the number
   of events from the initially large sample of photons. The default value is the value used when the 
+  :class:`~pyxsim.photon_list.PhotonList` was created. Units are in seconds.
+* ``redshift_new`` (optional): The value of the redshift to assume for the observation. Used to reduce the
+  of events from the initially large sample of photons. The default value is the value used when the 
   :class:`~pyxsim.photon_list.PhotonList` was created.
+* ``dist_new`` (optional): The value of the angular diameter to assume for the observation. Use for nearby
+  sources instead of the redshift. If units are not specified, it is assumed to be in Mpc. Used to reduce the
+  of events from the initially large sample of photons. The default value is the value used when the 
+  :class:`~pyxsim.photon_list.PhotonList` was created.
+* ``absorb_model`` (optional): :class:`~pyxsim.spectral_models.TableAbsorbModel` or 
+  :class:`~pyxsim.spectral_models.XSpecAbsorbModel`. A model for foreground galactic absorption.
+* ``sky_center`` (optional): Central RA, Dec of the events in degrees. Default ``(30.0, 45.0)``.
+* ``no_shifting`` (optional): If set to True, the photon energies will not be velocity Doppler shifted. Default False.
+* ``north_vector`` (optional): A vector defining the "up" direction, e.g. ``[0.0, 1.0, 0.0]``.
+  This option sets the orientation of the plane of projection. If not set, an arbitrary grid-aligned 
+  ``north_vector`` is chosen. Ignored in the case where a particular axis (e.g., "x", "y", or "z") is 
+  explicitly specified.
+* ``prng`` (optional): A pseudo-random number generator, :class:`~numpy.random.RandomState` object, or
+  :mod:`~numpy.random` is the default. Use this if you have a reason to generate the same set of random 
+  numbers, such as for a test. 
 
+Assuming one then has a :class:`~pyxsim.photon_list.PhotonList` ``photons``, example invocations could look
+like this:
+
+A simple projection along an axis:
+
+.. code-block:: python
+
+    events = photons.project_photons("z")
+        
+An off-axis projection with altered exposure time and redshift:
+
+.. code-block:: python
+
+    events = photons.project_photons([0.1, -0.3, 0.5], area_new=(200., "cm**2"), redshift_new=1.0)
+
+An on-axis projection with absorption and given a particular coordinate center:
+
+.. code-block:: python
+
+    abs_model = pyxsim.XSpecAbsorbModel("phabs", 0.01)
+    events = photons.project_photons("y", absorb_model=abs_model, sky_center=(12.0, -30.0))
+
+An off-axis projection with a ``north_vector``, without Doppler velocity shifting, and a specific
+random number generator:
+
+.. code-block:: python
+    
+    from numpy.random import RandomState
+    prng = RandomState(25)
+    events = photons.project_photons([0.1, -0.3, 0.5], no_shifting=True, north_vector=[1.0,0.0,0.0],
+                                     prng=prng)
+
+.. note::
+
+    Unlike the ``photon_simulator`` analysis module in yt, the ability to convolve the event energies
+    using an ARF and RMF has been taken out of this step entirely and moved into a new instrument 
+    simulator step. See :ref:`instruments` for details. 
+    
 Saving/Reading Raw Events to/from Disk
 --------------------------------------
 
