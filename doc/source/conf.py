@@ -23,9 +23,9 @@ html_theme = 'bootstrap'
 html_theme_path = sphinx_bootstrap_theme.get_html_theme_path()
 
 html_theme_options = dict(
-        bootswatch_theme = "readable",
-        navbar_sidebarrel = False,
-        globaltoc_depth = 2,
+    bootswatch_theme = "cerulean",
+    navbar_sidebarrel = False,
+    globaltoc_depth = 2,
 )
 
 sys.path.insert(0, os.path.abspath('../../pyxsim'))
