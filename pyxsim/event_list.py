@@ -279,27 +279,27 @@ class EventList(object):
         if "D_A" in tblhdu.header:
             parameters["AngularDiameterDistance"] = YTQuantity(tblhdu.header["D_A"], "Mpc")
         if "RMF" in tblhdu.header:
-            parameters["RMF"] = tblhdu["RMF"]
+            parameters["RMF"] = tblhdu.header["RMF"]
         if "ARF" in tblhdu.header:
-            parameters["ARF"] = tblhdu["ARF"]
+            parameters["ARF"] = tblhdu.header["ARF"]
         if "CHANTYPE" in tblhdu.header:
-            parameters["ChannelType"] = tblhdu["CHANTYPE"]
+            parameters["ChannelType"] = tblhdu.header["CHANTYPE"]
         if "MISSION" in tblhdu.header:
-            parameters["Mission"] = tblhdu["MISSION"]
+            parameters["Mission"] = tblhdu.header["MISSION"]
         if "TELESCOP" in tblhdu.header:
-            parameters["Telescope"] = tblhdu["TELESCOP"]
+            parameters["Telescope"] = tblhdu.header["TELESCOP"]
         if "INSTRUME" in tblhdu.header:
-            parameters["Instrument"] = tblhdu["INSTRUME"]
-        parameters["sky_center"] = YTArray([tblhdu["TCRVL2"],tblhdu["TCRVL3"]], "deg")
-        parameters["pix_center"] = np.array([tblhdu["TCRVL2"],tblhdu["TCRVL3"]])
-        parameters["dtheta"] = YTQuantity(tblhdu["TCRVL3"], "deg")
-        events["xpix"] = tblhdu.data.field("X")
-        events["ypix"] = tblhdu.data.field("Y")
-        events["eobs"] = YTArray(tblhdu.data.field("ENERGY")/1000., "keV")
+            parameters["Instrument"] = tblhdu.header["INSTRUME"]
+        parameters["sky_center"] = YTArray([tblhdu.header["TCRVL2"], tblhdu.header["TCRVL3"]], "deg")
+        parameters["pix_center"] = np.array([tblhdu.header["TCRVL2"], tblhdu.header["TCRVL3"]])
+        parameters["dtheta"] = YTQuantity(tblhdu.header["TCRVL3"], "deg")
+        events["xpix"] = tblhdu.data["X"]
+        events["ypix"] = tblhdu.data["Y"]
+        events["eobs"] = YTArray(tblhdu.data["ENERGY"]/1000., "keV")
         if "PI" in tblhdu.columns.names:
-            events["PI"] = tblhdu.data.field("PI")
+            events["PI"] = tblhdu.data["PI"]
         if "PHA" in tblhdu.columns.names:
-            events["PHA"] = tblhdu.data.field("PHA")
+            events["PHA"] = tblhdu.data["PHA"]
 
         return cls(events, parameters)
 
