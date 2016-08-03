@@ -195,9 +195,9 @@ class TableApecModel(SpectralModel):
     def __init__(self, emin, emax, nchan, apec_root=None,
                  apec_vers="2.0.2", thermal_broad=False):
         if apec_root is None:
-            self.cocofile = check_file_location("apec_v_%s_coco.fits" % apec_vers,
+            self.cocofile = check_file_location("apec_v%s_coco.fits" % apec_vers,
                                                 "spectral_files")
-            self.linefile = check_file_location("apec_v_%s_line.fits" % apec_vers,
+            self.linefile = check_file_location("apec_v%s_line.fits" % apec_vers,
                                                 "spectral_files")
         else:
             self.cocofile = os.path.join(apec_root, "apec_v_%s_coco.fits" % apec_vers)
