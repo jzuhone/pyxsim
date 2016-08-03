@@ -134,12 +134,15 @@ use the :meth:`~pyxsim.event_list.EventList.from_fits_file` method:
     FITS files, they are "standard" events files which may be read and analyzed by other X-ray 
     software tools such as ds9, CIAO, HEATOOLS, etc.
 
+.. _simput:
+
 SIMPUT
 ++++++
 
 An :class:`~pyxsim.event_list.EventList` can be exported to the SIMPUT file format for
-reading in by other packages that simulate particular instruments, such as MARX or SIMX
-(see :ref:`instruments` for more details). This is done by calling the 
+reading in by other packages that simulate particular instruments, such as
+`MARX <http://space.mit.edu/ASC/MARX/>`_ or `SIMX <http://hea-www.cfa.harvard.edu/simx/>`_
+(see also :ref:`instruments`). This is done by calling the 
 :meth:`~pyxsim.event_list.EventList.write_simput_file` method:
 
 .. code-block:: python

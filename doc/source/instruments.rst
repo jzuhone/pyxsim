@@ -106,6 +106,8 @@ Producing More Realistic Observations Using External Packages
 -------------------------------------------------------------
 
 If you want to produce a more realistic simulation of a particular instrumental configuration,
-pyXSIM provides options for exporting its event lists to external packages. For MARX and SIMX,
+pyXSIM provides options for exporting its event lists to external packages. For 
+`MARX <http://space.mit.edu/ASC/MARX/>`_ and `SIMX <http://hea-www.cfa.harvard.edu/simx/>`_,
 one can use SIMPUT files. Refer to the relevant documentation for both of those packages for
-more details. 
+more details, as well as the :ref:`simput` section of the :class:`~pyxsim.event_list.EventList`
+documentation.
