@@ -82,10 +82,6 @@ def test_background():
     Z = m.apec.Abundanc.values[0]
     norm = m.apec.norm.values[0]
 
-    dkT = m.apec.kT.sigma
-    dZ = m.apec.Abundanc.sigma
-    dnorm = m.apec.norm.sigma
-
     xspec.AllModels.clear()
     xspec.AllData.clear()
 

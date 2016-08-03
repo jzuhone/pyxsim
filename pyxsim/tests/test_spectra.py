@@ -3,12 +3,10 @@ from pyxsim import \
 from yt.utilities.answer_testing.framework import \
     GenericArrayTest
 from yt.testing import requires_module, fake_random_ds
-from yt.config import ytcfg
 
 def setup():
+    from yt.config import ytcfg
     ytcfg["yt", "__withintesting"] = "True"
-
-xray_data_dir = ytcfg.get("yt", "xray_data_dir")
 
 ds = fake_random_ds(64)
 @requires_module("xspec")
@@ -21,8 +19,7 @@ def test_apec():
     xcspec, xmspec = xmod.get_spectrum(6.0)
     spec1 = xcspec+0.3*xmspec
 
-    amod = TableApecModel(xray_data_dir, 0.1, 10.0, 
-                          10000, thermal_broad=True)
+    amod = TableApecModel(0.1, 10.0, 10000, thermal_broad=True)
     amod.prepare_spectrum(0.2)
 
     acspec, amspec = amod.get_spectrum(6.0)

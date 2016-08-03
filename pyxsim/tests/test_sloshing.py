@@ -6,10 +6,7 @@ from pyxsim import \
     TableApecModel, TableAbsorbModel, \
     ThermalSourceModel, PhotonList, EventList, \
     merge_files, AuxiliaryResponseFile, \
-    RedistributionMatrixFile, ACIS_S, ACIS_I, \
-    Hitomi_SXS
-from yt.config import ytcfg
-from yt.testing import requires_file
+    ACIS_S, ACIS_I, Hitomi_SXS
 from yt.utilities.answer_testing.framework import requires_ds, \
     GenericArrayTest, data_dir_load
 from numpy.testing import assert_array_equal
@@ -23,9 +20,6 @@ def setup():
     from yt.config import ytcfg
     ytcfg["yt", "__withintesting"] = "True"
 
-test_data_dir = ytcfg.get("yt", "test_data_dir")
-xray_data_dir = ytcfg.get("yt", "xray_data_dir")
-
 rmfs = ["acisi_aimpt_cy18.rmf",
         "aciss_aimpt_cy18.rmf",
         "ah_sxs_5ev_20130806.rmf"]
@@ -35,8 +29,6 @@ arfs = ["acisi_aimpt_cy18.arf",
 instruments = [ACIS_I, ACIS_S, Hitomi_SXS]
 
 gslr = "GasSloshingLowRes/sloshing_low_res_hdf5_plt_cnt_0300"
-APEC = xray_data_dir
-TBABS = os.path.join(xray_data_dir, "tbabs_table.h5")
 
 def return_data(data):
     def _return_data(name):
@@ -44,8 +36,6 @@ def return_data(data):
     return _return_data
 
 @requires_ds(gslr)
-@requires_file(APEC)
-@requires_file(TBABS)
 def test_sloshing():
 
     tmpdir = tempfile.mkdtemp()
@@ -59,8 +49,8 @@ def test_sloshing():
     exp_time = 1.0e4
     redshift = 0.1
 
-    apec_model = TableApecModel(APEC, 0.1, 11.0, 10000)
-    tbabs_model = TableAbsorbModel(TBABS, 0.1)
+    apec_model = TableApecModel(0.1, 11.0, 10000)
+    tbabs_model = TableAbsorbModel("tbabs_table.h5", 0.1)
 
     sphere = ds.sphere("c", (0.1, "Mpc"))
     sphere.set_field_parameter("X_H", 0.75)
@@ -74,9 +64,7 @@ def test_sloshing():
     tests = [GenericArrayTest(ds, return_photons, args=["photons"])]
 
     for a, r, i in zip(arfs, rmfs, instruments):
-        arf_fn = os.path.join(xray_data_dir, a)
-        rmf_fn = os.path.join(xray_data_dir, r)
-        arf = AuxiliaryResponseFile(arf_fn, rmffile=rmf_fn)
+        arf = AuxiliaryResponseFile(a, rmffile=r)
         events1 = photons1.project_photons([1.0,-0.5,0.2], area_new=arf.max_area,
                                            absorb_model=tbabs_model, prng=prng)
         events1["xsky"]
