@@ -188,7 +188,7 @@ The background is assumed to be spatially constant over the entire region. A sim
     nbins = 10000 # The number of bins in the simulated background spectrum
     ebins = YTArray(np.linspace(0.01, 50.0, nbins+1)) # The bin edges (note nbins+1 size)
     spec = YTArray(1.0e-9*np.ones(nbins), "photons/cm**2/s") # The spectrum itself
-    events.add_background(ebins, spec, prng=prng, absorb_model=tbabs_model)
+    new_events = events.add_background(ebins, spec, prng=prng, absorb_model=tbabs_model)
 
 Similarly, to add point sources, call :meth:`~pyxsim.event_list.EventList.add_point_sources`, which
 takes several arguments:
@@ -231,10 +231,14 @@ A simple example:
 
     positions = np.array([[30.01, 44.99], [29.98, 45.03]]) # The RA, Dec positions of the two sources
     
-    events.add_background(positions, ebins, [spec1, spec2], prng=prng, absorb_model=tbabs_model)
+    new_events = events.add_background(positions, ebins, [spec1, spec2], prng=prng, absorb_model=tbabs_model)
 
 For the ``absorb_model`` argument for either of these methods, it should be the same model that
 was provided when the :class:`~pyxsim.event_list.EventList` was created, for consistency.
+
+.. note::
+
+    Both of these methods return a new event list with *both* the original and new events together.
 
 Manipulating Event Lists
 ------------------------
