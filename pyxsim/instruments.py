@@ -100,6 +100,12 @@ class InstrumentSimulator(object):
         """
         mylog.info("Applying energy-dependent effective area.")
         arf = AuxiliaryResponseFile(self.arf, rmffile=self.rmf)
+        # If the area which was used to create the events is smaller than
+        # the maximum area in the ARF, scream loudly.
+        if events.parameters["Area"] < arf.max_area:
+            raise RuntimeError("The area used to create the events is less than "
+                               "the maximum of the effective area curve! Re-create the "
+                               "events with a collecting area higher than %s!" % arf.max_area)
         detected = arf.detect_events(events["eobs"], events.parameters["Area"], prng=prng)
         mylog.info("%s events detected." % detected.sum())
         for key in ["xpix", "ypix", "xsky", "ysky", "eobs"]:
