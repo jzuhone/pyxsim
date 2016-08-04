@@ -1,4 +1,5 @@
 import numpy as np
+from pyxsim.event_list import EventList
 from pyxsim.responses import AuxiliaryResponseFile, \
     RedistributionMatrixFile
 from pyxsim.utils import mylog
@@ -6,6 +7,7 @@ from yt.funcs import get_pbar, ensure_numpy_array, \
     iterable
 from yt.units.yt_array import YTQuantity, YTArray
 from yt.utilities.on_demand_imports import _astropy
+from copy import deepcopy
 
 sigma_to_fwhm = 2.*np.sqrt(2.*np.log(2.))
 
@@ -47,19 +49,21 @@ class InstrumentSimulator(object):
     def __call__(self, events, rebin=True,
                  convolve_psf=True, convolve_arf=True, 
                  convolve_rmf=True, prng=None):
+        new_events = EventList(deepcopy(events.events), 
+                               events.parameters.copy(), events.wcs.copy())
         if prng is None:
             prng = np.random
         if rebin:
-            self.rebin(events)
+            self.rebin(new_events)
         if convolve_psf:
-            self.convolve_with_psf(events, prng)
+            self.convolve_with_psf(new_events, prng)
         if convolve_arf:
-            events["xsky"]
-            events["ysky"]
-            self.apply_effective_area(events, prng)
+            new_events["xsky"]
+            new_events["ysky"]
+            self.apply_effective_area(new_events, prng)
             if convolve_rmf:
-                self.convolve_energies(events, prng)
-        return events
+                self.convolve_energies(new_events, prng)
+        return new_events
 
     def rebin(self, events):
         """
