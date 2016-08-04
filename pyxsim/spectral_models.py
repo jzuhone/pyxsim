@@ -30,7 +30,30 @@ class SpectralModel(object):
     def cleanup_spectrum(self):
         pass
 
-class XSpecThermalModel(SpectralModel):
+class ThermalSpectralModel(SpectralModel):
+
+    def return_spectrum(self, temperature, metallicity, redshift, norm):
+        """
+        Given the properties of a thermal plasma, return a spectrum.
+
+        Parameters
+        ----------
+        temperature : float
+            The temperature of the plasma in keV.
+        metallicity : float
+            The metallicity of the plasma in solar units.
+        redshift : float
+            The redshift of the plasma.
+        norm : float
+            The total flux of the spectrum in photons/s/cm**2.
+        """
+        self.prepare_spectrum(redshift)
+        cosmic_spec, metal_spec = self.get_spectrum(temperature)
+        self.cleanup_spectrum()
+        tspec = (cosmic_spec+metallicity*metal_spec).v
+        return YTArray(norm*tspec/tspec.sum(), "photons/s/cm**2")
+
+class XSpecThermalModel(ThermalSpectralModel):
     r"""
     Initialize a thermal gas emission model from PyXspec.
 
@@ -76,7 +99,7 @@ class XSpecThermalModel(SpectralModel):
         xspec.AllModels.setEnergies("%f %f %d lin" %
                                     (self.emin.value, self.emax.value, self.nchan))
         self.model = xspec.Model(self.model_name)
-        self.thermal_comp = getattr(self.model,self.model_name)
+        self.thermal_comp = getattr(self.model, self.model_name)
         if self.model_name == "bremss":
             self.norm = 3.02e-15
         else:
@@ -161,7 +184,7 @@ class XSpecAbsorbModel(SpectralModel):
     def cleanup_spectrum(self):
         del self.model
 
-class TableApecModel(SpectralModel):
+class TableApecModel(ThermalSpectralModel):
     r"""
     Initialize a thermal gas emission model from the AtomDB APEC tables
     available at http://www.atomdb.org. This code borrows heavily from Python
