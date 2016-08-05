@@ -66,6 +66,7 @@ Table of Contents
    spectral_models    
    event_lists
    instruments
+   misc
    examples
 
 

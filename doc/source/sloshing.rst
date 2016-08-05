@@ -3,5 +3,5 @@
 Thermal Emission from a Sloshing Cluster Core
 =============================================
 
-.. notebook:: sloshing.ipynb
+.. notebook:: Sloshing.ipynb
     :skip_exceptions:
