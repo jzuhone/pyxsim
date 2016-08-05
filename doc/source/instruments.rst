@@ -116,7 +116,7 @@ MARX
 The MARX version needs to be at least 5.3.1. To use SIMPUT with MARX, one only needs to 
 change the following lines in the ``marx.par`` file:
 
-.. code-block:: console
+.. code-block:: bash
 
     # Change the source RA, Dec to match the center of the observation
     SourceRA,r,a,45.0,0,360,"Source RA (degrees)"
