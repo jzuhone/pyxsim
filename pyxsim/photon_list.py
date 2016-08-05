@@ -13,9 +13,8 @@ from yt.utilities.parallel_tools.parallel_analysis_interface import \
     communication_system, get_mpi_type, parallel_capable, parallel_objects
 from yt.units.yt_array import YTQuantity, YTArray, uconcatenate
 import h5py
-from pyxsim.utils import parse_value, force_unicode
+from pyxsim.utils import parse_value, force_unicode, validate_parameters
 from pyxsim.event_list import EventList
-from pyxsim.responses import AuxiliaryResponseFile
 
 comm = communication_system.communicators[-1]
 
@@ -103,6 +102,23 @@ class PhotonList(object):
 
     def __repr__(self):
         return self.photons.__repr__()
+
+    def __add__(self, other):
+        validate_parameters(self.parameters, other.parameters)
+        for param in ["hubble_constant", "omega_matter", "omega_lambda",
+                      "omega_curvature"]:
+            v1 = getattr(self.cosmo, param)
+            v2 = getattr(other.cosmo, param)
+            check_equal = np.allclose(v1, v2, rtol=0.0, atol=1.0e-10)
+            if not check_equal:
+                raise RuntimeError("The values for the parameter '%s' in the two" % param +
+                                   " cosmologies are not identical (%s vs. %s)!" % (v1, v2))
+        photons = {}
+        for item1, item2 in zip(self.photons.items(), other.photons.items()):
+            k1, v1 = item1
+            k2, v2 = item2
+            photons[k1] = uconcatenate([v1,v2])
+        return PhotonList(photons, self.parameters, self.cosmo)
 
     @classmethod
     def from_file(cls, filename):
