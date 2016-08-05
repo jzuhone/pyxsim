@@ -11,9 +11,10 @@ galactic foreground absorption models.
 Thermal Models
 --------------
 
-For thermal plasmas, pyXSIM provides classes for modeling emission that is dependent on temperature
+For thermal plasmas, pyXSIM provides two classes for modeling emission that is dependent on temperature
 and metallicity, e.g. :math:`\Lambda(T,Z)`. These can serve as input to the 
-:class:`~pyxsim.source_models.ThermalSourceModel` class. 
+:class:`~pyxsim.source_models.ThermalSourceModel` class. Both of these classes are 
+:class:`~pyxsim.spectral_models.ThermalSpectralModel` objects.
 
 :class:`~pyxsim.spectral_models.XSpecThermalModel` generates a thermal emission spectrum
 from a model known to XSPEC, using PyXspec as a backend:
@@ -46,6 +47,22 @@ from the APEC plasma emission tables available from `AtomDB <http://www.atomdb.o
 
 You will need to set up one of these two models in your script and pass it as the first argument to
 :class:`~pyxsim.source_models.ThermalSourceModel` (see :ref:`thermal-sources` for details).
+
+Though a :class:`~pyxsim.spectral_models.ThermalSpectralModel` is mainly used internally by the 
+:class:`~pyxsim.source_models.ThermalSourceModel` to construct spectra, there is also a method
+:meth:`~pyxsim.source_models.ThermalSourceModel.return_spectrum` which can be used to return a 
+spectrum (in an array) for a given temperature, metallicity, redshift, and flux normalization:
+
+.. code-block:: python
+
+    kT = 6.0 # in keV
+    metallicity = 0.3 # in solar units
+    z = 0.05 # redshift
+    norm = 1.0e-3 # total spectrum flux in units of photons/s/cm**2
+    
+    spec = spec_model.return_spectrum(kT, metallicity, z, norm)
+
+The units of the returned spectrum are in :math:`{\rm photons~s^{-1}~cm^{-1}}`.
 
 Absorption Models
 -----------------
