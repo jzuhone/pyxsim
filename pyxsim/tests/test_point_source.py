@@ -1,6 +1,6 @@
 from pyxsim.event_list import EventList
 from pyxsim.tests.utils import create_dummy_wcs
-from pyxsim.instruments import ACIS_I
+from pyxsim.instruments import Athena_WFI, sigma_to_fwhm
 from pyxsim.spectral_models import XSpecAbsorbModel, XSpecThermalModel
 from yt.testing import requires_module
 import os
@@ -37,7 +37,7 @@ def test_point_source():
     norm_sim = 4.0e-3
 
     exp_time = (200., "ks")
-    area = (1000., "cm**2")
+    area = (30000., "cm**2")
 
     wcs = create_dummy_wcs()
 
@@ -57,8 +57,16 @@ def test_point_source():
     new_events = events.add_point_sources(positions, ebins, spec, prng=prng,
                                           absorb_model=abs_model)
 
-    new_events = ACIS_I(new_events, rebin=False, convolve_psf=False, prng=prng)
-    
+    new_events = Athena_WFI(new_events, prng=prng)
+
+    scalex = float(np.std(new_events['xpix'])*sigma_to_fwhm*new_events.parameters["dtheta"])
+    scaley = float(np.std(new_events['xpix'])*sigma_to_fwhm*new_events.parameters["dtheta"])
+
+    psf_scale = Athena_WFI.psf_scale
+
+    assert (scalex - psf_scale)/psf_scale
+    assert (scaley - psf_scale)/psf_scale
+
     new_events.write_spectrum("point_source_evt.pi", clobber=True)
 
     s = xspec.Spectrum("point_source_evt.pi")
