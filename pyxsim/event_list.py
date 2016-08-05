@@ -3,8 +3,7 @@ Classes for generating lists of detected events
 """
 from six import string_types
 import numpy as np
-from yt.funcs import get_pbar, ensure_numpy_array, \
-    iterable, ensure_list
+from yt.funcs import ensure_list
 from pyxsim.utils import mylog
 from yt.utilities.fits_image import assert_same_wcs
 from yt.utilities.parallel_tools.parallel_analysis_interface import \
@@ -13,7 +12,7 @@ from yt.units.yt_array import YTQuantity, YTArray, uconcatenate
 from yt.utilities.on_demand_imports import _astropy
 import h5py
 from pyxsim.utils import force_unicode, validate_parameters, parse_value
-from pyxsim.responses import AuxiliaryResponseFile, RedistributionMatrixFile
+from pyxsim.responses import RedistributionMatrixFile
 
 class EventList(object):
 
