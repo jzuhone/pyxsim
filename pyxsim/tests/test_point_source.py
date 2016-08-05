@@ -64,8 +64,8 @@ def test_point_source():
 
     psf_scale = Athena_WFI.psf_scale
 
-    assert (scalex - psf_scale)/psf_scale
-    assert (scaley - psf_scale)/psf_scale
+    assert (scalex - psf_scale)/psf_scale < 0.01
+    assert (scaley - psf_scale)/psf_scale < 0.01
 
     new_events.write_spectrum("point_source_evt.pi", clobber=True)
 
