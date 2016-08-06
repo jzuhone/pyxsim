@@ -148,6 +148,7 @@ class ThermalSourceModel(SourceModel):
         self.dkT = np.diff(self.kT_bins)
         kT = (kboltz*data_source[self.temperature_field]).in_units("keV").v
         num_cells = np.logical_and(kT > self.kT_min, kT < self.kT_max).sum()
+        self.source_type = data_source.ds._get_field_info(self.emission_measure_field).name[0]
         self.pbar = get_pbar("Generating photons ", num_cells)
 
     def __call__(self, chunk):
@@ -323,6 +324,7 @@ class PowerLawSourceModel(SourceModel):
     def setup_model(self, data_source, redshift, spectral_norm):
         self.spectral_norm = spectral_norm
         self.redshift = redshift
+        self.source_type = data_source.ds._get_field_info(self.emission_field).name[0]
 
     def __call__(self, chunk):
 
@@ -425,9 +427,10 @@ class LineSourceModel(SourceModel):
     def setup_model(self, data_source, redshift, spectral_norm):
         self.spectral_norm = spectral_norm
         self.redshift = redshift
+        self.source_type = data_source.ds._get_field_info(self.emission_field).name[0]
 
     def __call__(self, chunk):
-        num_cells = len(chunk["x"])
+        num_cells = len(chunk[self.emission_field])
         F = chunk[self.emission_field]*self.spectral_norm
         norm = np.modf(F.in_cgs().v)
         u = self.prng.uniform(size=num_cells)

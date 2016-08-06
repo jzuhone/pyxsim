@@ -28,16 +28,18 @@ for ax in "xyz":
     photon_units[ax] = "kpc"
     photon_units["v"+ax] = "km/s"
 
-def determine_fields(ds):
+def determine_fields(ds, source_type):
     ds_type = ds.index.__class__.__name__
     if "ParticleIndex" in ds_type:
-        position_fields = ["particle_position_%s" % ax for ax in "xyz"]
-        velocity_fields = ["particle_velocity_%s" % ax for ax in "xyz"]
-        width_field = "smoothing_length"
+        position_fields = [(source_type, "particle_position_%s" % ax) for ax in "xyz"]
+        velocity_fields = [(source_type, "particle_velocity_%s" % ax) for ax in "xyz"]
+        width_field = (source_type, "smoothing_length")
     else:
-        position_fields = list("xyz")
-        velocity_fields = ["velocity_%s" % ax for ax in "xyz"]
-        width_field = "dx"
+        position_fields = [("index", ax) for ax in "xyz"]
+        velocity_fields = [(source_type, "velocity_%s" % ax) for ax in "xyz"]
+        width_field = ("index", "dx")
+    if width_field not in ds.field_info:
+        width_field = None
     return position_fields, velocity_fields, width_field
 
 def get_smallest_dds(ds, ds_type):
@@ -235,11 +237,6 @@ class PhotonList(object):
         """
         ds = data_source.ds
 
-        p_fields, v_fields, w_field = determine_fields(ds)
-
-        if velocity_fields is not None:
-            v_fields = velocity_fields
-
         if parameters is None:
              parameters = {}
         if cosmology is None:
@@ -295,6 +292,17 @@ class PhotonList(object):
         parameters["OmegaMatter"] = cosmo.omega_matter
         parameters["OmegaLambda"] = cosmo.omega_lambda
 
+        D_A = parameters["FiducialAngularDiameterDistance"].in_cgs()
+        dist_fac = 1.0/(4.*np.pi*D_A.value*D_A.value*(1.+redshift)**2)
+        spectral_norm = parameters["FiducialArea"].v*parameters["FiducialExposureTime"].v*dist_fac
+
+        source_model.setup_model(data_source, redshift, spectral_norm)
+
+        p_fields, v_fields, w_field = determine_fields(ds, source_model.source_type)
+
+        if velocity_fields is not None:
+            v_fields = velocity_fields
+
         if p_fields[0] == "x":
             parameters["DataType"] = "cells"
         else:
@@ -322,15 +330,9 @@ class PhotonList(object):
         parameters["Dimension"] = int(width[dmax]/dds_min[dmax])
         parameters["Width"] = parameters["Dimension"]*dds_min[dmax].in_units("kpc")
 
-        D_A = parameters["FiducialAngularDiameterDistance"].in_cgs()
-        dist_fac = 1.0/(4.*np.pi*D_A.value*D_A.value*(1.+redshift)**2)
-        spectral_norm = parameters["FiducialArea"].v*parameters["FiducialExposureTime"].v*dist_fac
-
         citer = data_source.chunks([], "io")
 
         photons = defaultdict(list)
-
-        source_model.setup_model(data_source, redshift, spectral_norm)
 
         for chunk in parallel_objects(citer):
 
@@ -346,7 +348,10 @@ class PhotonList(object):
                 photons["vx"].append(chunk[v_fields[0]][idxs].in_units("km/s"))
                 photons["vy"].append(chunk[v_fields[1]][idxs].in_units("km/s"))
                 photons["vz"].append(chunk[v_fields[2]][idxs].in_units("km/s"))
-                photons["dx"].append(chunk[w_field][idxs].in_units("kpc"))
+                if w_field is None:
+                    photons["dx"].append(ds.arr(np.zeros(len(idxs)), "kpc"))
+                else:
+                    photons["dx"].append(chunk[w_field][idxs].in_units("kpc"))
 
         source_model.cleanup_model()
 
