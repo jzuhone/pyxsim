@@ -122,6 +122,17 @@ parameters to disk. To read previously stored photons back from disk, use the
 Merging Photon Lists
 --------------------
 
+If you have two :class:`~pyxsim.photon_list.PhotonList` objects that have been created using
+the exact same parameters and cosmology, but maybe with two different types of sources, they 
+can be simply added together:
+
+.. code-block:: python
+
+    new_photons = photons_line + photons_thermal
+    
+Parameters and cosmology will be checked between the two lists, and an error will be thrown
+if they do not match.
+
 :class:`~pyxsim.photon_list.PhotonList` instances which have been written to files can be
 merged together, using the :func:`~pyxsim.utils.merge_files` function. This may be useful 
 if you have so many photons to generate that they do not fit into memory all in one go.
