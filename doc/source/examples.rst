@@ -10,3 +10,5 @@ out on your own, using `sample datasets provided by the yt Project <http://yt-pr
     :maxdepth: 1
         
     sloshing
+    power_law
+    line_emission
