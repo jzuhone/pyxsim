@@ -303,7 +303,7 @@ class PhotonList(object):
         if velocity_fields is not None:
             v_fields = velocity_fields
 
-        if p_fields[0] == "x":
+        if p_fields[0] == ("index", "x"):
             parameters["DataType"] = "cells"
         else:
             parameters["DataType"] = "particles"
