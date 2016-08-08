@@ -52,6 +52,11 @@ link between the simulation data and the algorithm for generating the X-ray phot
 detailed information about the design of the algorithm in yt, check out
 `the SciPy 2014 Proceedings. <http://conference.scipy.org/proceedings/scipy2014/zuhone.html>`_
 
+License
+-------
+
+pyXSIM is released under a `BSD 3-clause license <https://opensource.org/licenses/BSD-3-Clause>`_.
+
 Table of Contents
 -----------------
 
