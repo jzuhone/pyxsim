@@ -1,5 +1,4 @@
-What is pyXSIM?
----------------
+# What is pyXSIM?
 
 pyXSIM is a Python package for simulating X-ray observations from astrophysical sources.
 
@@ -13,8 +12,7 @@ synthetic observations it produces in various ways, as well as ways to export th
 X-ray events to other software packages to simulate the end products of specific X-ray
 observatories. 
 
-The Heritage of pyXSIM
-----------------------
+# The Heritage of pyXSIM
 
 pyXSIM is an implementation of the [PHOX](http://www.mpa-garching.mpg.de/~kdolag/Phox/)
 algorithm, developed for constructing mock X-ray observations from SPH datasets by
@@ -30,31 +28,26 @@ link between the simulation data and the algorithm for generating the X-ray phot
 detailed information about the design of the algorithm in yt, check out
 [the SciPy 2014 Proceedings](http://conference.scipy.org/proceedings/scipy2014/zuhone.html).
 
-Getting Help
-------------
+# Getting Help
 
 There are a number of ways to get help with pyXSIM. 
 
-Documentation
-=============
+## Documentation
 
 Documentation for pyXSIM lives at http://hea-www.cfa.harvard.edu/~jzuhone/pyxsim.
 
-Mailing List
-============
+## Mailing List
 
 There's a [pyXSIM Google Group](https://groups.google.com/forum/#!forum/pyxsim) to get help and 
 discuss related matters.
 
-GitHub Issues Page
-==================
+## GitHub Issues Page
 
 If you have a specific code issue that seems like a bug or have a feature or enhancement request,
 the best place to note it is on the [GitHub issues page](http://github.com/jzuhone/pyxsim/issues)
 so that we can keep track of it. 
 
-Slack Channel at the yt Project
-===============================
+## Slack Channel at the yt Project
 
 The yt Project has a [Slack](http://www.slack.com) team which has a pyXSIM channel. Sign up for 
 the [yt Slack team](http://yt-project.slack.com) to get onto the channel and ask questions. 
