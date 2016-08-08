@@ -67,8 +67,8 @@ Table of Contents
    event_lists
    instruments
    misc
+   getting_help
    examples
-
 
 Indices and tables
 ==================
