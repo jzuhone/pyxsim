@@ -17,6 +17,7 @@ setup(name='pyxsim',
       author_email='jzuhone@gmail.com',
       url='http://bitbucket.org/jzuhone/pyxsim',
       install_requires=["six","numpy","astropy","h5py","yt>=3.3.1"],
+      include_package_data=True,
       classifiers=[
           'Intended Audience :: Science/Research',
           'Operating System :: OS Independent',
