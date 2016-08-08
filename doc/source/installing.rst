@@ -22,24 +22,19 @@ pyXSIM also has the following optional dependencies:
 Installing
 ----------
 
-pyXSIM can be installed using pip. pip will attempt to download the dependencies and 
-install them, if they are not already installed in your Python distribution. For an easy
-installation of the dependencies, using a Python package distribution is recommended. For
-example, using the `Anaconda Python Distribution <https://store.continuum.io/cshop/anaconda/>`_:
-  
+pyXSIM can be installed in a few different ways. The simplest way is via the conda package if
+you have the `Anaconda Python Distribution <https://store.continuum.io/cshop/anaconda/>`_:
+
 .. code-block:: bash
 
-    [~]$ conda install yt astropy h5py
-    
-Installing these three should be sufficient to get the remaining dependencies. In either case, install
-pyXSIM using pip:
+    [~]$ conda install -c jzuhone pyxsim
+
+The second way to install pyXSIM is via pip. pip will attempt to download the dependencies and 
+install them, if they are not already installed in your Python distribution:
 
 .. code-block:: bash
 
     [~]$ pip install pyxsim
-
-If you have a different Python distribution than Anaconda, using ``pip install`` will also install
-all of the requisite dependencies. 
 
 Alternatively, to install into your Python distribution from `source <http://github.com/jzuhone/pyxsim>`_:
 
