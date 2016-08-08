@@ -28,6 +28,28 @@ link between the simulation data and the algorithm for generating the X-ray phot
 detailed information about the design of the algorithm in yt, check out
 [the SciPy 2014 Proceedings](http://conference.scipy.org/proceedings/scipy2014/zuhone.html).
 
+# Installing pyXSIM
+
+pyXSIM can be installed in a few different ways. The simplest way is via the conda package if
+you have the [Anaconda Python Distribution](https://store.continuum.io/cshop/anaconda/):
+
+```
+[~]$ conda install -c jzuhone pyxsim
+```
+
+The second way to install pyXSIM is via pip. pip will attempt to download the dependencies and
+install them, if they are not already installed in your Python distribution:
+
+```
+[~]$ pip install pyxsim
+```
+
+Alternatively, to install into your Python distribution from [source](http://github.com/jzuhone/pyxsim):
+
+```
+[~]$ python setup.py install
+```
+
 # Getting Help
 
 There are a number of ways to get help with pyXSIM. 
