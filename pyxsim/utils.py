@@ -71,7 +71,7 @@ def validate_parameters(first, second, skip=[]):
             if isinstance(v1, string_types) or isinstance(v2, string_types):
                 check_equal = v1 == v2
             else:
-                check_equal = np.allclose(v1, v2, rtol=0.0, atol=1.0e-10)
+                check_equal = np.allclose(np.array(v1), np.array(v2), rtol=0.0, atol=1.0e-10)
             if not check_equal:
                 raise RuntimeError("The values for the parameter '%s' in the two inputs" % k1 +
                                    " are not identical (%s vs. %s)!" % (v1, v2))
