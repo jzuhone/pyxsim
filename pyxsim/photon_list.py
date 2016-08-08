@@ -111,7 +111,7 @@ class PhotonList(object):
                       "omega_curvature"]:
             v1 = getattr(self.cosmo, param)
             v2 = getattr(other.cosmo, param)
-            check_equal = np.allclose(v1, v2, rtol=0.0, atol=1.0e-10)
+            check_equal = np.allclose(np.array(v1), np.array(v2), rtol=0.0, atol=1.0e-10)
             if not check_equal:
                 raise RuntimeError("The values for the parameter '%s' in the two" % param +
                                    " cosmologies are not identical (%s vs. %s)!" % (v1, v2))
