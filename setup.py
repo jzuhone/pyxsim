@@ -16,6 +16,7 @@ setup(name='pyxsim',
       author='John ZuHone',
       author_email='jzuhone@gmail.com',
       url='http://bitbucket.org/jzuhone/pyxsim',
+      setup_requires=["numpy","cython>=0.24"],
       install_requires=["six","numpy","astropy","h5py","yt>=3.3.1"],
       include_package_data=True,
       classifiers=[
