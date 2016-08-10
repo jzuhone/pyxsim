@@ -231,7 +231,7 @@ A simple example:
 
     positions = np.array([[30.01, 44.99], [29.98, 45.03]]) # The RA, Dec positions of the two sources
     
-    new_events = events.add_background(positions, ebins, [spec1, spec2], prng=prng, absorb_model=tbabs_model)
+    new_events = events.add_point_sources(positions, ebins, [spec1, spec2], prng=prng, absorb_model=tbabs_model)
 
 For the ``absorb_model`` argument for either of these methods, it should be the same model that
 was provided when the :class:`~pyxsim.event_list.EventList` was created, for consistency.
