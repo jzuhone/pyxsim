@@ -15,7 +15,6 @@
 
 import sys
 import os
-import sphinx_readable_theme
 
 import sphinx_bootstrap_theme
 
