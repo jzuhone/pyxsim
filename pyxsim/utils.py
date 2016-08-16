@@ -49,13 +49,17 @@ def force_unicode(value):
     else:
         return value
 
-def parse_value(value, default_units):
-    if isinstance(value, YTQuantity):
-        return value.in_units(default_units)
-    elif iterable(value):
-        return YTQuantity(value[0], value[1]).in_units(default_units)
+def parse_value(value, default_units, ds=None):
+    if ds is None:
+        quan = YTQuantity
     else:
-        return YTQuantity(value, default_units)
+        quan = ds.quan
+    if isinstance(value, YTQuantity):
+        return quan(value).in_units(default_units)
+    elif iterable(value):
+        return quan(value[0], value[1]).in_units(default_units)
+    else:
+        return quan(value, default_units)
 
 def validate_parameters(first, second, skip=[]):
     keys1 = list(first.keys())
