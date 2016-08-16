@@ -240,17 +240,8 @@ class PhotonList(object):
         if parameters is None:
              parameters = {}
         if cosmology is None:
-            hubble = getattr(ds, "hubble_constant", None)
-            omega_m = getattr(ds, "omega_matter", None)
-            omega_l = getattr(ds, "omega_lambda", None)
-            if hubble == 0:
-                hubble = None
-            if hubble is not None and \
-               omega_m is not None and \
-               omega_l is not None:
-                cosmo = Cosmology(hubble_constant=hubble,
-                                  omega_matter=omega_m,
-                                  omega_lambda=omega_l)
+            if hasattr(ds, 'cosmology'):
+                cosmo = ds.cosmology
             else:
                 cosmo = Cosmology()
         else:
