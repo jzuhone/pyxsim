@@ -333,11 +333,14 @@ class PhotonList(object):
                 number_of_photons, idxs, energies = chunk_data
                 photons["NumberOfPhotons"].append(number_of_photons)
                 photons["Energy"].append(ds.arr(energies, "keV"))
-                coords = get_periodic_coords(ds, parameters["center"], chunk[p_fields[0]][idxs],
-                                             chunk[p_fields[1]][idxs], chunk[p_fields[2]][idxs])
-                photons["x"].append(coords[0,:])
-                photons["y"].append(coords[1,:])
-                photons["z"].append(coords[2,:])
+                #coords = get_periodic_coords(ds, parameters["center"], chunk[p_fields[0]][idxs],
+                #                             chunk[p_fields[1]][idxs], chunk[p_fields[2]][idxs])
+                #photons["x"].append(coords[0,:])
+                #photons["y"].append(coords[1,:])
+                #photons["z"].append(coords[2,:])
+                photons["x"].append((chunk[p_fields[0]][idxs]-parameters["center"][0]).in_units("kpc"))
+                photons["y"].append((chunk[p_fields[1]][idxs]-parameters["center"][1]).in_units("kpc"))
+                photons["z"].append((chunk[p_fields[2]][idxs]-parameters["center"][2]).in_units("kpc"))
                 photons["vx"].append(chunk[v_fields[0]][idxs].in_units("km/s"))
                 photons["vy"].append(chunk[v_fields[1]][idxs].in_units("km/s"))
                 photons["vz"].append(chunk[v_fields[2]][idxs].in_units("km/s"))
