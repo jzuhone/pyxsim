@@ -1,3 +1,5 @@
+[![yt](http://img.shields.io/badge/powered%20by-yt-blue.svg?style=flat)](http://yt-project.org/)
+
 # What is pyXSIM?
 
 pyXSIM is a Python package for simulating X-ray observations from astrophysical sources.
