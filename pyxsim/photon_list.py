@@ -311,6 +311,10 @@ class PhotonList(object):
             # Compute rough boundaries of the object
             # DOES NOT WORK for objects straddling periodic 
             # boundaries yet
+            if sum(ds.periodicity) > 0:
+                mylog.warning("You are using a region that is not currently "
+                              "supported for straddling periodic boundaries. "
+                              "Check to make sure that this is not the case.")
             le = ds.arr(np.zeros(3), "code_length")
             re = ds.arr(np.zeros(3), "code_length")
             for i, ax in enumerate("xyz"):
