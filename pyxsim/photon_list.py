@@ -5,7 +5,7 @@ from six import string_types
 from collections import defaultdict
 import numpy as np
 from yt.funcs import iterable
-from pyxsim.utils import mylog, get_periodic_coords
+from pyxsim.utils import mylog
 from yt.utilities.physical_constants import clight
 from yt.utilities.cosmology import Cosmology
 from yt.utilities.orientation import Orientation
