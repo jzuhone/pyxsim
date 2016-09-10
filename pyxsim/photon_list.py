@@ -309,10 +309,13 @@ class PhotonList(object):
             re = data_source.radius+data_source.center
         else:
             # Compute rough boundaries of the object
+            # DOES NOT WORK for objects straddling periodic 
+            # boundaries yet
             le = ds.arr(np.zeros(3), "code_length")
             re = ds.arr(np.zeros(3), "code_length")
             for i, ax in enumerate("xyz"):
                 le[i], re[i] = data_source.quantities.extrema(ax)
+
         dds_min = get_smallest_dds(ds, parameters["DataType"])
         le = np.rint((le-ds.domain_left_edge)/dds_min)*dds_min+ds.domain_left_edge
         re = ds.domain_right_edge-np.rint((ds.domain_right_edge-re)/dds_min)*dds_min
@@ -333,14 +336,9 @@ class PhotonList(object):
                 number_of_photons, idxs, energies = chunk_data
                 photons["NumberOfPhotons"].append(number_of_photons)
                 photons["Energy"].append(ds.arr(energies, "keV"))
-                #coords = get_periodic_coords(ds, parameters["center"], chunk[p_fields[0]][idxs],
-                #                             chunk[p_fields[1]][idxs], chunk[p_fields[2]][idxs])
-                #photons["x"].append(coords[0,:])
-                #photons["y"].append(coords[1,:])
-                #photons["z"].append(coords[2,:])
-                photons["x"].append((chunk[p_fields[0]][idxs]-parameters["center"][0]).in_units("kpc"))
-                photons["y"].append((chunk[p_fields[1]][idxs]-parameters["center"][1]).in_units("kpc"))
-                photons["z"].append((chunk[p_fields[2]][idxs]-parameters["center"][2]).in_units("kpc"))
+                photons["x"].append(chunk[p_fields[0]][idxs].in_units("kpc"))
+                photons["y"].append(chunk[p_fields[1]][idxs].in_units("kpc"))
+                photons["z"].append(chunk[p_fields[2]][idxs].in_units("kpc"))
                 photons["vx"].append(chunk[v_fields[0]][idxs].in_units("km/s"))
                 photons["vy"].append(chunk[v_fields[1]][idxs].in_units("km/s"))
                 photons["vz"].append(chunk[v_fields[2]][idxs].in_units("km/s"))
@@ -352,6 +350,17 @@ class PhotonList(object):
         source_model.cleanup_model()
 
         concatenate_photons(photons)
+
+        # Translate photon coordinates to the source center
+        # Fix photon coordinates for regions crossing a periodic boundary
+        dw = ds.domain_width.to("kpc")
+        for i, ax in enumerate("xyz"):
+            if ds.periodicity[i]:
+                tfl = photons[ax] < le[i].to('kpc')
+                tfr = photons[ax] > re[i].to('kpc')
+                photons[ax][tfl] += dw[i] 
+                photons[ax][tfr] -= dw[i]
+            photons[ax] -= parameters["center"][i].in_units("kpc")
 
         mylog.info("Finished generating photons.")
         mylog.info("Number of photons generated: %d" % int(np.sum(photons["NumberOfPhotons"])))
