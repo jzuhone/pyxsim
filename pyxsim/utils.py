@@ -149,26 +149,3 @@ def merge_files(input_files, output_file, clobber=False,
         d.create_dataset(k, data=np.concatenate(data[k]))
 
     f_out.close()
-
-def get_periodic_coords(ds, ctr, x, y, z):
-    coords = ds.arr(np.zeros((3, x.size)), "kpc")
-    coords[0, :] = (x - ctr[0]).to("kpc")
-    coords[1, :] = (y - ctr[1]).to("kpc")
-    coords[2, :] = (z - ctr[2]).to("kpc")
-    if sum(ds.periodicity) == 0:
-        return coords
-    dw = ds.domain_width.to("kpc").d
-    for i in range(3):
-        if ds.periodicity[i]: 
-            # figure out which measure is less
-            pos_dw = np.mod(coords[i, :],  dw[i])
-            neg_dw = np.mod(coords[i, :], -dw[i])
-            mins = np.argmin([np.abs(pos_dw), np.abs(neg_dw)], axis=0)
-            temp_coords = np.mod(coords[i, :], dw[i])
-            # Where second measure is better, updating temporary coords
-            ii = mins == 1
-            temp_coords[ii] = np.mod(coords[i, :], -dw[i])[ii]
-            # Putting the temporary coords into the actual storage
-            coords[i, :] = temp_coords
-
-    return coords
