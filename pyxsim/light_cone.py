@@ -13,10 +13,7 @@ class XrayLightCone(LightCone):
                  near_redshift, far_redshift, seed=None,
                  observer_redshift=0.0,
                  use_minimum_datasets=True, deltaz_min=0.0,
-                 minimum_coherent_box_fraction=0.0,
-                 time_data=True, redshift_data=True,
-                 find_outputs=False, set_parameters=None,
-                 output_dir="LC", output_prefix="LightCone"):
+                 minimum_coherent_box_fraction=0.0):
         if seed is None:
             seed = time.time()
         super(XrayLightCone, self).__init__(parameter_filename, simulation_type,
