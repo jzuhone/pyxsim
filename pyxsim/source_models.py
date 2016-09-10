@@ -253,8 +253,9 @@ class ThermalSourceModel(SourceModel):
                     tot_spec *= norm_factor
                     eidxs = self.prng.choice(nchan, size=cn, p=tot_spec)
                     cell_e = emid[eidxs]
-                if ei+cn > num_photons_max:
+                while ei+cn > num_photons_max:
                     num_photons_max *= 2
+                if num_photons_max > energies.size:
                     energies.resize(num_photons_max, refcheck=False)
                 energies[ei:ei+cn] = cell_e
                 ei += cn
