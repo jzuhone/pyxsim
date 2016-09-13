@@ -555,13 +555,12 @@ class PhotonList(object):
         if isinstance(normal, string_types):
             # if on-axis, just use the width of the plane perpendicular
             # to that axis
-            nx = self.parameters["Dimension"]["xyz".index(normal)]
-            dx_min = self.parameters["Width"]/self.parameters["Dimension"]["xyz".index(normal)]
+            ax_idx = "xyz".index(normal)
         else:
-            # if off-axis, use the largest width to make sure we get everything
-            idx = np.argmax(self.parameters["Width"])
-            nx = self.parameters["Dimension"][idx]
-            dx_min = (self.parameters["Width"]/self.parameters["Dimension"])[idx]
+            # if off-axis, just use the largest width to make sure we get everything
+            ax_idx = np.argmax(self.parameters["Width"])
+        nx = self.parameters["Dimension"][ax_idx]
+        dx_min = (self.parameters["Width"]/self.parameters["Dimension"])[ax_idx]
 
         if not isinstance(normal, string_types):
             L = np.array(normal)
