@@ -330,8 +330,7 @@ class PhotonList(object):
         le = np.rint((le-ds.domain_left_edge)/dds_min)*dds_min+ds.domain_left_edge
         re = ds.domain_right_edge-np.rint((ds.domain_right_edge-re)/dds_min)*dds_min
         width = re-le
-        dmax = np.argmax(width)
-        parameters["Dimension"] = np.rint(width[dmax]/dds_min[dmax]).astype("int")
+        parameters["Dimension"] = np.rint(width/dds_min).astype("int")
         parameters["Width"] = parameters["Dimension"]*dds_min.in_units("kpc")
 
         citer = data_source.chunks([], "io")
