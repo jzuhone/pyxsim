@@ -145,7 +145,7 @@ class PhotonList(object):
         width = p["width"].value
         if not isinstance(width, np.ndarray):
             width = np.array([width]*3)
-        parameters["Width"] = YTQuantity(width, "kpc")
+        parameters["Width"] = YTArray(width, "kpc")
         parameters["HubbleConstant"] = p["hubble"].value
         parameters["OmegaMatter"] = p["omega_matter"].value
         parameters["OmegaLambda"] = p["omega_lambda"].value
