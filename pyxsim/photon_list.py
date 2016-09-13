@@ -138,8 +138,14 @@ class PhotonList(object):
         parameters["FiducialArea"] = YTQuantity(p["fid_area"].value, "cm**2")
         parameters["FiducialRedshift"] = p["fid_redshift"].value
         parameters["FiducialAngularDiameterDistance"] = YTQuantity(p["fid_d_a"].value, "Mpc")
-        parameters["Dimension"] = p["dimension"].value
-        parameters["Width"] = YTQuantity(p["width"].value, "kpc")
+        dims = p["dimension"].value
+        if not isinstance(dims, np.ndarray):
+            dims = np.array([dims]*3)
+        parameters["Dimension"] = dims
+        width = p["width"].value
+        if not isinstance(width, np.ndarray):
+            width = np.array([width]*3)
+        parameters["Width"] = YTQuantity(width, "kpc")
         parameters["HubbleConstant"] = p["hubble"].value
         parameters["OmegaMatter"] = p["omega_matter"].value
         parameters["OmegaLambda"] = p["omega_lambda"].value
@@ -325,8 +331,8 @@ class PhotonList(object):
         re = ds.domain_right_edge-np.rint((ds.domain_right_edge-re)/dds_min)*dds_min
         width = re-le
         dmax = np.argmax(width)
-        parameters["Dimension"] = int(width[dmax]/dds_min[dmax])
-        parameters["Width"] = parameters["Dimension"]*dds_min[dmax].in_units("kpc")
+        parameters["Dimension"] = np.rint(width[dmax]/dds_min[dmax]).astype("int")
+        parameters["Width"] = parameters["Dimension"]*dds_min.in_units("kpc")
 
         citer = data_source.chunks([], "io")
 
@@ -547,7 +553,16 @@ class PhotonList(object):
             sky_center = YTArray(sky_center, "degree")
 
         dx = self.photons["dx"].d
-        nx = self.parameters["Dimension"]
+        if isinstance(normal, string_types):
+            # if on-axis, just use the width of the plane perpendicular
+            # to that axis
+            nx = self.parameters["Dimension"]["xyz".index(normal)]
+            dx_min = self.parameters["Width"]/self.parameters["Dimension"]["xyz".index(normal)]
+        else:
+            # if off-axis, use the largest width to make sure we get everything
+            idx = np.argmax(self.parameters["Width"])
+            nx = self.parameters["Dimension"][idx]
+            dx_min = (self.parameters["Width"]/self.parameters["Dimension"])[idx]
 
         if not isinstance(normal, string_types):
             L = np.array(normal)
@@ -678,7 +693,6 @@ class PhotonList(object):
 
         events = {}
 
-        dx_min = self.parameters["Width"]/self.parameters["Dimension"]
         dtheta = YTQuantity(np.rad2deg(dx_min/D_A), "degree")
 
         events["xpix"] = xsky[detected]/dx_min.v + 0.5*(nx+1)
