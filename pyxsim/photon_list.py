@@ -553,9 +553,11 @@ class PhotonList(object):
 
         dx = self.photons["dx"].d
         if isinstance(normal, string_types):
-            # if on-axis, just use the width of the plane perpendicular
+            # if on-axis, just use the maximum width of the plane perpendicular
             # to that axis
-            ax_idx = "xyz".index(normal)
+            w = self.parameters["Width"].copy()
+            w["xyz".index(normal)] = 0.0
+            ax_idx = np.argmax(w)
         else:
             # if off-axis, just use the largest width to make sure we get everything
             ax_idx = np.argmax(self.parameters["Width"])
