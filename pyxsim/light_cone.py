@@ -1,7 +1,7 @@
 import time
 
 from pyxsim.photon_list import PhotonList
-from pyxsim.utils import parse_value
+from pyxsim.utils import parse_value, rebin_events
 
 from yt.analysis_modules.cosmological_observation.api import LightCone
 from yt.convenience import load
@@ -42,22 +42,32 @@ class XrayLightCone(LightCone):
             depth = ds.domain_width[ax].in_units("code_length")*output["box_depth_fraction"]
             le[ax] -= 0.5*depth
             re[ax] += 0.5*depth
-            for a in axes_lookup[ax]:
-                le[a] -= 0.5*width
-                re[a] += 0.5*width
+            for off_ax in axes_lookup[ax]:
+                le[off_ax] -= 0.5*width
+                re[off_ax] += 0.5*width
             reg = ds.region(output["projection_center"], le, re)
             photons = PhotonList.from_data_source(reg, output['redshift'], area,
                                                   exp_time, source_model,
                                                   parameters=parameters,
                                                   velocity_fields=velocity_fields,
                                                   cosmology=ds.cosmology)
-            events = photons.project_photons("xyz"[ax], absorb_model=absorb_model, 
-                                             sky_center=sky_center, 
-                                             no_shifting=no_shifting, prng=prng)
-            events_by_snapshot.append(events)
+            if sum(photons["NumberOfPhotons"]) > 0:
+                events = photons.project_photons("xyz"[ax], absorb_model=absorb_model, 
+                                                 sky_center=sky_center, 
+                                                 no_shifting=no_shifting, prng=prng)
+                events_by_snapshot.append(events)
+            del photons
 
-        tot_events = events_by_snapshot[0]
-        for events in events_by_snapshot[1:]:
+        tot_events = events_by_snapshot[-1]
+        nx = int(2*tot_events.parameters["pix_center"][0]-1)
+        dtheta = tot_events.parameters["dtheta"]
+        tot_events.parameters.pop("AngularDiameterDistance")
+        tot_events.parameters.pop("Redshift")
+
+        for events in events_by_snapshot[-2::-1]:
+            rebin_events(events, nx, dtheta)
+            events.parameters.pop("AngularDiameterDistance")
+            events.parameters.pop("Redshift")
             tot_events = tot_events + events
 
         return tot_events
