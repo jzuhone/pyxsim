@@ -468,7 +468,7 @@ class PhotonList(object):
             p.create_dataset("omega_lambda", data=self.parameters["OmegaLambda"])
             p.create_dataset("fid_d_a", data=float(self.parameters["FiducialAngularDiameterDistance"]))
             p.create_dataset("dimension", data=self.parameters["Dimension"])
-            p.create_dataset("width", data=float(self.parameters["Width"]))
+            p.create_dataset("width", data=self.parameters["Width"].v)
             p.create_dataset("data_type", data=self.parameters["DataType"])
 
             # Data
