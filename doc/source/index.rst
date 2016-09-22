@@ -57,6 +57,12 @@ License
 
 pyXSIM is released under a `BSD 3-clause license <https://opensource.org/licenses/BSD-3-Clause>`_.
 
+Current Version
+---------------
+
+The current stable version is 1.0.1. See the :ref:`changelog` for details on changes from previous
+versions.
+
 Table of Contents
 -----------------
 
@@ -73,6 +79,7 @@ Table of Contents
    instruments
    misc
    getting_help
+   faq
    examples
 
 Indices and tables
