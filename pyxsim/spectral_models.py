@@ -223,8 +223,8 @@ class TableApecModel(ThermalSpectralModel):
             self.linefile = check_file_location("apec_v%s_line.fits" % apec_vers,
                                                 "spectral_files")
         else:
-            self.cocofile = os.path.join(apec_root, "apec_v_%s_coco.fits" % apec_vers)
-            self.linefile = os.path.join(apec_root, "apec_v_%s_line.fits" % apec_vers)
+            self.cocofile = os.path.join(apec_root, "apec_v%s_coco.fits" % apec_vers)
+            self.linefile = os.path.join(apec_root, "apec_v%s_line.fits" % apec_vers)
         if not os.path.exists(self.cocofile) or not os.path.exists(self.linefile):
             raise IOError("Cannot find the APEC files!\n %s\n, %s" % (self.cocofile,
                                                                       self.linefile))
