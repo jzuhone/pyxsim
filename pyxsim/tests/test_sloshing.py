@@ -3,9 +3,8 @@ Answer test pyxsim.
 """
 
 from pyxsim import \
-    TableApecModel, TableAbsorbModel, \
-    ThermalSourceModel, PhotonList, EventList, \
-    merge_files, AuxiliaryResponseFile, \
+    TableApecModel, TBabsModel, ThermalSourceModel, \
+    PhotonList, EventList, merge_files, AuxiliaryResponseFile, \
     ACIS_S, ACIS_I, Hitomi_SXS
 from yt.utilities.answer_testing.framework import requires_ds, \
     GenericArrayTest, data_dir_load
@@ -50,7 +49,7 @@ def test_sloshing():
     redshift = 0.1
 
     apec_model = TableApecModel(0.1, 11.0, 10000)
-    tbabs_model = TableAbsorbModel("tbabs_table.h5", 0.1)
+    tbabs_model = TBabsModel(0.1)
 
     sphere = ds.sphere("c", (0.1, "Mpc"))
     sphere.set_field_parameter("X_H", 0.75)
