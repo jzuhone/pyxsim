@@ -384,14 +384,29 @@ class TableAbsorbModel(SpectralModel):
         """
         return np.exp(-self.sigma*self.nH)
 
+
 class TBabsModel(TableAbsorbModel):
+    r"""
+    Initialize a Tuebingen-Boulder (Wilms, J., Allen, A., & 
+    McCray, R. 2000, ApJ, 542, 914) ISM absorption model.
+
+    Parameters
+    ----------
+    nH : float
+        The foreground column density *nH* in units of 10^22 cm^{-2}.
+
+    Examples
+    --------
+    >>> tbabs_model = TBabsModel(0.1)
+    """
     def __init__(self, nH):
         super(TBabsModel, self).__init__("tbabs_table.h5", nH)
 
 
 class WabsModel(SpectralModel):
     r"""
-    Initialize a Wisconsin absorption model.
+    Initialize a Wisconsin (Morrison and McCammon; ApJ 270, 119) 
+    absorption model.
 
     Parameters
     ----------
@@ -403,6 +418,7 @@ class WabsModel(SpectralModel):
         The maximum energy for the spectral model.
     nchan : integer, optional
         The number of channels in the spectral model.
+
     Examples
     --------
     >>> wabs_model = WabsModel(0.1)
