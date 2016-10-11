@@ -473,7 +473,7 @@ class WabsModel(AbsorptionModel):
         e = np.array(eobs)
         idxs = np.minimum(np.searchsorted(emx, e)-1, 13)
         sigma = (c0[idxs]+c1[idxs]*e+c2[idxs]*e)*1.0e-24/e**3
-        absorb = np.exp(-sigma*self.nH)
+        absorb = np.exp(-sigma*self.nH*1.0e22)
         randvec = absorb.max()*prng.uniform(size=e.shape)
         detected = randvec < absorb
         return detected
