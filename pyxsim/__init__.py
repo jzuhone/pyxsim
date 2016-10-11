@@ -20,7 +20,8 @@ from pyxsim.spectral_models import \
     XSpecThermalModel, \
     XSpecAbsorbModel, \
     TableApecModel, \
-    TableAbsorbModel
+    TableAbsorbModel, \
+    TBabsModel, WabsModel
 
 from pyxsim.responses import \
     AuxiliaryResponseFile, \
