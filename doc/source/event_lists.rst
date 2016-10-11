@@ -33,8 +33,8 @@ arguments to customize the resulting projection. The arguments are:
   sources instead of the redshift. If units are not specified, it is assumed to be in Mpc. Used to reduce the
   of events from the initially large sample of photons. The default value is the value used when the 
   :class:`~pyxsim.photon_list.PhotonList` was created. To use this, the redshift must be set to zero. 
-* ``absorb_model`` (optional): :class:`~pyxsim.spectral_models.TableAbsorbModel` or 
-  :class:`~pyxsim.spectral_models.XSpecAbsorbModel`. A model for foreground galactic absorption.
+* ``absorb_model`` (optional): :class:`~pyxsim.spectral_models.AbsorptionModel` A model for foreground 
+  galactic absorption. See :ref:`absorb-models` for details on how to construct one.  
 * ``sky_center`` (optional): Central RA, Dec of the events in degrees. Default ``(30.0, 45.0)``.
 * ``no_shifting`` (optional): If set to True, the photon energies will not be velocity Doppler shifted. Default False.
 * ``north_vector`` (optional): A vector defining the "up" direction, e.g. ``[0.0, 1.0, 0.0]``.
@@ -44,6 +44,9 @@ arguments to customize the resulting projection. The arguments are:
 * ``prng`` (optional): A pseudo-random number generator, :class:`~numpy.random.RandomState` object, or
   :mod:`~numpy.random` is the default. Use this if you have a reason to generate the same set of random 
   numbers, such as for a test. 
+
+This is also the stage where foreground galactic absorption can be applied. See :ref:`absorb-models` for
+details on how to construct models for absorption. 
 
 Assuming one then has a :class:`~pyxsim.photon_list.PhotonList` ``photons``, example invocations could look
 like this:
@@ -64,7 +67,7 @@ An on-axis projection with absorption and given a particular coordinate center:
 
 .. code-block:: python
 
-    abs_model = pyxsim.XSpecAbsorbModel("phabs", 0.01)
+    abs_model = pyxsim.TBabsModel(0.01)
     events = photons.project_photons("y", absorb_model=abs_model, sky_center=(12.0, -30.0))
 
 An off-axis projection with a ``north_vector``, without Doppler velocity shifting, and a specific
@@ -169,8 +172,8 @@ Methods are provided for adding background and point source events to an existin
 * ``prng`` (optional): A pseudo-random number generator, :class:`~numpy.random.RandomState` object 
   or simply :mod:`numpy.random` as the default. Typically will only be needed if you have a reason
   to generate the same set of random numbers, such as for a test.
-* ``absorb_model`` (optional): :class:`~pyxsim.spectral_models.TableAbsorbModel` or 
-  :class:`~pyxsim.spectral_models.XSpecAbsorbModel`, a model for galactic foreground absorption.
+* ``absorb_model`` (optional): :class:`~pyxsim.spectral_models.AbsorptionModel`, a model for 
+  galactic foreground absorption.
 
 The background is assumed to be spatially constant over the entire region. A simple example: 
 
@@ -203,8 +206,8 @@ takes several arguments:
 * ``prng`` (optional): A pseudo-random number generator, :class:`~numpy.random.RandomState` object 
   or simply :mod:`numpy.random` as the default. Typically will only be needed if you have a reason
   to generate the same set of random numbers, such as for a test.
-* ``absorb_model`` (optional): :class:`~pyxsim.spectral_models.TableAbsorbModel` or 
-  :class:`~pyxsim.spectral_models.XSpecAbsorbModel`, a model for galactic foreground absorption.
+* ``absorb_model`` (optional): :class:`~pyxsim.spectral_models.AbsorptionModel`, a model for 
+  galactic foreground absorption.
 
 A simple example: 
 

@@ -60,7 +60,7 @@ pyXSIM is released under a `BSD 3-clause license <https://opensource.org/license
 Current Version
 ---------------
 
-The current stable version is 1.0.1. See the :ref:`changelog` for details on changes from previous
+The current stable version is 1.1.0. See the :ref:`changelog` for details on changes from previous
 versions.
 
 Table of Contents
@@ -74,7 +74,7 @@ Table of Contents
    basic_yt_concepts
    photon_lists
    source_models
-   spectral_models    
+   absorb_models    
    event_lists
    instruments
    misc
