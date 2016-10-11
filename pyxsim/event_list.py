@@ -101,8 +101,8 @@ class EventList(object):
             A pseudo-random number generator. Typically will only be specified
             if you have a reason to generate the same set of random numbers, such as for a
             test. Default is the :mod:`numpy.random` module.
-        absorb_model : :class:`~pyxsim.spectral_models.TableAbsorbModel` or :class:`~pyxsim.spectral_models.XSpecAbsorbModel`, optional
-            A model for galactic absorption.
+        absorb_model : :class:`~pyxsim.spectral_models.AbsorptionModel` 
+            A model for foreground galactic absorption.
         """
         if prng is None:
             prng = np.random
@@ -146,8 +146,8 @@ class EventList(object):
             A pseudo-random number generator. Typically will only be specified
             if you have a reason to generate the same set of random numbers, such as for a
             test. Default is the :mod:`numpy.random` module.
-        absorb_model : :class:`~pyxsim.spectral_models.TableAbsorbModel` or :class:`~pyxsim.spectral_models.XSpecAbsorbModel`, optional
-            A model for galactic absorption.
+        absorb_model : :class:`~pyxsim.spectral_models.AbsorptionModel` 
+            A model for foreground galactic absorption.
         """
         if prng is None:
             prng = np.random

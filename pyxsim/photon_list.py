@@ -516,8 +516,8 @@ class PhotonList(object):
             This may be optionally supplied instead of it being determined from the
             cosmology. If units are not specified, it is assumed to be in Mpc. To use this, the 
             redshift must be zero. 
-        absorb_model : :class:`~pyxsim.spectral_models.TableAbsorbModel` or :class:`~pyxsim.spectral_models.XSpecAbsorbModel`, optional
-            A model for galactic absorption.
+        absorb_model : :class:`~pyxsim.spectral_models.AbsorptionModel` 
+            A model for foreground galactic absorption.
         sky_center : array-like, optional
             Center RA, Dec of the events in degrees.
         no_shifting : boolean, optional
