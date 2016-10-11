@@ -127,63 +127,6 @@ class XSpecThermalModel(ThermalSpectralModel):
         del self.thermal_comp
         del self.model
 
-class XSpecAbsorbModel(SpectralModel):
-    r"""
-    Initialize an absorption model from PyXspec.
-
-    Parameters
-    ----------
-    model_name : string
-        The name of the absorption model.
-    nH : float
-        The foreground column density *nH* in units of 10^22 cm^{-2}.
-    emin : float, optional
-        The minimum energy for the spectral model.
-    emax : float, optional
-        The maximum energy for the spectral model.
-    nchan : integer, optional
-        The number of channels in the spectral model.
-    settings : dictionary, optional
-        A dictionary of key, value pairs (must both be strings)
-        that can be used to set various options in XSPEC.
-
-    Examples
-    --------
-    >>> abs_model = XSpecAbsorbModel("wabs", 0.1)
-    """
-    def __init__(self, model_name, nH, emin=0.01, emax=50.0,
-                 nchan=100000, settings=None):
-        self.model_name = model_name
-        self.nH = nH
-        if settings is None: settings = {}
-        self.settings = settings
-        super(XSpecAbsorbModel, self).__init__(emin, emax, nchan)
-
-    def prepare_spectrum(self):
-        """
-        Prepare the absorption model for execution.
-        """
-        import xspec
-        xspec.Xset.chatter = 0
-        xspec.AllModels.setEnergies("%f %f %d lin" %
-                                    (self.emin.value, self.emax.value, self.nchan))
-        self.model = xspec.Model(self.model_name+"*powerlaw")
-        self.model.powerlaw.norm = self.nchan/(self.emax.value-self.emin.value)
-        self.model.powerlaw.PhoIndex = 0.0
-        for k,v in self.settings.items():
-            xspec.Xset.addModelString(k,v)
-
-    def get_spectrum(self):
-        """
-        Get the absorption spectrum.
-        """
-        m = getattr(self.model,self.model_name)
-        m.nH = self.nH
-        return np.array(self.model.values(0))
-
-    def cleanup_spectrum(self):
-        del self.model
-
 class TableApecModel(ThermalSpectralModel):
     r"""
     Initialize a thermal gas emission model from the AtomDB APEC tables
@@ -346,7 +289,89 @@ class TableApecModel(ThermalSpectralModel):
         metal_spec = mspec_l*(1.-dT)+mspec_r*dT
         return cosmic_spec, metal_spec
 
-class TableAbsorbModel(SpectralModel):
+class AbsorptionModel(SpectralModel):
+
+    def prepare_spectrum(self):
+        """
+        Prepare the absorption model for execution.
+        """
+        pass
+
+    def get_spectrum(self):
+        """
+        Get the absorption spectrum.
+        """
+        return np.exp(-self.sigma*self.nH)
+
+    def absorb_photons(self, eobs, prng=np.random):
+        mylog.info("Absorbing.")
+        self.prepare_spectrum()
+        aspec = self.get_spectrum()
+        absorb = np.interp(eobs, self.emid, aspec, left=0.0, right=0.0)
+        randvec = aspec.max()*prng.uniform(size=eobs.shape)
+        detected = randvec < absorb
+        self.cleanup_spectrum()
+        return detected
+
+class XSpecAbsorbModel(AbsorptionModel):
+    r"""
+    Initialize an absorption model from PyXspec.
+
+    Parameters
+    ----------
+    model_name : string
+        The name of the absorption model.
+    nH : float
+        The foreground column density *nH* in units of 10^22 cm^{-2}.
+    emin : float, optional
+        The minimum energy for the spectral model.
+    emax : float, optional
+        The maximum energy for the spectral model.
+    nchan : integer, optional
+        The number of channels in the spectral model.
+    settings : dictionary, optional
+        A dictionary of key, value pairs (must both be strings)
+        that can be used to set various options in XSPEC.
+
+    Examples
+    --------
+    >>> abs_model = XSpecAbsorbModel("wabs", 0.1)
+    """
+    def __init__(self, model_name, nH, emin=0.01, emax=50.0,
+                 nchan=100000, settings=None):
+        self.model_name = model_name
+        self.nH = nH
+        if settings is None: settings = {}
+        self.settings = settings
+        super(XSpecAbsorbModel, self).__init__(emin, emax, nchan)
+
+    def prepare_spectrum(self):
+        """
+        Prepare the absorption model for execution.
+        """
+        import xspec
+        xspec.Xset.chatter = 0
+        xspec.AllModels.setEnergies("%f %f %d lin" %
+                                    (self.emin.value, self.emax.value, self.nchan))
+        self.model = xspec.Model(self.model_name+"*powerlaw")
+        self.model.powerlaw.norm = self.nchan/(self.emax.value-self.emin.value)
+        self.model.powerlaw.PhoIndex = 0.0
+        for k,v in self.settings.items():
+            xspec.Xset.addModelString(k,v)
+
+    def get_spectrum(self):
+        """
+        Get the absorption spectrum.
+        """
+        m = getattr(self.model,self.model_name)
+        m.nH = self.nH
+        return np.array(self.model.values(0))
+
+    def cleanup_spectrum(self):
+        del self.model
+
+
+class TableAbsorbModel(AbsorptionModel):
     r"""
     Initialize an absorption model from a table stored in an HDF5 file.
 
@@ -372,18 +397,6 @@ class TableAbsorbModel(SpectralModel):
         super(TableAbsorbModel, self).__init__(emin, emax, nchan)
         self.nH = YTQuantity(nH*1.0e22, "cm**-2")
 
-    def prepare_spectrum(self):
-        """
-        Prepare the absorption model for execution.
-        """
-        pass
-
-    def get_spectrum(self):
-        """
-        Get the absorption spectrum.
-        """
-        return np.exp(-self.sigma*self.nH)
-
 
 class TBabsModel(TableAbsorbModel):
     r"""
@@ -403,7 +416,7 @@ class TBabsModel(TableAbsorbModel):
         super(TBabsModel, self).__init__("tbabs_table.h5", nH)
 
 
-class WabsModel(SpectralModel):
+class WabsModel(AbsorptionModel):
     r"""
     Initialize a Wisconsin (Morrison and McCammon; ApJ 270, 119) 
     absorption model.
@@ -436,16 +449,3 @@ class WabsModel(SpectralModel):
                        -31.5, -17.0, 0.0, 0.0, 0.75, 0.0, 0.0])
         idxs = np.minimum(np.searchsorted(emx, self.emid)-1, 13)
         self.sigma = (c0[idxs]+c1[idxs]*self.emid+c2[idxs]*self.emid)*1.0e-24/self.emid**3
-
-    def prepare_spectrum(self):
-        """
-        Prepare the absorption model for execution.
-        """
-        pass
-
-    def get_spectrum(self):
-        """
-        Get the absorption spectrum.
-        """
-        return np.exp(-self.sigma*self.nH)
- 

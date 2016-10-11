@@ -682,14 +682,7 @@ class PhotonList(object):
         if absorb_model is None:
             detected = np.ones(eobs.shape, dtype='bool')
         else:
-            mylog.info("Absorbing.")
-            absorb_model.prepare_spectrum()
-            emid = absorb_model.emid
-            aspec = absorb_model.get_spectrum()
-            absorb = np.interp(eobs, emid, aspec, left=0.0, right=0.0)
-            randvec = aspec.max()*prng.uniform(size=eobs.shape)
-            detected = randvec < absorb
-            absorb_model.cleanup_spectrum()
+            detected = absorb_model.absorb_photons(eobs, prng=prng)
 
         events = {}
 
