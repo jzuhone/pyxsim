@@ -470,9 +470,10 @@ class WabsModel(AbsorptionModel):
             test. Default is the :mod:`numpy.random` module.
         """
         mylog.info("Absorbing.")
-        idxs = np.minimum(np.searchsorted(emx, eobs)-1, 13)
-        sigma = (c0[idxs]+c1[idxs]*eobs+c2[idxs]*eobs)*1.0e-24/eobs**3
+        e = np.array(eobs)
+        idxs = np.minimum(np.searchsorted(emx, e)-1, 13)
+        sigma = (c0[idxs]+c1[idxs]*e+c2[idxs]*e)*1.0e-24/e**3
         absorb = np.exp(-sigma*self.nH)
-        randvec = absorb.max()*prng.uniform(size=eobs.shape)
+        randvec = absorb.max()*prng.uniform(size=e.shape)
         detected = randvec < absorb
         return detected
