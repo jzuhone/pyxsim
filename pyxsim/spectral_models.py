@@ -390,6 +390,23 @@ class TBabsModel(TableAbsorbModel):
 
 
 class WabsModel(SpectralModel):
+    r"""
+    Initialize a Wisconsin absorption model.
+
+    Parameters
+    ----------
+    nH : float
+        The foreground column density *nH* in units of 10^22 cm^{-2}.
+    emin : float, optional
+        The minimum energy for the spectral model.
+    emax : float, optional
+        The maximum energy for the spectral model.
+    nchan : integer, optional
+        The number of channels in the spectral model.
+    Examples
+    --------
+    >>> wabs_model = WabsModel(0.1)
+    """
     def __init__(self, nH, emin=0.01, emax=50.0, nchan=100000):
         self.nH = nH
         super(WabsModel, self).__init__(emin, emax, nchan)
