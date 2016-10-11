@@ -1,6 +1,6 @@
 from pyxsim import \
     PowerLawSourceModel, PhotonList, \
-    XSpecAbsorbModel, Hitomi_SXS
+    WabsModel, Hitomi_SXS
 from pyxsim.tests.utils import \
     BetaModelSource
 from yt.units.yt_array import YTQuantity
@@ -43,7 +43,7 @@ def plaw_fit(alpha_sim):
     ds.add_field(("gas","hard_emission"), function=_hard_emission, units="keV**-1*s**-1")
 
     nH_sim = 0.02
-    abs_model = XSpecAbsorbModel("TBabs", nH_sim)
+    abs_model = WabsModel(nH_sim)
 
     A = YTQuantity(2000., "cm**2")
     exp_time = YTQuantity(2.0e5, "s")
@@ -70,16 +70,16 @@ def plaw_fit(alpha_sim):
     s.ignore("**-0.5")
     s.ignore("9.0-**")
 
-    m = xspec.Model("tbabs*zpowerlw")
+    m = xspec.Model("wabs*zpowerlw")
     m.zpowerlw.PhoIndex = 2.0
     m.zpowerlw.norm = 1.0
     m.zpowerlw.Redshift = redshift
-    m.TBabs.nH = 0.02
+    m.wabs.nH = 0.02
 
     m.zpowerlw.PhoIndex.frozen = False
     m.zpowerlw.norm.frozen = False
     m.zpowerlw.Redshift.frozen = True
-    m.TBabs.nH.frozen = True
+    m.wabs.nH.frozen = True
 
     xspec.Fit.renorm()
     xspec.Fit.nIterations = 100
