@@ -507,7 +507,6 @@ class EventList(object):
         wrhdu.header["TUNIT4"] = "keV"
         wrhdu.header["TUNIT5"] = "keV"
         wrhdu.header["TUNIT6"] = "erg/s/cm**2"
-        wrhdu.header["EXPOSURE"] = self.parameters["ExposureTime"].value
 
         simputfile = prefix+"_simput.fits"
 
