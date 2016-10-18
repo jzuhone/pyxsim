@@ -3,7 +3,7 @@ A unit test for the pyxsim analysis module.
 """
 
 from pyxsim import \
-    XSpecThermalModel, XSpecAbsorbModel, \
+    TableApecModel, TBabsModel, \
     ThermalSourceModel, PhotonList, \
     Hitomi_SXS
 from pyxsim.tests.utils import \
@@ -52,9 +52,8 @@ def do_beta_model(source, v_field, em_field):
     redshift = 0.05
     nH_sim = 0.02
 
-    apec_model = XSpecThermalModel("bapec", 0.1, 11.5, 20000,
-                                   thermal_broad=True)
-    abs_model = XSpecAbsorbModel("TBabs", nH_sim)
+    apec_model = TableApecModel(0.1, 11.5, 20000, thermal_broad=True)
+    abs_model = TBabsModel(nH_sim)
 
     sphere = ds.sphere("c", (0.5, "Mpc"))
 
