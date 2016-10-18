@@ -153,23 +153,24 @@ class InstrumentSimulator(object):
             trueChannel = []
             f_chan = ensure_numpy_array(np.nan_to_num(rmf.data["F_CHAN"][k]))
             n_chan = ensure_numpy_array(np.nan_to_num(rmf.data["N_CHAN"][k]))
-            if not iterable(f_chan):
-                f_chan = [f_chan]
-                n_chan = [n_chan]
             for start, nchan in zip(f_chan, n_chan):
                 if nchan == 0:
                     trueChannel.append(start)
                 else:
                     trueChannel += list(range(start, start+nchan))
+            trueChannel = np.array(trueChannel)
             if len(trueChannel) > 0:
+                nn = 0
                 for q in range(fcurr, last):
                     if low <= sorted_e[q] < high:
-                        channelInd = prng.choice(len(weights), p=weights)
-                        fcurr += 1
-                        pbar.update(fcurr)
-                        detectedChannels.append(trueChannel[channelInd])
+                        nn += 1
                     else:
                         break
+                channelInd = prng.choice(len(weights), size=nn, p=weights)
+                detectedChannels.append(trueChannel[channelInd])
+                fcurr += nn
+                pbar.update(fcurr)
+
         pbar.finish()
 
         for key in ["xpix", "ypix", "xsky", "ysky"]:
