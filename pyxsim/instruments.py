@@ -160,12 +160,8 @@ class InstrumentSimulator(object):
                     trueChannel += list(range(start, start+nchan))
             trueChannel = np.array(trueChannel)
             if len(trueChannel) > 0:
-                nn = 0
-                for q in range(fcurr, last):
-                    if low <= sorted_e[q] < high:
-                        nn += 1
-                    else:
-                        break
+                e = sorted_e[fcurr:last]
+                nn = np.logical_and(low <= e, e < high).sum()
                 channelInd = prng.choice(len(weights), size=nn, p=weights)
                 detectedChannels.append(trueChannel[channelInd])
                 fcurr += nn
