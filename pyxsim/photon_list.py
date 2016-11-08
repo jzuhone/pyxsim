@@ -255,7 +255,11 @@ class PhotonList(object):
         mylog.info("Cosmology: h = %g, omega_matter = %g, omega_lambda = %g" %
                    (cosmo.hubble_constant, cosmo.omega_matter, cosmo.omega_lambda))
         if dist is None:
-            D_A = cosmo.angular_diameter_distance(0.0,redshift).in_units("Mpc")
+            if redshift <= 0.0:
+                msg = "If redshift <= 0.0, you must specify a distance to the source using the 'dist' argument!"
+                mylog.error(msg)
+                raise ValueError(msg)
+            D_A = cosmo.angular_diameter_distance(0.0, redshift).in_units("Mpc")
         else:
             D_A = parse_value(dist, "Mpc")
             if redshift > 0.0:
