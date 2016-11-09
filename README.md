@@ -1,5 +1,4 @@
-[![yt](http://img.shields.io/badge/powered%20by-yt-blue.svg?style=flat)](http://yt-project.org/)   
-[![astropy](http://img.shields.io/badge/powered%20by-AstroPy-orange.svg?style=flat)](http://www.astropy.org/)
+[![yt](http://img.shields.io/badge/powered%20by-yt-blue.svg?style=flat)](http://yt-project.org/)    [![astropy](http://img.shields.io/badge/powered%20by-AstroPy-orange.svg?style=flat)](http://www.astropy.org/)
 
 # What is pyXSIM?
 
