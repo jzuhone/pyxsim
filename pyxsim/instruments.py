@@ -173,7 +173,7 @@ class InstrumentSimulator(object):
             events.events[key] = events[key][eidxs]
 
         events.events["eobs"] = YTArray(sorted_e, "keV")
-        events.events[rmf.header["CHANTYPE"]] = np.array(detectedChannels, dtype="int")
+        events.events[rmf.header["CHANTYPE"]] = np.concatenate(detectedChannels).astype("int")
 
         events.parameters["RMF"] = rmf.filename
         events.parameters["ChannelType"] = rmf.header["CHANTYPE"]
