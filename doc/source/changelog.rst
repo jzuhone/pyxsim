@@ -3,6 +3,15 @@
 ChangeLog
 =========
 
+Version 1.1.1
+-------------
+
+This version is a bugfix and optimization release.
+
+* Some speedups have been achieved in the convolution of energies with RMFs.
+* An error is now thrown if one attempts to use a zero or negative redshift in
+  :meth:`~pyxsim.photon_list.PhotonList.from_data_source` without specifying a distance.
+
 Version 1.1.0
 -------------
 
