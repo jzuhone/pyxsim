@@ -76,6 +76,13 @@ class AuxiliaryResponseFile(object):
     def max_area(self):
         return self.eff_area.max()
 
+    def interpolate_area(self, energy):
+        """
+        Interpolate the effective area to the energies provided by the supplied *energy* array.
+        """
+        earea = np.interp(energy, self.emid, self.eff_area, left=0.0, right=0.0)
+        return YTArray(earea, "cm**2")
+
 class RedistributionMatrixFile(object):
     r"""
     A class for redistribution matrix files (RMFs).
