@@ -124,15 +124,6 @@ class InstrumentSimulator(object):
         mylog.info("Reading response matrix file (RMF): %s" % self.rmf)
         rmf = RedistributionMatrixFile(self.rmf)
 
-        elo = rmf.data["ENERG_LO"]
-        ehi = rmf.data["ENERG_HI"]
-        n_de = elo.shape[0]
-        mylog.info("Number of energy bins in RMF: %d" % n_de)
-        mylog.info("Energy limits: %g %g" % (min(elo), max(ehi)))
-
-        n_ch = len(rmf.ebounds["CHANNEL"])
-        mylog.info("Number of channels in RMF: %d" % n_ch)
-
         eidxs = np.argsort(events["eobs"])
         sorted_e = events["eobs"][eidxs].d
 
@@ -140,13 +131,15 @@ class InstrumentSimulator(object):
 
         # run through all photon energies and find which bin they go in
         fcurr = 0
-        last = sorted_e.shape[0]
+        last = sorted_e.size
 
         pbar = get_pbar("Scattering energies with RMF", last)
 
-        for (k, low), high in zip(enumerate(elo), ehi):
+        for (k, low), high in zip(enumerate(rmf.elo), rmf.ehi):
             # weight function for probabilities from RMF
             weights = np.nan_to_num(np.float64(rmf.data["MATRIX"][k]))
+            if weights.sum() <= 0.0:
+                continue
             weights /= weights.sum()
             # build channel number list associated to array value,
             # there are groups of channels in rmfs with nonzero probabilities
@@ -154,15 +147,18 @@ class InstrumentSimulator(object):
             f_chan = ensure_numpy_array(np.nan_to_num(rmf.data["F_CHAN"][k]))
             n_chan = ensure_numpy_array(np.nan_to_num(rmf.data["N_CHAN"][k]))
             for start, nchan in zip(f_chan, n_chan):
-                if nchan == 0:
-                    trueChannel.append(start)
-                else:
-                    trueChannel += list(range(start, start+nchan))
+                if start > -1:
+                    if nchan == 0:
+                        trueChannel.append(start)
+                    else:
+                        trueChannel += list(range(start, start+nchan))
             trueChannel = np.array(trueChannel)
-            if len(trueChannel) > 0:
+            nc = trueChannel.size
+            if nc > 0:
+                ww = weights[:nc]
                 e = sorted_e[fcurr:last]
                 nn = np.logical_and(low <= e, e < high).sum()
-                channelInd = prng.choice(len(weights), size=nn, p=weights)
+                channelInd = prng.choice(nc, size=nn, p=ww)
                 detectedChannels.append(trueChannel[channelInd])
                 fcurr += nn
                 pbar.update(fcurr)

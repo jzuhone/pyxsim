@@ -7,7 +7,7 @@ import numpy as np
 from yt.utilities.on_demand_imports import _astropy
 from yt.units.yt_array import YTArray
 from pyxsim.utils import mylog, check_file_location
-import os
+from yt.funcs import ensure_numpy_array
 
 class AuxiliaryResponseFile(object):
     r"""
@@ -99,9 +99,10 @@ class RedistributionMatrixFile(object):
     def __init__(self, filename):
         self.filename = check_file_location(filename, "response_files")
         self.handle = _astropy.pyfits.open(self.filename)
-        if "MATRIX" in self.handle:
+        names = [h.name.strip() for h in self.handle]
+        if "MATRIX" in names:
             self.mat_key = "MATRIX"
-        elif "SPECRESP MATRIX" in self.handle:
+        elif "SPECRESP MATRIX" in names:
             self.mat_key = "SPECRESP MATRIX"
         else:
             raise RuntimeError("Cannot find the response matrix in the RMF "
@@ -113,6 +114,18 @@ class RedistributionMatrixFile(object):
         self.ebounds = self.handle["EBOUNDS"].data
         self.ebounds_header = self.handle["EBOUNDS"].header
         self.weights = np.array([w.sum() for w in self.data["MATRIX"]])
+        self.elo = self.data["ENERG_LO"]
+        self.ehi = self.data["ENERG_HI"]
+        self.n_de = self.elo.size
+        self.n_ch = self.ebounds["CHANNEL"].size
+
+        num = 0
+        for i in range(1, self.num_mat_columns+1):
+            if self.header["TTYPE%d" % i] == "F_CHAN":
+                num = i
+                break
+        self.cmin = self.header["TLMIN%d" % num]
+        self.cmax = self.header["TLMAX%d" % num]
 
     def __str__(self):
         return self.filename

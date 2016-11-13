@@ -13,6 +13,7 @@ from yt.utilities.on_demand_imports import _astropy
 import h5py
 from pyxsim.utils import force_unicode, validate_parameters, parse_value
 from pyxsim.responses import RedistributionMatrixFile
+import os
 
 class EventList(object):
 
@@ -361,13 +362,10 @@ class EventList(object):
         tbhdu.header["TLMAX3"] = 2.*self.parameters["pix_center"][1]-0.5
         if "ChannelType" in self.parameters:
             rmf = RedistributionMatrixFile(self.parameters["RMF"])
-            num = 0
-            for i in range(1, rmf.num_mat_columns+1):
-                if rmf.header["TTYPE%d" % i] == "F_CHAN":
-                    num = i
-                    break
-            tbhdu.header["TLMIN4"] = rmf.header["TLMIN%d" % num]
-            tbhdu.header["TLMAX4"] = rmf.header["TLMAX%d" % num]
+            tbhdu.header["TLMIN4"] = rmf.cmin
+            tbhdu.header["TLMAX4"] = rmf.cmax
+            tbhdu.header["RESPFILE"] = os.path.split(self.parameters["RMF"])[-1]
+            tbhdu.header["PHA_BINS"] = rmf.n_ch
         tbhdu.header["EXPOSURE"] = exp_time
         tbhdu.header["TSTART"] = 0.0
         tbhdu.header["TSTOP"] = exp_time
@@ -385,14 +383,8 @@ class EventList(object):
         tbhdu.header["DATE"] = t_begin.tt.isot
         tbhdu.header["DATE-OBS"] = t_begin.tt.isot
         tbhdu.header["DATE-END"] = t_end.tt.isot
-        if "RMF" in self.parameters:
-            tbhdu.header["RESPFILE"] = self.parameters["RMF"]
-            f = pyfits.open(self.parameters["RMF"])
-            nchan = int(f["EBOUNDS"].header["DETCHANS"])
-            tbhdu.header["PHA_BINS"] = nchan
-            f.close()
         if "ARF" in self.parameters:
-            tbhdu.header["ANCRFILE"] = self.parameters["ARF"]
+            tbhdu.header["ANCRFILE"] = os.path.split(self.parameters["ARF"])[-1]
         if "ChannelType" in self.parameters:
             tbhdu.header["CHANTYPE"] = self.parameters["ChannelType"]
         if "Mission" in self.parameters:
@@ -637,24 +629,11 @@ class EventList(object):
         if bin_type == "channel" and "ChannelType" in self.parameters:
             spectype = self.parameters["ChannelType"]
             rmf = RedistributionMatrixFile(self.parameters["RMF"])
-            nchan = int(rmf.ebounds_header["DETCHANS"])
-            num = 0
-            for i in range(1, rmf.num_mat_columns+1):
-                if rmf.header["TTYPE%d" % i] == "F_CHAN":
-                    num = i
-                    break
-            if num > 0:
-                tlmin = "TLMIN%d" % num
-                cmin = int(rmf.header[tlmin])
-            else:
-                mylog.warning("Cannot determine minimum allowed value for channel. " +
-                              "Setting to 0, which may be wrong.")
-                cmin = 0
-            minlength = nchan
-            if cmin == 1: minlength += 1
-            spec = np.bincount(self[spectype],minlength=minlength)
-            if cmin == 1: spec = spec[1:]
-            bins = (np.arange(nchan)+cmin).astype("int32")
+            minlength = rmf.n_ch
+            if rmf.cmin == 1: minlength += 1
+            spec = np.bincount(self[spectype], minlength=minlength)
+            if rmf.cmin == 1: spec = spec[1:]
+            bins = (np.arange(rmf.n_ch)+rmf.cmin).astype("int32")
         else:
             espec = self["eobs"].d
             erange = (emin, emax)
@@ -695,11 +674,11 @@ class EventList(object):
         tbhdu.header["CORRFILE"] = "none"
         tbhdu.header["POISSERR"] = True
         if "RMF" in self.parameters:
-            tbhdu.header["RESPFILE"] = self.parameters["RMF"]
+            tbhdu.header["RESPFILE"] = os.path.split(self.parameters["RMF"])[-1]
         else:
             tbhdu.header["RESPFILE"] = "none"
         if "ARF" in self.parameters:
-            tbhdu.header["ANCRFILE"] = self.parameters["ARF"]
+            tbhdu.header["ANCRFILE"] = os.path.split(self.parameters["ARF"])[-1]
         else:
             tbhdu.header["ANCRFILE"] = "none"
         if "Mission" in self.parameters:
