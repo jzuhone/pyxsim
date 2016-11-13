@@ -1,6 +1,6 @@
 from pyxsim import \
     PowerLawSourceModel, PhotonList, \
-    WabsModel, Hitomi_SXS
+    WabsModel, ACIS_I
 from pyxsim.tests.utils import \
     BetaModelSource
 from yt.units.yt_array import YTQuantity
@@ -10,26 +10,30 @@ import os
 import shutil
 import tempfile
 from yt.utilities.physical_constants import mp
+from sherpa.astro.ui import load_user_model, add_user_pars, \
+    load_pha, ignore, fit, set_model, set_stat, set_method, \
+    covar, get_covar_results, set_covar_opt
 
 def setup():
     from yt.config import ytcfg
     ytcfg["yt", "__withintesting"] = "True"
 
-@requires_module("xspec")
+def ret_wabs_plaw(abs_model):
+    def _mymodel(pars, x, xhi=None):
+        dx = x[1]-x[0]
+        wm = abs_model(pars[0])
+        wabs = wm.get_absorb(x)
+        plaw = pars[1]*dx*(x*(1.0+pars[2]))**(-pars[3])
+        return wabs*plaw
+    return _mymodel
+
+@requires_module("sherpa")
 def test_power_law():
     plaw_fit(1.1)
     plaw_fit(0.8)
     plaw_fit(1.0)
 
 def plaw_fit(alpha_sim):
-    import xspec
-
-    xspec.Fit.statMethod = "cstat"
-    xspec.Xset.addModelString("APECTHERMAL","yes")
-    xspec.Fit.query = "yes"
-    xspec.Fit.method = ["leven","10","0.01"]
-    xspec.Fit.delta = 0.01
-    xspec.Xset.chatter = 5
 
     tmpdir = tempfile.mkdtemp()
     curdir = os.getcwd()
@@ -39,8 +43,8 @@ def plaw_fit(alpha_sim):
     ds = bms.ds
 
     def _hard_emission(field, data):
-        return YTQuantity(1.0e-19, "s**-1*keV**-1")*data["density"]*data["cell_volume"]/mp
-    ds.add_field(("gas","hard_emission"), function=_hard_emission, units="keV**-1*s**-1")
+        return YTQuantity(1.0e-18, "s**-1*keV**-1")*data["density"]*data["cell_volume"]/mp
+    ds.add_field(("gas", "hard_emission"), function=_hard_emission, units="keV**-1*s**-1")
 
     nH_sim = 0.02
     abs_model = WabsModel(nH_sim)
@@ -63,36 +67,33 @@ def plaw_fit(alpha_sim):
     events = photons.project_photons("z", absorb_model=abs_model,
                                      prng=bms.prng,
                                      no_shifting=True)
-    events = Hitomi_SXS(events, rebin=False, convolve_psf=False, prng=bms.prng)
+    events = ACIS_I(events, rebin=False, convolve_psf=False, prng=bms.prng)
     events.write_spectrum("plaw_model_evt.pi", clobber=True)
 
-    s = xspec.Spectrum("plaw_model_evt.pi")
-    s.ignore("**-0.5")
-    s.ignore("9.0-**")
+    os.system("cp plaw_model_evt.pi /Users/jzuhone")
+    os.system("cp %s ." % events.parameters["ARF"])
+    os.system("cp %s ." % events.parameters["RMF"])
 
-    m = xspec.Model("wabs*zpowerlw")
-    m.zpowerlw.PhoIndex = 2.0
-    m.zpowerlw.norm = 1.0
-    m.zpowerlw.Redshift = redshift
-    m.wabs.nH = 0.02
+    load_user_model(ret_wabs_plaw(WabsModel), "wplaw")
+    add_user_pars("wplaw", ["nH", "norm", "redshift", "alpha"],
+                  [0.01, norm_sim*0.8, redshift, 0.9], 
+                  parmins=[0.0, 0.0, 0.0, 0.1],
+                  parmaxs=[10.0, 1.0e9, 10.0, 10.0],
+                  parfrozen=[False, False, True, False])
 
-    m.zpowerlw.PhoIndex.frozen = False
-    m.zpowerlw.norm.frozen = False
-    m.zpowerlw.Redshift.frozen = True
-    m.wabs.nH.frozen = True
+    load_pha("plaw_model_evt.pi")
+    set_stat("cstat")
+    set_method("simplex")
+    ignore(":0.5, 9.0:")
+    set_model("wplaw")
+    fit()
+    set_covar_opt("sigma", 1.6)
+    covar()
+    res = get_covar_results()
 
-    xspec.Fit.renorm()
-    xspec.Fit.nIterations = 100
-    xspec.Fit.perform()
-
-    alpha = m.zpowerlw.PhoIndex.values[0]
-    norm = m.zpowerlw.norm.values[0]
-
-    xspec.AllModels.clear()
-    xspec.AllData.clear()
-
-    assert np.abs((alpha-alpha_sim)/alpha_sim) < 0.02
-    assert np.abs((norm-norm_sim)/norm_sim) < 0.02
+    assert np.abs(res.parvals[0]-nH_sim) < res.parmaxes[0]
+    assert np.abs(res.parvals[1]-norm_sim) < res.parmaxes[1]
+    assert np.abs(res.parvals[2]-alpha_sim) < res.parmaxes[2]
 
     os.chdir(curdir)
     shutil.rmtree(tmpdir)
