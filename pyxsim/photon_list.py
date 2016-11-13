@@ -69,7 +69,7 @@ class PhotonList(object):
         self.num_cells = len(photons["x"])
 
         p_bins = np.cumsum(photons["NumberOfPhotons"])
-        self.p_bins = np.insert(p_bins, 0, [np.uint64(0)])
+        self.p_bins = np.insert(p_bins, 0, [np.int64(0)])
 
     def keys(self):
         return self.photons.keys()
@@ -171,10 +171,10 @@ class PhotonList(object):
         n_ph = d["num_photons"][:]
 
         if comm.rank == 0:
-            start_e = np.uint64(0)
+            start_e = np.int64(0)
         else:
             start_e = n_ph[:start_c].sum()
-        end_e = start_e + np.uint64(n_ph[start_c:end_c].sum())
+        end_e = start_e + np.int64(n_ph[start_c:end_c].sum())
 
         photons["NumberOfPhotons"] = n_ph[start_c:end_c]
         photons["Energy"] = YTArray(d["energy"][start_e:end_e], "keV")
@@ -409,7 +409,7 @@ class PhotonList(object):
                 vy = np.zeros(num_cells)
                 vz = np.zeros(num_cells)
                 dx = np.zeros(num_cells)
-                n_ph = np.zeros(num_cells, dtype="uint64")
+                n_ph = np.zeros(num_cells, dtype="int64")
                 e = np.zeros(num_photons)
             else:
                 sizes_c = []
@@ -624,12 +624,12 @@ class PhotonList(object):
                                  "area, exposure time, or increase the distance/redshift "
                                  "of the object. Alternatively, generate a larger sample "
                                  "of photons.")
-            my_n_obs = np.uint64(n_ph_tot*fak)
+            my_n_obs = np.int64(n_ph_tot*fak)
 
         if my_n_obs == n_ph_tot:
-            idxs = np.arange(my_n_obs, dtype='uint64')
+            idxs = np.arange(my_n_obs, dtype='int64')
         else:
-            idxs = prng.permutation(n_ph_tot)[:my_n_obs].astype("uint64")
+            idxs = prng.permutation(n_ph_tot)[:my_n_obs].astype("int64")
         obs_cells = np.searchsorted(self.p_bins, idxs, side='right')-1
         delta = dx[obs_cells]
 

@@ -192,7 +192,7 @@ class ThermalSourceModel(SourceModel):
         else:
             metalZ = chunk[self.Zmet].v[idxs]
 
-        number_of_photons = np.zeros(num_cells, dtype="uint64")
+        number_of_photons = np.zeros(num_cells, dtype="int64")
         energies = np.zeros(num_photons_max)
 
         start_e = 0
@@ -216,7 +216,7 @@ class ThermalSourceModel(SourceModel):
             cell_norm_c = tot_ph_c*cem
             cell_norm_m = tot_ph_m*metalZ[ibegin:iend]*cem
             cell_norm = np.modf(cell_norm_c + cell_norm_m)
-            cell_n = np.uint64(cell_norm[1]) + np.uint64(cell_norm[0] >= u)
+            cell_n = np.int64(cell_norm[1]) + np.int64(cell_norm[0] >= u)
 
             number_of_photons[ibegin:iend] = cell_n
 
@@ -344,7 +344,7 @@ class PowerLawSourceModel(SourceModel):
         norm = np.modf(norm)
 
         u = self.prng.uniform(size=num_cells)
-        number_of_photons = np.uint64(norm[1]) + np.uint64(norm[0] >= u)
+        number_of_photons = np.int64(norm[1]) + np.int64(norm[0] >= u)
 
         energies = np.zeros(number_of_photons.sum())
 
@@ -435,7 +435,7 @@ class LineSourceModel(SourceModel):
         F = chunk[self.emission_field]*self.spectral_norm
         norm = np.modf(F.in_cgs().v)
         u = self.prng.uniform(size=num_cells)
-        number_of_photons = np.uint64(norm[1]) + np.uint64(norm[0] >= u)
+        number_of_photons = np.int64(norm[1]) + np.int64(norm[0] >= u)
 
         energies = self.e0*np.ones(number_of_photons.sum())
 
