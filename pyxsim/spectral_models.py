@@ -17,7 +17,7 @@ hc = (hcgs*clight).in_units("keV*angstrom").v
 # placement of spectral lines due to the above
 cl = clight.v
 
-class SpectralModel(object):
+class ThermalSpectralModel(object):
 
     def __init__(self, emin, emax, nchan):
         self.emin = YTQuantity(emin, "keV")
@@ -27,10 +27,14 @@ class SpectralModel(object):
         self.de = np.diff(self.ebins)
         self.emid = 0.5*(self.ebins[1:]+self.ebins[:-1])
 
+    def prepare_spectrum(self, redshift):
+        pass
+
     def cleanup_spectrum(self):
         pass
 
-class ThermalSpectralModel(SpectralModel):
+    def get_spectrum(self, kT):
+        pass
 
     def return_spectrum(self, temperature, metallicity, redshift, norm):
         """
@@ -289,9 +293,11 @@ class TableApecModel(ThermalSpectralModel):
         metal_spec = mspec_l*(1.-dT)+mspec_r*dT
         return cosmic_spec, metal_spec
 
-class AbsorptionModel(SpectralModel):
-    def __init__(self, nH):
-        self.nH = nH
+class AbsorptionModel(object):
+    def __init__(self, nH, emid, sigma):
+        self.nH = YTQuantity(nH*1.0e22, "cm**-2")
+        self.emid = YTQuantity(emid, "keV")
+        self.sigma = YTQuantity(sigma, "cm**2")
 
     def prepare_spectrum(self):
         pass
@@ -355,10 +361,14 @@ class XSpecAbsorbModel(AbsorptionModel):
     def __init__(self, model_name, nH, emin=0.01, emax=50.0,
                  nchan=100000, settings=None):
         self.model_name = model_name
-        self.nH = nH
+        self.nH = YTQuantity(nH*1.0e22, "cm**-2")
         if settings is None: settings = {}
         self.settings = settings
-        super(XSpecAbsorbModel, self).__init__(emin, emax, nchan)
+        self.emin = emin
+        self.emax = emax
+        self.nchan = nchan
+        ebins = np.linspace(emin, emax, nchan+1)
+        self.emid = YTArray(0.5*(ebins[1:]+ebins[:-1]), "keV")
 
     def prepare_spectrum(self):
         """
@@ -367,15 +377,15 @@ class XSpecAbsorbModel(AbsorptionModel):
         import xspec
         xspec.Xset.chatter = 0
         xspec.AllModels.setEnergies("%f %f %d lin" %
-                                    (self.emin.value, self.emax.value, self.nchan))
+                                    (self.emin, self.emax, self.nchan))
         self.model = xspec.Model(self.model_name+"*powerlaw")
-        self.model.powerlaw.norm = self.nchan/(self.emax.value-self.emin.value)
+        self.model.powerlaw.norm = self.nchan/(self.emax-self.emin)
         self.model.powerlaw.PhoIndex = 0.0
         for k,v in self.settings.items():
             xspec.Xset.addModelString(k,v)
         m = getattr(self.model, self.model_name)
         m.nH = 1.0
-        self.sigma = -np.log(self.model.values(0))
+        self.sigma = YTArray(-np.log(self.model.values(0))*1.0e-22, "cm**2")
 
     def cleanup_spectrum(self):
         del self.model
@@ -399,14 +409,10 @@ class TableAbsorbModel(AbsorptionModel):
     def __init__(self, filename, nH):
         self.filename = check_file_location(filename, "spectral_files")
         f = h5py.File(self.filename,"r")
-        emin = f["energy"][:].min()
-        emax = f["energy"][:].max()
-        self.sigma = YTArray(f["cross_section"][:], "cm**2")
-        nchan = self.sigma.shape[0]
+        emid = YTArray(0.5*(f["energy"][1:]+f["energy"][:-1]), "keV")
+        sigma = YTArray(f["cross_section"][:], "cm**2")
         f.close()
-        super(TableAbsorbModel, self).__init__(emin, emax, nchan)
-        self.nH = YTQuantity(nH*1.0e22, "cm**-2")
-
+        super(TableAbsorbModel, self).__init__(nH, emid, sigma)
 
 class TBabsModel(TableAbsorbModel):
     r"""
@@ -450,10 +456,10 @@ class WabsModel(AbsorptionModel):
     >>> wabs_model = WabsModel(0.1)
     """
     def __init__(self, nH):
-        self.nH = nH
+        self.nH = YTQuantity(nH*1.0e22, "cm**-2")
 
     def get_absorb(self, e):
         e = np.array(e)
         idxs = np.minimum(np.searchsorted(emx, e)-1, 13)
         sigma = (c0[idxs]+c1[idxs]*e+c2[idxs]*e*e)*1.0e-24/e**3
-        return np.exp(-sigma*self.nH*1.0e22)
+        return np.exp(-sigma*self.nH)
