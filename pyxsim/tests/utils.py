@@ -111,3 +111,8 @@ def create_dummy_wcs():
     wcs.wcs.ctype = ["RA---TAN","DEC--TAN"]
     wcs.wcs.cunit = ["deg"]*2
     return wcs
+
+def cstat(data, model, nparam):
+    w = np.logical_and(model > 0, data > 0)
+    lg = np.nan_to_num(np.log(data/model))
+    return 2*np.sum((model-data+data*lg)[w])/(w.sum()-nparam)
