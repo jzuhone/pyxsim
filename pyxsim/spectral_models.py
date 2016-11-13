@@ -290,18 +290,21 @@ class TableApecModel(ThermalSpectralModel):
         return cosmic_spec, metal_spec
 
 class AbsorptionModel(SpectralModel):
+    def __init__(self, nH):
+        self.nH = nH
 
     def prepare_spectrum(self):
-        """
-        Prepare the absorption model for execution.
-        """
         pass
 
-    def get_spectrum(self):
+    def get_absorb(self, e):
         """
         Get the absorption spectrum.
         """
-        return np.exp(-self.sigma*self.nH)
+        sigma = np.interp(e, self.emid, self.sigma, left=0.0, right=0.0)
+        return np.exp(-sigma*self.nH)
+
+    def cleanup_spectrum(self):
+        pass
 
     def absorb_photons(self, eobs, prng=np.random):
         r"""
@@ -319,9 +322,8 @@ class AbsorptionModel(SpectralModel):
         """
         mylog.info("Absorbing.")
         self.prepare_spectrum()
-        aspec = self.get_spectrum()
-        absorb = np.interp(eobs, self.emid, aspec, left=0.0, right=0.0)
-        randvec = aspec.max()*prng.uniform(size=eobs.shape)
+        absorb = self.get_absorb(eobs)
+        randvec = absorb.max()*prng.uniform(size=eobs.shape)
         detected = randvec < absorb
         self.cleanup_spectrum()
         return detected
@@ -371,14 +373,9 @@ class XSpecAbsorbModel(AbsorptionModel):
         self.model.powerlaw.PhoIndex = 0.0
         for k,v in self.settings.items():
             xspec.Xset.addModelString(k,v)
-
-    def get_spectrum(self):
-        """
-        Get the absorption spectrum.
-        """
-        m = getattr(self.model,self.model_name)
-        m.nH = self.nH
-        return np.array(self.model.values(0))
+        m = getattr(self.model, self.model_name)
+        m.nH = 1.0
+        self.sigma = -np.log(self.model.values(0))
 
     def cleanup_spectrum(self):
         del self.model
@@ -455,25 +452,8 @@ class WabsModel(AbsorptionModel):
     def __init__(self, nH):
         self.nH = nH
 
-    def absorb_photons(self, eobs, prng=np.random):
-        r"""
-        Determine which photons will be absorbed by foreground
-        galactic absorption.
-
-        Parameters
-        ----------
-        eobs : array_like
-            The energies of the photons in keV.
-        prng : :class:`~numpy.random.RandomState` object or :mod:`~numpy.random`, optional
-            A pseudo-random number generator. Typically will only be specified
-            if you have a reason to generate the same set of random numbers, such as for a
-            test. Default is the :mod:`numpy.random` module.
-        """
-        mylog.info("Absorbing.")
-        e = np.array(eobs)
+    def get_absorb(self, e):
+        e = np.array(e)
         idxs = np.minimum(np.searchsorted(emx, e)-1, 13)
         sigma = (c0[idxs]+c1[idxs]*e+c2[idxs]*e*e)*1.0e-24/e**3
-        absorb = np.exp(-sigma*self.nH*1.0e22)
-        randvec = absorb.max()*prng.uniform(size=e.shape)
-        detected = randvec < absorb
-        return detected
+        return np.exp(-sigma*self.nH*1.0e22)
