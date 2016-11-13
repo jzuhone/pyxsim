@@ -296,8 +296,8 @@ class TableApecModel(ThermalSpectralModel):
 class AbsorptionModel(object):
     def __init__(self, nH, emid, sigma):
         self.nH = YTQuantity(nH*1.0e22, "cm**-2")
-        self.emid = YTQuantity(emid, "keV")
-        self.sigma = YTQuantity(sigma, "cm**2")
+        self.emid = YTArray(emid, "keV")
+        self.sigma = YTArray(sigma, "cm**2")
 
     def prepare_spectrum(self):
         pass
