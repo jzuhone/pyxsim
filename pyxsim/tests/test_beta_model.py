@@ -100,7 +100,7 @@ def do_beta_model(source, v_field, em_field):
     ignore(":0.5, 8.0:")
     set_model("tbapec")
     fit()
-    set_covar_opt("sigma", 1.6)
+    set_covar_opt("sigma", 1.645)
     covar()
     res = get_covar_results()
 
