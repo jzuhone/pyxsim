@@ -10,12 +10,14 @@ matrix:
 
         # Try all python versions with the latest numpy
         - python: 2.7
-          env: CMD='nosetests .'
+          env: CMD='nosetests pyxsim/tests'
         - python: 3.5
-          env: CMD='nosetests .'
+          env: CMD='nosetests pyxsim/tests'
 
 before_install:
 
+    - wget http://yt-project.org/data/GasSloshingLowRes.tar.gz
+    - tar -zxvf GasSloshingLowRes.tar.gz						
     # Use utf8 encoding. Should be default, but this is insurance against
     # future changes
     - export PYTHONIOENCODING=UTF8
@@ -36,13 +38,15 @@ install:
 
     # CORE DEPENDENCIES
     - conda config --add channels https://conda.anaconda.org/sherpa
-    - conda install --yes numpy=$NUMPY_VERSION nose pip yt astropy sherpa
+    - conda install --yes numpy=$NUMPY_VERSION nose pip yt astropy sherpa cython
 
     # COVERAGE DEPENDENCIES
     - pip install coverage coveralls
+    - $PYTHON setup.py develop
+    - ls
 
 script:
-    - cd pyxsim/tests
+
     - $CMD
 
 after_success:
