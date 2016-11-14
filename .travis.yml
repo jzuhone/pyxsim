@@ -4,7 +4,7 @@ env:
     global:
         # Set defaults to avoid repeating in most cases
         - NUMPY_VERSION=1.10
-	- NOSE_OPTS='--with-answer-testing --local --local-dir . --answer-name=pyxsim9'
+	- NOSE_OPTS="--with-answer-testing --local --local-dir . --answer-name=pyxsim9"
 
 matrix:
     include:
