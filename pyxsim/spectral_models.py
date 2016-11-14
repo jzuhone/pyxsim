@@ -329,7 +329,7 @@ class AbsorptionModel(object):
         mylog.info("Absorbing.")
         self.prepare_spectrum()
         absorb = self.get_absorb(eobs)
-        randvec = absorb.max()*prng.uniform(size=eobs.shape)
+        randvec = prng.uniform(size=eobs.shape)
         detected = randvec < absorb
         self.cleanup_spectrum()
         return detected
