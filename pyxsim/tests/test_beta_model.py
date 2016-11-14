@@ -5,7 +5,7 @@ A unit test for the pyxsim analysis module.
 from pyxsim import \
     TableApecModel, TBabsModel, \
     ThermalSourceModel, PhotonList, \
-    Hitomi_SXS
+    ACIS_I, RedistributionMatrixFile
 from pyxsim.tests.utils import \
     BetaModelSource, ParticleBetaModelSource
 from yt.testing import requires_module
@@ -14,6 +14,9 @@ from yt.utilities.physical_constants import clight
 import os
 import tempfile
 import shutil
+from sherpa.astro.ui import load_user_model, add_user_pars, \
+    load_pha, ignore, fit, set_model, set_stat, set_method, \
+    covar, get_covar_results, set_covar_opt
 
 ckms = clight.in_units("km/s").v
 
@@ -21,25 +24,26 @@ def setup():
     from yt.config import ytcfg
     ytcfg["yt", "__withintesting"] = "True"
 
-@requires_module("xspec")
+rmf = RedistributionMatrixFile(ACIS_I.rmf)
+fit_model = TableApecModel(rmf.elo[0], rmf.ehi[-1], rmf.n_de, thermal_broad=True)
+
+def mymodel(pars, x, xhi=None):
+    tm = TBabsModel(pars[0])
+    tbabs = tm.get_absorb(x)
+    bapec = fit_model.return_spectrum(pars[1], pars[2], pars[3], pars[4])
+    return tbabs*bapec
+
+@requires_module("sherpa")
 def test_beta_model():
     bms = BetaModelSource()
     do_beta_model(bms, "velocity_z", "emission_measure")
 
-@requires_module("xspec")
+@requires_module("sherpa")
 def test_particle_beta_model():
     bms = ParticleBetaModelSource()
     do_beta_model(bms, "particle_velocity_z", ("io","emission_measure"))
 
 def do_beta_model(source, v_field, em_field):
-    import xspec
-
-    xspec.Fit.statMethod = "cstat"
-    xspec.Xset.addModelString("APECTHERMAL","yes")
-    xspec.Fit.query = "yes"
-    xspec.Fit.method = ["leven","10","0.01"]
-    xspec.Fit.delta = 0.01
-    xspec.Xset.chatter = 5
 
     tmpdir = tempfile.mkdtemp()
     curdir = os.getcwd()
@@ -76,14 +80,38 @@ def do_beta_model(source, v_field, em_field):
 
     events = photons.project_photons("z", absorb_model=abs_model,
                                      prng=source.prng)
-    events = Hitomi_SXS(events, rebin=False, convolve_psf=False, prng=source.prng)
+    events = ACIS_I(events, rebin=False, convolve_psf=False, prng=source.prng)
 
     events.write_spectrum("beta_model_evt.pi", clobber=True)
 
-    s = xspec.Spectrum("beta_model_evt.pi")
-    s.ignore("**-0.4")
-    s.ignore("9.0-**")
+    os.system("cp beta_model_evt.pi /Users/jzuhone")
+    os.system("cp %s ." % events.parameters["ARF"])
+    os.system("cp %s ." % events.parameters["RMF"])
 
+    load_user_model(mymodel, "tbapec")
+    add_user_pars("tbapec", ["nH", "kT", "metallicity", "redshift", "norm"],
+                  [0.01, 4.0, 0.2, redshift, norm_sim*0.8],
+                  parmins=[0.0, 0.1, 0.0, 0.0, 0.0],
+                  parmaxs=[10.0, 20.0, 10.0, 10.0, 1.0e9],
+                  parfrozen=[False, False, False, False, False])
+
+    load_pha("beta_model_evt.pi")
+    set_stat("cstat")
+    ignore(":0.5, 7.0:")
+    set_model("tbapec")
+    fit()
+    set_covar_opt("sigma", 1.6)
+    covar()
+    res = get_covar_results()
+
+    #assert np.abs(res.parvals[0]-nH_sim) < res.parmaxes[0]
+    #assert np.abs(res.parvals[1]-norm_sim) < res.parmaxes[1]
+    #assert np.abs(res.parvals[2]-alpha_sim) < res.parmaxes[2]
+    #assert np.abs(res.parvals[0]-nH_sim) < res.parmaxes[0]
+    #assert np.abs(res.parvals[1]-norm_sim) < res.parmaxes[1]
+    #assert np.abs(res.parvals[2]-alpha_sim) < res.parmaxes[2]
+
+    """
     m = xspec.Model("tbabs*bapec")
     m.bapec.kT = 5.5
     m.bapec.Abundanc = 0.25
@@ -92,29 +120,18 @@ def do_beta_model(source, v_field, em_field):
     m.bapec.Velocity = 300.0
     m.TBabs.nH = 0.02
 
-    m.bapec.Velocity.frozen = False
-    m.bapec.Abundanc.frozen = False
-    m.bapec.Redshift.frozen = False
-    m.TBabs.nH.frozen = True
-
-    xspec.Fit.renorm()
-    xspec.Fit.nIterations = 100
-    xspec.Fit.perform()
-
     kT  = m.bapec.kT.values[0]
     mu = ((1.0+m.bapec.Redshift.values[0])/(1.0+redshift)-1.)*ckms
     Z = m.bapec.Abundanc.values[0]
     sigma = m.bapec.Velocity.values[0]
     norm = m.bapec.norm.values[0]
 
-    xspec.AllModels.clear()
-    xspec.AllData.clear()
-
     assert np.abs((mu-mu_sim)/mu_sim) < 0.05
     assert np.abs(kT-kT_sim)/kT_sim < 0.05
     assert np.abs(Z-Z_sim)/Z_sim < 0.05
     assert np.abs(sigma-sigma_sim)/sigma_sim < 0.05
     assert np.abs(norm-norm_sim)/norm_sim < 0.05
+    """
 
     os.chdir(curdir)
     shutil.rmtree(tmpdir)
