@@ -1,14 +1,16 @@
 from pyxsim.event_list import EventList
 from pyxsim.tests.utils import create_dummy_wcs
-from pyxsim.instruments import Athena_WFI, sigma_to_fwhm
-from pyxsim.spectral_models import XSpecAbsorbModel, XSpecThermalModel
+from pyxsim.instruments import ACIS_S, sigma_to_fwhm
+from pyxsim.spectral_models import TBabsModel
 from yt.testing import requires_module
 import os
 from numpy.random import RandomState
-from yt.units.yt_array import YTQuantity
 import tempfile
 import shutil
 import numpy as np
+from sherpa.astro.ui import load_user_model, add_user_pars, \
+    load_pha, ignore, fit, set_model, set_stat, set_method, \
+    covar, get_covar_results, set_covar_opt
 
 prng = RandomState(24)
 
@@ -16,39 +18,36 @@ def setup():
     from yt.config import ytcfg
     ytcfg["yt", "__withintesting"] = "True"
 
-@requires_module("xspec")
+def mymodel(pars, x, xhi=None):
+    wm = TBabsModel(pars[0])
+    wabs = wm.get_absorb(x)
+    dx = x[1]-x[0]
+    plaw = pars[1]*dx*(x*(1.0+pars[2]))**(-pars[3])
+    return wabs*plaw
+
+@requires_module("sherpa")
 def test_point_source():
-
-    import xspec
-
-    xspec.Fit.statMethod = "cstat"
-    xspec.Xset.addModelString("APECTHERMAL","yes")
-    xspec.Fit.query = "yes"
-    xspec.Fit.method = ["leven","10","0.01"]
-    xspec.Fit.delta = 0.01
-    xspec.Xset.chatter = 5
 
     tmpdir = tempfile.mkdtemp()
     curdir = os.getcwd()
     os.chdir(tmpdir)
 
-    kT_sim = 6.0
-    Z_sim = 0.5
-    norm_sim = 4.0e-3
+    nH_sim = 0.02
+    norm_sim = 1.0e-4
+    alpha_sim = 0.95
+    redshift = 0.02
 
-    exp_time = (200., "ks")
-    area = (30000., "cm**2")
+    exp_time = (100., "ks")
+    area = (3000., "cm**2")
 
     wcs = create_dummy_wcs()
 
-    apec_model = XSpecThermalModel("apec", 0.1, 11.5, 20000,
-                                   thermal_broad=False)
-    abs_model = XSpecAbsorbModel("TBabs", 0.02)
+    ebins = np.linspace(0.1, 11.5, 2001)
+    emid = 0.5*(ebins[1:]+ebins[:-1])
+    spec = norm_sim*(emid*(1.0+redshift))**(-alpha_sim)
+    de = np.diff(ebins)[0]
 
-    apec_model.prepare_spectrum(0.05)
-    cspec, mspec = apec_model.get_spectrum(kT_sim)
-    spec = (cspec+Z_sim*mspec)*YTQuantity(norm_sim*1.0e14, "cm**-5")
-    ebins = apec_model.ebins
+    abs_model = TBabsModel(nH_sim)
 
     events = EventList.create_empty_list(exp_time, area, wcs)
 
@@ -57,47 +56,41 @@ def test_point_source():
     new_events = events.add_point_sources(positions, ebins, spec, prng=prng,
                                           absorb_model=abs_model)
 
-    new_events = Athena_WFI(new_events, prng=prng)
+    new_events = ACIS_S(new_events, prng=prng)
 
     scalex = float(np.std(new_events['xpix'])*sigma_to_fwhm*new_events.parameters["dtheta"])
-    scaley = float(np.std(new_events['xpix'])*sigma_to_fwhm*new_events.parameters["dtheta"])
+    scaley = float(np.std(new_events['ypix'])*sigma_to_fwhm*new_events.parameters["dtheta"])
 
-    psf_scale = Athena_WFI.psf_scale
+    psf_scale = ACIS_S.psf_scale
 
     assert (scalex - psf_scale)/psf_scale < 0.01
     assert (scaley - psf_scale)/psf_scale < 0.01
 
     new_events.write_spectrum("point_source_evt.pi", clobber=True)
 
-    s = xspec.Spectrum("point_source_evt.pi")
-    s.ignore("**-0.5")
-    s.ignore("9.0-**")
+    os.system("cp %s ." % new_events.parameters["ARF"])
+    os.system("cp %s ." % new_events.parameters["RMF"])
 
-    m = xspec.Model("tbabs*apec")
-    m.apec.kT = 5.5
-    m.apec.Abundanc = 0.25
-    m.apec.norm = 1.0
-    m.apec.Redshift = 0.05
-    m.TBabs.nH = 0.02
+    load_user_model(mymodel, "tplaw")
+    add_user_pars("tplaw", ["nH", "norm", "redshift", "alpha"],
+                  [0.01, norm_sim*0.8, redshift, 0.9],
+                  parmins=[0.0, 0.0, 0.0, 0.1],
+                  parmaxs=[10.0, 1.0e9, 10.0, 10.0],
+                  parfrozen=[False, False, True, False])
 
-    m.apec.Abundanc.frozen = False
-    m.apec.Redshift.frozen = True
-    m.TBabs.nH.frozen = True
+    load_pha("point_source_evt.pi")
+    set_stat("cstat")
+    set_method("simplex")
+    ignore(":0.5, 9.0:")
+    set_model("tplaw")
+    fit()
+    set_covar_opt("sigma", 1.6)
+    covar()
+    res = get_covar_results()
 
-    xspec.Fit.renorm()
-    xspec.Fit.nIterations = 100
-    xspec.Fit.perform()
-
-    kT  = m.apec.kT.values[0]
-    Z = m.apec.Abundanc.values[0]
-    norm = m.apec.norm.values[0]
-
-    xspec.AllModels.clear()
-    xspec.AllData.clear()
-
-    assert np.abs(kT-kT_sim)/kT_sim < 0.02
-    assert np.abs(Z-Z_sim)/Z_sim < 0.02
-    assert np.abs(norm-norm_sim)/norm_sim < 0.02
+    assert np.abs(res.parvals[0]-nH_sim) < res.parmaxes[0]
+    assert np.abs(res.parvals[1]-norm_sim/de) < res.parmaxes[1]
+    assert np.abs(res.parvals[2]-alpha_sim) < res.parmaxes[2]
 
     os.chdir(curdir)
     shutil.rmtree(tmpdir)
