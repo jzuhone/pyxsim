@@ -9,30 +9,18 @@ def setup():
     ytcfg["yt", "__withintesting"] = "True"
 
 ds = fake_random_ds(64)
-@requires_module("xspec")
 @requires_module("astropy")
 def test_apec():
-
-    xmod = XSpecThermalModel("apec", 0.1, 10.0, 10000, thermal_broad=True)
-    xmod.prepare_spectrum(0.2)
-
-    xcspec, xmspec = xmod.get_spectrum(6.0)
-    spec1 = xcspec+0.3*xmspec
 
     amod = TableApecModel(0.1, 10.0, 10000, thermal_broad=True)
     amod.prepare_spectrum(0.2)
 
     acspec, amspec = amod.get_spectrum(6.0)
-    spec2 = acspec+0.3*amspec
+    spec1 = acspec+0.3*amspec
 
     def spec1_test():
         return spec1.v
-    def spec2_test():
-        return spec2.v
 
-    for test in [GenericArrayTest(ds, spec1_test),
-                 GenericArrayTest(ds, spec2_test)]:
+    for test in [GenericArrayTest(ds, spec1_test)]:
         test_apec.__name__ = test.description
         yield test
-
-    xmod.cleanup_spectrum()
