@@ -291,7 +291,8 @@ class TableApecModel(ThermalSpectralModel):
         redshift : float
             The redshift of the plasma.
         norm : float
-            The total flux of the spectrum in photons/s/cm**2.
+            The normalization of the model, in the standard Xspec units of
+            1.0e-14*EM/(4*pi*(1+z)**2*D_A**2).
         velocity : float, optional
             Velocity broadening parameter in km/s. Default: 0.0
         """
@@ -321,7 +322,7 @@ class TableApecModel(ThermalSpectralModel):
                                                          scale_factor, velocity=velocity)
 
         tspec = (cosmic_spec+metallicity*metal_spec)
-        return YTArray(norm*tspec/tspec.sum(), "photons/s/cm**2")
+        return YTArray(1.0e14*norm*tspec, "photons/s/cm**2")
 
 class AbsorptionModel(object):
     def __init__(self, nH, emid, sigma):
