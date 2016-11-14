@@ -18,14 +18,12 @@ def setup():
     from yt.config import ytcfg
     ytcfg["yt", "__withintesting"] = "True"
 
-def ret_wabs_plaw(abs_model):
-    def _mymodel(pars, x, xhi=None):
-        dx = x[1]-x[0]
-        wm = abs_model(pars[0])
-        wabs = wm.get_absorb(x)
-        plaw = pars[1]*dx*(x*(1.0+pars[2]))**(-pars[3])
-        return wabs*plaw
-    return _mymodel
+def mymodel(pars, x, xhi=None):
+    dx = x[1]-x[0]
+    wm = WabsModel(pars[0])
+    wabs = wm.get_absorb(x)
+    plaw = pars[1]*dx*(x*(1.0+pars[2]))**(-pars[3])
+    return wabs*plaw
 
 @requires_module("sherpa")
 def test_power_law():
@@ -73,7 +71,7 @@ def plaw_fit(alpha_sim):
     os.system("cp %s ." % events.parameters["ARF"])
     os.system("cp %s ." % events.parameters["RMF"])
 
-    load_user_model(ret_wabs_plaw(WabsModel), "wplaw")
+    load_user_model(mymodel, "wplaw")
     add_user_pars("wplaw", ["nH", "norm", "redshift", "alpha"],
                   [0.01, norm_sim*0.8, redshift, 0.9], 
                   parmins=[0.0, 0.0, 0.0, 0.1],
