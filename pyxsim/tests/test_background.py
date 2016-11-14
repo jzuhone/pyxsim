@@ -1,14 +1,16 @@
 from pyxsim.event_list import EventList
 from pyxsim.tests.utils import create_dummy_wcs
-from pyxsim.spectral_models import XSpecAbsorbModel, XSpecThermalModel
-from pyxsim.instruments import ACIS_I
+from pyxsim.spectral_models import TableApecModel, WabsModel
+from pyxsim.instruments import ACIS_I, RedistributionMatrixFile
 from yt.testing import requires_module
 import os
 from numpy.random import RandomState
-from yt.units.yt_array import YTQuantity
 import tempfile
 import shutil
 import numpy as np
+from sherpa.astro.ui import load_user_model, add_user_pars, \
+    load_pha, ignore, fit, set_model, set_stat, set_method, \
+    covar, get_covar_results, set_covar_opt
 
 prng = RandomState(24)
 
@@ -16,17 +18,17 @@ def setup():
     from yt.config import ytcfg
     ytcfg["yt", "__withintesting"] = "True"
 
-@requires_module("xspec")
+rmf = RedistributionMatrixFile(ACIS_I.rmf)
+fit_model = TableApecModel(rmf.elo[0], rmf.ehi[-1], rmf.n_de, thermal_broad=False)
+
+def mymodel(pars, x, xhi=None):
+    tm = WabsModel(pars[0])
+    tbabs = tm.get_absorb(x)
+    bapec = fit_model.return_spectrum(pars[1], pars[2], pars[3], pars[4])
+    return tbabs*bapec
+
+@requires_module("sherpa")
 def test_background():
-
-    import xspec
-
-    xspec.Fit.statMethod = "cstat"
-    xspec.Xset.addModelString("APECTHERMAL","yes")
-    xspec.Fit.query = "yes"
-    xspec.Fit.method = ["leven","10","0.01"]
-    xspec.Fit.delta = 0.01
-    xspec.Xset.chatter = 5
 
     tmpdir = tempfile.mkdtemp()
     curdir = os.getcwd()
@@ -34,60 +36,53 @@ def test_background():
 
     kT_sim = 1.0
     Z_sim = 0.0
-    norm_sim = 4.0e-3
+    norm_sim = 4.0e-2
+    nH_sim = 0.04
+    redshift = 0.01
 
     exp_time = (200., "ks")
     area = (1000., "cm**2")
 
     wcs = create_dummy_wcs()
 
-    apec_model = XSpecThermalModel("apec", 0.1, 11.5, 20000,
-                                   thermal_broad=False)
-    abs_model = XSpecAbsorbModel("TBabs", 0.02)
-
-    apec_model.prepare_spectrum(0.05)
-    cspec, mspec = apec_model.get_spectrum(kT_sim)
-    spec = (cspec+Z_sim*mspec)*YTQuantity(norm_sim*1.0e14, "cm**-5")
-    ebins = apec_model.ebins
+    abs_model = WabsModel(nH_sim)
 
     events = EventList.create_empty_list(exp_time, area, wcs)
 
-    new_events = events.add_background(ebins, spec, prng=prng,
+    spec_model = TableApecModel(0.05, 12.0, 5000, thermal_broad=False)
+    spec = spec_model.return_spectrum(kT_sim, Z_sim, redshift, norm_sim)
+
+    new_events = events.add_background(spec_model.ebins, spec, prng=prng,
                                        absorb_model=abs_model)
 
     new_events = ACIS_I(new_events, rebin=False, convolve_psf=False, prng=prng)
 
     new_events.write_spectrum("background_evt.pi", clobber=True)
 
-    s = xspec.Spectrum("background_evt.pi")
-    s.ignore("**-0.5")
-    s.ignore("9.0-**")
+    os.system("cp %s ." % new_events.parameters["ARF"])
+    os.system("cp %s ." % new_events.parameters["RMF"])
 
-    m = xspec.Model("tbabs*apec")
-    m.apec.kT = 2.0
-    m.apec.Abundanc = 0.1
-    m.apec.norm = 1.0
-    m.apec.Redshift = 0.05
-    m.TBabs.nH = 0.02
+    load_user_model(mymodel, "wapec")
+    add_user_pars("wapec", ["nH", "kT", "metallicity", "redshift", "norm"],
+                  [0.01, 4.0, 0.2, redshift, norm_sim*0.8],
+                  parmins=[0.0, 0.1, 0.0, -20.0, 0.0],
+                  parmaxs=[10.0, 20.0, 10.0, 20.0, 1.0e9],
+                  parfrozen=[False, False, False, True, False])
 
-    m.apec.Abundanc.frozen = False
-    m.apec.Redshift.frozen = True
-    m.TBabs.nH.frozen = True
+    load_pha("background_evt.pi")
+    set_stat("cstat")
+    set_method("simplex")
+    ignore(":0.5, 8.0:")
+    set_model("wapec")
+    fit()
+    set_covar_opt("sigma", 1.6)
+    covar()
+    res = get_covar_results()
 
-    xspec.Fit.renorm()
-    xspec.Fit.nIterations = 100
-    xspec.Fit.perform()
-
-    kT  = m.apec.kT.values[0]
-    Z = m.apec.Abundanc.values[0]
-    norm = m.apec.norm.values[0]
-
-    xspec.AllModels.clear()
-    xspec.AllData.clear()
-
-    assert np.abs(kT-kT_sim)/kT_sim < 0.02
-    assert np.abs(Z-Z_sim) < 1.0e-10
-    assert np.abs(norm-norm_sim)/norm_sim < 0.02
+    assert np.abs(res.parvals[0]-nH_sim) < res.parmaxes[0]
+    assert np.abs(res.parvals[1]-kT_sim) < res.parmaxes[1]
+    assert np.abs(res.parvals[2]-Z_sim) < res.parmaxes[2]
+    assert np.abs(res.parvals[3]-norm_sim) < res.parmaxes[3]
 
     os.chdir(curdir)
     shutil.rmtree(tmpdir)
