@@ -84,6 +84,8 @@ class XSpecThermalModel(ThermalSpectralModel):
     """
     def __init__(self, model_name, emin, emax, nchan,
                  thermal_broad=False, settings=None):
+        mylog.warning("XSpecThermalModel is deprecated and will be removed "
+                      "in a future release. Use of TableApecModel is suggested.")
         self.model_name = model_name
         self.thermal_broad = thermal_broad
         if settings is None: settings = {}
@@ -360,6 +362,9 @@ class XSpecAbsorbModel(AbsorptionModel):
     """
     def __init__(self, model_name, nH, emin=0.01, emax=50.0,
                  nchan=100000, settings=None):
+        mylog.warning("XSpecAbsorbModel is deprecated and will be removed "
+                      "in a future release. Use of the other models is "
+                      "suggested.")
         self.model_name = model_name
         self.nH = YTQuantity(nH*1.0e22, "cm**-2")
         if settings is None: settings = {}
