@@ -10,9 +10,9 @@ matrix:
 
         # Try all python versions with the latest numpy
         - python: 2.7
-          env: CMD='nosetests pyxsim/tests'
+          env: CMD='nosetests pyxsim/tests'; PYTHON='python'
         - python: 3.5
-          env: CMD='nosetests pyxsim/tests'
+          env: CMD='nosetests pyxsim/tests'; PYTHON='python3'
 
 before_install:
 
