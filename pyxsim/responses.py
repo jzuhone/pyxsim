@@ -7,7 +7,6 @@ import numpy as np
 from yt.utilities.on_demand_imports import _astropy
 from yt.units.yt_array import YTArray
 from pyxsim.utils import mylog, check_file_location
-from yt.funcs import ensure_numpy_array
 
 class AuxiliaryResponseFile(object):
     r"""
