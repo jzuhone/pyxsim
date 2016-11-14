@@ -16,11 +16,11 @@ def test_apec():
     amod.prepare_spectrum(0.2)
 
     acspec, amspec = amod.get_spectrum(6.0)
-    spec1 = acspec+0.3*amspec
+    spec = acspec+0.3*amspec
 
-    def spec1_test():
-        return spec1.v
+    def spec_test():
+        return spec.v
 
-    for test in [GenericArrayTest(ds, spec1_test)]:
-        test_apec.__name__ = test.description
-        yield test
+    test = GenericArrayTest(ds, spec_test)
+    test_apec.__name__ = test.description
+    yield test
