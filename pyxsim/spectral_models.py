@@ -36,29 +36,6 @@ class ThermalSpectralModel(object):
     def get_spectrum(self, kT):
         pass
 
-    def return_spectrum(self, temperature, metallicity, redshift, norm, velocity=0.0):
-        """
-        Given the properties of a thermal plasma, return a spectrum.
-
-        Parameters
-        ----------
-        temperature : float
-            The temperature of the plasma in keV.
-        metallicity : float
-            The metallicity of the plasma in solar units.
-        redshift : float
-            The redshift of the plasma.
-        norm : float
-            The total flux of the spectrum in photons/s/cm**2.
-        velocity : float, optional
-            Velocity broadening parameter in km/s. Default: 0.0
-        """
-        self.prepare_spectrum(redshift, velocity=velocity)
-        cosmic_spec, metal_spec = self.get_spectrum(temperature)
-        self.cleanup_spectrum()
-        tspec = (cosmic_spec+metallicity*metal_spec).v
-        return YTArray(norm*tspec/tspec.sum(), "photons/s/cm**2")
-
 class XSpecThermalModel(ThermalSpectralModel):
     r"""
     Initialize a thermal gas emission model from PyXspec.
@@ -193,10 +170,6 @@ class TableApecModel(ThermalSpectralModel):
                            44.9559,47.8670,50.9415,51.9961,54.9380,
                            55.8450,58.9332,58.6934,63.5460,65.3800])
 
-    def prepare_spectrum(self, zobs, velocity=0.0):
-        """
-        Prepare the thermal model for execution given a redshift *zobs* for the spectrum.
-        """
         try:
             self.line_handle = _astropy.pyfits.open(self.linefile)
         except IOError:
@@ -208,13 +181,17 @@ class TableApecModel(ThermalSpectralModel):
             mylog.error("COCO file %s does not exist" % self.cocofile)
             raise IOError("COCO file %s does not exist" % self.cocofile)
 
-        self.velocity = YTQuantity(velocity, "km/s").in_cgs()
         self.Tvals = self.line_handle[1].data.field("kT")
         self.nT = len(self.Tvals)
         self.dTvals = np.diff(self.Tvals)
         self.minlam = self.wvbins.min()
         self.maxlam = self.wvbins.max()
-        self.scale_factor = 1.0/(1.+zobs)
+
+    def prepare_spectrum(self, zobs):
+        """
+        Prepare the thermal model for execution given a redshift *zobs* for the spectrum.
+        """
+        sfac = 1.0/(1.+zobs)
 
         cosmic_spec = np.zeros((self.nT, self.nchan))
         metal_spec = np.zeros((self.nT, self.nchan))
@@ -223,15 +200,15 @@ class TableApecModel(ThermalSpectralModel):
             line_fields, coco_fields = self._preload_data(ikT)
             # First do H,He, and trace elements
             for elem in self.cosmic_elem:
-                cosmic_spec[ikT,:] += self._make_spectrum(kT, elem, line_fields, coco_fields)
+                cosmic_spec[ikT,:] += self._make_spectrum(kT, elem, line_fields, coco_fields, sfac)
             # Next do the metals
             for elem in self.metal_elem:
-                metal_spec[ikT,:] += self._make_spectrum(kT, elem, line_fields, coco_fields)
+                metal_spec[ikT,:] += self._make_spectrum(kT, elem, line_fields, coco_fields, sfac)
 
         self.cosmic_spec = YTArray(cosmic_spec, "cm**3/s")
         self.metal_spec = YTArray(metal_spec, "cm**3/s")
 
-    def _make_spectrum(self, kT, element, line_fields, coco_fields):
+    def _make_spectrum(self, kT, element, line_fields, coco_fields, scale_factor, velocity=0.0):
 
         tmpspec = np.zeros(self.nchan)
 
@@ -239,13 +216,15 @@ class TableApecModel(ThermalSpectralModel):
                      (line_fields['lambda'] > self.minlam) &
                      (line_fields['lambda'] < self.maxlam))[0]
 
-        E0 = hc/line_fields['lambda'][i].astype("float64")*self.scale_factor
+        E0 = hc/line_fields['lambda'][i].astype("float64")*scale_factor
         amp = line_fields['epsilon'][i].astype("float64")
         ebins = self.ebins.d
         de = self.de.d
         emid = self.emid.d
         if self.thermal_broad:
-            sigma = 2.*kT*erg_per_keV/(self.A[element]*amu_grams)+self.velocity.v*self.velocity.v
+            sigma = 2.*kT*erg_per_keV/(self.A[element]*amu_grams)
+            if velocity is not None:
+                sigma += velocity*velocity
             sigma = E0*np.sqrt(sigma)/cl
             vec = broaden_lines(E0, sigma, amp, ebins)
         else:
@@ -263,15 +242,15 @@ class TableApecModel(ThermalSpectralModel):
         e_cont = coco_fields['E_Cont'][ind][:n_cont]
         continuum = coco_fields['Continuum'][ind][:n_cont]
 
-        tmpspec += np.interp(emid, e_cont*self.scale_factor, continuum)*de/self.scale_factor
+        tmpspec += np.interp(emid, e_cont*scale_factor, continuum)*de/scale_factor
 
         n_pseudo = coco_fields['N_Pseudo'][ind]
         e_pseudo = coco_fields['E_Pseudo'][ind][:n_pseudo]
         pseudo = coco_fields['Pseudo'][ind][:n_pseudo]
 
-        tmpspec += np.interp(emid, e_pseudo*self.scale_factor, pseudo)*de/self.scale_factor
+        tmpspec += np.interp(emid, e_pseudo*scale_factor, pseudo)*de/scale_factor
 
-        return tmpspec*self.scale_factor
+        return tmpspec*scale_factor
 
     def _preload_data(self, index):
         line_data = self.line_handle[index+2].data
@@ -298,6 +277,51 @@ class TableApecModel(ThermalSpectralModel):
         cosmic_spec = cspec_l*(1.-dT)+cspec_r*dT
         metal_spec = mspec_l*(1.-dT)+mspec_r*dT
         return cosmic_spec, metal_spec
+
+    def return_spectrum(self, temperature, metallicity, redshift, norm, velocity=0.0):
+        """
+        Given the properties of a thermal plasma, return a spectrum.
+
+        Parameters
+        ----------
+        temperature : float
+            The temperature of the plasma in keV.
+        metallicity : float
+            The metallicity of the plasma in solar units.
+        redshift : float
+            The redshift of the plasma.
+        norm : float
+            The total flux of the spectrum in photons/s/cm**2.
+        velocity : float, optional
+            Velocity broadening parameter in km/s. Default: 0.0
+        """
+        velocity = YTQuantity(velocity, "km/s").in_cgs().v
+        scale_factor = 1.0/(1.+redshift)
+
+        tindex = np.searchsorted(self.Tvals, temperature)-1
+        if tindex >= self.Tvals.shape[0]-1 or tindex < 0:
+            return YTArray(np.zeros(self.nchan), "photons/s/cm**2")
+        dT = (temperature-self.Tvals[tindex])/self.dTvals[tindex]
+
+        cosmic_spec = np.zeros(self.nchan)
+        metal_spec = np.zeros(self.nchan)
+
+        fac = [1.0-dT, dT]
+
+        for i, ikT in enumerate([tindex, tindex+1]):
+            line_fields, coco_fields = self._preload_data(ikT)
+            kT = self.Tvals[ikT]
+            # First do H,He, and trace elements
+            for elem in self.cosmic_elem:
+                cosmic_spec += fac[i]*self._make_spectrum(kT, elem, line_fields, coco_fields,
+                                                          scale_factor, velocity=velocity)
+            # Next do the metals
+            for elem in self.metal_elem:
+                metal_spec += fac[i]*self._make_spectrum(kT, elem, line_fields, coco_fields,
+                                                         scale_factor, velocity=velocity)
+
+        tspec = (cosmic_spec+metallicity*metal_spec)
+        return YTArray(norm*tspec/tspec.sum(), "photons/s/cm**2")
 
 class AbsorptionModel(object):
     def __init__(self, nH, emid, sigma):
