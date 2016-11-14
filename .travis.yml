@@ -43,7 +43,6 @@ install:
     # COVERAGE DEPENDENCIES
     - pip install coverage coveralls
     - ls 
-    - cd jzuhone/pyxsim
     - $PYTHON setup.py develop
 
 script:
