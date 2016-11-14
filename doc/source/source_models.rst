@@ -59,11 +59,9 @@ There are a number of other optional parameters which can be set:
 Thermal Spectra
 +++++++++++++++
 
-For thermal plasmas, pyXSIM provides two classes for modeling emission that is dependent on temperature
-and metallicity, e.g. :math:`\Lambda(T,Z)`. These can serve as input to the 
-:class:`~pyxsim.source_models.ThermalSourceModel` class. Both of these classes are 
-:class:`~pyxsim.spectral_models.ThermalSpectralModel` objects.
-
+For thermal plasmas, pyXSIM provides the :class:`~pyxsim.spectral_models.TableApecModel` class
+for modeling emission that is dependent on temperature and metallicity, e.g. :math:`\Lambda(T,Z)`. 
+It can serve as input to the :class:`~pyxsim.source_models.ThermalSourceModel` class.
 :class:`~pyxsim.spectral_models.TableApecModel` generates a thermal emission spectrum
 from the APEC plasma emission tables available from `AtomDB <http://www.atomdb.org>`_:
 
@@ -79,38 +77,28 @@ from the APEC plasma emission tables available from `AtomDB <http://www.atomdb.o
     spec_model = pyxsim.TableApecModel(emin, emax, nchan, apec_root=apec_root,
                                        apec_vers=apec_vers, thermal_broad=False)
 
-:class:`~pyxsim.spectral_models.XSpecThermalModel` generates a thermal emission spectrum
-from a model known to XSPEC, using PyXspec as a backend:
-
-.. code-block:: python
-
-    model = "apec" # or "mekal", "bapec", etc.
-    emin = 0.01 # The minimum energy of the spectrum in keV
-    emax = 20.0 # The maximum energy of the spectrum in keV
-    nchan = 10000 # The number of spectral channels
-    spec_model = pyxsim.XSpecThermalModel(model, emin, emax, nchan, thermal_broad=True)
-
 They keyword argument ``thermal_broad`` should be set to ``True`` or ``False`` depending on
-whether or not you want the spectral lines thermally broadened. 
+whether or not you want the spectral lines thermally broadened. You will need to set up a
+:class:`~pyxsim.spectral_models.TableApecModel` in your script and pass it as the first argument 
+to :class:`~pyxsim.source_models.ThermalSourceModel`.
 
-You will need to set up one of these two models in your script and pass it as the first argument to
-:class:`~pyxsim.source_models.ThermalSourceModel`.
-
-Though a :class:`~pyxsim.spectral_models.ThermalSpectralModel` is mainly used internally by the 
+Though a :class:`~pyxsim.spectral_models.TableApecModel` is mainly used internally by the 
 :class:`~pyxsim.source_models.ThermalSourceModel` to construct spectra, there is also a method
-:meth:`~pyxsim.source_models.ThermalSourceModel.return_spectrum` which can be used to return a 
-spectrum (in an array) for a given temperature, metallicity, redshift, and flux normalization:
+:meth:`~pyxsim.source_models.TableApecModel.return_spectrum` which can be used to return a 
+spectrum (in an array) for a given temperature, metallicity, redshift, normalization, and
+(optionally) a velocity parameter:
 
 .. code-block:: python
 
     kT = 6.0 # in keV
     metallicity = 0.3 # in solar units
     z = 0.05 # redshift
-    norm = 1.0e-3 # total spectrum flux in units of photons/s/cm**2
-    
-    spec = spec_model.return_spectrum(kT, metallicity, z, norm)
+    norm = 1.0e-3 # standard "Xspec" normalization of APEC spectrum
+    velocity = 300.0 # velocity broadening parameter in units of km/s
+  
+    spec = spec_model.return_spectrum(kT, metallicity, z, norm, velocity=velocity)
 
-The units of the returned spectrum are in :math:`{\rm photons~s^{-1}~cm^{-1}}`.
+The units of the returned spectrum are in :math:`{\rm photons~s^{-1}~cm^{-2}}`.
 
 Examples
 ++++++++
