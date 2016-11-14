@@ -36,7 +36,7 @@ class ThermalSpectralModel(object):
     def get_spectrum(self, kT):
         pass
 
-    def return_spectrum(self, temperature, metallicity, redshift, norm):
+    def return_spectrum(self, temperature, metallicity, redshift, norm, velocity=0.0):
         """
         Given the properties of a thermal plasma, return a spectrum.
 
@@ -50,8 +50,10 @@ class ThermalSpectralModel(object):
             The redshift of the plasma.
         norm : float
             The total flux of the spectrum in photons/s/cm**2.
+        velocity : float, optional
+            Velocity broadening parameter in km/s. Default: 0.0
         """
-        self.prepare_spectrum(redshift)
+        self.prepare_spectrum(redshift, velocity=velocity)
         cosmic_spec, metal_spec = self.get_spectrum(temperature)
         self.cleanup_spectrum()
         tspec = (cosmic_spec+metallicity*metal_spec).v
@@ -191,7 +193,7 @@ class TableApecModel(ThermalSpectralModel):
                            44.9559,47.8670,50.9415,51.9961,54.9380,
                            55.8450,58.9332,58.6934,63.5460,65.3800])
 
-    def prepare_spectrum(self, zobs):
+    def prepare_spectrum(self, zobs, velocity=0.0):
         """
         Prepare the thermal model for execution given a redshift *zobs* for the spectrum.
         """
@@ -206,6 +208,7 @@ class TableApecModel(ThermalSpectralModel):
             mylog.error("COCO file %s does not exist" % self.cocofile)
             raise IOError("COCO file %s does not exist" % self.cocofile)
 
+        self.velocity = YTQuantity(velocity, "km/s").in_cgs()
         self.Tvals = self.line_handle[1].data.field("kT")
         self.nT = len(self.Tvals)
         self.dTvals = np.diff(self.Tvals)
@@ -242,7 +245,8 @@ class TableApecModel(ThermalSpectralModel):
         de = self.de.d
         emid = self.emid.d
         if self.thermal_broad:
-            sigma = E0*np.sqrt(2.*kT*erg_per_keV/(self.A[element]*amu_grams))/cl
+            sigma = 2.*kT*erg_per_keV/(self.A[element]*amu_grams)+self.velocity.v*self.velocity.v
+            sigma = E0*np.sqrt(sigma)/cl
             vec = broaden_lines(E0, sigma, amp, ebins)
         else:
             vec = np.histogram(E0, ebins, weights=amp)[0]
