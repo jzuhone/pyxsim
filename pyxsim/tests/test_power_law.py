@@ -70,7 +70,6 @@ def plaw_fit(alpha_sim):
     events = ACIS_I(events, rebin=False, convolve_psf=False, prng=bms.prng)
     events.write_spectrum("plaw_model_evt.pi", clobber=True)
 
-    os.system("cp plaw_model_evt.pi /Users/jzuhone")
     os.system("cp %s ." % events.parameters["ARF"])
     os.system("cp %s ." % events.parameters["RMF"])
 
