@@ -84,7 +84,7 @@ def plaw_fit(alpha_sim):
     ignore(":0.5, 9.0:")
     set_model("wplaw")
     fit()
-    set_covar_opt("sigma", 1.6)
+    set_covar_opt("sigma", 1.645)
     covar()
     res = get_covar_results()
 
