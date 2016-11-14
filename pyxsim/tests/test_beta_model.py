@@ -25,7 +25,7 @@ def setup():
     ytcfg["yt", "__withintesting"] = "True"
 
 rmf = RedistributionMatrixFile(ACIS_I.rmf)
-fit_model = TableApecModel(rmf.elo[0], rmf.ehi[-1], rmf.n_de, thermal_broad=True)
+fit_model = TableApecModel(rmf.elo[0], rmf.ehi[-1], rmf.n_de, thermal_broad=False)
 
 def mymodel(pars, x, xhi=None):
     tm = TBabsModel(pars[0])
@@ -56,7 +56,7 @@ def do_beta_model(source, v_field, em_field):
     redshift = 0.05
     nH_sim = 0.02
 
-    apec_model = TableApecModel(0.1, 11.5, 20000, thermal_broad=True)
+    apec_model = TableApecModel(0.1, 11.5, 20000, thermal_broad=False)
     abs_model = TBabsModel(nH_sim)
 
     sphere = ds.sphere("c", (0.5, "Mpc"))
@@ -84,55 +84,31 @@ def do_beta_model(source, v_field, em_field):
 
     events.write_spectrum("beta_model_evt.pi", clobber=True)
 
-    os.system("cp beta_model_evt.pi /Users/jzuhone")
     os.system("cp %s ." % events.parameters["ARF"])
     os.system("cp %s ." % events.parameters["RMF"])
 
     load_user_model(mymodel, "tbapec")
     add_user_pars("tbapec", ["nH", "kT", "metallicity", "redshift", "norm"],
                   [0.01, 4.0, 0.2, redshift, norm_sim*0.8],
-                  parmins=[0.0, 0.1, 0.0, 0.0, 0.0],
-                  parmaxs=[10.0, 20.0, 10.0, 10.0, 1.0e9],
-                  parfrozen=[False, False, False, False, False])
+                  parmins=[0.0, 0.1, 0.0, -20.0, 0.0],
+                  parmaxs=[10.0, 20.0, 10.0, 20.0, 1.0e9],
+                  parfrozen=[False, False, False, True, False])
 
     load_pha("beta_model_evt.pi")
     set_stat("cstat")
-    ignore(":0.5, 7.0:")
+    set_method("simplex")
+    ignore(":0.5, 8.0:")
     set_model("tbapec")
     fit()
     set_covar_opt("sigma", 1.6)
     covar()
     res = get_covar_results()
 
-    #assert np.abs(res.parvals[0]-nH_sim) < res.parmaxes[0]
-    #assert np.abs(res.parvals[1]-norm_sim) < res.parmaxes[1]
-    #assert np.abs(res.parvals[2]-alpha_sim) < res.parmaxes[2]
-    #assert np.abs(res.parvals[0]-nH_sim) < res.parmaxes[0]
-    #assert np.abs(res.parvals[1]-norm_sim) < res.parmaxes[1]
-    #assert np.abs(res.parvals[2]-alpha_sim) < res.parmaxes[2]
-
-    """
-    m = xspec.Model("tbabs*bapec")
-    m.bapec.kT = 5.5
-    m.bapec.Abundanc = 0.25
-    m.bapec.norm = 1.0
-    m.bapec.Redshift = 0.05
-    m.bapec.Velocity = 300.0
-    m.TBabs.nH = 0.02
-
-    kT  = m.bapec.kT.values[0]
-    mu = ((1.0+m.bapec.Redshift.values[0])/(1.0+redshift)-1.)*ckms
-    Z = m.bapec.Abundanc.values[0]
-    sigma = m.bapec.Velocity.values[0]
-    norm = m.bapec.norm.values[0]
-
-    assert np.abs((mu-mu_sim)/mu_sim) < 0.05
-    assert np.abs(kT-kT_sim)/kT_sim < 0.05
-    assert np.abs(Z-Z_sim)/Z_sim < 0.05
-    assert np.abs(sigma-sigma_sim)/sigma_sim < 0.05
-    assert np.abs(norm-norm_sim)/norm_sim < 0.05
-    """
-
+    assert np.abs(res.parvals[0]-nH_sim) < res.parmaxes[0]
+    assert np.abs(res.parvals[1]-kT_sim) < res.parmaxes[1]
+    assert np.abs(res.parvals[2]-Z_sim) < res.parmaxes[2]
+    assert np.abs(res.parvals[3]-norm_sim) < res.parmaxes[3]
+    
     os.chdir(curdir)
     shutil.rmtree(tmpdir)
 
