@@ -44,11 +44,11 @@ install:
 
     # COVERAGE DEPENDENCIES
     - pip install coverage coveralls
-    - ls 
     - $PYTHON setup.py develop
 
 script:
 
+    - ls
     - $CMD
 
 after_success:
