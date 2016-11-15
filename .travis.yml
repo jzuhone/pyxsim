@@ -10,18 +10,18 @@ matrix:
 
         # Try all python versions with the latest numpy
         - python: 2.7
-          env: CMD='nosetests --with-answer-testing --local --local-dir . --answer-name=pyxsim9 .'; PYTHON='python'
+          env: CMD='nosetests --with-answer-testing --local --local-dir . --answer-name=pyxsim9 pyxsim/tests'; PYTHON='python'
         - python: 3.5
-          env: CMD='nosetests --with-answer-testing --local --local-dir . --answer-name=pyxsim9 .'; PYTHON='python3'
+          env: CMD='nosetests --with-answer-testing --local --local-dir . --answer-name=pyxsim9 pyxsim/tests'; PYTHON='python3'
 
 before_install:
 
     - wget http://yt-project.org/data/GasSloshingLowRes.tar.gz
     - tar -zxvf GasSloshingLowRes.tar.gz
     - wget http://hea-www.cfa.harvard.edu/~jzuhone/pyxsim9.tar.gz
-    - tar -zxvf pyxsim9.tar.gz						
-    - mv GasSloshingLowRes pyxsim/tests
-    - mv pyxsim9 pyxsim/tests
+    - tar -zxvf pyxsim9.tar.gz		
+    - mkdir ~/.yt
+    - printf "[yt]\ntest_data_dir = $PWD" >> ~/.yt/config
     # Use utf8 encoding. Should be default, but this is insurance against
     # future changes
     - export PYTHONIOENCODING=UTF8
@@ -50,7 +50,6 @@ install:
 
 script:
 
-    - cd pyxsim/tests
     - $CMD
 
 after_success:
