@@ -4,16 +4,15 @@ env:
     global:
         # Set defaults to avoid repeating in most cases
         - NUMPY_VERSION=1.10
-        - NOSE_OPTS="--with-answer-testing --local --local-dir . --answer-name=pyxsim9"
 
 matrix:
     include:
 
         # Try all python versions with the latest numpy
         - python: 2.7
-          env: CMD='nosetests $NOSE_OPTS pyxsim/tests'; PYTHON='python'
+          env: CMD='nosetests --with-answer-testing --local --local-dir . --answer-name=pyxsim9 pyxsim/tests'; PYTHON='python'
         - python: 3.5
-          env: CMD='nosetests $NOSE_OPTS pyxsim/tests'; PYTHON='python3'
+          env: CMD='nosetests --with-answer-testing --local --local-dir . --answer-name=pyxsim9 pyxsim/tests'; PYTHON='python3'
 
 before_install:
 
