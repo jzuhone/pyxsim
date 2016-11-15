@@ -224,7 +224,7 @@ class TableApecModel(ThermalSpectralModel):
         if self.thermal_broad:
             sigma = 2.*kT*erg_per_keV/(self.A[element]*amu_grams)
             if velocity is not None:
-                sigma += velocity*velocity
+                sigma += 2.0*velocity*velocity
             sigma = E0*np.sqrt(sigma)/cl
             vec = broaden_lines(E0, sigma, amp, ebins)
         else:
