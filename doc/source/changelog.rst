@@ -3,6 +3,22 @@
 ChangeLog
 =========
 
+Version 1.2.0
+-------------
+
+This version contains bugfixes and performance enhancements, as well as a new test suite.
+
+* We are now running a test suite which automatically checks changes to the code pushed up to the 
+  `GitHub repository <http://github.com/jzuhone/pyxsim>`_.
+* The definition of the ``norm`` parameter for the :meth:`~pyxsim.spectral_models.TableApecModel.return_spectrum` 
+  method is now consistent with the `normal Xspec definition <http://heasarc.gsfc.nasa.gov/xanadu/xspec/manual/XSmodelApec.html>`_.
+* Annoying NumPy indexing warnings have been silenced by only using signed ints for indexing. 
+* Absorption models have been refactored to have a more common structure. 
+* For table-based absorption models, the cross-section is now interpolated instead of the absorption factor itself,
+  which should be more accurate. 
+* XSpec-based spectral models are officially in deprecation; they will be removed in a future release. 
+* A bug that prevented response matrices from not being read properly with old versions of AstroPy was fixed. 
+
 Version 1.1.1
 -------------
 
