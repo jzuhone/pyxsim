@@ -1,6 +1,6 @@
 [![yt](http://img.shields.io/badge/powered%20by-yt-blue.svg?style=flat)](http://yt-project.org/)    [![astropy](http://img.shields.io/badge/powered%20by-AstroPy-orange.svg?style=flat)](http://www.astropy.org/)  
-[![Build Status](https://travis-ci.org/jzuhone/pyxsim.svg?branch=master)](https://travis-ci.org/jzuhone/pyxsim)
-
+[![Build Status](https://travis-ci.org/jzuhone/pyxsim.svg?branch=master)](https://travis-ci.org/jzuhone/pyxsim)  
+[![Coverage Status](https://coveralls.io/repos/github/jzuhone/pyxsim/badge.svg?branch=master)](https://coveralls.io/github/jzuhone/pyxsim?branch=master)  
 # What is pyXSIM?
 
 pyXSIM is a Python package for simulating X-ray observations from astrophysical sources.

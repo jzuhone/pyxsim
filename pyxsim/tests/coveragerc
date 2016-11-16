@@ -1,0 +1,22 @@
+[run]
+source = pyxsim
+omit =
+   pyxsim/__init__*
+   pyxsim/*setup*
+   pyxsim/*tests/*
+
+[report]
+# Regexes for lines to exclude from consideration
+exclude_lines =
+    # Have to re-enable the standard pragma
+    pragma: no cover
+
+    # Don't complain about missing debug-only code:
+    def __repr__
+
+    # Don't complain about ImportError
+    except ImportError
+        
+    # Don't check Xspec models    
+    class XSpecThermalModel
+    class XSpecAbsorbModel
