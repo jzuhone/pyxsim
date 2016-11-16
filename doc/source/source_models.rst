@@ -22,13 +22,13 @@ and metallicity, and is proportional to the density squared:
 
     \varepsilon(E) = n_en_H\Lambda(T, Z, E)
 
-:class:`~pyxsim.source_models.ThermalSourceModel` requires the use of one of the
-two thermal spectral models, described in the next sub-section. From this
-spectral model, which depends on temperature and metallicity, a spectrum of photon
-energies can be generated from each cell or particle. Since generating a new spectrum
-for each cell would be prohibitively expensive, the cells are binned into a 1-D 
-histogram of temperatures, and for each bin a spectrum is calculated. Provided the bins
-are finely spaced enough, the accuracy of this method is sufficient for most purposes. 
+:class:`~pyxsim.source_models.ThermalSourceModel` requires the use of a thermal spectral 
+model, described in the next sub-section. From this spectral model, which depends on 
+temperature and metallicity, a spectrum of photon energies can be generated from each 
+cell or particle. Since generating a new spectrum for each cell would be prohibitively 
+expensive, the cells are binned into a 1-D histogram of temperatures, and for each bin 
+a spectrum is calculated. Provided the bins are finely spaced enough, the accuracy of 
+this method is sufficient for most purposes. 
 
 There are a number of other optional parameters which can be set:
 

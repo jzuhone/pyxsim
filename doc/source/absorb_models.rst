@@ -26,15 +26,6 @@ Allen, A., & McCray, R. 2000, ApJ, 542, 914) absorption model ("TBabs"):
     N_H = 0.1 # galactic column density in units of 10^{22} cm^{-2}
     abs_model = pyxsim.TBabsModel(N_H)
 
-:class:`~pyxsim.spectral_models.XSpecAbsorbModel` generates an absorption spectrum from 
-an XSpec model (must have PyXspec installed):
-
-.. code-block:: python
-
-    model = "wabs" # or "phabs", or "TBabs", etc.
-    N_H = 0.1 # galactic column density in units of 10^{22} cm^{-2}
-    abs_model = pyxsim.XSpecAbsorbModel(model, N_H)
-
 :class:`~pyxsim.spectral_models.TableAbsorbModel` generates an absorption spectrum from 
 an HDF5-based table of energy and cross section:
 
@@ -42,7 +33,7 @@ an HDF5-based table of energy and cross section:
 
     filename = "tbabs_table.h5" # file containing the table
     N_H = 0.1 # galactic column density in units of 10^{22} cm^{-2}
-    abs_model = pyxsim.XSpecAbsorbModel(filename, N_H)
+    abs_model = pyxsim.TableAbsorbModel(filename, N_H)
     
 The HDF5 file must have two top-level datasets:
  
