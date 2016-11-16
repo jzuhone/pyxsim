@@ -12,7 +12,7 @@ matrix:
         - python: 2.7
           env: CMD='nosetests --with-answer-testing --local --local-dir . --answer-name=pyxsim9_2 pyxsim/tests'; PYTHON='python'
         - python: 3.5
-          env: CMD='nosetests --with-answer-testing --local --local-dir . --answer-name=pyxsim9_3 pyxsim/tests'; PYTHON='python3'
+          env: CMD='nosetests --with-coverage --cover-package=pyxsim --with-answer-testing --local --local-dir . --answer-name=pyxsim9_3 pyxsim/tests'; PYTHON='python3'
 
 before_install:
 
@@ -55,6 +55,6 @@ script:
     - $CMD
 
 after_success:
-    - if [[ $CMD == 'coverage run --source formulas -m py.test' ]]; then
-          coveralls --rcfile='formulas/tests/coveragerc';
+    - if [[ $PYTHON == 'python3' ]]; then
+          coveralls --rcfile='pyxsim/tests/coveragerc';
       fi
