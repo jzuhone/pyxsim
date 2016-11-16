@@ -1,5 +1,5 @@
-[![yt](http://img.shields.io/badge/powered%20by-yt-blue.svg?style=flat)](http://yt-project.org/)    [![astropy](http://img.shields.io/badge/powered%20by-AstroPy-orange.svg?style=flat)](http://www.astropy.org/)
-[![Build Status](https://travis-ci.org/jzuhone/pyxsim.svg?branch=master)]
+[![yt](http://img.shields.io/badge/powered%20by-yt-blue.svg?style=flat)](http://yt-project.org/)    [![astropy](http://img.shields.io/badge/powered%20by-AstroPy-orange.svg?style=flat)](http://www.astropy.org/)  
+[![Build Status](https://travis-ci.org/jzuhone/pyxsim.svg?branch=master)](https://travis-ci.org/jzuhone/pyxsim)
 
 # What is pyXSIM?
 
