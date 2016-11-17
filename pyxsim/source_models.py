@@ -77,8 +77,8 @@ class ThermalSourceModel(SourceModel):
 
     Examples
     --------
-    >>> mekal_model = XSpecThermalModel("mekal", 0.05, 50.0, 1000)
-    >>> source_model = ThermalSourceModel(mekal_model, Zmet="metallicity")
+    >>> spec_model = TableApecModel(0.05, 50.0, 1000)
+    >>> source_model = ThermalSourceModel(spec_model, Zmet="metallicity")
     """
     def __init__(self, spectral_model, temperature_field=None,
                  emission_measure_field=None, kT_min=0.008,
