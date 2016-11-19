@@ -42,8 +42,8 @@ There are a number of other optional parameters which can be set:
   the default density and mass fields of the dataset, and the fields ``("PartType0", "ElectronAbundance")``
   ``("PartType0", "NeutralHydrogenAbundance")`` to construct the electron and hydrogen ion
   number densities if they are present in the dataset.
-* ``kT_min``: The minimum temperature in units of keV in the set of temperature bins. Default is 0.0808.
-* ``kT_max``: The maximum temperature in units of keV in the set of temperature bins. Default is 50.0.
+* ``kT_min``: The minimum temperature in units of keV in the set of temperature bins. Default is 0.008.
+* ``kT_max``: The maximum temperature in units of keV in the set of temperature bins. Default is 64.0.
 * ``n_kT``: The number of temperature bins to use. Default is 10000.
 * ``kT_scale``: The scaling of the temperature bins, either "linear" or "log". Default: "linear"
 * ``Zmet``: The metallicity. Either a floating-point number for a constant metallicity, or the name of 
