@@ -26,7 +26,7 @@ and metallicity, and is proportional to the density squared:
 model, described in the next sub-section. From this spectral model, which depends on 
 temperature and metallicity, a spectrum of photon energies can be generated from each 
 cell or particle. Since generating a new spectrum for each cell would be prohibitively 
-expensive, the cells are binned into a 1-D histogram of temperatures, and for each bin 
+expensive, the cells are binned into a 1-D table of temperatures, and for each bin 
 a spectrum is calculated. Provided the bins are finely spaced enough, the accuracy of 
 this method is sufficient for most purposes. 
 
@@ -99,6 +99,26 @@ spectrum (in an array) for a given temperature, metallicity, redshift, normaliza
     spec = spec_model.return_spectrum(kT, metallicity, z, norm, velocity=velocity)
 
 The units of the returned spectrum are in :math:`{\rm photons~s^{-1}~cm^{-2}}`.
+
+Tweaking the Temperature Bins
++++++++++++++++++++++++++++++
+
+As mentioned above, :class:`~pyxsim.source_models.ThermalSourceModel` bins the dataset's cells/particles 
+into a 1-D table of temperatures, each bin containing a spectrum. It is important that this temperature 
+binning faithfully reflects the temperature distribution within the dataset adequately. It may be necessary
+to tweak the number, limits, or scaling of the temperature bins. Some example situations where it may
+be necessary to do this are:
+
+* A situation in which there is a lot of low-temperature, high-density gas that is not expected to emit
+  X-rays, in which case one could set ``kT_min`` to a higher value than these temperatures. 
+* A situation in which the temperatures in the dataset span a small dynamic range, in which case one would
+  set both ``kT_min`` and ``kT_max`` to bracket this range, and set ``n_kT`` to ensure that the bins are 
+  finely  spaced. 
+* A situation with both low and high temperature gas which are expected to emit X-rays, requiring resolution
+  over a large dynamic range. One could set ``n_kT`` to a large value, or alternatively one could set 
+  ``kT_scale="log"`` to adopt logarithmic binning. 
+
+Some degree of trial and error may be necessary to determine the correct setup of the temperature bins.
 
 Examples
 ++++++++
