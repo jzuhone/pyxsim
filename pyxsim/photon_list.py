@@ -266,9 +266,9 @@ class PhotonList(object):
                 mylog.warning("Redshift must be zero for nearby sources. Resetting redshift to 0.0.")
                 redshift = 0.0
 
-        if center in ("center", "c"):
+        if center == "center" or center == "c":
             parameters["center"] = ds.domain_center
-        elif center in ("max", "m"):
+        elif center == "max" or center == "m":
             parameters["center"] = ds.find_max("density")[-1]
         elif iterable(center):
             if isinstance(center, YTArray):
