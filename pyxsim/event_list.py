@@ -447,10 +447,10 @@ class EventList(object):
             emax = self["eobs"].max().value
 
         idxs = np.logical_and(self["eobs"].d >= emin, self["eobs"].d <= emax)
-        flux = np.sum(self["eobs"][idxs].in_units("erg")).v / \
-               self.parameters["ExposureTime"].v/self.parameters["Area"].v
+        flux = np.sum(self["eobs"][idxs].in_units("erg")) / \
+               self.parameters["ExposureTime"]/self.parameters["Area"]
 
-        write_photon_list(prefix, prefix, flux, self["xsky"][idxs].d, self["ysky"][idxs].d,
+        write_photon_list(prefix, prefix, flux.v, self["xsky"][idxs].d, self["ysky"][idxs].d,
                           self["eobs"][idxs].d, clobber=clobber)
 
 
