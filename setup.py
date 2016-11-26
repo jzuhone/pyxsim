@@ -1,13 +1,5 @@
 #!/usr/bin/env python
 from setuptools import setup
-from setuptools.extension import Extension
-import numpy as np
-
-cython_extensions = [
-    Extension("pyxsim.cutils",
-              sources=["pyxsim/cutils.pyx"],
-              language="c", libraries=["m"],
-              include_dirs=[np.get_include()])]
 
 setup(name='pyxsim',
       packages=['pyxsim'],
@@ -16,7 +8,7 @@ setup(name='pyxsim',
       author='John ZuHone',
       author_email='jzuhone@gmail.com',
       url='http://github.com/jzuhone/pyxsim',
-      setup_requires=["numpy","cython>=0.24"],
+      setup_requires=["numpy"],
       install_requires=["six","numpy","astropy","h5py","yt>=3.3.1","soxs"],
       include_package_data=True,
       classifiers=[
@@ -26,5 +18,4 @@ setup(name='pyxsim',
           'Programming Language :: Python :: 3.5',
           'Topic :: Scientific/Engineering :: Visualization',
       ],
-      ext_modules=cython_extensions,
       )
