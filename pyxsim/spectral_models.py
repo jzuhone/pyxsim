@@ -2,7 +2,6 @@
 Photon emission and absoprtion models.
 """
 import numpy as np
-import os
 import h5py
 
 from soxs.spectra import ApecGenerator
@@ -10,9 +9,6 @@ from soxs.constants import cosmic_elem, metal_elem
 from pyxsim.utils import mylog, check_file_location
 from yt.units.yt_array import YTArray, YTQuantity
 from yt.utilities.physical_constants import hcgs, clight
-from yt.utilities.physical_ratios import erg_per_keV, amu_grams
-from pyxsim.cutils import broaden_lines
-from yt.utilities.on_demand_imports import _astropy
 
 hc = (hcgs*clight).in_units("keV*angstrom").v
 # NOTE: XSPEC has hc = 12.39854 keV*A, so there may be slight differences in
