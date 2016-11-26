@@ -150,10 +150,10 @@ class TableApecModel(ApecGenerator):
             line_fields, coco_fields = self._preload_data(ikT)
             # First do H,He, and trace elements
             for elem in cosmic_elem:
-                cosmic_spec[ikT,:] += self._make_spectrum(kT, 0.0, elem, line_fields, coco_fields, sfac)
+                cosmic_spec[ikT,:] += self._make_spectrum(kT, elem, 0.0, line_fields, coco_fields, sfac)
             # Next do the metals
             for elem in metal_elem:
-                metal_spec[ikT,:] += self._make_spectrum(kT, 0.0, elem, line_fields, coco_fields, sfac)
+                metal_spec[ikT,:] += self._make_spectrum(kT, elem, 0.0, line_fields, coco_fields, sfac)
 
         self.cosmic_spec = YTArray(cosmic_spec, "cm**3/s")
         self.metal_spec = YTArray(metal_spec, "cm**3/s")
