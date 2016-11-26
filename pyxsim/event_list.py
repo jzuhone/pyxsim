@@ -13,6 +13,7 @@ from yt.utilities.on_demand_imports import _astropy
 import h5py
 from pyxsim.utils import force_unicode, validate_parameters, parse_value
 from pyxsim.responses import RedistributionMatrixFile
+from soxs.simput import write_photon_list
 import os
 
 class EventList(object):
@@ -436,7 +437,6 @@ class EventList(object):
         e_max : float, optional
             The maximum energy of the photons to save in keV.
         """
-        pyfits = _astropy.pyfits
         if isinstance(self.parameters["Area"], string_types):
              mylog.error("Writing SIMPUT files is only supported if you didn't convolve with responses.")
              raise TypeError("Writing SIMPUT files is only supported if you didn't convolve with responses.")
@@ -447,62 +447,12 @@ class EventList(object):
             emax = self["eobs"].max().value
 
         idxs = np.logical_and(self["eobs"].d >= emin, self["eobs"].d <= emax)
-        flux = np.sum(self["eobs"][idxs].in_units("erg")) / \
-               self.parameters["ExposureTime"]/self.parameters["Area"]
+        flux = np.sum(self["eobs"][idxs].in_units("erg")).v / \
+               self.parameters["ExposureTime"].v/self.parameters["Area"].v
 
-        col1 = pyfits.Column(name='ENERGY', format='E', array=self["eobs"][idxs].d)
-        col2 = pyfits.Column(name='RA', format='D', array=self["xsky"][idxs].d)
-        col3 = pyfits.Column(name='DEC', format='D', array=self["ysky"][idxs].d)
+        write_photon_list(prefix, prefix, flux, self["xsky"][idxs].d, self["ysky"][idxs].d,
+                          self["eobs"][idxs].d, clobber=clobber)
 
-        coldefs = pyfits.ColDefs([col1, col2, col3])
-
-        tbhdu = pyfits.BinTableHDU.from_columns(coldefs)
-        tbhdu.update_ext_name("PHLIST")
-
-        tbhdu.header["HDUCLASS"] = "HEASARC/SIMPUT"
-        tbhdu.header["HDUCLAS1"] = "PHOTONS"
-        tbhdu.header["HDUVERS"] = "1.1.0"
-        tbhdu.header["EXTVER"] = 1
-        tbhdu.header["REFRA"] = 0.0
-        tbhdu.header["REFDEC"] = 0.0
-        tbhdu.header["TUNIT1"] = "keV"
-        tbhdu.header["TUNIT2"] = "deg"
-        tbhdu.header["TUNIT3"] = "deg"
-
-        phfile = prefix+"_phlist.fits"
-
-        tbhdu.writeto(phfile, clobber=clobber)
-
-        col1 = pyfits.Column(name='SRC_ID', format='J', array=np.array([1]).astype("int32"))
-        col2 = pyfits.Column(name='RA', format='D', array=np.array([0.0]))
-        col3 = pyfits.Column(name='DEC', format='D', array=np.array([0.0]))
-        col4 = pyfits.Column(name='E_MIN', format='D', array=np.array([float(emin)]))
-        col5 = pyfits.Column(name='E_MAX', format='D', array=np.array([float(emax)]))
-        col6 = pyfits.Column(name='FLUX', format='D', array=np.array([flux.value]))
-        col7 = pyfits.Column(name='SPECTRUM', format='80A', array=np.array([phfile+"[PHLIST,1]"]))
-        col8 = pyfits.Column(name='IMAGE', format='80A', array=np.array([phfile+"[PHLIST,1]"]))
-        col9 = pyfits.Column(name='SRC_NAME', format='80A', array=np.array(["yt_src"]))
-
-        coldefs = pyfits.ColDefs([col1, col2, col3, col4, col5, col6, col7, col8, col9])
-
-        wrhdu = pyfits.BinTableHDU.from_columns(coldefs)
-        wrhdu.update_ext_name("SRC_CAT")
-
-        wrhdu.header["HDUCLASS"] = "HEASARC"
-        wrhdu.header["HDUCLAS1"] = "SIMPUT"
-        wrhdu.header["HDUCLAS2"] = "SRC_CAT"
-        wrhdu.header["HDUVERS"] = "1.1.0"
-        wrhdu.header["RADECSYS"] = "FK5"
-        wrhdu.header["EQUINOX"] = 2000.0
-        wrhdu.header["TUNIT2"] = "deg"
-        wrhdu.header["TUNIT3"] = "deg"
-        wrhdu.header["TUNIT4"] = "keV"
-        wrhdu.header["TUNIT5"] = "keV"
-        wrhdu.header["TUNIT6"] = "erg/s/cm**2"
-
-        simputfile = prefix+"_simput.fits"
-
-        wrhdu.writeto(simputfile, clobber=clobber)
 
     @parallel_root_only
     def write_h5_file(self, h5file):
