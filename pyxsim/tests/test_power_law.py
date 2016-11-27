@@ -9,10 +9,12 @@ from yt.testing import requires_module
 import os
 import shutil
 import tempfile
+from soxs.tests.utils import write_spectrum
 from yt.utilities.physical_constants import mp
 from sherpa.astro.ui import load_user_model, add_user_pars, \
     load_pha, ignore, fit, set_model, set_stat, set_method, \
     covar, get_covar_results, set_covar_opt
+from pyxsim.instruments import specs
 
 def setup():
     from yt.config import ytcfg
@@ -65,11 +67,11 @@ def plaw_fit(alpha_sim):
     events = photons.project_photons("z", absorb_model=abs_model,
                                      prng=bms.prng,
                                      no_shifting=True)
-    events = ACIS_I(events, rebin=False, convolve_psf=False, prng=bms.prng)
-    events.write_spectrum("plaw_model_evt.pi", clobber=True)
+    events = ACIS_I(events, "plaw_model_evt.fits", rebin=False, convolve_psf=False, prng=bms.prng)
+    write_spectrum("plaw_model_evt.fits", "plaw_model_evt.pi", clobber=True)
 
-    os.system("cp %s ." % events.parameters["ARF"])
-    os.system("cp %s ." % events.parameters["RMF"])
+    os.system("cp %s ." % specs[ACIS_I.spec_name]["arf"])
+    os.system("cp %s ." % specs[ACIS_I.spec_name]["rmf"])
 
     load_user_model(mymodel, "wplaw")
     add_user_pars("wplaw", ["nH", "norm", "redshift", "alpha"],
