@@ -44,7 +44,8 @@ def plaw_fit(alpha_sim):
 
     def _hard_emission(field, data):
         return YTQuantity(1.0e-18, "s**-1*keV**-1")*data["density"]*data["cell_volume"]/mp
-    ds.add_field(("gas", "hard_emission"), function=_hard_emission, units="keV**-1*s**-1")
+    ds.add_field(("gas", "hard_emission"), function=_hard_emission, 
+                 sampling_type='cell', units="keV**-1*s**-1")
 
     nH_sim = 0.02
     abs_model = WabsModel(nH_sim)
@@ -64,14 +65,15 @@ def plaw_fit(alpha_sim):
     dist_fac = 1.0/(4.*np.pi*D_A*D_A*(1.+redshift)**2).in_cgs()
     norm_sim = float((sphere["hard_emission"]).sum()*dist_fac.in_cgs())*(1.+redshift)
 
-    events = photons.project_photons("z", absorb_model=abs_model,
+    events = photons.project_photons("z", [30., 45.], absorb_model=abs_model,
                                      prng=bms.prng,
                                      no_shifting=True)
-    events = ACIS_I(events, "plaw_model_evt.fits", rebin=False, convolve_psf=False, prng=bms.prng)
-    write_spectrum("plaw_model_evt.fits", "plaw_model_evt.pi", clobber=True)
+    ACIS_I(events, "plaw_model_evt.fits", instr_bkgnd=False, astro_bkgnd=False, prng=bms.prng)
 
-    os.system("cp %s ." % specs[ACIS_I.spec_name]["arf"])
-    os.system("cp %s ." % specs[ACIS_I.spec_name]["rmf"])
+    os.system("cp %s ." % specs[ACIS_I.inst_name]["arf"])
+    os.system("cp %s ." % specs[ACIS_I.inst_name]["rmf"])
+
+    write_spectrum("plaw_model_evt.fits", "plaw_model_evt.pi", clobber=True)
 
     load_user_model(mymodel, "wplaw")
     add_user_pars("wplaw", ["nH", "norm", "redshift", "alpha"],
