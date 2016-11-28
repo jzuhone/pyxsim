@@ -539,7 +539,7 @@ class PhotonList(object):
         Examples
         --------
         >>> L = np.array([0.1,-0.2,0.3])
-        >>> events = my_photons.project_photons(L, area_new=10000.,
+        >>> events = my_photons.project_photons(L, [30., 45.], area_new=10000.,
         ...                                     redshift_new=0.05)
         """
 
