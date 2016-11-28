@@ -65,8 +65,8 @@ class InstrumentSimulator(object):
         if prng is None:
             prng = np.random
         if not rebin:
-            inst["fov"] = events.parameters["dtheta"].v*60.0
             inst["num_pixels"] = int(2*events.parameters["pix_center"][0]-1.)
+            inst["fov"] = events.parameters["dtheta"].v*60.0*inst["num_pixels"]
         if not convolve_psf:
             inst["psf"] = None
         inst["name"] = "_".join([inst["name"], uuid.uuid4().hex])
