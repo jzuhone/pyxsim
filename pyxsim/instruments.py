@@ -50,9 +50,8 @@ class InstrumentSimulator(object):
         """
         self.inst_name = inst_name
 
-    def __call__(self, events, out_file, rebin=True,
-                 convolve_psf=True, instr_bkgnd=True, 
-                 astro_bkgnd=True, clobber=False, prng=None):
+    def __call__(self, events, out_file, convolve_energies_only=False,
+                 instr_bkgnd=True, astro_bkgnd=True, clobber=False, prng=None):
         if self.inst_name not in instrument_registry:
             add_instrument_to_registry(specs[self.inst_name])
         flux = np.sum(events["eobs"]).to("erg") / \
@@ -64,10 +63,9 @@ class InstrumentSimulator(object):
         inst = get_instrument_from_registry(self.inst_name)
         if prng is None:
             prng = np.random
-        if not rebin:
+        if convolve_energies_only:
             inst["num_pixels"] = int(2*events.parameters["pix_center"][0]-1.)
             inst["fov"] = events.parameters["dtheta"].v*60.0*inst["num_pixels"]
-        if not convolve_psf:
             inst["psf"] = None
         inst["name"] = "_".join([inst["name"], uuid.uuid4().hex])
         add_instrument_to_registry(inst)

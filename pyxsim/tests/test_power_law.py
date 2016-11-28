@@ -68,7 +68,8 @@ def plaw_fit(alpha_sim):
     events = photons.project_photons("z", [30., 45.], absorb_model=abs_model,
                                      prng=bms.prng,
                                      no_shifting=True)
-    ACIS_I(events, "plaw_model_evt.fits", instr_bkgnd=False, astro_bkgnd=False, prng=bms.prng)
+    ACIS_I(events, "plaw_model_evt.fits", convolve_energies_only=True, 
+           instr_bkgnd=False, astro_bkgnd=False, prng=bms.prng)
 
     os.system("cp %s ." % specs[ACIS_I.inst_name]["arf"])
     os.system("cp %s ." % specs[ACIS_I.inst_name]["rmf"])
