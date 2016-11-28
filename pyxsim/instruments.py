@@ -71,8 +71,9 @@ class InstrumentSimulator(object):
             inst["psf"] = None
         inst["name"] = "_".join([inst["name"], uuid.uuid4().hex])
         add_instrument_to_registry(inst)
-        instrument_simulator(input_events, out_file, events.parameters["ExposureTime"].v, 
-                             inst["name"], events.parameters["sky_center"].v, clobber=clobber, 
+        exp_time = float(events.parameters["ExposureTime"])
+        instrument_simulator(input_events, out_file, exp_time, inst["name"],
+                             events.parameters["sky_center"].v, clobber=clobber, 
                              instr_bkgnd=instr_bkgnd, astro_bkgnd=astro_bkgnd, prng=prng)
 
 # Specific instrument approximations
