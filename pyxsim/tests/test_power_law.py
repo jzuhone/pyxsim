@@ -9,7 +9,7 @@ from yt.testing import requires_module
 import os
 import shutil
 import tempfile
-from soxs.tests.utils import write_spectrum
+from soxs.utils import write_spectrum
 from yt.utilities.physical_constants import mp
 from sherpa.astro.ui import load_user_model, add_user_pars, \
     load_pha, ignore, fit, set_model, set_stat, set_method, \

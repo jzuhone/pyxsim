@@ -17,7 +17,7 @@ import shutil
 from sherpa.astro.ui import load_user_model, add_user_pars, \
     load_pha, ignore, fit, set_model, set_stat, set_method, \
     covar, get_covar_results, set_covar_opt, thaw
-from soxs.tests.utils import write_spectrum, convert_rmf
+from soxs.utils import write_spectrum, convert_rmf
 from soxs.instrument import RedistributionMatrixFile, AuxiliaryResponseFile
 from soxs.instrument_registry import get_instrument_from_registry
 
