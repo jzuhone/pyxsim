@@ -1,7 +1,7 @@
 from pyxsim.event_list import EventList
 from pyxsim.tests.utils import create_dummy_wcs
 from pyxsim.spectral_models import TableApecModel, WabsModel
-from pyxsim.instruments import ACIS_I, RedistributionMatrixFile
+from pyxsim.instruments import ACIS_I
 from yt.testing import requires_module
 import os
 from numpy.random import RandomState
@@ -11,6 +11,9 @@ import numpy as np
 from sherpa.astro.ui import load_user_model, add_user_pars, \
     load_pha, ignore, fit, set_model, set_stat, set_method, \
     covar, get_covar_results, set_covar_opt
+from soxs.instrument import RedistributionMatrixFile
+from soxs.utils import write_spectrum
+from pyxsim.instruments import specs
 
 prng = RandomState(24)
 
@@ -18,7 +21,7 @@ def setup():
     from yt.config import ytcfg
     ytcfg["yt", "__withintesting"] = "True"
 
-rmf = RedistributionMatrixFile(ACIS_I.rmf)
+rmf = RedistributionMatrixFile(specs[ACIS_I.inst_name]["rmf"])
 fit_model = TableApecModel(rmf.elo[0], rmf.ehi[-1], rmf.n_de, thermal_broad=False)
 
 def mymodel(pars, x, xhi=None):
@@ -55,12 +58,13 @@ def test_background():
     new_events = events.add_background(spec_model.ebins, spec, prng=prng,
                                        absorb_model=abs_model)
 
-    new_events = ACIS_I(new_events, rebin=False, convolve_psf=False, prng=prng)
+    ACIS_I(new_events, "background_evt.fits", convolve_energies_only=True,
+           instr_bkgnd=False, astro_bkgnd=False, prng=prng)
 
-    new_events.write_spectrum("background_evt.pi", clobber=True)
+    os.system("cp %s ." % specs[ACIS_I.inst_name]["arf"])
+    os.system("cp %s ." % specs[ACIS_I.inst_name]["rmf"])
 
-    os.system("cp %s ." % new_events.parameters["ARF"])
-    os.system("cp %s ." % new_events.parameters["RMF"])
+    write_spectrum("background_evt.fits", "background_evt.pi", clobber=True)
 
     load_user_model(mymodel, "wapec")
     add_user_pars("wapec", ["nH", "kT", "metallicity", "redshift", "norm"],
