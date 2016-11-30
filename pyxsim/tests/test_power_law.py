@@ -45,7 +45,7 @@ def plaw_fit(alpha_sim):
     def _hard_emission(field, data):
         return YTQuantity(1.0e-18, "s**-1*keV**-1")*data["density"]*data["cell_volume"]/mp
     ds.add_field(("gas", "hard_emission"), function=_hard_emission, 
-                 sampling_type='cell', units="keV**-1*s**-1")
+                 units="keV**-1*s**-1")
 
     nH_sim = 0.02
     abs_model = WabsModel(nH_sim)

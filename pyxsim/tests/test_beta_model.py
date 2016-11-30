@@ -97,8 +97,6 @@ def do_beta_model(source, v_field, em_field):
 
     write_spectrum("beta_model_evt.fits", "beta_model_evt.pi", clobber=True)
 
-    os.system("cp beta_model_evt.pi /Users/jzuhone")
-
     load_user_model(mymodel, "tbapec")
     add_user_pars("tbapec", ["nH", "kT", "metallicity", "redshift", "norm", "velocity"],
                   [0.01, 4.0, 0.2, 0.04, norm_sim*0.8, 300.0],

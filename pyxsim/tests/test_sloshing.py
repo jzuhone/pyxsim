@@ -51,7 +51,7 @@ def test_sloshing():
 
     return_photons = return_data(photons1.photons)
 
-    events1 = photons1.project_photons([1.0,-0.5,0.2], area_new=1500.,
+    events1 = photons1.project_photons([1.0,-0.5,0.2], [30., 45.], area_new=1500.,
                                        absorb_model=tbabs_model, prng=prng)
     events1["xsky"]
     return_events = return_data(events1.events)
