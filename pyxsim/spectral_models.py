@@ -4,7 +4,7 @@ Photon emission and absoprtion models.
 import numpy as np
 import h5py
 
-from soxs.spectra import ApecGenerator
+from soxs.spectra import ApecGenerator, get_wabs_absorb
 from soxs.constants import cosmic_elem, metal_elem
 from pyxsim.utils import mylog, check_file_location
 from yt.units.yt_array import YTArray, YTQuantity
@@ -336,16 +336,6 @@ class TBabsModel(TableAbsorbModel):
     def __init__(self, nH):
         super(TBabsModel, self).__init__("tbabs_table.h5", nH)
 
-
-emx = np.array([0.0, 0.1, 0.284, 0.4, 0.532, 0.707, 0.867,
-                1.303, 1.840, 2.471, 3.210, 4.038, 7.111, 8.331, 10.0])
-c0 = np.array([17.3, 34.6, 78.1, 71.4, 95.5, 308.9, 120.6, 141.3,
-               202.7,342.7,352.2,433.9,629.0,701.2])
-c1 = np.array([608.1, 267.9, 18.8, 66.8, 145.8, -380.6, 169.3,
-               146.8, 104.7, 18.7, 18.7, -2.4, 30.9, 25.2])
-c2 = np.array([-2150., -476.1 ,4.3, -51.4, -61.1, 294.0, -47.7,
-               -31.5, -17.0, 0.0, 0.0, 0.75, 0.0, 0.0])
-
 class WabsModel(AbsorptionModel):
     r"""
     Initialize a Wisconsin (Morrison and McCammon; ApJ 270, 119) 
@@ -365,6 +355,4 @@ class WabsModel(AbsorptionModel):
 
     def get_absorb(self, e):
         e = np.array(e)
-        idxs = np.minimum(np.searchsorted(emx, e)-1, 13)
-        sigma = (c0[idxs]+c1[idxs]*e+c2[idxs]*e*e)*1.0e-24/e**3
-        return np.exp(-sigma*self.nH)
+        return get_wabs_absorb(e, self.nH)
