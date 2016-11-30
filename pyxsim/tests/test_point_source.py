@@ -1,6 +1,6 @@
 from pyxsim.event_list import EventList
 from pyxsim.tests.utils import create_dummy_wcs
-from pyxsim.instruments import ACIS_S, sigma_to_fwhm
+from pyxsim.instruments import ACIS_S
 from pyxsim.spectral_models import TBabsModel
 from yt.testing import requires_module
 import os
@@ -11,18 +11,24 @@ import numpy as np
 from sherpa.astro.ui import load_user_model, add_user_pars, \
     load_pha, ignore, fit, set_model, set_stat, set_method, \
     covar, get_covar_results, set_covar_opt
+from pyxsim.instruments import specs
+from soxs.utils import write_spectrum
+from numpy.testing import assert_allclose
 
 prng = RandomState(24)
+
+sigma_to_fwhm = 2.*np.sqrt(2.*np.log(2.))
 
 def setup():
     from yt.config import ytcfg
     ytcfg["yt", "__withintesting"] = "True"
 
 def mymodel(pars, x, xhi=None):
-    wm = TBabsModel(pars[0])
-    wabs = wm.get_absorb(x)
     dx = x[1]-x[0]
-    plaw = pars[1]*dx*(x*(1.0+pars[2]))**(-pars[3])
+    xmid = x+0.5*dx
+    wm = TBabsModel(pars[0])
+    wabs = wm.get_absorb(xmid)
+    plaw = pars[1]*dx*(xmid*(1.0+pars[2]))**(-pars[3])
     return wabs*plaw
 
 @requires_module("sherpa")
@@ -33,7 +39,7 @@ def test_point_source():
     os.chdir(tmpdir)
 
     nH_sim = 0.02
-    norm_sim = 1.0e-4
+    norm_sim = 1.0e-2
     alpha_sim = 0.95
     redshift = 0.02
 
@@ -42,10 +48,10 @@ def test_point_source():
 
     wcs = create_dummy_wcs()
 
-    ebins = np.linspace(0.1, 11.5, 2001)
+    ebins = np.linspace(0.1, 11.5, 5001)
     emid = 0.5*(ebins[1:]+ebins[:-1])
-    spec = norm_sim*(emid*(1.0+redshift))**(-alpha_sim)
-    de = np.diff(ebins)[0]
+    de = np.diff(ebins)
+    spec = norm_sim*(emid*(1.0+redshift))**(-alpha_sim)*de
 
     abs_model = TBabsModel(nH_sim)
 
@@ -56,20 +62,16 @@ def test_point_source():
     new_events = events.add_point_sources(positions, ebins, spec, prng=prng,
                                           absorb_model=abs_model)
 
-    new_events = ACIS_S(new_events, prng=prng)
+    assert_allclose(np.unique(new_events["xsky"])[0].v, positions[0][0])
+    assert_allclose(np.unique(new_events["ysky"])[0].v, positions[0][1])
 
-    scalex = float(np.std(new_events['xpix'])*sigma_to_fwhm*new_events.parameters["dtheta"])
-    scaley = float(np.std(new_events['ypix'])*sigma_to_fwhm*new_events.parameters["dtheta"])
+    ACIS_S(new_events, "point_source_evt.fits", convolve_energies_only=True,
+           instr_bkgnd=False, astro_bkgnd=False, prng=prng)
 
-    psf_scale = ACIS_S.psf_scale
+    os.system("cp %s ." % specs[ACIS_S.inst_name]["arf"])
+    os.system("cp %s ." % specs[ACIS_S.inst_name]["rmf"])
 
-    assert (scalex - psf_scale)/psf_scale < 0.01
-    assert (scaley - psf_scale)/psf_scale < 0.01
-
-    new_events.write_spectrum("point_source_evt.pi", clobber=True)
-
-    os.system("cp %s ." % new_events.parameters["ARF"])
-    os.system("cp %s ." % new_events.parameters["RMF"])
+    write_spectrum("point_source_evt.fits", "point_source_evt.pi", clobber=True)
 
     load_user_model(mymodel, "tplaw")
     add_user_pars("tplaw", ["nH", "norm", "redshift", "alpha"],
@@ -84,12 +86,12 @@ def test_point_source():
     ignore(":0.5, 9.0:")
     set_model("tplaw")
     fit()
-    set_covar_opt("sigma", 1.6)
+    set_covar_opt("sigma", 1.645)
     covar()
     res = get_covar_results()
 
     assert np.abs(res.parvals[0]-nH_sim) < res.parmaxes[0]
-    assert np.abs(res.parvals[1]-norm_sim/de) < res.parmaxes[1]
+    assert np.abs(res.parvals[1]-norm_sim) < res.parmaxes[1]
     assert np.abs(res.parvals[2]-alpha_sim) < res.parmaxes[2]
 
     os.chdir(curdir)
