@@ -22,10 +22,6 @@ from pyxsim.spectral_models import \
     TableAbsorbModel, \
     TBabsModel, WabsModel
 
-from pyxsim.responses import \
-    AuxiliaryResponseFile, \
-    RedistributionMatrixFile
-
 from pyxsim.instruments import \
     InstrumentSimulator, \
     ACIS_I, ACIS_S, \
