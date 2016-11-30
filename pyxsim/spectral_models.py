@@ -355,4 +355,4 @@ class WabsModel(AbsorptionModel):
 
     def get_absorb(self, e):
         e = np.array(e)
-        return get_wabs_absorb(e, self.nH)
+        return get_wabs_absorb(e, self.nH.v)
