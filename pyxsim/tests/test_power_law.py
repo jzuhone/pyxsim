@@ -6,6 +6,7 @@ from pyxsim.tests.utils import \
 from yt.units.yt_array import YTQuantity
 import numpy as np
 from yt.testing import requires_module
+from numpy.random import RandomState
 import os
 import shutil
 import tempfile
@@ -16,15 +17,18 @@ from sherpa.astro.ui import load_user_model, add_user_pars, \
     covar, get_covar_results, set_covar_opt
 from pyxsim.instruments import specs
 
+prng = RandomState(25)
+
 def setup():
     from yt.config import ytcfg
     ytcfg["yt", "__withintesting"] = "True"
 
 def mymodel(pars, x, xhi=None):
     dx = x[1]-x[0]
+    xmid = x+0.5*dx
     wm = WabsModel(pars[0])
-    wabs = wm.get_absorb(x)
-    plaw = pars[1]*dx*(x*(1.0+pars[2]))**(-pars[3])
+    wabs = wm.get_absorb(xmid)
+    plaw = pars[1]*dx*(xmid*(1.0+pars[2]))**(-pars[3])
     return wabs*plaw
 
 @requires_module("sherpa")
@@ -54,9 +58,9 @@ def plaw_fit(alpha_sim):
     exp_time = YTQuantity(2.0e5, "s")
     redshift = 0.01
 
-    sphere = ds.sphere("c", (100.,"kpc"))
+    sphere = ds.sphere("c", (100., "kpc"))
 
-    plaw_model = PowerLawSourceModel(1.0, 0.01, 11.0, "hard_emission", alpha_sim, prng=bms.prng)
+    plaw_model = PowerLawSourceModel(1.0, 0.01, 11.0, "hard_emission", alpha_sim, prng=prng)
 
     photons = PhotonList.from_data_source(sphere, redshift, A, exp_time,
                                           plaw_model)
@@ -69,7 +73,7 @@ def plaw_fit(alpha_sim):
                                      prng=bms.prng,
                                      no_shifting=True)
     ACIS_I(events, "plaw_model_evt.fits", convolve_energies_only=True, 
-           instr_bkgnd=False, astro_bkgnd=False, prng=bms.prng)
+           instr_bkgnd=False, astro_bkgnd=False, prng=prng)
 
     os.system("cp %s ." % specs[ACIS_I.inst_name]["arf"])
     os.system("cp %s ." % specs[ACIS_I.inst_name]["rmf"])
