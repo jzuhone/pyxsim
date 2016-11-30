@@ -83,7 +83,7 @@ def test_sloshing():
     nevents = 0
 
     for i in range(4):
-        events = photons1.project_photons([1.0,-0.5,0.2],
+        events = photons1.project_photons([1.0,-0.5,0.2], [30., 45.],
                                           exp_time_new=0.25*exp_time,
                                           absorb_model=tbabs_model,
                                           prng=prng)
