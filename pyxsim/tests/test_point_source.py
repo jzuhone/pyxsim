@@ -12,7 +12,7 @@ from sherpa.astro.ui import load_user_model, add_user_pars, \
     load_pha, ignore, fit, set_model, set_stat, set_method, \
     covar, get_covar_results, set_covar_opt
 from pyxsim.instruments import specs
-from soxs.utils import write_spectrum
+from soxs.events import write_spectrum
 from numpy.testing import assert_allclose
 
 prng = RandomState(24)
