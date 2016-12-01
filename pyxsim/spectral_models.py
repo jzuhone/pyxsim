@@ -351,7 +351,7 @@ class WabsModel(AbsorptionModel):
     >>> wabs_model = WabsModel(0.1)
     """
     def __init__(self, nH):
-        self.nH = YTQuantity(nH*1.0e22, "cm**-2")
+        self.nH = YTQuantity(nH, "1.0e22*cm**-2")
 
     def get_absorb(self, e):
         e = np.array(e)
