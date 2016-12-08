@@ -5,7 +5,10 @@ from six import string_types
 import numpy as np
 from yt.funcs import ensure_list
 from pyxsim.utils import mylog
-from yt.utilities.fits_image import assert_same_wcs
+try:
+    from yt.utilities.fits_image import assert_same_wcs
+except ImportError:
+    from yt.visualization.fits_image import assert_same_wcs
 from yt.utilities.parallel_tools.parallel_analysis_interface import \
     parallel_root_only
 from yt.units.yt_array import YTQuantity, YTArray, uconcatenate
