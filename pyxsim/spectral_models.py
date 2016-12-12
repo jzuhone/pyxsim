@@ -124,7 +124,7 @@ class TableApecModel(ApecGenerator):
 
     Examples
     --------
-    >>> apec_model = TableApecModel(0.05, 50.0, 1000, apec_vers="3.0",
+    >>> apec_model = TableApecModel(0.05, 50.0, 1000, apec_vers="3.0.3",
     ...                             thermal_broad=True)
     """
     def __init__(self, emin, emax, nchan, apec_root=None,
