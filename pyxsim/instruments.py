@@ -55,7 +55,7 @@ class InstrumentSimulator(object):
         if self.inst_name not in instrument_registry:
             add_instrument_to_registry(specs[self.inst_name])
         flux = np.sum(events["eobs"]).to("erg") / \
-               events.parameters["ExposureTime"]/events.parameters["Area"]
+               events.parameters["exp_time"]/events.parameters["area"]
         input_events = {"ra": events["xsky"].d, 
                         "dec": events["ysky"].d,
                         "energy": events["eobs"].d,
@@ -69,7 +69,7 @@ class InstrumentSimulator(object):
             inst["psf"] = None
         inst["name"] = "_".join([inst["name"], uuid.uuid4().hex])
         add_instrument_to_registry(inst)
-        exp_time = float(events.parameters["ExposureTime"])
+        exp_time = float(events.parameters["exp_time"])
         instrument_simulator(input_events, out_file, exp_time, inst["name"],
                              events.parameters["sky_center"].v, clobber=clobber, 
                              instr_bkgnd=instr_bkgnd, astro_bkgnd=astro_bkgnd, prng=prng)

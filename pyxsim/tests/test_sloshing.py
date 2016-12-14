@@ -49,7 +49,17 @@ def test_sloshing():
     photons1 = PhotonList.from_data_source(sphere, redshift, A, exp_time,
                                            thermal_model)
 
-    return_photons = return_data(photons1.photons)
+    # Hack to not change answers just yet
+    new_photons = {}
+    for key, value in photons1.photons.items():
+        if key == "num_photons":
+            new_photons["NumberOfPhotons"] = value
+        elif key == "energy":
+            new_photons["Energy"] = value
+        else:
+            new_photons[key] = value
+
+    return_photons = return_data(new_photons)
 
     events1 = photons1.project_photons([1.0,-0.5,0.2], [30., 45.], area_new=1500.,
                                        absorb_model=tbabs_model, prng=prng)
@@ -70,7 +80,7 @@ def test_sloshing():
     events2 = EventList.from_h5_file("test_events.h5")
 
     for k in photons1.keys():
-        if k == "Energy":
+        if k == "energy":
             arr1 = uconcatenate(photons1[k])
             arr2 = uconcatenate(photons2[k])
         else:
@@ -96,7 +106,7 @@ def test_sloshing():
 
     merged_events = EventList.from_h5_file("merged_events.h5")
     assert len(merged_events["xsky"]) == nevents
-    assert merged_events.parameters["ExposureTime"] == exp_time
+    assert merged_events.parameters["exp_time"] == exp_time
 
     os.chdir(curdir)
     shutil.rmtree(tmpdir)

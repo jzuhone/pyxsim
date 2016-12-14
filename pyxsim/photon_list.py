@@ -13,7 +13,8 @@ from yt.utilities.parallel_tools.parallel_analysis_interface import \
     communication_system, get_mpi_type, parallel_capable, parallel_objects
 from yt.units.yt_array import YTQuantity, YTArray, uconcatenate
 import h5py
-from pyxsim.utils import parse_value, force_unicode, validate_parameters
+from pyxsim.utils import parse_value, force_unicode, validate_parameters, \
+    key_warning, ParameterDict
 from pyxsim.event_list import EventList
 
 comm = communication_system.communicators[-1]
@@ -22,11 +23,24 @@ axes_lookup = {"x": ("y","z"),
                "y": ("z","x"),
                "z": ("x","y")}
 
-photon_units = {"Energy": "keV",
+photon_units = {"energy": "keV",
                 "dx": "kpc"}
 for ax in "xyz":
     photon_units[ax] = "kpc"
     photon_units["v"+ax] = "km/s"
+
+old_photon_keys = {"Energy": "energy",
+                   "NumberOfPhotons": "num_photons"}
+old_parameter_keys = {"FiducialExposureTime": "fid_exp_time",
+                      "FiducialArea": "fid_area",
+                      "FiducialRedshift": "fid_redshift",
+                      "FiducialAngularDiameterDistance": "fid_d_a",
+                      "Width": "width",
+                      "Dimension": "dimension",
+                      "HubbleConstant": "hubble",
+                      "OmegaLambda": "omega_lambda",
+                      "OmegaMatter": "omega_matter",
+                      "DataType": "data_type"}
 
 def determine_fields(ds, source_type):
     ds_type = ds.index.__class__.__name__
@@ -55,7 +69,7 @@ def concatenate_photons(photons):
     for key in photons:
         if len(photons[key]) > 0:
             photons[key] = uconcatenate(photons[key])
-        elif key == "NumberOfPhotons":
+        elif key == "num_photons":
             photons[key] = np.array([])
         else:
             photons[key] = YTArray([], photon_units[key])
@@ -64,11 +78,11 @@ class PhotonList(object):
 
     def __init__(self, photons, parameters, cosmo):
         self.photons = photons
-        self.parameters = parameters
+        self.parameters = ParameterDict(parameters, "PhotonList", old_parameter_keys)
         self.cosmo = cosmo
         self.num_cells = len(photons["x"])
 
-        p_bins = np.cumsum(photons["NumberOfPhotons"])
+        p_bins = np.cumsum(photons["num_photons"])
         self.p_bins = np.insert(p_bins, 0, [np.int64(0)])
 
     def keys(self):
@@ -77,7 +91,7 @@ class PhotonList(object):
     def items(self):
         ret = []
         for k, v in self.photons.items():
-            if k == "Energy":
+            if k == "energy":
                 ret.append((k, self[k]))
             else:
                 ret.append((k,v))
@@ -86,20 +100,28 @@ class PhotonList(object):
     def values(self):
         ret = []
         for k, v in self.photons.items():
-            if k == "Energy":
+            if k == "energy":
                 ret.append(self[k])
             else:
                 ret.append(v)
         return ret
 
     def __getitem__(self, key):
-        if key == "Energy":
-            return [self.photons["Energy"][self.p_bins[i]:self.p_bins[i+1]]
+        if key in old_photon_keys:
+            k = old_photon_keys[key]
+            mylog.warning(key_warning % ("PhotonList", k))
+        else:
+            k = key
+        if k == "energy":
+            return [self.photons["energy"][self.p_bins[i]:self.p_bins[i+1]]
                     for i in range(self.num_cells)]
         else:
-            return self.photons[key]
+            return self.photons[k]
 
     def __contains__(self, key):
+        if key in old_photon_keys:
+            mylog.warning(key_warning % ("PhotonList", old_photon_keys[key]))
+            return True
         return key in self.photons
 
     def __repr__(self):
@@ -134,25 +156,25 @@ class PhotonList(object):
         f = h5py.File(filename, "r")
 
         p = f["/parameters"]
-        parameters["FiducialExposureTime"] = YTQuantity(p["fid_exp_time"].value, "s")
-        parameters["FiducialArea"] = YTQuantity(p["fid_area"].value, "cm**2")
-        parameters["FiducialRedshift"] = p["fid_redshift"].value
-        parameters["FiducialAngularDiameterDistance"] = YTQuantity(p["fid_d_a"].value, "Mpc")
+        parameters["fid_exp_time"] = YTQuantity(p["fid_exp_time"].value, "s")
+        parameters["fid_area"] = YTQuantity(p["fid_area"].value, "cm**2")
+        parameters["fid_redshift"] = p["fid_redshift"].value
+        parameters["fid_d_a"] = YTQuantity(p["fid_d_a"].value, "Mpc")
         dims = p["dimension"].value
         if not isinstance(dims, np.ndarray):
             dims = np.array([dims]*3)
-        parameters["Dimension"] = dims
+        parameters["dimension"] = dims
         width = p["width"].value
         if not isinstance(width, np.ndarray):
             width = np.array([width]*3)
-        parameters["Width"] = YTArray(width, "kpc")
-        parameters["HubbleConstant"] = p["hubble"].value
-        parameters["OmegaMatter"] = p["omega_matter"].value
-        parameters["OmegaLambda"] = p["omega_lambda"].value
+        parameters["width"] = YTArray(width, "kpc")
+        parameters["hubble"] = p["hubble"].value
+        parameters["omega_matter"] = p["omega_matter"].value
+        parameters["omega_lambda"] = p["omega_lambda"].value
         if "data_type" in p:
-            parameters["DataType"] = force_unicode(p["data_type"].value)
+            parameters["data_type"] = force_unicode(p["data_type"].value)
         else:
-            parameters["DataType"] = "cells"
+            parameters["data_type"] = "cells"
 
         d = f["/data"]
 
@@ -176,14 +198,14 @@ class PhotonList(object):
             start_e = n_ph[:start_c].sum()
         end_e = start_e + np.int64(n_ph[start_c:end_c].sum())
 
-        photons["NumberOfPhotons"] = n_ph[start_c:end_c]
-        photons["Energy"] = YTArray(d["energy"][start_e:end_e], "keV")
+        photons["num_photons"] = n_ph[start_c:end_c]
+        photons["energy"] = YTArray(d["energy"][start_e:end_e], "keV")
 
         f.close()
 
-        cosmo = Cosmology(hubble_constant=parameters["HubbleConstant"],
-                          omega_matter=parameters["OmegaMatter"],
-                          omega_lambda=parameters["OmegaLambda"])
+        cosmo = Cosmology(hubble_constant=parameters["hubble"],
+                          omega_matter=parameters["omega_matter"],
+                          omega_lambda=parameters["omega_lambda"])
 
         return cls(photons, parameters, cosmo)
 
@@ -285,17 +307,17 @@ class PhotonList(object):
         elif center is None:
             parameters["center"] = data_source.get_field_parameter("center")
 
-        parameters["FiducialExposureTime"] = parse_value(exp_time, "s")
-        parameters["FiducialArea"] = parse_value(area, "cm**2")
-        parameters["FiducialRedshift"] = redshift
-        parameters["FiducialAngularDiameterDistance"] = D_A
-        parameters["HubbleConstant"] = cosmo.hubble_constant
-        parameters["OmegaMatter"] = cosmo.omega_matter
-        parameters["OmegaLambda"] = cosmo.omega_lambda
+        parameters["fid_exp_time"] = parse_value(exp_time, "s")
+        parameters["fid_area"] = parse_value(area, "cm**2")
+        parameters["fid_redshift"] = redshift
+        parameters["fid_d_a"] = D_A
+        parameters["hubble"] = cosmo.hubble_constant
+        parameters["omega_matter"] = cosmo.omega_matter
+        parameters["omega_lambda"] = cosmo.omega_lambda
 
-        D_A = parameters["FiducialAngularDiameterDistance"].in_cgs()
+        D_A = parameters["fid_d_a"].in_cgs()
         dist_fac = 1.0/(4.*np.pi*D_A.value*D_A.value*(1.+redshift)**2)
-        spectral_norm = parameters["FiducialArea"].v*parameters["FiducialExposureTime"].v*dist_fac
+        spectral_norm = parameters["fid_area"].v*parameters["fid_exp_time"].v*dist_fac
 
         source_model.setup_model(data_source, redshift, spectral_norm)
 
@@ -305,9 +327,9 @@ class PhotonList(object):
             v_fields = velocity_fields
 
         if p_fields[0] == ("index", "x"):
-            parameters["DataType"] = "cells"
+            parameters["data_type"] = "cells"
         else:
-            parameters["DataType"] = "particles"
+            parameters["data_type"] = "particles"
 
         if hasattr(data_source, "left_edge"):
             # Region or grid
@@ -330,12 +352,12 @@ class PhotonList(object):
             for i, ax in enumerate("xyz"):
                 le[i], re[i] = data_source.quantities.extrema(ax)
 
-        dds_min = get_smallest_dds(ds, parameters["DataType"])
+        dds_min = get_smallest_dds(ds, parameters["data_type"])
         le = np.rint((le-ds.domain_left_edge)/dds_min)*dds_min+ds.domain_left_edge
         re = ds.domain_right_edge-np.rint((ds.domain_right_edge-re)/dds_min)*dds_min
         width = re-le
-        parameters["Dimension"] = np.rint(width/dds_min).astype("int")
-        parameters["Width"] = parameters["Dimension"]*dds_min.in_units("kpc")
+        parameters["dimension"] = np.rint(width/dds_min).astype("int")
+        parameters["width"] = parameters["dimension"]*dds_min.in_units("kpc")
 
         citer = data_source.chunks([], "io")
 
@@ -347,8 +369,8 @@ class PhotonList(object):
 
             if chunk_data is not None:
                 number_of_photons, idxs, energies = chunk_data
-                photons["NumberOfPhotons"].append(number_of_photons)
-                photons["Energy"].append(ds.arr(energies, "keV"))
+                photons["num_photons"].append(number_of_photons)
+                photons["energy"].append(ds.arr(energies, "keV"))
                 photons["x"].append(chunk[p_fields[0]][idxs].in_units("kpc"))
                 photons["y"].append(chunk[p_fields[1]][idxs].in_units("kpc"))
                 photons["z"].append(chunk[p_fields[2]][idxs].in_units("kpc"))
@@ -376,7 +398,7 @@ class PhotonList(object):
             photons[ax] -= parameters["center"][i].in_units("kpc")
 
         mylog.info("Finished generating photons.")
-        mylog.info("Number of photons generated: %d" % int(np.sum(photons["NumberOfPhotons"])))
+        mylog.info("Number of photons generated: %d" % int(np.sum(photons["num_photons"])))
         mylog.info("Number of cells with photons: %d" % len(photons["x"]))
 
         return cls(photons, parameters, cosmo)
@@ -394,7 +416,7 @@ class PhotonList(object):
             local_num_cells = len(self.photons["x"])
             sizes_c = comm.comm.gather(local_num_cells, root=0)
 
-            local_num_photons = np.sum(self.photons["NumberOfPhotons"])
+            local_num_photons = np.sum(self.photons["num_photons"])
             sizes_p = comm.comm.gather(local_num_photons, root=0)
 
             if comm.rank == 0:
@@ -440,9 +462,9 @@ class PhotonList(object):
                               [vz, (sizes_c, disps_c), mpi_double], root=0)
             comm.comm.Gatherv([self.photons["dx"].d, local_num_cells, mpi_double],
                               [dx, (sizes_c, disps_c), mpi_double], root=0)
-            comm.comm.Gatherv([self.photons["NumberOfPhotons"], local_num_cells, mpi_long],
+            comm.comm.Gatherv([self.photons["num_photons"], local_num_cells, mpi_long],
                               [n_ph, (sizes_c, disps_c), mpi_long], root=0)
-            comm.comm.Gatherv([self.photons["Energy"].d, local_num_photons, mpi_double],
+            comm.comm.Gatherv([self.photons["energy"].d, local_num_photons, mpi_double],
                               [e, (sizes_p, disps_p), mpi_double], root=0)
 
         else:
@@ -454,8 +476,8 @@ class PhotonList(object):
             vy = self.photons["vy"].d
             vz = self.photons["vz"].d
             dx = self.photons["dx"].d
-            n_ph = self.photons["NumberOfPhotons"]
-            e = self.photons["Energy"].d
+            n_ph = self.photons["num_photons"]
+            e = self.photons["energy"].d
 
         if comm.rank == 0:
 
@@ -464,16 +486,16 @@ class PhotonList(object):
             # Parameters
 
             p = f.create_group("parameters")
-            p.create_dataset("fid_area", data=float(self.parameters["FiducialArea"]))
-            p.create_dataset("fid_exp_time", data=float(self.parameters["FiducialExposureTime"]))
-            p.create_dataset("fid_redshift", data=self.parameters["FiducialRedshift"])
-            p.create_dataset("hubble", data=self.parameters["HubbleConstant"])
-            p.create_dataset("omega_matter", data=self.parameters["OmegaMatter"])
-            p.create_dataset("omega_lambda", data=self.parameters["OmegaLambda"])
-            p.create_dataset("fid_d_a", data=float(self.parameters["FiducialAngularDiameterDistance"]))
-            p.create_dataset("dimension", data=self.parameters["Dimension"])
-            p.create_dataset("width", data=self.parameters["Width"].v)
-            p.create_dataset("data_type", data=self.parameters["DataType"])
+            p.create_dataset("fid_area", data=float(self.parameters["fid_area"]))
+            p.create_dataset("fid_exp_time", data=float(self.parameters["fid_exp_time"]))
+            p.create_dataset("fid_redshift", data=self.parameters["fid_redshift"])
+            p.create_dataset("hubble", data=self.parameters["hubble"])
+            p.create_dataset("omega_matter", data=self.parameters["omega_matter"])
+            p.create_dataset("omega_lambda", data=self.parameters["omega_lambda"])
+            p.create_dataset("fid_d_a", data=float(self.parameters["fid_d_a"]))
+            p.create_dataset("dimension", data=self.parameters["dimension"])
+            p.create_dataset("width", data=self.parameters["width"].v)
+            p.create_dataset("data_type", data=self.parameters["data_type"])
 
             # Data
 
@@ -556,14 +578,14 @@ class PhotonList(object):
         if isinstance(normal, string_types):
             # if on-axis, just use the maximum width of the plane perpendicular
             # to that axis
-            w = self.parameters["Width"].copy()
+            w = self.parameters["width"].copy()
             w["xyz".index(normal)] = 0.0
             ax_idx = np.argmax(w)
         else:
             # if off-axis, just use the largest width to make sure we get everything
-            ax_idx = np.argmax(self.parameters["Width"])
-        nx = self.parameters["Dimension"][ax_idx]
-        dx_min = (self.parameters["Width"]/self.parameters["Dimension"])[ax_idx]
+            ax_idx = np.argmax(self.parameters["width"])
+        nx = self.parameters["dimension"][ax_idx]
+        dx_min = (self.parameters["width"]/self.parameters["dimension"])[ax_idx]
 
         if not isinstance(normal, string_types):
             L = np.array(normal)
@@ -572,13 +594,13 @@ class PhotonList(object):
             y_hat = orient.unit_vectors[1]
             z_hat = orient.unit_vectors[2]
 
-        n_ph = self.photons["NumberOfPhotons"]
+        n_ph = self.photons["num_photons"]
         n_ph_tot = n_ph.sum()
 
         parameters = {}
 
-        zobs0 = self.parameters["FiducialRedshift"]
-        D_A0 = self.parameters["FiducialAngularDiameterDistance"]
+        zobs0 = self.parameters["fid_redshift"]
+        D_A0 = self.parameters["fid_d_a"]
         scale_factor = 1.0
 
         if (exp_time_new is None and area_new is None and
@@ -591,12 +613,12 @@ class PhotonList(object):
                 Tratio = 1.
             else:
                 exp_time_new = parse_value(exp_time_new, "s")
-                Tratio = exp_time_new/self.parameters["FiducialExposureTime"]
+                Tratio = exp_time_new/self.parameters["fid_exp_time"]
             if area_new is None:
                 Aratio = 1.
             else:
                 area_new = parse_value(area_new, "cm**2")
-                Aratio = area_new/self.parameters["FiducialArea"]
+                Aratio = area_new/self.parameters["fid_area"]
             if redshift_new is None and dist_new is None:
                 Dratio = 1.
                 zobs = zobs0
@@ -632,10 +654,10 @@ class PhotonList(object):
 
         if isinstance(normal, string_types):
 
-            if self.parameters["DataType"] == "cells":
+            if self.parameters["data_type"] == "cells":
                 xsky = prng.uniform(low=-0.5, high=0.5, size=my_n_obs)
                 ysky = prng.uniform(low=-0.5, high=0.5, size=my_n_obs)
-            elif self.parameters["DataType"] == "particles":
+            elif self.parameters["data_type"] == "particles":
                 xsky = prng.normal(loc=0.0, scale=1.0, size=my_n_obs)
                 ysky = prng.normal(loc=0.0, scale=1.0, size=my_n_obs)
             xsky *= delta
@@ -648,11 +670,11 @@ class PhotonList(object):
 
         else:
 
-            if self.parameters["DataType"] == "cells":
+            if self.parameters["data_type"] == "cells":
                 x = prng.uniform(low=-0.5, high=0.5, size=my_n_obs)
                 y = prng.uniform(low=-0.5, high=0.5, size=my_n_obs)
                 z = prng.uniform(low=-0.5, high=0.5, size=my_n_obs)
-            elif self.parameters["DataType"] == "particles":
+            elif self.parameters["data_type"] == "particles":
                 x = prng.normal(loc=0.0, scale=1.0, size=my_n_obs)
                 y = prng.normal(loc=0.0, scale=1.0, size=my_n_obs)
                 z = prng.normal(loc=0.0, scale=1.0, size=my_n_obs)
@@ -673,11 +695,11 @@ class PhotonList(object):
             ysky = x*y_hat[0] + y*y_hat[1] + z*y_hat[2]
 
         if no_shifting:
-            eobs = self.photons["Energy"][idxs]
+            eobs = self.photons["energy"][idxs]
         else:
             shift = -vz.in_cgs()/clight
             shift = np.sqrt((1.-shift)/(1.+shift))
-            eobs = self.photons["Energy"][idxs]*shift[obs_cells]
+            eobs = self.photons["energy"][idxs]*shift[obs_cells]
         eobs *= scale_factor
 
         if absorb_model is None:
@@ -701,15 +723,15 @@ class PhotonList(object):
             mylog.info("Total number of observed photons: %d" % num_events)
 
         if exp_time_new is None:
-            parameters["ExposureTime"] = self.parameters["FiducialExposureTime"]
+            parameters["exp_time"] = self.parameters["fid_exp_time"]
         else:
-            parameters["ExposureTime"] = exp_time_new
+            parameters["exp_time"] = exp_time_new
         if area_new is None:
-            parameters["Area"] = self.parameters["FiducialArea"]
+            parameters["area"] = self.parameters["fid_area"]
         else:
-            parameters["Area"] = area_new
-        parameters["Redshift"] = zobs
-        parameters["AngularDiameterDistance"] = D_A.in_units("Mpc")
+            parameters["area"] = area_new
+        parameters["redshift"] = zobs
+        parameters["d_a"] = D_A.in_units("Mpc")
         parameters["sky_center"] = sky_center
         parameters["pix_center"] = np.array([0.5*(nx+1)]*2)
         parameters["dtheta"] = dtheta
