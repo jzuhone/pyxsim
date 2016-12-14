@@ -6,13 +6,18 @@ from pyxsim.tests.utils import \
 from yt.units.yt_array import YTQuantity
 import numpy as np
 from yt.testing import requires_module
+from numpy.random import RandomState
 import os
 import shutil
 import tempfile
+from soxs.events import write_spectrum
 from yt.utilities.physical_constants import mp
 from sherpa.astro.ui import load_user_model, add_user_pars, \
     load_pha, ignore, fit, set_model, set_stat, set_method, \
     covar, get_covar_results, set_covar_opt
+from pyxsim.instruments import specs
+
+prng = RandomState(25)
 
 def setup():
     from yt.config import ytcfg
@@ -20,9 +25,10 @@ def setup():
 
 def mymodel(pars, x, xhi=None):
     dx = x[1]-x[0]
+    xmid = x+0.5*dx
     wm = WabsModel(pars[0])
-    wabs = wm.get_absorb(x)
-    plaw = pars[1]*dx*(x*(1.0+pars[2]))**(-pars[3])
+    wabs = wm.get_absorb(xmid)
+    plaw = pars[1]*dx*(xmid*(1.0+pars[2]))**(-pars[3])
     return wabs*plaw
 
 @requires_module("sherpa")
@@ -42,7 +48,8 @@ def plaw_fit(alpha_sim):
 
     def _hard_emission(field, data):
         return YTQuantity(1.0e-18, "s**-1*keV**-1")*data["density"]*data["cell_volume"]/mp
-    ds.add_field(("gas", "hard_emission"), function=_hard_emission, units="keV**-1*s**-1")
+    ds.add_field(("gas", "hard_emission"), function=_hard_emission, 
+                 units="keV**-1*s**-1")
 
     nH_sim = 0.02
     abs_model = WabsModel(nH_sim)
@@ -51,9 +58,9 @@ def plaw_fit(alpha_sim):
     exp_time = YTQuantity(2.0e5, "s")
     redshift = 0.01
 
-    sphere = ds.sphere("c", (100.,"kpc"))
+    sphere = ds.sphere("c", (100., "kpc"))
 
-    plaw_model = PowerLawSourceModel(1.0, 0.01, 11.0, "hard_emission", alpha_sim, prng=bms.prng)
+    plaw_model = PowerLawSourceModel(1.0, 0.01, 11.0, "hard_emission", alpha_sim, prng=prng)
 
     photons = PhotonList.from_data_source(sphere, redshift, A, exp_time,
                                           plaw_model)
@@ -62,14 +69,16 @@ def plaw_fit(alpha_sim):
     dist_fac = 1.0/(4.*np.pi*D_A*D_A*(1.+redshift)**2).in_cgs()
     norm_sim = float((sphere["hard_emission"]).sum()*dist_fac.in_cgs())*(1.+redshift)
 
-    events = photons.project_photons("z", absorb_model=abs_model,
+    events = photons.project_photons("z", [30., 45.], absorb_model=abs_model,
                                      prng=bms.prng,
                                      no_shifting=True)
-    events = ACIS_I(events, rebin=False, convolve_psf=False, prng=bms.prng)
-    events.write_spectrum("plaw_model_evt.pi", clobber=True)
+    ACIS_I(events, "plaw_model_evt.fits", convolve_energies_only=True, 
+           instr_bkgnd=False, astro_bkgnd=False, prng=prng)
 
-    os.system("cp %s ." % events.parameters["ARF"])
-    os.system("cp %s ." % events.parameters["RMF"])
+    os.system("cp %s ." % specs[ACIS_I.inst_name]["arf"])
+    os.system("cp %s ." % specs[ACIS_I.inst_name]["rmf"])
+
+    write_spectrum("plaw_model_evt.fits", "plaw_model_evt.pi", clobber=True)
 
     load_user_model(mymodel, "wplaw")
     add_user_pars("wplaw", ["nH", "norm", "redshift", "alpha"],

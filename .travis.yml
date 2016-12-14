@@ -10,18 +10,18 @@ matrix:
 
         # Try all python versions with the latest numpy
         - python: 2.7
-          env: CMD='nosetests --with-answer-testing --local --local-dir . --answer-name=pyxsim9_2 pyxsim/tests'; PYTHON='python'
+          env: CMD='nosetests --with-answer-testing --local --local-dir . --answer-name=pyxsim10_2 pyxsim/tests'; PYTHON='python'
         - python: 3.5
-          env: CMD='nosetests --with-coverage --cover-package=pyxsim --with-answer-testing --local --local-dir . --answer-name=pyxsim9_3 pyxsim/tests'; PYTHON='python3'
+          env: CMD='nosetests --with-coverage --cover-package=pyxsim --with-answer-testing --local --local-dir . --answer-name=pyxsim10_3 pyxsim/tests'; PYTHON='python3'
 
 before_install:
 
     - wget http://yt-project.org/data/GasSloshingLowRes.tar.gz
     - tar -zxvf GasSloshingLowRes.tar.gz
-    - wget http://hea-www.cfa.harvard.edu/~jzuhone/pyxsim9_2.tar.gz
-    - tar -zxvf pyxsim9_2.tar.gz		
-    - wget http://hea-www.cfa.harvard.edu/~jzuhone/pyxsim9_3.tar.gz
-    - tar -zxvf pyxsim9_3.tar.gz		
+    - wget http://hea-www.cfa.harvard.edu/~jzuhone/pyxsim10_2.tar.gz
+    - tar -zxvf pyxsim10_2.tar.gz		
+    - wget http://hea-www.cfa.harvard.edu/~jzuhone/pyxsim10_3.tar.gz
+    - tar -zxvf pyxsim10_3.tar.gz		
     - mkdir ~/.yt
     - printf "[yt]\ntest_data_dir = $PWD" >> ~/.yt/config
     # Use utf8 encoding. Should be default, but this is insurance against
@@ -45,7 +45,7 @@ install:
     # CORE DEPENDENCIES
     - conda config --add channels https://conda.anaconda.org/sherpa
     - conda install --yes numpy=$NUMPY_VERSION nose pip yt astropy sherpa cython
-
+    - conda install --yes -c jzuhone soxs
     # COVERAGE DEPENDENCIES
     - pip install coverage coveralls
     - $PYTHON setup.py develop

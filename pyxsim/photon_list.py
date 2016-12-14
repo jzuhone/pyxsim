@@ -492,9 +492,9 @@ class PhotonList(object):
 
         comm.barrier()
 
-    def project_photons(self, normal, area_new=None, exp_time_new=None,
-                        redshift_new=None, dist_new=None,
-                        absorb_model=None, sky_center=None,
+    def project_photons(self, normal, sky_center, area_new=None, 
+                        exp_time_new=None, redshift_new=None, 
+                        dist_new=None, absorb_model=None, 
                         no_shifting=False, north_vector=None,
                         prng=None):
         r"""
@@ -507,6 +507,8 @@ class PhotonList(object):
             Normal vector to the plane of projection. If "x", "y", or "z", will
             assume to be along that axis (and will probably be faster). Otherwise,
             should be an off-axis normal vector, e.g [1.0, 2.0, -3.0]
+        sky_center : array-like
+            Center RA, Dec of the events in degrees.
         area_new : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`, optional
             New value for the (constant) collecting area of the detector. If
             units are not specified, is assumed to be in cm**2.
@@ -522,8 +524,6 @@ class PhotonList(object):
             redshift must be zero. 
         absorb_model : :class:`~pyxsim.spectral_models.AbsorptionModel` 
             A model for foreground galactic absorption.
-        sky_center : array-like, optional
-            Center RA, Dec of the events in degrees.
         no_shifting : boolean, optional
             If set, the photon energies will not be Doppler shifted.
         north_vector : a sequence of floats
@@ -539,7 +539,7 @@ class PhotonList(object):
         Examples
         --------
         >>> L = np.array([0.1,-0.2,0.3])
-        >>> events = my_photons.project_photons(L, area_new=10000.,
+        >>> events = my_photons.project_photons(L, [30., 45.], area_new=10000.,
         ...                                     redshift_new=0.05)
         """
 
@@ -550,10 +550,7 @@ class PhotonList(object):
             mylog.error("You may specify a new redshift or distance, "+
                         "but not both!")
 
-        if sky_center is None:
-            sky_center = YTArray([30.,45.], "degree")
-        else:
-            sky_center = YTArray(sky_center, "degree")
+        sky_center = YTArray(sky_center, "degree")
 
         dx = self.photons["dx"].d
         if isinstance(normal, string_types):

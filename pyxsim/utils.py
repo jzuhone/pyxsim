@@ -17,8 +17,8 @@ else:
     stream = sys.stderr
 
 level = min(max(ytcfg.getint("yt", "loglevel"), 0), 50)
-ufstring = "%(name)-3s: [%(levelname)-9s] %(asctime)s %(message)s"
-cfstring = "%(name)-3s: [%(levelname)-18s] %(asctime)s %(message)s"
+ufstring = "%(name)-3s : [%(levelname)-9s] %(asctime)s %(message)s"
+cfstring = "%(name)-3s : [%(levelname)-18s] %(asctime)s %(message)s"
 
 pyxsim_sh = logging.StreamHandler(stream=stream)
 # create formatter and add it to the handlers

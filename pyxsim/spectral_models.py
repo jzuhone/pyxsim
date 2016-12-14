@@ -2,41 +2,20 @@
 Photon emission and absoprtion models.
 """
 import numpy as np
-import os
 import h5py
 
+from soxs.spectra import ApecGenerator, get_wabs_absorb
+from soxs.constants import cosmic_elem, metal_elem
 from pyxsim.utils import mylog, check_file_location
 from yt.units.yt_array import YTArray, YTQuantity
 from yt.utilities.physical_constants import hcgs, clight
-from yt.utilities.physical_ratios import erg_per_keV, amu_grams
-from pyxsim.cutils import broaden_lines
-from yt.utilities.on_demand_imports import _astropy
 
 hc = (hcgs*clight).in_units("keV*angstrom").v
 # NOTE: XSPEC has hc = 12.39854 keV*A, so there may be slight differences in
 # placement of spectral lines due to the above
 cl = clight.v
 
-class ThermalSpectralModel(object):
-
-    def __init__(self, emin, emax, nchan):
-        self.emin = YTQuantity(emin, "keV")
-        self.emax = YTQuantity(emax, "keV")
-        self.nchan = nchan
-        self.ebins = YTArray(np.linspace(self.emin, self.emax, nchan+1), "keV")
-        self.de = np.diff(self.ebins)
-        self.emid = 0.5*(self.ebins[1:]+self.ebins[:-1])
-
-    def prepare_spectrum(self, redshift):
-        pass
-
-    def cleanup_spectrum(self):
-        pass
-
-    def get_spectrum(self, kT):
-        pass
-
-class XSpecThermalModel(ThermalSpectralModel):
+class XSpecThermalModel(object):
     r"""
     Initialize a thermal gas emission model from PyXspec.
 
@@ -69,7 +48,12 @@ class XSpecThermalModel(ThermalSpectralModel):
         self.thermal_broad = thermal_broad
         if settings is None: settings = {}
         self.settings = settings
-        super(XSpecThermalModel, self).__init__(emin, emax, nchan)
+        self.emin = emin
+        self.emax = emax
+        self.nchan = nchan
+        self.ebins = np.linspace(self.emin, self.emax, nchan+1)
+        self.de = np.diff(self.ebins)
+        self.emid = 0.5*(self.ebins[1:]+self.ebins[:-1])
 
     def prepare_spectrum(self, zobs):
         """
@@ -112,7 +96,7 @@ class XSpecThermalModel(ThermalSpectralModel):
         del self.thermal_comp
         del self.model
 
-class TableApecModel(ThermalSpectralModel):
+class TableApecModel(ApecGenerator):
     r"""
     Initialize a thermal gas emission model from the AtomDB APEC tables
     available at http://www.atomdb.org. This code borrows heavily from Python
@@ -140,52 +124,14 @@ class TableApecModel(ThermalSpectralModel):
 
     Examples
     --------
-    >>> apec_model = TableApecModel(0.05, 50.0, 1000, apec_vers="3.0",
+    >>> apec_model = TableApecModel(0.05, 50.0, 1000, apec_vers="3.0.3",
     ...                             thermal_broad=True)
     """
     def __init__(self, emin, emax, nchan, apec_root=None,
                  apec_vers="2.0.2", thermal_broad=False):
-        if apec_root is None:
-            self.cocofile = check_file_location("apec_v%s_coco.fits" % apec_vers,
-                                                "spectral_files")
-            self.linefile = check_file_location("apec_v%s_line.fits" % apec_vers,
-                                                "spectral_files")
-        else:
-            self.cocofile = os.path.join(apec_root, "apec_v%s_coco.fits" % apec_vers)
-            self.linefile = os.path.join(apec_root, "apec_v%s_line.fits" % apec_vers)
-        if not os.path.exists(self.cocofile) or not os.path.exists(self.linefile):
-            raise IOError("Cannot find the APEC files!\n %s\n, %s" % (self.cocofile,
-                                                                      self.linefile))
-        super(TableApecModel, self).__init__(emin, emax, nchan)
-        self.wvbins = hc/self.ebins[::-1].d
-        # H, He, and trace elements
-        self.cosmic_elem = [1,2,3,4,5,9,11,15,17,19,21,22,23,24,25,27,29,30]
-        # Non-trace metals
-        self.metal_elem = [6,7,8,10,12,13,14,16,18,20,26,28]
-        self.thermal_broad = thermal_broad
-        self.A = np.array([0.0,1.00794,4.00262,6.941,9.012182,10.811,
-                           12.0107,14.0067,15.9994,18.9984,20.1797,
-                           22.9898,24.3050,26.9815,28.0855,30.9738,
-                           32.0650,35.4530,39.9480,39.0983,40.0780,
-                           44.9559,47.8670,50.9415,51.9961,54.9380,
-                           55.8450,58.9332,58.6934,63.5460,65.3800])
-
-        try:
-            self.line_handle = _astropy.pyfits.open(self.linefile)
-        except IOError:
-            mylog.error("LINE file %s does not exist" % self.linefile)
-            raise IOError("LINE file %s does not exist" % self.linefile)
-        try:
-            self.coco_handle = _astropy.pyfits.open(self.cocofile)
-        except IOError:
-            mylog.error("COCO file %s does not exist" % self.cocofile)
-            raise IOError("COCO file %s does not exist" % self.cocofile)
-
-        self.Tvals = self.line_handle[1].data.field("kT")
-        self.nT = len(self.Tvals)
-        self.dTvals = np.diff(self.Tvals)
-        self.minlam = self.wvbins.min()
-        self.maxlam = self.wvbins.max()
+        super(TableApecModel, self).__init__(emin, emax, nchan, apec_root=apec_root,
+                                             apec_vers=apec_vers, broadening=thermal_broad)
+        self.nchan = self.nbins
 
     def prepare_spectrum(self, zobs):
         """
@@ -199,68 +145,14 @@ class TableApecModel(ThermalSpectralModel):
         for ikT, kT in enumerate(self.Tvals):
             line_fields, coco_fields = self._preload_data(ikT)
             # First do H,He, and trace elements
-            for elem in self.cosmic_elem:
-                cosmic_spec[ikT,:] += self._make_spectrum(kT, elem, line_fields, coco_fields, sfac)
+            for elem in cosmic_elem:
+                cosmic_spec[ikT,:] += self._make_spectrum(kT, elem, 0.0, line_fields, coco_fields, sfac)
             # Next do the metals
-            for elem in self.metal_elem:
-                metal_spec[ikT,:] += self._make_spectrum(kT, elem, line_fields, coco_fields, sfac)
+            for elem in metal_elem:
+                metal_spec[ikT,:] += self._make_spectrum(kT, elem, 0.0, line_fields, coco_fields, sfac)
 
         self.cosmic_spec = YTArray(cosmic_spec, "cm**3/s")
         self.metal_spec = YTArray(metal_spec, "cm**3/s")
-
-    def _make_spectrum(self, kT, element, line_fields, coco_fields, scale_factor, velocity=0.0):
-
-        tmpspec = np.zeros(self.nchan)
-
-        i = np.where((line_fields['element'] == element) &
-                     (line_fields['lambda'] > self.minlam) &
-                     (line_fields['lambda'] < self.maxlam))[0]
-
-        E0 = hc/line_fields['lambda'][i].astype("float64")*scale_factor
-        amp = line_fields['epsilon'][i].astype("float64")
-        ebins = self.ebins.d
-        de = self.de.d
-        emid = self.emid.d
-        if self.thermal_broad:
-            sigma = 2.*kT*erg_per_keV/(self.A[element]*amu_grams)
-            if velocity is not None:
-                sigma += 2.0*velocity*velocity
-            sigma = E0*np.sqrt(sigma)/cl
-            vec = broaden_lines(E0, sigma, amp, ebins)
-        else:
-            vec = np.histogram(E0, ebins, weights=amp)[0]
-        tmpspec += vec
-
-        ind = np.where((coco_fields['Z'] == element) &
-                       (coco_fields['rmJ'] == 0))[0]
-        if len(ind) == 0:
-            return tmpspec
-        else:
-            ind = ind[0]
-
-        n_cont = coco_fields['N_Cont'][ind]
-        e_cont = coco_fields['E_Cont'][ind][:n_cont]
-        continuum = coco_fields['Continuum'][ind][:n_cont]
-
-        tmpspec += np.interp(emid, e_cont*scale_factor, continuum)*de/scale_factor
-
-        n_pseudo = coco_fields['N_Pseudo'][ind]
-        e_pseudo = coco_fields['E_Pseudo'][ind][:n_pseudo]
-        pseudo = coco_fields['Pseudo'][ind][:n_pseudo]
-
-        tmpspec += np.interp(emid, e_pseudo*scale_factor, pseudo)*de/scale_factor
-
-        return tmpspec*scale_factor
-
-    def _preload_data(self, index):
-        line_data = self.line_handle[index+2].data
-        coco_data = self.coco_handle[index+2].data
-        line_fields = ('element', 'lambda', 'epsilon')
-        coco_fields = ('Z', 'rmJ', 'N_Cont', 'E_Cont', 'Continuum', 'N_Pseudo',
-                       'E_Pseudo', 'Pseudo')
-        line_fields = {el: line_data.field(el) for el in line_fields}
-        coco_fields = {el: coco_data.field(el) for el in coco_fields}
-        return line_fields, coco_fields
 
     def get_spectrum(self, kT):
         """
@@ -296,33 +188,12 @@ class TableApecModel(ThermalSpectralModel):
         velocity : float, optional
             Velocity broadening parameter in km/s. Default: 0.0
         """
-        velocity = YTQuantity(velocity, "km/s").in_cgs().v
-        scale_factor = 1.0/(1.+redshift)
+        spec = super(TableApecModel, self).get_spectrum(temperature, metallicity, redshift, norm,
+                                                        velocity=velocity)
+        return YTArray(spec.flux*spec.de, "photons/s/cm**2")
 
-        tindex = np.searchsorted(self.Tvals, temperature)-1
-        if tindex >= self.Tvals.shape[0]-1 or tindex < 0:
-            return YTArray(np.zeros(self.nchan), "photons/s/cm**2")
-        dT = (temperature-self.Tvals[tindex])/self.dTvals[tindex]
-
-        cosmic_spec = np.zeros(self.nchan)
-        metal_spec = np.zeros(self.nchan)
-
-        fac = [1.0-dT, dT]
-
-        for i, ikT in enumerate([tindex, tindex+1]):
-            line_fields, coco_fields = self._preload_data(ikT)
-            kT = self.Tvals[ikT]
-            # First do H,He, and trace elements
-            for elem in self.cosmic_elem:
-                cosmic_spec += fac[i]*self._make_spectrum(kT, elem, line_fields, coco_fields,
-                                                          scale_factor, velocity=velocity)
-            # Next do the metals
-            for elem in self.metal_elem:
-                metal_spec += fac[i]*self._make_spectrum(kT, elem, line_fields, coco_fields,
-                                                         scale_factor, velocity=velocity)
-
-        tspec = (cosmic_spec+metallicity*metal_spec)
-        return YTArray(1.0e14*norm*tspec, "photons/s/cm**2")
+    def cleanup_spectrum(self):
+        pass
 
 class AbsorptionModel(object):
     def __init__(self, nH, emid, sigma):
@@ -465,16 +336,6 @@ class TBabsModel(TableAbsorbModel):
     def __init__(self, nH):
         super(TBabsModel, self).__init__("tbabs_table.h5", nH)
 
-
-emx = np.array([0.0, 0.1, 0.284, 0.4, 0.532, 0.707, 0.867,
-                1.303, 1.840, 2.471, 3.210, 4.038, 7.111, 8.331, 10.0])
-c0 = np.array([17.3, 34.6, 78.1, 71.4, 95.5, 308.9, 120.6, 141.3,
-               202.7,342.7,352.2,433.9,629.0,701.2])
-c1 = np.array([608.1, 267.9, 18.8, 66.8, 145.8, -380.6, 169.3,
-               146.8, 104.7, 18.7, 18.7, -2.4, 30.9, 25.2])
-c2 = np.array([-2150., -476.1 ,4.3, -51.4, -61.1, 294.0, -47.7,
-               -31.5, -17.0, 0.0, 0.0, 0.75, 0.0, 0.0])
-
 class WabsModel(AbsorptionModel):
     r"""
     Initialize a Wisconsin (Morrison and McCammon; ApJ 270, 119) 
@@ -490,10 +351,8 @@ class WabsModel(AbsorptionModel):
     >>> wabs_model = WabsModel(0.1)
     """
     def __init__(self, nH):
-        self.nH = YTQuantity(nH*1.0e22, "cm**-2")
+        self.nH = YTQuantity(nH, "1.0e22*cm**-2")
 
     def get_absorb(self, e):
         e = np.array(e)
-        idxs = np.minimum(np.searchsorted(emx, e)-1, 13)
-        sigma = (c0[idxs]+c1[idxs]*e+c2[idxs]*e*e)*1.0e-24/e**3
-        return np.exp(-sigma*self.nH)
+        return get_wabs_absorb(e, self.nH.v)

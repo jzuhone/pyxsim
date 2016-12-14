@@ -4,8 +4,7 @@ Answer test pyxsim.
 
 from pyxsim import \
     TableApecModel, TBabsModel, ThermalSourceModel, \
-    PhotonList, EventList, merge_files, AuxiliaryResponseFile, \
-    ACIS_S, ACIS_I, Hitomi_SXS
+    PhotonList, EventList, merge_files
 from yt.utilities.answer_testing.framework import requires_ds, \
     GenericArrayTest, data_dir_load
 from numpy.testing import assert_array_equal
@@ -18,14 +17,6 @@ import shutil
 def setup():
     from yt.config import ytcfg
     ytcfg["yt", "__withintesting"] = "True"
-
-rmfs = ["acisi_aimpt_cy18.rmf",
-        "aciss_aimpt_cy18.rmf",
-        "ah_sxs_5ev_20130806.rmf"]
-arfs = ["acisi_aimpt_cy18.arf",
-        "aciss_aimpt_cy18.arf",
-        "sxt-s_140505_ts02um_intallpxl.arf"]
-instruments = [ACIS_I, ACIS_S, Hitomi_SXS]
 
 gslr = "GasSloshingLowRes/sloshing_low_res_hdf5_plt_cnt_0300"
 
@@ -60,17 +51,13 @@ def test_sloshing():
 
     return_photons = return_data(photons1.photons)
 
-    tests = [GenericArrayTest(ds, return_photons, args=["photons"])]
+    events1 = photons1.project_photons([1.0,-0.5,0.2], [30., 45.], area_new=1500.,
+                                       absorb_model=tbabs_model, prng=prng)
+    events1["xsky"]
+    return_events = return_data(events1.events)
 
-    for a, r, i in zip(arfs, rmfs, instruments):
-        arf = AuxiliaryResponseFile(a, rmffile=r)
-        events1 = photons1.project_photons([1.0,-0.5,0.2], area_new=arf.max_area,
-                                           absorb_model=tbabs_model, prng=prng)
-        events1["xsky"]
-        events1 = i(events1, rebin=False, convolve_psf=False, prng=prng)
-        return_events = return_data(events1.events)
-
-        tests.append(GenericArrayTest(ds, return_events, args=[a]))
+    tests = [GenericArrayTest(ds, return_photons, args=["photons"]),
+             GenericArrayTest(ds, return_events, args=["events"])]
 
     for test in tests:
         test_sloshing.__name__ = test.description
@@ -96,7 +83,7 @@ def test_sloshing():
     nevents = 0
 
     for i in range(4):
-        events = photons1.project_photons([1.0,-0.5,0.2],
+        events = photons1.project_photons([1.0,-0.5,0.2], [30., 45.],
                                           exp_time_new=0.25*exp_time,
                                           absorb_model=tbabs_model,
                                           prng=prng)
