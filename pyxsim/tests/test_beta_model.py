@@ -77,7 +77,7 @@ def do_beta_model(source, v_field, em_field):
     photons = PhotonList.from_data_source(sphere, redshift, A, exp_time,
                                           thermal_model)
 
-    D_A = photons.parameters["FiducialAngularDiameterDistance"]
+    D_A = photons.parameters["fid_d_a"]
 
     norm_sim = sphere.quantities.total_quantity(em_field)
     norm_sim *= 1.0e-14/(4*np.pi*D_A*D_A*(1.+redshift)*(1.+redshift))

@@ -34,7 +34,7 @@ def test_line_emission():
     photons = PhotonList.from_data_source(sphere, redshift, A, exp_time,
                                           line_model)
 
-    D_A = photons.parameters["FiducialAngularDiameterDistance"]
+    D_A = photons.parameters["fid_d_a"]
     dist_fac = 1.0/(4.*np.pi*D_A*D_A*(1.+redshift)**2)
     dm_E = (sphere["dm_emission"]).sum()
 
