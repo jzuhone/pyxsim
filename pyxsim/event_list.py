@@ -39,8 +39,8 @@ class EventList(object):
                   "eobs": YTArray([], "keV")}
         if parameters is None:
             parameters = {}
-        parameters["ExposureTime"] = parse_value(exp_time, "s")
-        parameters["Area"] = parse_value(area, "cm**2")
+        parameters["exp_time"] = parse_value(exp_time, "s")
+        parameters["area"] = parse_value(area, "cm**2")
         parameters["pix_center"] = wcs.wcs.crpix[:]
         parameters["sky_center"] = YTArray(wcs.wcs.crval[:], "deg")
         parameters["dtheta"] = YTQuantity(wcs.wcs.cdelt[0], "deg")
@@ -167,8 +167,8 @@ class EventList(object):
         return EventList(events, self.parameters)
 
     def _add_events(self, ebins, spectrum, prng, absorb_model):
-        exp_time = self.parameters["ExposureTime"]
-        area = self.parameters["Area"]
+        exp_time = self.parameters["exp_time"]
+        area = self.parameters["area"]
         flux = spectrum.sum()
         num_photons = np.uint64(exp_time*area*flux)
         cumspec = np.cumsum(spectrum)
@@ -219,12 +219,12 @@ class EventList(object):
         f = h5py.File(h5file, "r")
 
         p = f["/parameters"]
-        parameters["ExposureTime"] = YTQuantity(p["exp_time"].value, "s")
-        parameters["Area"] = YTQuantity(p["area"].value, "cm**2")
+        parameters["exp_time"] = YTQuantity(p["exp_time"].value, "s")
+        parameters["area"] = YTQuantity(p["area"].value, "cm**2")
         if "redshift" in p:
-            parameters["Redshift"] = p["redshift"].value
+            parameters["redshift"] = p["redshift"].value
         if "d_a" in p:
-            parameters["AngularDiameterDistance"] = YTQuantity(p["d_a"].value, "Mpc")
+            parameters["d_a"] = YTQuantity(p["d_a"].value, "Mpc")
         parameters["sky_center"] = YTArray(p["sky_center"][:], "deg")
         parameters["dtheta"] = YTQuantity(p["dtheta"].value, "deg")
         parameters["pix_center"] = p["pix_center"][:]
@@ -250,12 +250,12 @@ class EventList(object):
         events = {}
         parameters = {}
 
-        parameters["ExposureTime"] = YTQuantity(tblhdu.header["EXPOSURE"], "s")
-        parameters["Area"] = YTQuantity(tblhdu.header["AREA"], "cm**2")
+        parameters["exp_time"] = YTQuantity(tblhdu.header["EXPOSURE"], "s")
+        parameters["area"] = YTQuantity(tblhdu.header["AREA"], "cm**2")
         if "REDSHIFT" in tblhdu.header:
-            parameters["Redshift"] = tblhdu.header["REDSHIFT"]
+            parameters["redshift"] = tblhdu.header["REDSHIFT"]
         if "D_A" in tblhdu.header:
-            parameters["AngularDiameterDistance"] = YTQuantity(tblhdu.header["D_A"], "Mpc")
+            parameters["d_a"] = YTQuantity(tblhdu.header["D_A"], "Mpc")
         parameters["sky_center"] = YTArray([tblhdu.header["TCRVL2"], tblhdu.header["TCRVL3"]], "deg")
         parameters["pix_center"] = np.array([tblhdu.header["TCRVL2"], tblhdu.header["TCRVL3"]])
         parameters["dtheta"] = YTQuantity(tblhdu.header["TCRVL3"], "deg")
@@ -273,7 +273,7 @@ class EventList(object):
         """
         pyfits = _astropy.pyfits
 
-        exp_time = float(self.parameters["ExposureTime"])
+        exp_time = float(self.parameters["exp_time"])
 
         col_e = pyfits.Column(name='ENERGY', format='E', unit='eV',
                               array=self["eobs"].in_units("eV").d)
@@ -307,11 +307,11 @@ class EventList(object):
         tbhdu.header["EXPOSURE"] = exp_time
         tbhdu.header["TSTART"] = 0.0
         tbhdu.header["TSTOP"] = exp_time
-        tbhdu.header["AREA"] = float(self.parameters["Area"])
-        if "AngularDiameterDistance" in self.parameters:
-            tbhdu.header["D_A"] = float(self.parameters["AngularDiameterDistance"])
-        if "Redshift" in self.parameters:
-            tbhdu.header["REDSHIFT"] = self.parameters["Redshift"]
+        tbhdu.header["AREA"] = float(self.parameters["area"])
+        if "d_a" in self.parameters:
+            tbhdu.header["D_A"] = float(self.parameters["d_a"])
+        if "redshift" in self.parameters:
+            tbhdu.header["REDSHIFT"] = self.parameters["redshift"]
         tbhdu.header["HDUVERS"] = "1.1.0"
         tbhdu.header["RADECSYS"] = "FK5"
         tbhdu.header["EQUINOX"] = 2000.0
@@ -347,7 +347,7 @@ class EventList(object):
 
         idxs = np.logical_and(self["eobs"].d >= emin, self["eobs"].d <= emax)
         flux = np.sum(self["eobs"][idxs].in_units("erg")) / \
-               self.parameters["ExposureTime"]/self.parameters["Area"]
+               self.parameters["exp_time"]/self.parameters["area"]
 
         write_photon_list(prefix, prefix, flux.v, self["xsky"][idxs].d, self["ysky"][idxs].d,
                           self["eobs"][idxs].d, clobber=clobber)
@@ -360,12 +360,12 @@ class EventList(object):
         f = h5py.File(h5file, "w")
 
         p = f.create_group("parameters")
-        p.create_dataset("exp_time", data=float(self.parameters["ExposureTime"]))
-        p.create_dataset("area", data=float(self.parameters["Area"]))
-        if "Redshift" in self.parameters:
-            p.create_dataset("redshift", data=self.parameters["Redshift"])
-        if "AngularDiameterDistance" in self.parameters:
-            p.create_dataset("d_a", data=float(self.parameters["AngularDiameterDistance"]))
+        p.create_dataset("exp_time", data=float(self.parameters["exp_time"]))
+        p.create_dataset("area", data=float(self.parameters["area"]))
+        if "redshift" in self.parameters:
+            p.create_dataset("redshift", data=self.parameters["redshift"])
+        if "d_a" in self.parameters:
+            p.create_dataset("d_a", data=float(self.parameters["d_a"]))
         p.create_dataset("sky_center", data=self.parameters["sky_center"].d)
         p.create_dataset("pix_center", data=self.parameters["pix_center"])
         p.create_dataset("dtheta", data=float(self.parameters["dtheta"]))
@@ -431,7 +431,7 @@ class EventList(object):
         hdu.header["CUNIT2"] = "deg"
         hdu.header["CDELT1"] = -float(self.parameters["dtheta"])
         hdu.header["CDELT2"] = float(self.parameters["dtheta"])
-        hdu.header["EXPOSURE"] = float(self.parameters["ExposureTime"])
+        hdu.header["EXPOSURE"] = float(self.parameters["exp_time"])
 
         hdu.writeto(imagefile, clobber=clobber)
 
@@ -462,7 +462,7 @@ class EventList(object):
         col1 = pyfits.Column(name='CHANNEL', format='1J', array=np.arange(nchan).astype('int32')+1)
         col2 = pyfits.Column(name='ENERGY', format='1D', array=bins.astype("float64"))
         col3 = pyfits.Column(name='COUNTS', format='1J', array=spec.astype("int32"))
-        col4 = pyfits.Column(name='COUNT_RATE', format='1D', array=spec/float(self.parameters["ExposureTime"]))
+        col4 = pyfits.Column(name='COUNT_RATE', format='1D', array=spec/float(self.parameters["exp_time"]))
 
         coldefs = pyfits.ColDefs([col1, col2, col3, col4])
 
@@ -471,8 +471,8 @@ class EventList(object):
 
         tbhdu.header["DETCHANS"] = spec.shape[0]
         tbhdu.header["TOTCTS"] = spec.sum()
-        tbhdu.header["EXPOSURE"] = float(self.parameters["ExposureTime"])
-        tbhdu.header["LIVETIME"] = float(self.parameters["ExposureTime"])
+        tbhdu.header["EXPOSURE"] = float(self.parameters["exp_time"])
+        tbhdu.header["LIVETIME"] = float(self.parameters["exp_time"])
         tbhdu.header["CONTENT"] = "pi"
         tbhdu.header["HDUCLASS"] = "OGIP"
         tbhdu.header["HDUCLAS1"] = "SPECTRUM"
