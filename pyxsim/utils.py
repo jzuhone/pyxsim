@@ -153,3 +153,38 @@ def merge_files(input_files, output_file, clobber=False,
         d.create_dataset(k, data=np.concatenate(data[k]))
 
     f_out.close()
+
+key_warning = "As of pyXSIM v2.0.0 this key to the %s has been deprecated, " + \
+              "and will be removed in a future release. Use the '%s' key instead."
+
+class ParameterDict(object):
+    def __init__(self, param_dict, list_type, old_keys):
+        self.param_dict = param_dict
+        self.list_type = list_type
+        self.old_keys = old_keys
+
+    def __setitem__(self, key, value):
+        self.param_dict[key] = value
+
+    def __getitem__(self, key):
+        if key in self.old_keys:
+            k = self.old_keys
+            mylog.warning(key_warning % ("%s parameters" % self.list_type, k))
+        else:
+            k = key
+        return self.param_dict[k]
+
+    def keys(self):
+        return self.param_dict.keys()
+
+    def values(self):
+        return self.param_dict.values()
+
+    def items(self):
+        return self.param_dict.items()
+
+    def __contains__(self, key):
+        if key in self.old_keys:
+            mylog.warning(key_warning % ("%s parameters" % self.list_type, self.old_keys[key]))
+            return True
+        return key in self.param_dict

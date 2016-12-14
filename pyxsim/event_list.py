@@ -13,14 +13,20 @@ from yt.utilities.parallel_tools.parallel_analysis_interface import \
 from yt.units.yt_array import YTQuantity, YTArray, uconcatenate
 from yt.utilities.on_demand_imports import _astropy
 import h5py
-from pyxsim.utils import validate_parameters, parse_value
+from pyxsim.utils import validate_parameters, parse_value, \
+    ParameterDict
 from soxs.simput import write_photon_list
+
+old_parameter_keys = {"ExposureTime": "exp_time",
+                      "Area": "area",
+                      "Redshift": "redshift",
+                      "AngularDiameterDistance": "d_a"}
 
 class EventList(object):
 
     def __init__(self, events, parameters, wcs=None):
         self.events = events
-        self.parameters = parameters
+        self.parameters = ParameterDict(parameters, "EventList", old_parameter_keys)
         self.num_events = events["xpix"].shape[0]
         if wcs is None:
             self.wcs = _astropy.pywcs.WCS(naxis=2)

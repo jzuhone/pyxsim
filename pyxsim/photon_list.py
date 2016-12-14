@@ -13,7 +13,8 @@ from yt.utilities.parallel_tools.parallel_analysis_interface import \
     communication_system, get_mpi_type, parallel_capable, parallel_objects
 from yt.units.yt_array import YTQuantity, YTArray, uconcatenate
 import h5py
-from pyxsim.utils import parse_value, force_unicode, validate_parameters
+from pyxsim.utils import parse_value, force_unicode, validate_parameters, \
+    key_warning, ParameterDict
 from pyxsim.event_list import EventList
 
 comm = communication_system.communicators[-1]
@@ -27,6 +28,19 @@ photon_units = {"energy": "keV",
 for ax in "xyz":
     photon_units[ax] = "kpc"
     photon_units["v"+ax] = "km/s"
+
+old_photon_keys = {"Energy": "energy",
+                   "NumberOfPhotons": "num_photons"}
+old_parameter_keys = {"FiducialExposureTime": "fid_exp_time",
+                      "FiducialArea": "fid_area",
+                      "FiducialRedshift": "fid_redshift",
+                      "FiducialAngularDiameterDistance": "fid_d_a",
+                      "Width": "width",
+                      "Dimension": "dimension",
+                      "HubbleConstant": "hubble",
+                      "OmegaLambda": "omega_lambda",
+                      "OmegaMatter": "omega_matter",
+                      "DataType": "data_type"}
 
 def determine_fields(ds, source_type):
     ds_type = ds.index.__class__.__name__
@@ -64,7 +78,7 @@ class PhotonList(object):
 
     def __init__(self, photons, parameters, cosmo):
         self.photons = photons
-        self.parameters = parameters
+        self.parameters = ParameterDict(parameters, "PhotonList", old_parameter_keys)
         self.cosmo = cosmo
         self.num_cells = len(photons["x"])
 
@@ -93,13 +107,21 @@ class PhotonList(object):
         return ret
 
     def __getitem__(self, key):
-        if key == "energy":
+        if key in old_photon_keys:
+            k = old_photon_keys[key]
+            mylog.warning(key_warning % ("PhotonList", k))
+        else:
+            k = key
+        if k == "energy":
             return [self.photons["energy"][self.p_bins[i]:self.p_bins[i+1]]
                     for i in range(self.num_cells)]
         else:
-            return self.photons[key]
+            return self.photons[k]
 
     def __contains__(self, key):
+        if key in old_photon_keys:
+            mylog.warning(key_warning % ("PhotonList", old_photon_keys[key]))
+            return True
         return key in self.photons
 
     def __repr__(self):
