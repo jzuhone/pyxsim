@@ -70,7 +70,7 @@ def test_sloshing():
     events2 = EventList.from_h5_file("test_events.h5")
 
     for k in photons1.keys():
-        if k == "Energy":
+        if k == "energy":
             arr1 = uconcatenate(photons1[k])
             arr2 = uconcatenate(photons2[k])
         else:
@@ -96,7 +96,7 @@ def test_sloshing():
 
     merged_events = EventList.from_h5_file("merged_events.h5")
     assert len(merged_events["xsky"]) == nevents
-    assert merged_events.parameters["ExposureTime"] == exp_time
+    assert merged_events.parameters["exp_time"] == exp_time
 
     os.chdir(curdir)
     shutil.rmtree(tmpdir)
