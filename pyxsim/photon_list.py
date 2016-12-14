@@ -563,7 +563,7 @@ class PhotonList(object):
             # if off-axis, just use the largest width to make sure we get everything
             ax_idx = np.argmax(self.parameters["width"])
         nx = self.parameters["dimension"][ax_idx]
-        dx_min = (self.parameters["Width"]/self.parameters["dimension"])[ax_idx]
+        dx_min = (self.parameters["width"]/self.parameters["dimension"])[ax_idx]
 
         if not isinstance(normal, string_types):
             L = np.array(normal)
