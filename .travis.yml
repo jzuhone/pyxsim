@@ -45,8 +45,7 @@ install:
     # CORE DEPENDENCIES
     - conda config --add channels https://conda.anaconda.org/sherpa
     - conda install --yes numpy=$NUMPY_VERSION nose pip yt astropy sherpa cython
-    #- conda install --yes -c jzuhone soxs
-    - pip install git+https://github.com/jzuhone/soxs@pyxsim
+    - conda install --yes -c jzuhone soxs
     # COVERAGE DEPENDENCIES
     - pip install coverage coveralls
     - $PYTHON setup.py develop
