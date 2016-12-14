@@ -38,7 +38,7 @@ def test_line_emission():
     dist_fac = 1.0/(4.*np.pi*D_A*D_A*(1.+redshift)**2)
     dm_E = (sphere["dm_emission"]).sum()
 
-    E = uconcatenate(photons["Energy"])
+    E = uconcatenate(photons["energy"])
     n_E = len(E)
 
     n_E_pred = (exp_time*A*dm_E*dist_fac).in_units("dimensionless")

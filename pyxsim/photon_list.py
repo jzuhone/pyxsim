@@ -673,11 +673,11 @@ class PhotonList(object):
             ysky = x*y_hat[0] + y*y_hat[1] + z*y_hat[2]
 
         if no_shifting:
-            eobs = self.photons["Energy"][idxs]
+            eobs = self.photons["energy"][idxs]
         else:
             shift = -vz.in_cgs()/clight
             shift = np.sqrt((1.-shift)/(1.+shift))
-            eobs = self.photons["Energy"][idxs]*shift[obs_cells]
+            eobs = self.photons["energy"][idxs]*shift[obs_cells]
         eobs *= scale_factor
 
         if absorb_model is None:
