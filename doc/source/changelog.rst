@@ -3,6 +3,15 @@
 ChangeLog
 =========
 
+Version 1.2.1
+-------------
+
+This is a bugfix release. 
+
+* Fixed a bug when writing FITS table files when AstroPy 1.3 is installed. 
+* Fixed an import error which occurs when using the yt development branch.
+* Minor documentation updates
+
 Version 1.2.0
 -------------
 
