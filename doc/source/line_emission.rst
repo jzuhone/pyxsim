@@ -1,4 +1,4 @@
-.. _power-law:
+.. _line-emission:
  
 Line Emission Example
 =====================
