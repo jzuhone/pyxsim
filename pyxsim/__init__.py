@@ -1,4 +1,4 @@
-__version__ = "1.2.1"
+__version__ = "1.3-dev"
 
 from pyxsim.source_models import \
    SourceModel, \
