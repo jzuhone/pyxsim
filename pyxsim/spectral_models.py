@@ -137,20 +137,7 @@ class TableApecModel(ApecGenerator):
         """
         Prepare the thermal model for execution given a redshift *zobs* for the spectrum.
         """
-        sfac = 1.0/(1.+zobs)
-
-        cosmic_spec = np.zeros((self.nT, self.nchan))
-        metal_spec = np.zeros((self.nT, self.nchan))
-
-        for ikT, kT in enumerate(self.Tvals):
-            line_fields, coco_fields = self._preload_data(ikT)
-            # First do H,He, and trace elements
-            for elem in cosmic_elem:
-                cosmic_spec[ikT,:] += self._make_spectrum(kT, elem, 0.0, line_fields, coco_fields, sfac)
-            # Next do the metals
-            for elem in metal_elem:
-                metal_spec[ikT,:] += self._make_spectrum(kT, elem, 0.0, line_fields, coco_fields, sfac)
-
+        cosmic_spec, metal_spec = self._get_table(list(range(self.nT)), zobs, 0.0)
         self.cosmic_spec = YTArray(cosmic_spec, "cm**3/s")
         self.metal_spec = YTArray(metal_spec, "cm**3/s")
 
