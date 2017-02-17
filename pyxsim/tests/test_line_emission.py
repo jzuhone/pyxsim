@@ -6,6 +6,7 @@ from yt.units.yt_array import YTQuantity, uconcatenate
 import numpy as np
 import yt.units as u
 from yt.utilities.physical_constants import clight
+from numpy.random import RandomState
 
 cross_section = 500.0e-22*u.cm**3/u.s
 m_chi = (10.0*u.GeV).to_equivalent("g", "mass_energy")
@@ -14,6 +15,8 @@ def test_line_emission():
 
     bms = BetaModelSource()
     ds = bms.ds
+
+    prng = RandomState(32)
 
     def _dm_emission(field, data):
         return cross_section*(data["dark_matter_density"]/m_chi)**2*data["cell_volume"]
@@ -29,7 +32,8 @@ def test_line_emission():
 
     sphere = ds.sphere("c", (100.,"kpc"))
 
-    line_model = LineSourceModel(location, "dm_emission", sigma="dark_matter_dispersion", prng=bms.prng)
+    line_model = LineSourceModel(location, "dm_emission", 
+                                 sigma="dark_matter_dispersion", prng=prng)
 
     photons = PhotonList.from_data_source(sphere, redshift, A, exp_time,
                                           line_model)
