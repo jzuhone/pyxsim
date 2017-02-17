@@ -202,8 +202,6 @@ class ThermalSourceModel(SourceModel):
 
             kT = self.kT_bins[ikT] + 0.5*self.dkT[ikT]
 
-            n_current = iend-ibegin
-
             cem = cell_em[ibegin:iend]
 
             cspec, mspec = self.spectral_model.get_spectrum(kT)
@@ -211,12 +209,11 @@ class ThermalSourceModel(SourceModel):
             tot_ph_c = cspec.d.sum()
             tot_ph_m = mspec.d.sum()
 
-            u = self.prng.uniform(size=n_current)
-
             cell_norm_c = tot_ph_c*cem
             cell_norm_m = tot_ph_m*metalZ[ibegin:iend]*cem
-            cell_norm = np.modf(cell_norm_c + cell_norm_m)
-            cell_n = np.int64(cell_norm[1]) + np.int64(cell_norm[0] >= u)
+            cell_norm = cell_norm_c + cell_norm_m
+
+            cell_n = self.prng.poisson(lam=cell_norm)
 
             number_of_photons[ibegin:iend] = cell_n
 
@@ -341,10 +338,8 @@ class PowerLawSourceModel(SourceModel):
         norm = norm_fac*chunk[self.emission_field].v*self.e0.v**alpha
         norm[alpha != 1] /= (1.-alpha[alpha != 1])
         norm *= self.spectral_norm
-        norm = np.modf(norm)
 
-        u = self.prng.uniform(size=num_cells)
-        number_of_photons = np.int64(norm[1]) + np.int64(norm[0] >= u)
+        number_of_photons = self.prng.poisson(lam=norm)
 
         energies = np.zeros(number_of_photons.sum())
 
@@ -433,9 +428,7 @@ class LineSourceModel(SourceModel):
     def __call__(self, chunk):
         num_cells = len(chunk[self.emission_field])
         F = chunk[self.emission_field]*self.spectral_norm
-        norm = np.modf(F.in_cgs().v)
-        u = self.prng.uniform(size=num_cells)
-        number_of_photons = np.int64(norm[1]) + np.int64(norm[0] >= u)
+        number_of_photons = self.prng.poisson(lam=F.in_cgs().v)
 
         energies = self.e0*np.ones(number_of_photons.sum())
 

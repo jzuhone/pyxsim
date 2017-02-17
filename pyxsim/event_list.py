@@ -172,7 +172,7 @@ class EventList(object):
         exp_time = self.parameters["ExposureTime"]
         area = self.parameters["Area"]
         flux = spectrum.sum()
-        num_photons = np.uint64(exp_time*area*flux)
+        num_photons = prng.poisson(lam=exp_time*area*flux)
         cumspec = np.cumsum(spectrum)
         cumspec = np.insert(cumspec, 0, 0.0)
         cumspec /= cumspec[-1]
