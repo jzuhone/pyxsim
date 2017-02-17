@@ -2,7 +2,7 @@
 Classes for specific source models
 """
 import numpy as np
-from yt.funcs import get_pbar
+from yt.funcs import get_pbar, ensure_numpy_array
 from pyxsim.utils import mylog
 from yt.units.yt_array import YTQuantity
 from yt.utilities.physical_constants import mp, clight, kboltz
@@ -213,7 +213,7 @@ class ThermalSourceModel(SourceModel):
             cell_norm_m = tot_ph_m*metalZ[ibegin:iend]*cem
             cell_norm = cell_norm_c + cell_norm_m
 
-            cell_n = self.prng.poisson(lam=cell_norm)
+            cell_n = ensure_numpy_array(self.prng.poisson(lam=cell_norm))
 
             number_of_photons[ibegin:iend] = cell_n
 
