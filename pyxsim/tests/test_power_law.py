@@ -15,7 +15,7 @@ from sherpa.astro.ui import load_user_model, add_user_pars, \
     covar, get_covar_results, set_covar_opt
 from numpy.random import RandomState
 
-prng = RandomState(33)
+prng = RandomState(22)
 
 def setup():
     from yt.config import ytcfg
@@ -77,7 +77,7 @@ def plaw_fit(alpha_sim):
 
     load_user_model(mymodel, "wplaw")
     add_user_pars("wplaw", ["nH", "norm", "redshift", "alpha"],
-                  [0.01, norm_sim*0.8, redshift, 0.9], 
+                  [0.01, norm_sim*1.1, redshift, 0.9], 
                   parmins=[0.0, 0.0, 0.0, 0.1],
                   parmaxs=[10.0, 1.0e9, 10.0, 10.0],
                   parfrozen=[False, False, True, False])
@@ -85,7 +85,7 @@ def plaw_fit(alpha_sim):
     load_pha("plaw_model_evt.pi")
     set_stat("cstat")
     set_method("simplex")
-    ignore(":0.5, 9.0:")
+    ignore(":0.6, 7.0:")
     set_model("wplaw")
     fit()
     set_covar_opt("sigma", 1.645)
