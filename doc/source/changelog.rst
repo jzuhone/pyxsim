@@ -3,6 +3,19 @@
 ChangeLog
 =========
 
+Version 1.2.2
+-------------
+
+This is a bugfix release. 
+
+* Position fields for SPH datasets will now be correctly detected for 
+  irregularly shaped sources. 
+* Photon numbers for all sources are now being generated assuming a Poisson 
+  distribution. 
+* pyXSIM will no longer automatically emit a deprecation warning when it tries
+  to import ``assert_same_wcs`` from yt. 
+* Minor documentation fixes. 
+
 Version 1.2.1
 -------------
 
