@@ -11,7 +11,7 @@ cython_extensions = [
 
 setup(name='pyxsim',
       packages=['pyxsim'],
-      version='1.3-dev',
+      version='1.2.2',
       description='Python package for simulating X-ray observations of astrophysical sources',
       author='John ZuHone',
       author_email='jzuhone@gmail.com',
