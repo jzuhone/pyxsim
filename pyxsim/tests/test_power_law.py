@@ -13,6 +13,9 @@ from yt.utilities.physical_constants import mp
 from sherpa.astro.ui import load_user_model, add_user_pars, \
     load_pha, ignore, fit, set_model, set_stat, set_method, \
     covar, get_covar_results, set_covar_opt
+from numpy.random import RandomState
+
+prng = RandomState(33)
 
 def setup():
     from yt.config import ytcfg
@@ -53,7 +56,8 @@ def plaw_fit(alpha_sim):
 
     sphere = ds.sphere("c", (100.,"kpc"))
 
-    plaw_model = PowerLawSourceModel(1.0, 0.01, 11.0, "hard_emission", alpha_sim, prng=bms.prng)
+    plaw_model = PowerLawSourceModel(1.0, 0.01, 11.0, "hard_emission", 
+                                     alpha_sim, prng=prng)
 
     photons = PhotonList.from_data_source(sphere, redshift, A, exp_time,
                                           plaw_model)
