@@ -138,6 +138,17 @@ class ThermalSourceModel(SourceModel):
             found_tfield = [fd for fd in particle_temp_fields if fd in data_source.ds.derived_field_list]
             if len(found_tfield) > 0:
                 self.temperature_field = found_tfield[0]
+                # What we have to do here is make sure that the temperature is set correctly
+                # for SPH datasets that don't have the temperature field defined. What this
+                # means is that we must set the mean molecular weight to the value for a
+                # fully ionized gas if the ionization fraction is not available in the dataset.
+                if self.temperature_field not in data_source.ds.field_list and ptype is not None:
+                    if (ptype, 'ElectronAbundance') not in data_source.ds.field_list:
+                        if data_source.has_field_parameter("X_H"):
+                            X_H = data_source.get_field_parameter("X_H")
+                        else:
+                            X_H = 0.76
+                        data_source.set_field_parameter("mean_molecular_weight", 4.0/(5*X_H+3))
             else:
                 self.temperature_field = ('gas', 'temperature')
         mylog.info("Using temperature field '(%s, %s)'." % self.temperature_field)
