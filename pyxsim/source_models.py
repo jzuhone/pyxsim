@@ -33,9 +33,11 @@ class SourceModel(object):
         self.redshift = None
 
 particle_dens_fields = [("io", "density"),
-                        ("PartType0", "Density")]
+                        ("PartType0", "Density"),
+                        ("Gas", "Density")]
 particle_temp_fields = [("io", "temperature"),
-                        ("PartType0", "Temperature")]
+                        ("PartType0", "Temperature"),
+                        ("Gas", "Temperature")]
 
 class ThermalSourceModel(SourceModel):
     r"""
@@ -105,6 +107,7 @@ class ThermalSourceModel(SourceModel):
 
     def setup_model(self, data_source, redshift, spectral_norm):
         self.redshift = redshift
+        ptype = None
         if self.emission_measure_field is None:
             found_dfield = [fd for fd in particle_dens_fields if fd in data_source.ds.field_list]
             if len(found_dfield) > 0:
@@ -117,9 +120,9 @@ class ThermalSourceModel(SourceModel):
                         X_H = data.get_field_parameter("X_H")
                     else:
                         X_H = 0.76
-                    if ('PartType0', 'ElectronAbundance') in data_source.ds.field_list:
-                        nenh *= X_H * data['PartType0','ElectronAbundance']
-                        nenh *= X_H * (1.-data['PartType0','NeutralHydrogenAbundance'])
+                    if (ptype, 'ElectronAbundance') in data_source.ds.field_list:
+                        nenh *= X_H * data[ptype, 'ElectronAbundance']
+                        nenh *= X_H * (1.-data[ptype, 'NeutralHydrogenAbundance'])
                     else:
                         nenh *= 0.5*(1.+X_H)*X_H
                     return nenh
