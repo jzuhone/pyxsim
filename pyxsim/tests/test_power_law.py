@@ -63,7 +63,7 @@ def plaw_fit(alpha_sim):
                                           plaw_model)
 
     D_A = photons.parameters["FiducialAngularDiameterDistance"]
-    dist_fac = 1.0/(4.*np.pi*D_A*D_A*(1.+redshift)**2).in_cgs()
+    dist_fac = 1.0/(4.*np.pi*D_A*D_A*(1.+redshift)**3).in_cgs()
     norm_sim = float((sphere["hard_emission"]).sum()*dist_fac.in_cgs())*(1.+redshift)
 
     events = photons.project_photons("z", absorb_model=abs_model,

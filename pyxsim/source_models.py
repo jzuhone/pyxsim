@@ -294,17 +294,18 @@ class PowerLawSourceModel(SourceModel):
     Parameters
     ----------
     e0 : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`
-        The reference energy of the power law. If units are not given,
-        they are assumed to be in keV.
+        The reference energy of the power law, in the rest frame of the source.
+        If units are not given, they are assumed to be in keV.
     emin : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`
-        The minimum energy of the photons to be generated. If units
-        are not given, they are assumed to be in keV.
+        The minimum energy of the photons to be generated, in the rest frame of
+        the source. If units are not given, they are assumed to be in keV.
     emax : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`
-        The maximum energy of the photons to be generated. If units
-        are not given, they are assumed to be in keV.
+        The maximum energy of the photons to be generated, in the rest frame of
+        the source. If units are not given, they are assumed to be in keV.
     emission_field : string or (ftype, fname) tuple
-        The field which serves as the normalization for the power law. Must be in units
-        of counts/s/keV.
+        The field corresponding to the specific photon count rate per cell or
+        particle, in the rest frame of the source, which serves as the
+        normalization for the power law. Must be in counts/s/keV.
     index : float, string, or (ftype, fname) tuple
         The power-law index of the spectrum. Either a float for a single power law or
         the name of a field that corresponds to the power law.
@@ -337,6 +338,7 @@ class PowerLawSourceModel(SourceModel):
         self.spectral_norm = spectral_norm
         self.redshift = redshift
         self.source_type = data_source.ds._get_field_info(self.emission_field).name[0]
+        self.scale_factor = 1.0 / (1.0 + self.redshift)
 
     def __call__(self, chunk):
 
@@ -351,7 +353,7 @@ class PowerLawSourceModel(SourceModel):
         norm_fac[alpha == 1] = np.log(self.emax.v/self.emin.v)
         norm = norm_fac*chunk[self.emission_field].v*self.e0.v**alpha
         norm[alpha != 1] /= (1.-alpha[alpha != 1])
-        norm *= self.spectral_norm
+        norm *= self.spectral_norm*self.scale_factor
 
         number_of_photons = self.prng.poisson(lam=norm)
 
@@ -368,7 +370,7 @@ class PowerLawSourceModel(SourceModel):
                 else:
                     e = self.emin.v**(1.-alpha[i]) + u*norm_fac[i]
                     e **= 1./(1.-alpha[i])
-                energies[start_e:end_e] = e / (1.+self.redshift)
+                energies[start_e:end_e] = e * self.scale_factor
                 start_e = end_e
 
         active_cells = number_of_photons > 0
@@ -389,8 +391,9 @@ class LineSourceModel(SourceModel):
         The location of the emission line in energy in the rest frame of the
         source. If units are not given, they are assumed to be in keV.
     emission_field : string or (ftype, fname) tuple
-        The field which serves as the normalization for the line. Must be in
-        counts/s.
+        The field corresponding to the photon count rate per cell or particle,
+        in the rest frame of the source, which serves as the normalization for
+        the line. Must be in counts/s.
     sigma : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or field name, optional
         The standard intrinsic deviation of the emission line (not from Doppler
         broadening, which is handled in the projection step). Units of
@@ -438,10 +441,11 @@ class LineSourceModel(SourceModel):
         self.spectral_norm = spectral_norm
         self.redshift = redshift
         self.source_type = data_source.ds._get_field_info(self.emission_field).name[0]
+        self.scale_factor = 1.0 / (1.0 + self.redshift)
 
     def __call__(self, chunk):
         num_cells = len(chunk[self.emission_field])
-        F = chunk[self.emission_field]*self.spectral_norm
+        F = chunk[self.emission_field]*self.spectral_norm*self.scale_factor
         number_of_photons = self.prng.poisson(lam=F.in_cgs().v)
 
         energies = self.e0*np.ones(number_of_photons.sum())
@@ -461,7 +465,7 @@ class LineSourceModel(SourceModel):
                     energies[start_e:end_e] += dE
                     start_e = end_e
 
-        energies = energies / (1.+self.redshift)
+        energies = energies * self.scale_factor
 
         active_cells = number_of_photons > 0
 

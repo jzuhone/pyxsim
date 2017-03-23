@@ -39,7 +39,7 @@ def test_line_emission():
                                           line_model)
 
     D_A = photons.parameters["FiducialAngularDiameterDistance"]
-    dist_fac = 1.0/(4.*np.pi*D_A*D_A*(1.+redshift)**2)
+    dist_fac = 1.0/(4.*np.pi*D_A*D_A*(1.+redshift)**3)
     dm_E = (sphere["dm_emission"]).sum()
 
     E = uconcatenate(photons["Energy"])
