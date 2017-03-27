@@ -3,6 +3,16 @@
 ChangeLog
 =========
 
+Version 1.2.3
+-------------
+
+This is a bugfix release.
+
+* Gadget binary (non-HDF5) datasets are now supported.
+* Make sure that SPH datasets assume fully ionized gas if an ``ElectronAbundance`` field is not present.
+* The normalization of the power-law and line emission models was incorrect by a factor of :math:`1/(1+z)`.
+  This has been fixed.
+
 Version 1.2.2
 -------------
 
