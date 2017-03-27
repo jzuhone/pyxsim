@@ -3,7 +3,7 @@ language: python
 env:
     global:
         # Set defaults to avoid repeating in most cases
-        - NUMPY_VERSION=1.10
+        - NUMPY_VERSION=1.11
 
 matrix:
     include:
@@ -15,7 +15,7 @@ matrix:
         - python: 3.5
           env: CMD='nosetests --with-answer-testing --local --local-dir . --answer-name=pyxsim11_3 pyxsim/tests --with-coverage --cover-package=pyxsim'; PYTHON='python3'
         - python: 3.6
-          env: CMD='nosetests --with-answer-testing --local --local-dir . --answer-name=pyxsim11_3 pyxsim/tests'; PYTHON='python3'; NUMPY_VERSION=1.11
+          env: CMD='nosetests --with-answer-testing --local --local-dir . --answer-name=pyxsim11_3 pyxsim/tests'; PYTHON='python3'
 
 before_install:
 
@@ -47,6 +47,7 @@ install:
 
     # CORE DEPENDENCIES
     - conda config --add channels https://conda.anaconda.org/sherpa
+    - conda config --add channels conda-forge
     - conda install --yes numpy=$NUMPY_VERSION nose pip yt astropy sherpa cython
 
     # COVERAGE DEPENDENCIES
