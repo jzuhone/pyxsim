@@ -272,10 +272,10 @@ class EventList(object):
         return cls(events, parameters)
 
     @parallel_root_only
-    def write_fits_file(self, fitsfile, clobber=False):
+    def write_fits_file(self, fitsfile, overwrite=False):
         """
         Write events to a FITS binary table file with filename *fitsfile*.
-        Set *clobber* to True if you need to overwrite a previous file.
+        Set *overwrite* to True if you need to overwrite a previous file.
         """
         pyfits = _astropy.pyfits
 
@@ -327,10 +327,10 @@ class EventList(object):
 
         hdulist = [pyfits.PrimaryHDU(), tbhdu]
 
-        pyfits.HDUList(hdulist).writeto(fitsfile, clobber=clobber)
+        pyfits.HDUList(hdulist).writeto(fitsfile, overwrite=overwrite)
 
     @parallel_root_only
-    def write_simput_file(self, prefix, clobber=False, emin=None, emax=None):
+    def write_simput_file(self, prefix, overwrite=False, emin=None, emax=None):
         r"""
         Write events to a SIMPUT file that may be read by the SIMX instrument
         simulator.
@@ -339,7 +339,7 @@ class EventList(object):
         ----------
         prefix : string
             The filename prefix.
-        clobber : boolean, optional
+        overwrite : boolean, optional
             Set to True to overwrite previous files.
         e_min : float, optional
             The minimum energy of the photons to save in keV.
@@ -356,7 +356,7 @@ class EventList(object):
                self.parameters["exp_time"]/self.parameters["area"]
 
         write_photon_list(prefix, prefix, flux.v, self["xsky"][idxs].d, self["ysky"][idxs].d,
-                          self["eobs"][idxs].d, clobber=clobber)
+                          self["eobs"][idxs].d, overwrite=overwrite)
 
     @parallel_root_only
     def write_h5_file(self, h5file):
@@ -386,7 +386,7 @@ class EventList(object):
         f.close()
 
     @parallel_root_only
-    def write_fits_image(self, imagefile, clobber=False,
+    def write_fits_image(self, imagefile, overwrite=False,
                          emin=None, emax=None):
         r"""
         Generate a image by binning X-ray counts and write it to a FITS file.
@@ -395,7 +395,7 @@ class EventList(object):
         ----------
         imagefile : string
             The name of the image file to write.
-        clobber : boolean, optional
+        overwrite : boolean, optional
             Set to True to overwrite a previous file.
         emin : float, optional
             The minimum energy of the photons to put in the image, in keV.
@@ -439,10 +439,10 @@ class EventList(object):
         hdu.header["CDELT2"] = float(self.parameters["dtheta"])
         hdu.header["EXPOSURE"] = float(self.parameters["exp_time"])
 
-        hdu.writeto(imagefile, clobber=clobber)
+        hdu.writeto(imagefile, overwrite=overwrite)
 
     @parallel_root_only
-    def write_spectrum(self, specfile, emin, emax, nchan, clobber=False):
+    def write_spectrum(self, specfile, emin, emax, nchan, overwrite=False):
         r"""
         Bin event energies into a spectrum and write it to a FITS binary table. 
         Since we have not convolved with anything, this assumes a perfect response. 
@@ -457,7 +457,7 @@ class EventList(object):
             The maximum energy of the spectral bins in keV.
         nchan : integer
             The number of channels.
-        clobber : boolean, optional
+        overwrite : boolean, optional
             Set to True to overwrite a previous file.
         """
         pyfits = _astropy.pyfits
@@ -502,4 +502,4 @@ class EventList(object):
 
         hdulist = pyfits.HDUList([pyfits.PrimaryHDU(), tbhdu])
 
-        hdulist.writeto(specfile, clobber=clobber)
+        hdulist.writeto(specfile, overwrite=overwrite)
