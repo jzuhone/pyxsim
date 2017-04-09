@@ -204,7 +204,7 @@ class ThermalSourceModel(SourceModel):
         if isinstance(self.Zmet, float):
             metalZ = self.Zmet*np.ones(num_cells)
         else:
-            metalZ = chunk[self.Zmet].v[idxs]
+            metalZ = chunk[self.Zmet].to("Zsun").v[idxs]
 
         number_of_photons = np.zeros(num_cells, dtype="int64")
         energies = np.zeros(num_photons_max)
