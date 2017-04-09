@@ -9,7 +9,7 @@ setup(name='pyxsim',
       author_email='jzuhone@gmail.com',
       url='http://github.com/jzuhone/pyxsim',
       setup_requires=["numpy"],
-      install_requires=["six","numpy","astropy","h5py","yt>=3.3.1","soxs>=0.5.0"],
+      install_requires=["six","numpy","astropy>=1.3","h5py","yt>=3.3.5","soxs>=1.0.0"],
       include_package_data=True,
       classifiers=[
           'Intended Audience :: Science/Research',
