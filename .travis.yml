@@ -48,7 +48,8 @@ install:
     - conda config --add channels https://conda.anaconda.org/sherpa
     - conda config --add channels conda-forge
     - conda install --yes numpy=$NUMPY_VERSION nose pip yt astropy sherpa cython
-    - pip install git+https://github.com/jzuhone/soxs@master
+    - conda install --yes -c jzuhone soxs
+
     # COVERAGE DEPENDENCIES
     - pip install coverage coveralls
     - $PYTHON setup.py develop
