@@ -91,7 +91,8 @@ def do_beta_model(source, v_field, em_field):
                                      prng=source.prng)
 
     XRS_Calorimeter(events, "beta_model_evt.fits", convolve_energies_only=True,
-                    instr_bkgnd=False, astro_bkgnd=False, prng=source.prng)
+                    instr_bkgnd=False, foreground=False, ptsrc_bkgnd=False,
+                    prng=source.prng)
 
     os.system("cp %s ." % arf.filename)
     convert_rmf(rmf.filename)

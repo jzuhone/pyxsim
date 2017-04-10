@@ -66,7 +66,7 @@ def test_point_source():
     assert_allclose(np.unique(new_events["ysky"])[0].v, positions[0][1])
 
     ACIS_S(new_events, "point_source_evt.fits", convolve_energies_only=True,
-           instr_bkgnd=False, astro_bkgnd=False, prng=prng)
+           instr_bkgnd=False, ptsrc_bkgnd=False, foreground=False, prng=prng)
 
     os.system("cp %s ." % specs[ACIS_S.inst_name]["arf"])
     os.system("cp %s ." % specs[ACIS_S.inst_name]["rmf"])

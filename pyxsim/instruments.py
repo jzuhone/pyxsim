@@ -51,7 +51,8 @@ class InstrumentSimulator(object):
         self.inst_name = inst_name
 
     def __call__(self, events, out_file, convolve_energies_only=False,
-                 instr_bkgnd=True, astro_bkgnd=True, overwrite=False, prng=None):
+                 instr_bkgnd=True, ptsrc_bkgnd=True, foreground=True, 
+                 overwrite=False, prng=None):
         if self.inst_name not in instrument_registry:
             add_instrument_to_registry(specs[self.inst_name])
         flux = np.sum(events["eobs"]).to("erg") / \
@@ -72,7 +73,8 @@ class InstrumentSimulator(object):
         exp_time = float(events.parameters["exp_time"])
         instrument_simulator(input_events, out_file, exp_time, inst["name"],
                              events.parameters["sky_center"].v, overwrite=overwrite, 
-                             instr_bkgnd=instr_bkgnd, astro_bkgnd=astro_bkgnd, prng=prng)
+                             instr_bkgnd=instr_bkgnd, foreground=foreground, 
+                             ptsrc_bkgnd=ptsrc_bkgnd, prng=prng)
 
 # Specific instrument approximations
 

@@ -75,7 +75,7 @@ def plaw_fit(alpha_sim):
                                      prng=bms.prng,
                                      no_shifting=True)
     ACIS_I(events, "plaw_model_evt.fits", convolve_energies_only=True, 
-           instr_bkgnd=False, astro_bkgnd=False, prng=prng)
+           instr_bkgnd=False, ptsrc_bkgnd=False, foreground=False, prng=prng)
 
     os.system("cp %s ." % specs[ACIS_I.inst_name]["arf"])
     os.system("cp %s ." % specs[ACIS_I.inst_name]["rmf"])
