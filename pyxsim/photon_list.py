@@ -349,7 +349,7 @@ class PhotonList(object):
                               "Check to make sure that this is not the case.")
             le = ds.arr(np.zeros(3), "code_length")
             re = ds.arr(np.zeros(3), "code_length")
-            for i, ax in enumerate("xyz"):
+            for i, ax in enumerate(p_fields):
                 le[i], re[i] = data_source.quantities.extrema(ax)
 
         dds_min = get_smallest_dds(ds, parameters["data_type"])

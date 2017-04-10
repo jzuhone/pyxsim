@@ -5,9 +5,9 @@ import numpy as np
 from yt.funcs import ensure_list
 from pyxsim.utils import mylog
 try:
-    from yt.utilities.fits_image import assert_same_wcs
-except ImportError:
     from yt.visualization.fits_image import assert_same_wcs
+except ImportError:
+    from yt.utilities.fits_image import assert_same_wcs
 from yt.utilities.parallel_tools.parallel_analysis_interface import \
     parallel_root_only
 from yt.units.yt_array import YTQuantity, YTArray, uconcatenate
@@ -176,7 +176,7 @@ class EventList(object):
         exp_time = self.parameters["exp_time"]
         area = self.parameters["area"]
         flux = spectrum.sum()
-        num_photons = np.uint64(exp_time*area*flux)
+        num_photons = prng.poisson(lam=exp_time*area*flux)
         cumspec = np.cumsum(spectrum)
         cumspec = np.insert(cumspec, 0, 0.0)
         cumspec /= cumspec[-1]
@@ -292,7 +292,7 @@ class EventList(object):
 
         coldefs = pyfits.ColDefs(cols)
         tbhdu = pyfits.BinTableHDU.from_columns(coldefs)
-        tbhdu.update_ext_name("EVENTS")
+        tbhdu.name = "EVENTS"
 
         tbhdu.header["MTYPE1"] = "sky"
         tbhdu.header["MFORM1"] = "x,y"
@@ -473,7 +473,7 @@ class EventList(object):
         coldefs = pyfits.ColDefs([col1, col2, col3, col4])
 
         tbhdu = pyfits.BinTableHDU.from_columns(coldefs)
-        tbhdu.update_ext_name("SPECTRUM")
+        tbhdu.name = "SPECTRUM"
 
         tbhdu.header["DETCHANS"] = spec.shape[0]
         tbhdu.header["TOTCTS"] = spec.sum()

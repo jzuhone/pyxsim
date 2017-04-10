@@ -2,7 +2,7 @@
 Classes for specific source models
 """
 import numpy as np
-from yt.funcs import get_pbar
+from yt.funcs import get_pbar, ensure_numpy_array
 from pyxsim.utils import mylog
 from yt.units.yt_array import YTQuantity
 from yt.utilities.physical_constants import mp, clight, kboltz
@@ -33,9 +33,11 @@ class SourceModel(object):
         self.redshift = None
 
 particle_dens_fields = [("io", "density"),
-                        ("PartType0", "Density")]
+                        ("PartType0", "Density"),
+                        ("Gas", "Density")]
 particle_temp_fields = [("io", "temperature"),
-                        ("PartType0", "Temperature")]
+                        ("PartType0", "Temperature"),
+                        ("Gas", "Temperature")]
 
 class ThermalSourceModel(SourceModel):
     r"""
@@ -105,6 +107,7 @@ class ThermalSourceModel(SourceModel):
 
     def setup_model(self, data_source, redshift, spectral_norm):
         self.redshift = redshift
+        ptype = None
         if self.emission_measure_field is None:
             found_dfield = [fd for fd in particle_dens_fields if fd in data_source.ds.field_list]
             if len(found_dfield) > 0:
@@ -117,9 +120,9 @@ class ThermalSourceModel(SourceModel):
                         X_H = data.get_field_parameter("X_H")
                     else:
                         X_H = 0.76
-                    if ('PartType0', 'ElectronAbundance') in data_source.ds.field_list:
-                        nenh *= X_H * data['PartType0','ElectronAbundance']
-                        nenh *= X_H * (1.-data['PartType0','NeutralHydrogenAbundance'])
+                    if (ptype, 'ElectronAbundance') in data_source.ds.field_list:
+                        nenh *= X_H * data[ptype, 'ElectronAbundance']
+                        nenh *= X_H * (1.-data[ptype, 'NeutralHydrogenAbundance'])
                     else:
                         nenh *= 0.5*(1.+X_H)*X_H
                     return nenh
@@ -135,6 +138,17 @@ class ThermalSourceModel(SourceModel):
             found_tfield = [fd for fd in particle_temp_fields if fd in data_source.ds.derived_field_list]
             if len(found_tfield) > 0:
                 self.temperature_field = found_tfield[0]
+                # What we have to do here is make sure that the temperature is set correctly
+                # for SPH datasets that don't have the temperature field defined. What this
+                # means is that we must set the mean molecular weight to the value for a
+                # fully ionized gas if the ionization fraction is not available in the dataset.
+                if self.temperature_field not in data_source.ds.field_list and ptype is not None:
+                    if (ptype, 'ElectronAbundance') not in data_source.ds.field_list:
+                        if data_source.has_field_parameter("X_H"):
+                            X_H = data_source.get_field_parameter("X_H")
+                        else:
+                            X_H = 0.76
+                        data_source.set_field_parameter("mean_molecular_weight", 4.0/(5*X_H+3))
             else:
                 self.temperature_field = ('gas', 'temperature')
         mylog.info("Using temperature field '(%s, %s)'." % self.temperature_field)
@@ -190,7 +204,7 @@ class ThermalSourceModel(SourceModel):
         if isinstance(self.Zmet, float):
             metalZ = self.Zmet*np.ones(num_cells)
         else:
-            metalZ = chunk[self.Zmet].v[idxs]
+            metalZ = chunk[self.Zmet].to("Zsun").v[idxs]
 
         number_of_photons = np.zeros(num_cells, dtype="int64")
         energies = np.zeros(num_photons_max)
@@ -202,8 +216,6 @@ class ThermalSourceModel(SourceModel):
 
             kT = self.kT_bins[ikT] + 0.5*self.dkT[ikT]
 
-            n_current = iend-ibegin
-
             cem = cell_em[ibegin:iend]
 
             cspec, mspec = self.spectral_model.get_spectrum(kT)
@@ -211,12 +223,11 @@ class ThermalSourceModel(SourceModel):
             tot_ph_c = cspec.d.sum()
             tot_ph_m = mspec.d.sum()
 
-            u = self.prng.uniform(size=n_current)
-
             cell_norm_c = tot_ph_c*cem
             cell_norm_m = tot_ph_m*metalZ[ibegin:iend]*cem
-            cell_norm = np.modf(cell_norm_c + cell_norm_m)
-            cell_n = np.int64(cell_norm[1]) + np.int64(cell_norm[0] >= u)
+            cell_norm = cell_norm_c + cell_norm_m
+
+            cell_n = ensure_numpy_array(self.prng.poisson(lam=cell_norm))
 
             number_of_photons[ibegin:iend] = cell_n
 
@@ -283,17 +294,18 @@ class PowerLawSourceModel(SourceModel):
     Parameters
     ----------
     e0 : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`
-        The reference energy of the power law. If units are not given,
-        they are assumed to be in keV.
+        The reference energy of the power law, in the rest frame of the source.
+        If units are not given, they are assumed to be in keV.
     emin : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`
-        The minimum energy of the photons to be generated. If units
-        are not given, they are assumed to be in keV.
+        The minimum energy of the photons to be generated, in the rest frame of
+        the source. If units are not given, they are assumed to be in keV.
     emax : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`
-        The maximum energy of the photons to be generated. If units
-        are not given, they are assumed to be in keV.
+        The maximum energy of the photons to be generated, in the rest frame of
+        the source. If units are not given, they are assumed to be in keV.
     emission_field : string or (ftype, fname) tuple
-        The field which serves as the normalization for the power law. Must be in units
-        of counts/s/keV.
+        The field corresponding to the specific photon count rate per cell or
+        particle, in the rest frame of the source, which serves as the
+        normalization for the power law. Must be in counts/s/keV.
     index : float, string, or (ftype, fname) tuple
         The power-law index of the spectrum. Either a float for a single power law or
         the name of a field that corresponds to the power law.
@@ -326,6 +338,7 @@ class PowerLawSourceModel(SourceModel):
         self.spectral_norm = spectral_norm
         self.redshift = redshift
         self.source_type = data_source.ds._get_field_info(self.emission_field).name[0]
+        self.scale_factor = 1.0 / (1.0 + self.redshift)
 
     def __call__(self, chunk):
 
@@ -340,11 +353,9 @@ class PowerLawSourceModel(SourceModel):
         norm_fac[alpha == 1] = np.log(self.emax.v/self.emin.v)
         norm = norm_fac*chunk[self.emission_field].v*self.e0.v**alpha
         norm[alpha != 1] /= (1.-alpha[alpha != 1])
-        norm *= self.spectral_norm
-        norm = np.modf(norm)
+        norm *= self.spectral_norm*self.scale_factor
 
-        u = self.prng.uniform(size=num_cells)
-        number_of_photons = np.int64(norm[1]) + np.int64(norm[0] >= u)
+        number_of_photons = self.prng.poisson(lam=norm)
 
         energies = np.zeros(number_of_photons.sum())
 
@@ -359,7 +370,7 @@ class PowerLawSourceModel(SourceModel):
                 else:
                     e = self.emin.v**(1.-alpha[i]) + u*norm_fac[i]
                     e **= 1./(1.-alpha[i])
-                energies[start_e:end_e] = e / (1.+self.redshift)
+                energies[start_e:end_e] = e * self.scale_factor
                 start_e = end_e
 
         active_cells = number_of_photons > 0
@@ -380,8 +391,9 @@ class LineSourceModel(SourceModel):
         The location of the emission line in energy in the rest frame of the
         source. If units are not given, they are assumed to be in keV.
     emission_field : string or (ftype, fname) tuple
-        The field which serves as the normalization for the line. Must be in
-        counts/s.
+        The field corresponding to the photon count rate per cell or particle,
+        in the rest frame of the source, which serves as the normalization for
+        the line. Must be in counts/s.
     sigma : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or field name, optional
         The standard intrinsic deviation of the emission line (not from Doppler
         broadening, which is handled in the projection step). Units of
@@ -429,13 +441,12 @@ class LineSourceModel(SourceModel):
         self.spectral_norm = spectral_norm
         self.redshift = redshift
         self.source_type = data_source.ds._get_field_info(self.emission_field).name[0]
+        self.scale_factor = 1.0 / (1.0 + self.redshift)
 
     def __call__(self, chunk):
         num_cells = len(chunk[self.emission_field])
-        F = chunk[self.emission_field]*self.spectral_norm
-        norm = np.modf(F.in_cgs().v)
-        u = self.prng.uniform(size=num_cells)
-        number_of_photons = np.int64(norm[1]) + np.int64(norm[0] >= u)
+        F = chunk[self.emission_field]*self.spectral_norm*self.scale_factor
+        number_of_photons = self.prng.poisson(lam=F.in_cgs().v)
 
         energies = self.e0*np.ones(number_of_photons.sum())
 
@@ -454,7 +465,7 @@ class LineSourceModel(SourceModel):
                     energies[start_e:end_e] += dE
                     start_e = end_e
 
-        energies = energies / (1.+self.redshift)
+        energies = energies * self.scale_factor
 
         active_cells = number_of_photons > 0
 

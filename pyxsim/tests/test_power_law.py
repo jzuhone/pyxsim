@@ -16,8 +16,9 @@ from sherpa.astro.ui import load_user_model, add_user_pars, \
     load_pha, ignore, fit, set_model, set_stat, set_method, \
     covar, get_covar_results, set_covar_opt
 from pyxsim.instruments import specs
+from numpy.random import RandomState
 
-prng = RandomState(25)
+prng = RandomState(27)
 
 def setup():
     from yt.config import ytcfg
@@ -60,13 +61,14 @@ def plaw_fit(alpha_sim):
 
     sphere = ds.sphere("c", (100., "kpc"))
 
-    plaw_model = PowerLawSourceModel(1.0, 0.01, 11.0, "hard_emission", alpha_sim, prng=prng)
+    plaw_model = PowerLawSourceModel(1.0, 0.01, 11.0, "hard_emission", 
+                                     alpha_sim, prng=prng)
 
     photons = PhotonList.from_data_source(sphere, redshift, A, exp_time,
                                           plaw_model)
 
     D_A = photons.parameters["fid_d_a"]
-    dist_fac = 1.0/(4.*np.pi*D_A*D_A*(1.+redshift)**2).in_cgs()
+    dist_fac = 1.0/(4.*np.pi*D_A*D_A*(1.+redshift)**3).in_cgs()
     norm_sim = float((sphere["hard_emission"]).sum()*dist_fac.in_cgs())*(1.+redshift)
 
     events = photons.project_photons("z", [30., 45.], absorb_model=abs_model,
@@ -82,7 +84,7 @@ def plaw_fit(alpha_sim):
 
     load_user_model(mymodel, "wplaw")
     add_user_pars("wplaw", ["nH", "norm", "redshift", "alpha"],
-                  [0.01, norm_sim*0.8, redshift, 0.9], 
+                  [0.01, norm_sim*1.1, redshift, 0.9], 
                   parmins=[0.0, 0.0, 0.0, 0.1],
                   parmaxs=[10.0, 1.0e9, 10.0, 10.0],
                   parfrozen=[False, False, True, False])
@@ -90,7 +92,7 @@ def plaw_fit(alpha_sim):
     load_pha("plaw_model_evt.pi")
     set_stat("cstat")
     set_method("simplex")
-    ignore(":0.5, 9.0:")
+    ignore(":0.6, 7.0:")
     set_model("wplaw")
     fit()
     set_covar_opt("sigma", 1.645)
