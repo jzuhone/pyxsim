@@ -71,7 +71,7 @@ def test_point_source():
     os.system("cp %s ." % specs[ACIS_S.inst_name]["arf"])
     os.system("cp %s ." % specs[ACIS_S.inst_name]["rmf"])
 
-    write_spectrum("point_source_evt.fits", "point_source_evt.pi", clobber=True)
+    write_spectrum("point_source_evt.fits", "point_source_evt.pi", overwrite=True)
 
     load_user_model(mymodel, "tplaw")
     add_user_pars("tplaw", ["nH", "norm", "redshift", "alpha"],

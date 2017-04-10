@@ -96,7 +96,7 @@ def do_beta_model(source, v_field, em_field):
     os.system("cp %s ." % arf.filename)
     convert_rmf(rmf.filename)
 
-    write_spectrum("beta_model_evt.fits", "beta_model_evt.pi", clobber=True)
+    write_spectrum("beta_model_evt.fits", "beta_model_evt.pi", overwrite=True)
 
     load_user_model(mymodel, "tbapec")
     add_user_pars("tbapec", ["nH", "kT", "metallicity", "redshift", "norm", "velocity"],

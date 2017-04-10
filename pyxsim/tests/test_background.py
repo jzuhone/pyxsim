@@ -64,7 +64,7 @@ def test_background():
     os.system("cp %s ." % specs[ACIS_I.inst_name]["arf"])
     os.system("cp %s ." % specs[ACIS_I.inst_name]["rmf"])
 
-    write_spectrum("background_evt.fits", "background_evt.pi", clobber=True)
+    write_spectrum("background_evt.fits", "background_evt.pi", overwrite=True)
 
     load_user_model(mymodel, "wapec")
     add_user_pars("wapec", ["nH", "kT", "metallicity", "redshift", "norm"],

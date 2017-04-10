@@ -80,7 +80,7 @@ def plaw_fit(alpha_sim):
     os.system("cp %s ." % specs[ACIS_I.inst_name]["arf"])
     os.system("cp %s ." % specs[ACIS_I.inst_name]["rmf"])
 
-    write_spectrum("plaw_model_evt.fits", "plaw_model_evt.pi", clobber=True)
+    write_spectrum("plaw_model_evt.fits", "plaw_model_evt.pi", overwrite=True)
 
     load_user_model(mymodel, "wplaw")
     add_user_pars("wplaw", ["nH", "norm", "redshift", "alpha"],
