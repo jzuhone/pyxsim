@@ -138,7 +138,7 @@ merged together, using the :func:`~pyxsim.utils.merge_files` function. This may 
 if you have so many photons to generate that they do not fit into memory all in one go.
 
 :func:`~pyxsim.utils.merge_files` takes a list of input filenames, and an output filename. 
-The optional keyword arguments are ``clobber``, which decides whether or not an existing file 
+The optional keyword arguments are ``overwrite``, which decides whether or not an existing file 
 will be overwritten, and ``add_exposure_times`` decides whether or not the final file will 
 have an exposure time of the sum of the times in the separate files or that of the longest 
 exposure time between the files. 
@@ -147,4 +147,4 @@ exposure time between the files.
 
     from pyxsim import merge_files
     merge_files(["photons_0.h5","photons_1.h5","photons_3.h5"], "photons.h5",
-                clobber=True, add_exposure_times=True)
+                overwrite=True, add_exposure_times=True)
