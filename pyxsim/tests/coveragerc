@@ -16,7 +16,3 @@ exclude_lines =
 
     # Don't complain about ImportError
     except ImportError
-        
-    # Don't check Xspec models    
-    class XSpecThermalModel
-    class XSpecAbsorbModel

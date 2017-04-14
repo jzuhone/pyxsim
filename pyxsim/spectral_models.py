@@ -5,7 +5,6 @@ import numpy as np
 import h5py
 
 from soxs.spectra import ApecGenerator, get_wabs_absorb
-from soxs.constants import cosmic_elem, metal_elem
 from pyxsim.utils import mylog, check_file_location
 from yt.units.yt_array import YTArray, YTQuantity
 from yt.utilities.physical_constants import hcgs, clight
@@ -14,87 +13,6 @@ hc = (hcgs*clight).in_units("keV*angstrom").v
 # NOTE: XSPEC has hc = 12.39854 keV*A, so there may be slight differences in
 # placement of spectral lines due to the above
 cl = clight.v
-
-class XSpecThermalModel(object):
-    r"""
-    Initialize a thermal gas emission model from PyXspec.
-
-    Parameters
-    ----------
-    model_name : string
-        The name of the thermal emission model.
-    emin : float
-        The minimum energy for the spectral model.
-    emax : float
-        The maximum energy for the spectral model.
-    nchan : integer
-        The number of channels in the spectral model.
-    thermal_broad : boolean, optional
-        Whether or not the spectral lines should be thermally
-        broadened.
-    settings : dictionary, optional
-        A dictionary of key, value pairs (must both be strings)
-        that can be used to set various options in XSPEC.
-
-    Examples
-    --------
-    >>> mekal_model = XSpecThermalModel("mekal", 0.05, 50.0, 1000)
-    """
-    def __init__(self, model_name, emin, emax, nchan,
-                 thermal_broad=False, settings=None):
-        mylog.warning("XSpecThermalModel is deprecated and will be removed "
-                      "in a future release. Use of TableApecModel is suggested.")
-        self.model_name = model_name
-        self.thermal_broad = thermal_broad
-        if settings is None: settings = {}
-        self.settings = settings
-        self.emin = emin
-        self.emax = emax
-        self.nchan = nchan
-        self.ebins = np.linspace(self.emin, self.emax, nchan+1)
-        self.de = np.diff(self.ebins)
-        self.emid = 0.5*(self.ebins[1:]+self.ebins[:-1])
-
-    def prepare_spectrum(self, zobs):
-        """
-        Prepare the thermal model for execution given a redshift *zobs* for the spectrum.
-        """
-        import xspec
-        xspec.Xset.chatter = 0
-        if self.thermal_broad:
-            xspec.Xset.addModelString("APECTHERMAL","yes")
-        for k,v in self.settings.items():
-            xspec.Xset.addModelString(k,v)
-        xspec.AllModels.setEnergies("%f %f %d lin" %
-                                    (self.emin.value, self.emax.value, self.nchan))
-        self.model = xspec.Model(self.model_name)
-        self.thermal_comp = getattr(self.model, self.model_name)
-        if self.model_name == "bremss":
-            self.norm = 3.02e-15
-        else:
-            self.norm = 1.0e-14
-        self.thermal_comp.norm = 1.0
-        self.thermal_comp.Redshift = zobs
-
-    def get_spectrum(self, kT):
-        """
-        Get the thermal emission spectrum given a temperature *kT* in keV. 
-        """
-        self.thermal_comp.kT = kT
-        self.thermal_comp.Abundanc = 0.0
-        cosmic_spec = np.array(self.model.values(0))
-        if self.model_name == "bremss":
-            metal_spec = np.zeros(self.nchan)
-        else:
-            self.thermal_comp.Abundanc = 1.0
-            metal_spec = np.array(self.model.values(0)) - cosmic_spec
-        cosmic_spec *= self.norm
-        metal_spec *= self.norm
-        return YTArray(cosmic_spec, "cm**3/s"), YTArray(metal_spec, "cm**3/s")
-
-    def cleanup_spectrum(self):
-        del self.thermal_comp
-        del self.model
 
 class TableApecModel(ApecGenerator):
     r"""
@@ -222,66 +140,6 @@ class AbsorptionModel(object):
         detected = randvec < absorb
         self.cleanup_spectrum()
         return detected
-
-class XSpecAbsorbModel(AbsorptionModel):
-    r"""
-    Initialize an absorption model from PyXspec.
-
-    Parameters
-    ----------
-    model_name : string
-        The name of the absorption model.
-    nH : float
-        The foreground column density *nH* in units of 10^22 cm^{-2}.
-    emin : float, optional
-        The minimum energy for the spectral model.
-    emax : float, optional
-        The maximum energy for the spectral model.
-    nchan : integer, optional
-        The number of channels in the spectral model.
-    settings : dictionary, optional
-        A dictionary of key, value pairs (must both be strings)
-        that can be used to set various options in XSPEC.
-
-    Examples
-    --------
-    >>> abs_model = XSpecAbsorbModel("wabs", 0.1)
-    """
-    def __init__(self, model_name, nH, emin=0.01, emax=50.0,
-                 nchan=100000, settings=None):
-        mylog.warning("XSpecAbsorbModel is deprecated and will be removed "
-                      "in a future release. Use of the other models is "
-                      "suggested.")
-        self.model_name = model_name
-        self.nH = YTQuantity(nH*1.0e22, "cm**-2")
-        if settings is None: settings = {}
-        self.settings = settings
-        self.emin = emin
-        self.emax = emax
-        self.nchan = nchan
-        ebins = np.linspace(emin, emax, nchan+1)
-        self.emid = YTArray(0.5*(ebins[1:]+ebins[:-1]), "keV")
-
-    def prepare_spectrum(self):
-        """
-        Prepare the absorption model for execution.
-        """
-        import xspec
-        xspec.Xset.chatter = 0
-        xspec.AllModels.setEnergies("%f %f %d lin" %
-                                    (self.emin, self.emax, self.nchan))
-        self.model = xspec.Model(self.model_name+"*powerlaw")
-        self.model.powerlaw.norm = self.nchan/(self.emax-self.emin)
-        self.model.powerlaw.PhoIndex = 0.0
-        for k,v in self.settings.items():
-            xspec.Xset.addModelString(k,v)
-        m = getattr(self.model, self.model_name)
-        m.nH = 1.0
-        self.sigma = YTArray(-np.log(self.model.values(0))*1.0e-22, "cm**2")
-
-    def cleanup_spectrum(self):
-        del self.model
-
 
 class TableAbsorbModel(AbsorptionModel):
     r"""
