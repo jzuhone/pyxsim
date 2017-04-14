@@ -175,6 +175,7 @@ class PhotonList(object):
             parameters["data_type"] = force_unicode(p["data_type"].value)
         else:
             parameters["data_type"] = "cells"
+        parameters["absorbed"] = p["absorbed"].value
 
         d = f["/data"]
 
@@ -213,7 +214,7 @@ class PhotonList(object):
     def from_data_source(cls, data_source, redshift, area,
                          exp_time, source_model, parameters=None,
                          center=None, dist=None, cosmology=None,
-                         velocity_fields=None):
+                         velocity_fields=None, absorb_model=None):
         r"""
         Initialize a :class:`~pyxsim.photon_list.PhotonList` from a yt data source.
         The redshift, collecting area, exposure time, and cosmology are stored in the
@@ -252,6 +253,11 @@ class PhotonList(object):
             be assumed:
             ['velocity_x', 'velocity_y', 'velocity_z'] for grid datasets
             ['particle_velocity_x', 'particle_velocity_y', 'particle_velocity_z'] for particle datasets
+        absorb_model : :class:`~pyxsim.spectral_models.AbsorptionModel` 
+            A model for foreground galactic absorption, to simulate the absorption
+            of events. If you apply absoprtion at this step, it means that you 
+            cannot apply it again later, or, more importantly, you cannot change the
+            redshift to the source when projecting the photons later. 
 
         Examples
         --------
@@ -314,6 +320,7 @@ class PhotonList(object):
         parameters["hubble"] = cosmo.hubble_constant
         parameters["omega_matter"] = cosmo.omega_matter
         parameters["omega_lambda"] = cosmo.omega_lambda
+        parameters["absorbed"] = absorb_model is not None
 
         D_A = parameters["fid_d_a"].in_cgs()
         dist_fac = 1.0/(4.*np.pi*D_A.value*D_A.value*(1.+redshift)**2)
@@ -496,6 +503,7 @@ class PhotonList(object):
             p.create_dataset("dimension", data=self.parameters["dimension"])
             p.create_dataset("width", data=self.parameters["width"].v)
             p.create_dataset("data_type", data=self.parameters["data_type"])
+            p.create_dataset("absorbed", data=self.parameters["absorbed"])
 
             # Data
 
@@ -532,20 +540,25 @@ class PhotonList(object):
         sky_center : array-like
             Center RA, Dec of the events in degrees.
         area_new : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`, optional
-            New value for the (constant) collecting area of the detector. If
+            A value for the (constant) collecting area of the detector. If
             units are not specified, is assumed to be in cm**2.
         exp_time_new : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`, optional
-            The new value for the exposure time. If units are not specified
+            A new value for the exposure time. If units are not specified
             it is assumed to be in seconds.
         redshift_new : float, optional
-            The new value for the cosmological redshift.
+            A new value for the cosmological redshift. Cannot be specified
+            if you applied foreground galactic absorption already in the 
+            :class:`~pyxsim.photon_list.PhotonList` instance.
         dist_new : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`, optional
             The new value for the angular diameter distance, used for nearby sources.
             This may be optionally supplied instead of it being determined from the
-            cosmology. If units are not specified, it is assumed to be in Mpc. To use this, the 
-            redshift must be zero. 
+            cosmology. If units are not specified, it is assumed to be in Mpc. To 
+            use this, the redshift must be zero. 
         absorb_model : :class:`~pyxsim.spectral_models.AbsorptionModel` 
-            A model for foreground galactic absorption.
+            A model for foreground galactic absorption, to simulate the absorption
+            of events before being detected. This cannot be applied here if you 
+            already did this step previously in the creation of the 
+            :class:`~pyxsim.photon_list.PhotonList` instance.
         no_shifting : boolean, optional
             If set, the photon energies will not be Doppler shifted.
         north_vector : a sequence of floats
@@ -568,9 +581,20 @@ class PhotonList(object):
         if prng is None:
             prng = np.random
 
-        if redshift_new is not None and dist_new is not None:
-            mylog.error("You may specify a new redshift or distance, "+
-                        "but not both!")
+        change_redshift = redshift_new is not None
+        change_dist = dist_new is not None
+
+        if change_redshift and change_dist:
+            raise RuntimeError("You may specify a new redshift or distance, "
+                               "but not both!")
+
+        if change_redshift and self.parameters["absorbed"]:
+            raise RuntimeError("You created this PhotonList with foreground "
+                               "absorption, so you cannot change the redshift!")
+
+        if absorb_model is not None and self.parameters["absorbed"]:
+            raise RuntimeError("You created this PhotonList with foreground "
+                               "absorption, so you cannot apply absorption again!")
 
         sky_center = YTArray(sky_center, "degree")
 
