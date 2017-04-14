@@ -6,23 +6,16 @@ Convolving Events with Instrumental Responses
 Built-In Instrument Simulators
 ------------------------------
 
-pyXSIM provides the ability to perform "quick-and-dirty" convolutions with approximate
-representations of real X-ray instruments. The accuracy of these representations is 
-limited, since they assume the following simplifications:
+pyXSIM provides the ability to perform "quick-and-dirty" convolutions with approximate representations 
+of real X-ray instruments using the [SOXS](http://hea-www.cfa.harvard.edu/~jzuhone/soxs) project as a 
+backend. The accuracy of these representations is limited, since they assume the following simplifications:
 
 * A square field of view without chip gaps
 * The spectral response, PSF, and effective area are position-independent.
 * The PSF is assumed to have a Gaussian shape
-* No instrumental background is added
 
 If you only need an approximate representation of what an X-ray observation of your source
 would look like, using a built-in instrument simulator should be sufficient for your purposes. 
-
-.. warning::
-
-    If you want to export simulated events to an external instrument simulator
-    such as MARX or SIMX (see below), DO NOT use any of these built-in instrument 
-    simulators within pyXSIM. This will be the job of the instrument simulator itself to do.
 
 Using a Built-In Instrument Simulator
 +++++++++++++++++++++++++++++++++++++
@@ -42,21 +35,24 @@ this order.
 
 1. The event positions are re-binned from the original simulation pixelization to the one appropriate
    for the detector simulation.
-2. The event positions are smoothed using a Gaussian PSF. 
+2. The event positions are smoothed using a Gaussian PSF, and dithering is optionally applied.
 3. Using the effective area curve from the selected ARF, events are selected or rejected for observation.
-4. The observed event energies are convolved with the selected RMF to produce the observed energy channels. 
+4. Instrumental and astrophysical backgrounds are added.
+5. The observed event energies are convolved with the selected RMF to produce the observed energy channels. 
 
-Assuming one has an :class:`~pyxsim.event_list.EventList` object handy, to generate a new event list
-passed through one of these :class:`~pyxsim.instruments.InstrumentSimulator` classes, one only needs to call
-the instrument simulator with the events as an argument:
+Unlike previous versions of pyXSIM, the instrument simulators do not generate a new event list in-memory; they
+simply write a convolved event list to a FITS file. Assuming one has an :class:`~pyxsim.event_list.EventList` 
+object handy, to write such a file using one of these :class:`~pyxsim.instruments.InstrumentSimulator` classes, 
+one only needs to call the instrument simulator with the events as the first argument and the desired output 
+file name as the second:
 
 .. code-block:: python
 
     >>> from pyxsim import ACIS_S, Hitomi_SXS
-    >>> aciss_events = ACIS_S(events)
-    >>> hitomi_events = Hitomi_SXS(events)
+    >>> ACIS_S(events, "evt_acis-s.fits", clobber=True)
+    >>> Hitomi_SXS(events, "evt_hitomi_sxs.fits", clobber=True)
 
-The specific effects of the instrument simulator can be turned on or off, which are handled with the
+Some of specific effects of the instrument simulator can be turned on or off, which are handled with the
 following boolean keyword arguments, all of which default to ``True``:
 
 * ``rebin``: Controls whether or not the events are rebinned.
@@ -71,7 +67,7 @@ could do this:
 .. code-block:: python
 
     >>> from pyxsim import ACIS_S
-    >>> new_events = ACIS_S(events, rebin=False, convolve_psf=False)
+    >>> ACIS_S(events, rebin=False, convolve_psf=False)
 
 Designing Your Own Instrument Simulator
 +++++++++++++++++++++++++++++++++++++++
@@ -107,8 +103,9 @@ Producing More Realistic Observations Using External Packages
 
 If you want to produce a more realistic simulation of a particular instrumental configuration,
 pyXSIM provides options for exporting its event lists to external packages. For 
-`MARX <http://space.mit.edu/ASC/MARX/>`_ and `SIMX <http://hea-www.cfa.harvard.edu/simx/>`_,
-one can use SIMPUT files. 
+`MARX <http://space.mit.edu/ASC/MARX/>`_ and `SIMX <http://hea-www.cfa.harvard.edu/simx/>`_, or
+for more fine-tuned use of `SOXS <http://hea-www.cfa.harvard.edu/~jzuhone/soxs>`_, one can use 
+SIMPUT files. 
 
 MARX
 ++++
@@ -159,6 +156,9 @@ pyXSIM:
     pset simx OutputFileName=spiral_242959_noshift_xrs
     simx
 
-Refer to the relevant documentation for both of those packages for
-more details, as well as the :ref:`simput` section of the :class:`~pyxsim.event_list.EventList`
-documentation.
+SOXS
+++++
+
+
+Refer to the relevant documentation for all of those packages for more details, as well 
+as the :ref:`simput` section of the :class:`~pyxsim.event_list.EventList` documentation.
