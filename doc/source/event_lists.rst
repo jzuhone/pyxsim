@@ -77,8 +77,8 @@ random number generator:
     
     from numpy.random import RandomState
     prng = RandomState(25)
-    events = photons.project_photons([0.1, -0.3, 0.5], no_shifting=True, north_vector=[1.0,0.0,0.0],
-                                     prng=prng)
+    events = photons.project_photons([0.1, -0.3, 0.5], no_shifting=True, 
+                                     north_vector=[1.0,0.0,0.0], prng=prng)
 
 .. note::
 
@@ -119,23 +119,15 @@ method:
 
 .. code-block:: python
 
-    events.write_fits_file("cluster_events.fits", clobber=True)
+    events.write_fits_file("cluster_events.fits", overwrite=True)
     
-The ``clobber`` keyword argument is used to allow (or prevent) overwrites of 
+The ``overwrite`` keyword argument is used to allow (or prevent) overwrites of 
 files if they already exist. To read previously stored events back from disk, 
 use the :meth:`~pyxsim.event_list.EventList.from_fits_file` method:
 
 .. code-block:: python
 
     events = EventList.from_fits_file("cluster_events.fits")
-
-.. note::
-
-    If the events have convolved with responses using a built-in instrument model (see 
-    :ref:`instruments` for more details), then the characteristics of the convolved events
-    are stored in the HDF5 or FITS file, including the spectral channels. In the case of the
-    FITS files, they are "standard" events files which may be read and analyzed by other X-ray 
-    software tools such as ds9, CIAO, HEATOOLS, etc.
 
 .. _simput:
 
@@ -144,13 +136,14 @@ SIMPUT
 
 An :class:`~pyxsim.event_list.EventList` can be exported to the SIMPUT file format for
 reading in by other packages that simulate particular instruments, such as
-`MARX <http://space.mit.edu/ASC/MARX/>`_ or `SIMX <http://hea-www.cfa.harvard.edu/simx/>`_
+`SOXS <http://hea-www.cfa.harvard.edu/~jzuhone/soxs>`_, 
+`MARX <http://space.mit.edu/ASC/MARX/>`_, or `SIMX <http://hea-www.cfa.harvard.edu/simx/>`_
 (see also :ref:`instruments`). This is done by calling the 
 :meth:`~pyxsim.event_list.EventList.write_simput_file` method:
 
 .. code-block:: python
 
-    events.write_simput_file("my_great_events", clobber=False, emin=0.1, emax=9.0)
+    events.write_simput_file("my_great_events", overwrite=False, emin=0.1, emax=9.0)
 
 where the first argument is the prefix for the files that will be created (the SIMPUT 
 file and a photon list sidecar file), and the other optional arguments control whether
@@ -198,10 +191,10 @@ method:
 
 .. code-block:: python
 
-    events.write_fits_image("myimage.fits", clobber=True, emin=0.5, emax=7.0)
+    events.write_fits_image("myimage.fits", overwrite=True, emin=0.5, emax=7.0)
 
 which writes an image binned at the finest resolution of the simulation in the file
-``"myimage.fits"``. Set ``clobber=True`` if the file is already there and you 
+``"myimage.fits"``. Set ``overwrite=True`` if the file is already there and you 
 want to overwrite it. The ``emin`` and ``emax`` parameters control the energy range
 of the events which will be included in the image (default is to include all of the
 events).
@@ -213,18 +206,12 @@ To produce a binned spectrum, call :meth:`~pyxsim.event_list.EventList.write_spe
 
 .. code-block:: python
 
-    events.write_spectrum("myspec.fits", bin_type="energy", emin=0.1,
-                          emax=10.0, nchan=2000, clobber=False)
+    specfile = "myspec.fits" # filename to write to
+    emin = 0.1 # minimum energy of spectrum
+    emax = 10.0 # maximum energy of spectrum
+    nchan = 2000 # number of bins in spectrum
+    events.write_spectrum(specfile, emin, emax, nchan, overwrite=False)
 
-In this case, we have chosen ``"energy"`` as the ``bin_type``, which will bin the unconvolved
-event energies using the ``emin``, ``emax``, and ``nchan`` arguments into a histogram which
-will be written to the file as a spectrum. If ``bin_type="channel``:
-
-.. code-block:: python
-
-    events.write_spectrum("myspec.fits", bin_type="channel")
-
-the spectrum will be binned by channel instead. This is particularly useful if the events
-were convolved with an instrument simulator, as this spectrum can be read and fit using programs
-such as XSPEC. As usual, the ``clobber`` argument determines whether or not a file can
-be overwritten. 
+This bins the unconvolved event energies using the ``emin``, ``emax``, and ``nchan`` 
+arguments into a histogram which will be written to the file as a spectrum. As usual, 
+the ``overwrite`` argument determines whether or not a file can be overwritten. 

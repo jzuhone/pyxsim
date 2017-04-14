@@ -340,7 +340,7 @@ class EventList(object):
     def write_spectrum(self, specfile, emin, emax, nchan, overwrite=False):
         r"""
         Bin event energies into a spectrum and write it to a FITS binary table. 
-        Since we have not convolved with anything, this assumes a perfect response. 
+        This is for an *unconvolved* spectrum.
 
         Parameters
         ----------
