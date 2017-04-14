@@ -3,6 +3,12 @@
 ChangeLog
 =========
 
+Version 1.2.4
+-------------
+
+This version fixes a single bug, ensuring that the metallicity is converted to
+solar units in thermal source models. 
+
 Version 1.2.3
 -------------
 
