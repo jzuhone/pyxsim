@@ -102,7 +102,7 @@ def test_sloshing():
 
     merge_files(["split_events_%d.h5" % i for i in range(4)],
                 "merged_events.h5", add_exposure_times=True,
-                clobber=True)
+                overwrite=True)
 
     merged_events = EventList.from_h5_file("merged_events.h5")
     assert len(merged_events["xsky"]) == nevents

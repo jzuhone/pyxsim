@@ -80,7 +80,7 @@ def validate_parameters(first, second, skip=[]):
                 raise RuntimeError("The values for the parameter '%s' in the two inputs" % k1 +
                                    " are not identical (%s vs. %s)!" % (v1, v2))
 
-def merge_files(input_files, output_file, clobber=False,
+def merge_files(input_files, output_file, overwrite=False,
                 add_exposure_times=False):
     r"""
     Helper function for merging PhotonList or EventList HDF5 files.
@@ -91,7 +91,7 @@ def merge_files(input_files, output_file, clobber=False,
         List of filenames that will be merged together.
     output_file : string
         Name of the merged file to be outputted.
-    clobber : boolean, default False
+    overwrite : boolean, default False
         If a the output file already exists, set this to True to
         overwrite it.
     add_exposure_times : boolean, default False
@@ -102,7 +102,7 @@ def merge_files(input_files, output_file, clobber=False,
     --------
     >>> from pyxsim import merge_files
     >>> merge_files(["events_0.h5","events_1.h5","events_3.h5"], "events.h5",
-    ...             clobber=True, add_exposure_times=True)
+    ...             overwrite=True, add_exposure_times=True)
 
     Notes
     -----
@@ -110,9 +110,9 @@ def merge_files(input_files, output_file, clobber=False,
     same values, with the exception of the exposure time parameter "exp_time". If
     add_exposure_times=False, the maximum exposure time will be used.
     """
-    if os.path.exists(output_file) and not clobber:
+    if os.path.exists(output_file) and not overwrite:
         raise IOError("Cannot overwrite existing file %s. " % output_file +
-                      "If you want to do this, set clobber=True.")
+                      "If you want to do this, set overwrite=True.")
 
     f_in = h5py.File(input_files[0], "r")
     f_out = h5py.File(output_file, "w")
