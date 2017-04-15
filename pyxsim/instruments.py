@@ -57,10 +57,13 @@ class InstrumentSimulator(object):
             add_instrument_to_registry(specs[self.inst_name])
         flux = np.sum(events["eobs"]).to("erg") / \
                events.parameters["exp_time"]/events.parameters["area"]
-        input_events = {"ra": events["xsky"].d, 
-                        "dec": events["ysky"].d,
-                        "energy": events["eobs"].d,
-                        "flux": flux.v}
+        input_events = {"ra": [events["xsky"].d], 
+                        "dec": [events["ysky"].d],
+                        "energy": [events["eobs"].d],
+                        "flux": [flux.v],
+                        "emin": [events["eobs"].v.min()],
+                        "emax": [events["eobs"].v.max()],
+                        "sources": ["pyxsim"]}
         inst = get_instrument_from_registry(self.inst_name)
         if prng is None:
             prng = np.random
