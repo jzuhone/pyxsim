@@ -16,8 +16,6 @@ from pyxsim.event_list import \
     EventList
 
 from pyxsim.spectral_models import \
-    XSpecThermalModel, \
-    XSpecAbsorbModel, \
     TableApecModel, \
     TableAbsorbModel, \
     TBabsModel, WabsModel
