@@ -111,7 +111,7 @@ class ThermalSourceModel(SourceModel):
         ptype = None
         if not isinstance(self.Zmet, float):
             Z_units = str(data_source.ds._get_field_info(self.Zmet).units)
-            if Z_units == "dimensionless":
+            if Z_units == "dimensionless" or Z_units == "":
                 self.Zconvert = 1.0/0.019
             elif Z_units == "Zsun":
                 self.Zconvert = 1.0
