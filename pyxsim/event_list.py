@@ -18,6 +18,7 @@ from pyxsim.utils import force_unicode, validate_parameters, parse_value
 from pyxsim.responses import RedistributionMatrixFile
 import os
 
+
 class EventList(object):
 
     def __init__(self, events, parameters, wcs=None):
@@ -28,9 +29,10 @@ class EventList(object):
             self.wcs = _astropy.pywcs.WCS(naxis=2)
             self.wcs.wcs.crpix = parameters["pix_center"]
             self.wcs.wcs.crval = parameters["sky_center"].d
-            self.wcs.wcs.cdelt = [-parameters["dtheta"].value, parameters["dtheta"].value]
-            self.wcs.wcs.ctype = ["RA---TAN","DEC--TAN"]
-            self.wcs.wcs.cunit = ["deg"]*2
+            self.wcs.wcs.cdelt = [-parameters["dtheta"].value,
+                                  parameters["dtheta"].value]
+            self.wcs.wcs.ctype = ["RA---TAN", "DEC--TAN"]
+            self.wcs.wcs.cunit = ["deg"] * 2
         else:
             self.wcs = wcs
 
@@ -60,10 +62,11 @@ class EventList(object):
     def values(self):
         return self.events.values()
 
-    def __getitem__(self,key):
+    def __getitem__(self, key):
         if key not in self.events:
             if key == "xsky" or key == "ysky":
-                x,y = self.wcs.wcs_pix2world(self.events["xpix"], self.events["ypix"], 1)
+                x, y = self.wcs.wcs_pix2world(
+                    self.events["xpix"], self.events["ypix"], 1)
                 self.events["xsky"] = YTArray(x, "degree")
                 self.events["ysky"] = YTArray(y, "degree")
         return self.events[key]
@@ -81,7 +84,7 @@ class EventList(object):
         for item1, item2 in zip(self.items(), other.items()):
             k1, v1 = item1
             k2, v2 = item2
-            events[k1] = uconcatenate([v1,v2])
+            events[k1] = uconcatenate([v1, v2])
         return EventList(events, self.parameters)
 
     def add_point_sources(self, positions, energy_bins, spectra,
@@ -105,7 +108,7 @@ class EventList(object):
             A pseudo-random number generator. Typically will only be specified
             if you have a reason to generate the same set of random numbers, such as for a
             test. Default is the :mod:`numpy.random` module.
-        absorb_model : :class:`~pyxsim.spectral_models.AbsorptionModel` 
+        absorb_model : :class:`~pyxsim.spectral_models.AbsorptionModel`
             A model for foreground galactic absorption.
         """
         if prng is None:
@@ -122,8 +125,8 @@ class EventList(object):
             eobs = self._add_events(energy_bins, spectrum, prng, absorb_model)
             xpix, ypix = self.wcs.wcs_world2pix(pos[0], pos[1], 1)
             ne = len(eobs)
-            x.append([xpix]*ne)
-            y.append([ypix]*ne)
+            x.append([xpix] * ne)
+            y.append([ypix] * ne)
             e.append(eobs)
 
         events = {}
@@ -150,7 +153,7 @@ class EventList(object):
             A pseudo-random number generator. Typically will only be specified
             if you have a reason to generate the same set of random numbers, such as for a
             test. Default is the :mod:`numpy.random` module.
-        absorb_model : :class:`~pyxsim.spectral_models.AbsorptionModel` 
+        absorb_model : :class:`~pyxsim.spectral_models.AbsorptionModel`
             A model for foreground galactic absorption.
         """
         if prng is None:
@@ -158,8 +161,10 @@ class EventList(object):
 
         eobs = self._add_events(energy_bins, spectrum, prng, absorb_model)
         ne = len(eobs)
-        x = np.random.uniform(low=0.5, high=2.*self.parameters["pix_center"][0]-0.5, size=ne)
-        y = np.random.uniform(low=0.5, high=2.*self.parameters["pix_center"][1]-0.5, size=ne)
+        x = np.random.uniform(
+            low=0.5, high=2. * self.parameters["pix_center"][0] - 0.5, size=ne)
+        y = np.random.uniform(
+            low=0.5, high=2. * self.parameters["pix_center"][1] - 0.5, size=ne)
 
         events = {}
         events["xpix"] = uconcatenate([x, self.events["xpix"]])
@@ -172,7 +177,7 @@ class EventList(object):
         exp_time = self.parameters["ExposureTime"]
         area = self.parameters["Area"]
         flux = spectrum.sum()
-        num_photons = prng.poisson(lam=exp_time*area*flux)
+        num_photons = prng.poisson(lam=exp_time * area * flux)
         cumspec = np.cumsum(spectrum)
         cumspec = np.insert(cumspec, 0, 0.0)
         cumspec /= cumspec[-1]
@@ -226,7 +231,8 @@ class EventList(object):
         if "redshift" in p:
             parameters["Redshift"] = p["redshift"].value
         if "d_a" in p:
-            parameters["AngularDiameterDistance"] = YTQuantity(p["d_a"].value, "Mpc")
+            parameters["AngularDiameterDistance"] = YTQuantity(
+                p["d_a"].value, "Mpc")
         parameters["sky_center"] = YTArray(p["sky_center"][:], "deg")
         parameters["dtheta"] = YTQuantity(p["dtheta"].value, "deg")
         parameters["pix_center"] = p["pix_center"][:]
@@ -273,7 +279,8 @@ class EventList(object):
         if "REDSHIFT" in tblhdu.header:
             parameters["Redshift"] = tblhdu.header["REDSHIFT"]
         if "D_A" in tblhdu.header:
-            parameters["AngularDiameterDistance"] = YTQuantity(tblhdu.header["D_A"], "Mpc")
+            parameters["AngularDiameterDistance"] = YTQuantity(
+                tblhdu.header["D_A"], "Mpc")
         if "RMF" in tblhdu.header:
             parameters["RMF"] = tblhdu.header["RMF"]
         if "ARF" in tblhdu.header:
@@ -286,12 +293,14 @@ class EventList(object):
             parameters["Telescope"] = tblhdu.header["TELESCOP"]
         if "INSTRUME" in tblhdu.header:
             parameters["Instrument"] = tblhdu.header["INSTRUME"]
-        parameters["sky_center"] = YTArray([tblhdu.header["TCRVL2"], tblhdu.header["TCRVL3"]], "deg")
-        parameters["pix_center"] = np.array([tblhdu.header["TCRVL2"], tblhdu.header["TCRVL3"]])
+        parameters["sky_center"] = YTArray(
+            [tblhdu.header["TCRVL2"], tblhdu.header["TCRVL3"]], "deg")
+        parameters["pix_center"] = np.array(
+            [tblhdu.header["TCRVL2"], tblhdu.header["TCRVL3"]])
         parameters["dtheta"] = YTQuantity(tblhdu.header["TCRVL3"], "deg")
         events["xpix"] = tblhdu.data["X"]
         events["ypix"] = tblhdu.data["Y"]
-        events["eobs"] = YTArray(tblhdu.data["ENERGY"]/1000., "keV")
+        events["eobs"] = YTArray(tblhdu.data["ENERGY"] / 1000., "keV")
         if "PI" in tblhdu.columns.names:
             events["PI"] = tblhdu.data["PI"]
         if "PHA" in tblhdu.columns.names:
@@ -324,24 +333,24 @@ class EventList(object):
         cols = [col_e, col_x, col_y]
 
         if "ChannelType" in self.parameters:
-             chantype = self.parameters["ChannelType"]
-             if chantype == "PHA":
-                  cunit = "adu"
-             elif chantype == "PI":
-                  cunit = "Chan"
-             col_ch = pyfits.Column(name=chantype.upper(), format='1J',
-                                    unit=cunit, array=self.events[chantype])
-             cols.append(col_ch)
+            chantype = self.parameters["ChannelType"]
+            if chantype == "PHA":
+                cunit = "adu"
+            elif chantype == "PI":
+                cunit = "Chan"
+            col_ch = pyfits.Column(name=chantype.upper(), format='1J',
+                                   unit=cunit, array=self.events[chantype])
+            cols.append(col_ch)
 
-             mylog.info("Generating times for events assuming uniform time "
-                        "distribution. In future versions this will be made "
-                        "more general.")
+            mylog.info("Generating times for events assuming uniform time "
+                       "distribution. In future versions this will be made "
+                       "more general.")
 
-             time = np.random.uniform(size=self.num_events, low=0.0,
-                                      high=float(self.parameters["ExposureTime"]))
-             col_t = pyfits.Column(name="TIME", format='1D', unit='s',
-                                   array=time)
-             cols.append(col_t)
+            time = np.random.uniform(size=self.num_events, low=0.0,
+                                     high=float(self.parameters["ExposureTime"]))
+            col_t = pyfits.Column(name="TIME", format='1D', unit='s',
+                                  array=time)
+            cols.append(col_t)
 
         coldefs = pyfits.ColDefs(cols)
         tbhdu = pyfits.BinTableHDU.from_columns(coldefs)
@@ -361,20 +370,22 @@ class EventList(object):
         tbhdu.header["TCRPX3"] = self.parameters["pix_center"][1]
         tbhdu.header["TLMIN2"] = 0.5
         tbhdu.header["TLMIN3"] = 0.5
-        tbhdu.header["TLMAX2"] = 2.*self.parameters["pix_center"][0]-0.5
-        tbhdu.header["TLMAX3"] = 2.*self.parameters["pix_center"][1]-0.5
+        tbhdu.header["TLMAX2"] = 2. * self.parameters["pix_center"][0] - 0.5
+        tbhdu.header["TLMAX3"] = 2. * self.parameters["pix_center"][1] - 0.5
         if "ChannelType" in self.parameters:
             rmf = RedistributionMatrixFile(self.parameters["RMF"])
             tbhdu.header["TLMIN4"] = rmf.cmin
             tbhdu.header["TLMAX4"] = rmf.cmax
-            tbhdu.header["RESPFILE"] = os.path.split(self.parameters["RMF"])[-1]
+            tbhdu.header["RESPFILE"] = os.path.split(
+                self.parameters["RMF"])[-1]
             tbhdu.header["PHA_BINS"] = rmf.n_ch
         tbhdu.header["EXPOSURE"] = exp_time
         tbhdu.header["TSTART"] = 0.0
         tbhdu.header["TSTOP"] = exp_time
         tbhdu.header["AREA"] = float(self.parameters["Area"])
         if "AngularDiameterDistance" in self.parameters:
-            tbhdu.header["D_A"] = float(self.parameters["AngularDiameterDistance"])
+            tbhdu.header["D_A"] = float(
+                self.parameters["AngularDiameterDistance"])
         if "Redshift" in self.parameters:
             tbhdu.header["REDSHIFT"] = self.parameters["Redshift"]
         tbhdu.header["HDUVERS"] = "1.1.0"
@@ -387,7 +398,8 @@ class EventList(object):
         tbhdu.header["DATE-OBS"] = t_begin.tt.isot
         tbhdu.header["DATE-END"] = t_end.tt.isot
         if "ARF" in self.parameters:
-            tbhdu.header["ANCRFILE"] = os.path.split(self.parameters["ARF"])[-1]
+            tbhdu.header["ANCRFILE"] = os.path.split(
+                self.parameters["ARF"])[-1]
         if "ChannelType" in self.parameters:
             tbhdu.header["CHANTYPE"] = self.parameters["ChannelType"]
         if "Mission" in self.parameters:
@@ -405,7 +417,7 @@ class EventList(object):
             stop = pyfits.Column(name='STOP', format='1D', unit='s',
                                  array=np.array([exp_time]))
 
-            tbhdu_gti = pyfits.BinTableHDU.from_columns([start,stop])
+            tbhdu_gti = pyfits.BinTableHDU.from_columns([start, stop])
             tbhdu_gti.name = "STDGTI"
             tbhdu_gti.header["TSTART"] = 0.0
             tbhdu_gti.header["TSTOP"] = exp_time
@@ -441,8 +453,10 @@ class EventList(object):
         """
         pyfits = _astropy.pyfits
         if isinstance(self.parameters["Area"], string_types):
-             mylog.error("Writing SIMPUT files is only supported if you didn't convolve with responses.")
-             raise TypeError("Writing SIMPUT files is only supported if you didn't convolve with responses.")
+            mylog.error(
+                "Writing SIMPUT files is only supported if you didn't convolve with responses.")
+            raise TypeError(
+                "Writing SIMPUT files is only supported if you didn't convolve with responses.")
 
         if emin is None:
             emin = self["eobs"].min().value
@@ -451,11 +465,13 @@ class EventList(object):
 
         idxs = np.logical_and(self["eobs"].d >= emin, self["eobs"].d <= emax)
         flux = np.sum(self["eobs"][idxs].in_units("erg")) / \
-               self.parameters["ExposureTime"]/self.parameters["Area"]
+            self.parameters["ExposureTime"] / self.parameters["Area"]
 
-        col1 = pyfits.Column(name='ENERGY', format='E', array=self["eobs"][idxs].d)
+        col1 = pyfits.Column(name='ENERGY', format='E',
+                             array=self["eobs"][idxs].d)
         col2 = pyfits.Column(name='RA', format='D', array=self["xsky"][idxs].d)
-        col3 = pyfits.Column(name='DEC', format='D', array=self["ysky"][idxs].d)
+        col3 = pyfits.Column(name='DEC', format='D',
+                             array=self["ysky"][idxs].d)
 
         coldefs = pyfits.ColDefs([col1, col2, col3])
 
@@ -472,21 +488,29 @@ class EventList(object):
         tbhdu.header["TUNIT2"] = "deg"
         tbhdu.header["TUNIT3"] = "deg"
 
-        phfile = prefix+"_phlist.fits"
+        phfile = prefix + "_phlist.fits"
 
         tbhdu.writeto(phfile, clobber=clobber)
 
-        col1 = pyfits.Column(name='SRC_ID', format='J', array=np.array([1]).astype("int32"))
+        col1 = pyfits.Column(name='SRC_ID', format='J',
+                             array=np.array([1]).astype("int32"))
         col2 = pyfits.Column(name='RA', format='D', array=np.array([0.0]))
         col3 = pyfits.Column(name='DEC', format='D', array=np.array([0.0]))
-        col4 = pyfits.Column(name='E_MIN', format='D', array=np.array([float(emin)]))
-        col5 = pyfits.Column(name='E_MAX', format='D', array=np.array([float(emax)]))
-        col6 = pyfits.Column(name='FLUX', format='D', array=np.array([flux.value]))
-        col7 = pyfits.Column(name='SPECTRUM', format='80A', array=np.array([phfile+"[PHLIST,1]"]))
-        col8 = pyfits.Column(name='IMAGE', format='80A', array=np.array([phfile+"[PHLIST,1]"]))
-        col9 = pyfits.Column(name='SRC_NAME', format='80A', array=np.array(["yt_src"]))
+        col4 = pyfits.Column(name='E_MIN', format='D',
+                             array=np.array([float(emin)]))
+        col5 = pyfits.Column(name='E_MAX', format='D',
+                             array=np.array([float(emax)]))
+        col6 = pyfits.Column(name='FLUX', format='D',
+                             array=np.array([flux.value]))
+        col7 = pyfits.Column(name='SPECTRUM', format='80A',
+                             array=np.array([phfile + "[PHLIST,1]"]))
+        col8 = pyfits.Column(name='IMAGE', format='80A',
+                             array=np.array([phfile + "[PHLIST,1]"]))
+        col9 = pyfits.Column(name='SRC_NAME', format='80A',
+                             array=np.array(["yt_src"]))
 
-        coldefs = pyfits.ColDefs([col1, col2, col3, col4, col5, col6, col7, col8, col9])
+        coldefs = pyfits.ColDefs(
+            [col1, col2, col3, col4, col5, col6, col7, col8, col9])
 
         wrhdu = pyfits.BinTableHDU.from_columns(coldefs)
         wrhdu.name = "SRC_CAT"
@@ -503,7 +527,7 @@ class EventList(object):
         wrhdu.header["TUNIT5"] = "keV"
         wrhdu.header["TUNIT6"] = "erg/s/cm**2"
 
-        simputfile = prefix+"_simput.fits"
+        simputfile = prefix + "_simput.fits"
 
         wrhdu.writeto(simputfile, clobber=clobber)
 
@@ -515,18 +539,21 @@ class EventList(object):
         f = h5py.File(h5file, "w")
 
         p = f.create_group("parameters")
-        p.create_dataset("exp_time", data=float(self.parameters["ExposureTime"]))
+        p.create_dataset("exp_time", data=float(
+            self.parameters["ExposureTime"]))
         p.create_dataset("area", data=float(self.parameters["Area"]))
         if "Redshift" in self.parameters:
             p.create_dataset("redshift", data=self.parameters["Redshift"])
         if "AngularDiameterDistance" in self.parameters:
-            p.create_dataset("d_a", data=float(self.parameters["AngularDiameterDistance"]))
+            p.create_dataset("d_a", data=float(
+                self.parameters["AngularDiameterDistance"]))
         if "ARF" in self.parameters:
             p.create_dataset("arf", data=self.parameters["ARF"])
         if "RMF" in self.parameters:
             p.create_dataset("rmf", data=self.parameters["RMF"])
         if "ChannelType" in self.parameters:
-            p.create_dataset("channel_type", data=self.parameters["ChannelType"])
+            p.create_dataset(
+                "channel_type", data=self.parameters["ChannelType"])
         if "Mission" in self.parameters:
             p.create_dataset("mission", data=self.parameters["Mission"])
         if "Telescope" in self.parameters:
@@ -578,15 +605,15 @@ class EventList(object):
 
         mask = np.logical_and(mask_emin, mask_emax)
 
-        nx = int(2*self.parameters["pix_center"][0]-1.)
-        ny = int(2*self.parameters["pix_center"][1]-1.)
+        nx = int(2 * self.parameters["pix_center"][0] - 1.)
+        ny = int(2 * self.parameters["pix_center"][1] - 1.)
 
-        xbins = np.linspace(0.5, float(nx)+0.5, nx+1, endpoint=True)
-        ybins = np.linspace(0.5, float(ny)+0.5, ny+1, endpoint=True)
+        xbins = np.linspace(0.5, float(nx) + 0.5, nx + 1, endpoint=True)
+        ybins = np.linspace(0.5, float(ny) + 0.5, ny + 1, endpoint=True)
 
         H, xedges, yedges = np.histogram2d(self["xpix"][mask],
                                            self["ypix"][mask],
-                                           bins=[xbins,ybins])
+                                           bins=[xbins, ybins])
 
         hdu = _astropy.pyfits.PrimaryHDU(H.T)
 
@@ -594,8 +621,8 @@ class EventList(object):
         hdu.header["MFORM1"] = "RA,DEC"
         hdu.header["CTYPE1"] = "RA---TAN"
         hdu.header["CTYPE2"] = "DEC--TAN"
-        hdu.header["CRPIX1"] = 0.5*(nx+1)
-        hdu.header["CRPIX2"] = 0.5*(nx+1)
+        hdu.header["CRPIX1"] = 0.5 * (nx + 1)
+        hdu.header["CRPIX2"] = 0.5 * (nx + 1)
         hdu.header["CRVAL1"] = float(self.parameters["sky_center"][0])
         hdu.header["CRVAL2"] = float(self.parameters["sky_center"][1])
         hdu.header["CUNIT1"] = "deg"
@@ -620,7 +647,7 @@ class EventList(object):
             The name of the FITS file to be written.
         bin_type : string, optional
             Bin on "energy" or "channel". If an RMF is detected, channel information will be
-            imported from it. 
+            imported from it.
         emin : float, optional
             The minimum energy of the spectral bins in keV. Only used if binning without an RMF.
         emax : float, optional
@@ -633,27 +660,32 @@ class EventList(object):
             spectype = self.parameters["ChannelType"]
             rmf = RedistributionMatrixFile(self.parameters["RMF"])
             minlength = rmf.n_ch
-            if rmf.cmin == 1: minlength += 1
+            if rmf.cmin == 1:
+                minlength += 1
             spec = np.bincount(self[spectype], minlength=minlength)
-            if rmf.cmin == 1: spec = spec[1:]
-            bins = (np.arange(rmf.n_ch)+rmf.cmin).astype("int32")
+            if rmf.cmin == 1:
+                spec = spec[1:]
+            bins = (np.arange(rmf.n_ch) + rmf.cmin).astype("int32")
         else:
             espec = self["eobs"].d
             erange = (emin, emax)
             spec, ee = np.histogram(espec, bins=nchan, range=erange)
             if bin_type == "energy":
-                bins = 0.5*(ee[1:]+ee[:-1])
+                bins = 0.5 * (ee[1:] + ee[:-1])
                 spectype = "energy"
             else:
                 mylog.info("Events haven't been convolved with an RMF, so assuming "
                            "a perfect response and %d PI channels." % nchan)
-                bins = (np.arange(nchan)+1).astype("int32")
+                bins = (np.arange(nchan) + 1).astype("int32")
                 spectype = "pi"
 
         col1 = pyfits.Column(name='CHANNEL', format='1J', array=bins)
-        col2 = pyfits.Column(name=spectype.upper(), format='1D', array=bins.astype("float64"))
-        col3 = pyfits.Column(name='COUNTS', format='1J', array=spec.astype("int32"))
-        col4 = pyfits.Column(name='COUNT_RATE', format='1D', array=spec/float(self.parameters["ExposureTime"]))
+        col2 = pyfits.Column(name=spectype.upper(),
+                             format='1D', array=bins.astype("float64"))
+        col3 = pyfits.Column(name='COUNTS', format='1J',
+                             array=spec.astype("int32"))
+        col4 = pyfits.Column(name='COUNT_RATE', format='1D',
+                             array=spec / float(self.parameters["ExposureTime"]))
 
         coldefs = pyfits.ColDefs([col1, col2, col3, col4])
 
@@ -677,11 +709,13 @@ class EventList(object):
         tbhdu.header["CORRFILE"] = "none"
         tbhdu.header["POISSERR"] = True
         if "RMF" in self.parameters:
-            tbhdu.header["RESPFILE"] = os.path.split(self.parameters["RMF"])[-1]
+            tbhdu.header["RESPFILE"] = os.path.split(
+                self.parameters["RMF"])[-1]
         else:
             tbhdu.header["RESPFILE"] = "none"
         if "ARF" in self.parameters:
-            tbhdu.header["ANCRFILE"] = os.path.split(self.parameters["ARF"])[-1]
+            tbhdu.header["ANCRFILE"] = os.path.split(
+                self.parameters["ARF"])[-1]
         else:
             tbhdu.header["ANCRFILE"] = "none"
         if "Mission" in self.parameters:
