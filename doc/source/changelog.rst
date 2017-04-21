@@ -3,6 +3,12 @@
 ChangeLog
 =========
 
+Version 1.2.6
+-------------
+
+This is a bugfix release that ensures that fields with units of ``code_metallicity`` are
+properly handled. 
+
 Version 1.2.5
 -------------
 
