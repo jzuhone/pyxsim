@@ -20,11 +20,11 @@ def test_apec():
 
     spec2 = amod.return_spectrum(6.0, 0.3, 0.2, 1.0e-14)
 
-    yield assert_allclose, spec.v, spec2.v
+    assert_allclose(spec.v, spec2.v)
 
     def spec_test():
         return spec.v
 
     test = GenericArrayTest(ds, spec_test)
     test_apec.__name__ = test.description
-    yield test
+    test()
