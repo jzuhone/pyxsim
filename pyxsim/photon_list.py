@@ -59,7 +59,10 @@ def determine_fields(ds, source_type):
 
 def get_smallest_dds(ds, ds_type):
     if ds_type == "cells":
-        dds = ds.index.select_grids(ds.index.grid_levels.max())[0].dds[:]
+        if hasattr(ds.index, "select_grids"):
+            dds = ds.index.select_grids(ds.index.grid_levels.max())[0].dds[:]
+        else:
+            dds = ds.domain_width / (ds.domain_dimensions * 2**(ds.max_level))
     else:
         ML = ds.index.oct_handler.max_level
         dds = 1.0/(ds.domain_dimensions*2**ML)

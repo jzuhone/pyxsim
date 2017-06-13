@@ -3,6 +3,28 @@
 ChangeLog
 =========
 
+Version 1.2.6
+-------------
+
+This is a bugfix release that ensures that fields with units of ``code_metallicity`` are
+properly handled. 
+
+Version 1.2.5
+-------------
+
+This is a bugfix release with two fixes:
+
+* Ensured that metallicity fields in the :class:`~pyxsim.source_models.ThermalSourceModel`
+  are properly scaled to the Anders & Grevasse (1989) solar metallicity since this is 
+  what APEC assumes.
+* Support for octree mesh datasets (such as RAMSES) has now been added. 
+
+Version 1.2.4
+-------------
+
+This version fixes a single bug, ensuring that the metallicity is converted to
+solar units in thermal source models. 
+
 Version 1.2.3
 -------------
 

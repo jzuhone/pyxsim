@@ -104,10 +104,19 @@ class ThermalSourceModel(SourceModel):
         self.kT_bins = None
         self.dkT = None
         self.emission_measure_field = emission_measure_field
+        self.Zconvert = 1.0
 
     def setup_model(self, data_source, redshift, spectral_norm):
         self.redshift = redshift
         ptype = None
+        if not isinstance(self.Zmet, float):
+            Z_units = str(data_source.ds._get_field_info(self.Zmet).units)
+            if Z_units in ["dimensionless", "", "code_metallicity"]:
+                self.Zconvert = 1.0/0.019
+            elif Z_units == "Zsun":
+                self.Zconvert = 1.0
+            else:
+                raise RuntimeError("I don't understand metallicity units of %s!" % Z_units)
         if self.emission_measure_field is None:
             found_dfield = [fd for fd in particle_dens_fields if fd in data_source.ds.field_list]
             if len(found_dfield) > 0:
@@ -204,7 +213,7 @@ class ThermalSourceModel(SourceModel):
         if isinstance(self.Zmet, float):
             metalZ = self.Zmet*np.ones(num_cells)
         else:
-            metalZ = chunk[self.Zmet].to("Zsun").v[idxs]
+            metalZ = chunk[self.Zmet].v[idxs]*self.Zconvert
 
         number_of_photons = np.zeros(num_cells, dtype="int64")
         energies = np.zeros(num_photons_max)
