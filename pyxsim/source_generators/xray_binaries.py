@@ -1,9 +1,10 @@
 import numpy as np
-import yt
-from yt.units.yt_array import uconcatenate
-import yt.units as u
+from yt.frontends.stream.api import load_particles
+from yt.units.yt_array import uconcatenate, YTArray, \
+    YTQuantity
 from scipy.integrate import quad
 from scipy.interpolate import InterpolatedUnivariateSpline
+from six import string_types
 from pyxsim.utils import mylog
 
 t_lm = np.array([7.07038000e-03,   7.42810000e-03,   7.90964000e-03,
@@ -300,14 +301,14 @@ def make_xrbs(Ls, Lfunc, Nfunc, prng):
     return N
 
 def make_xrb_particles(data_source, metallicity_field, age_field,
-                       prng=None):
+                       scale_length, output_lums=None, prng=None):
     r"""
     This routine generates an in-memory dataset composed of X-ray binary particles
     from an input data source containing star particles. 
 
     Parameters
     ----------
-    data_source :  :class:`~yt.data_objects.data_containers.YTSelectionContainer`
+    data_source : :class:`~yt.data_objects.data_containers.YTSelectionContainer`
         The yt data source to obtain the data from, such as a sphere, box, disk, 
         etc.
     metallicity_field : string or (type, name) field tuple
@@ -324,8 +325,28 @@ def make_xrb_particles(data_source, metallicity_field, age_field,
 
     t = data_source[age_field].to("Gyr").d
     Z = data_source[metallicity_field].to("Zsun").d
-
     m = data_source[(ptype, "particle_mass")].to("Msun")
+
+    npart = t.size
+
+    scale_field = None
+    if isinstance(scale_length, tuple):
+        if isinstance(scale_length[0], string_types):
+            scale_field = scale_length
+    elif isinstance(scale_length, string_types):
+        scale_field = (ptype, scale_length)
+
+    if scale_field is None:
+        if isinstance(scale_length, tuple):
+            scale = YTArray([scale_length[0]]*npart, scale_length[0])
+        elif isinstance(scale_length, YTQuantity):
+            scale = YTArray([scale_length]*npart)
+        else:
+            scale = YTArray([scale_length[0]]*npart, "kpc")
+    else:
+        scale = data_source[scale_length]
+
+    scale = scale.to('kpc').d
 
     l_l = np.interp(t, t_lm, L_lm, left=0.0, right=0.0)
     l_h = np.interp(t, t_hm, L_hm, left=0.0, right=0.0)
@@ -333,8 +354,8 @@ def make_xrb_particles(data_source, metallicity_field, age_field,
     l_l[l_l > 0.0] = 10**l_l[l_l > 0.0]
     l_h[l_h > 0.0] = 10**l_h[l_h > 0.0]
 
-    l_l = yt.YTArray(l_l, "erg/s/(1.0e10*Msun)")
-    l_h = yt.YTArray(l_h, "erg/s/(1.0e10*Msun)")
+    l_l = YTArray(l_l, "erg/s/(1.0e10*Msun)")
+    l_h = YTArray(l_h, "erg/s/(1.0e10*Msun)")
 
     f_zh = np.interp(t, t_zhi, f_zhi, left=0.0, right=0.0)
     f_zl = np.interp(t, t_zlo, f_zlo, left=0.0, right=0.0)
@@ -354,8 +375,11 @@ def make_xrb_particles(data_source, metallicity_field, age_field,
     N_l = make_xrbs(l_l, lmxb_pdf, lmxb_cdf, prng)
     N_h = make_xrbs(l_h, hmxb_pdf, hmxb_cdf, prng)
 
-    #np.savetxt("lmxb.dat", np.transpose([l_l, N_l]), delimiter="\t")
-    #np.savetxt("hmxb.dat", np.transpose([l_h, N_h]), delimiter="\t")
+    if output_lums is not None:
+        np.savetxt("%s_lmxb.dat" % output_lums, np.transpose([l_l, N_l]),
+                   delimiter="\t")
+        np.savetxt("%s_hmxb.dat" % output_lums, np.transpose([l_h, N_h]),
+                   delimiter="\t")
 
     N_all = (N_l+N_h).sum()
 
@@ -386,19 +410,22 @@ def make_xrb_particles(data_source, metallicity_field, age_field,
         for i, n in enumerate(N_l):
             if n > 0:
                 randvec = prng.uniform(size=n)
-                lum = yt.YTArray(10**invcdf_l(randvec)*1.0e38, "erg/s")
-                x = data_source[ptype, "particle_position_x"][i] + prng.normal(scale=1.0, size=n)*u.kpc
-                y = data_source[ptype, "particle_position_y"][i] + prng.normal(scale=1.0, size=n)*u.kpc
-                z = data_source[ptype, "particle_position_z"][i] + prng.normal(scale=1.0, size=n)*u.kpc
-                vx = yt.YTArray([data_source[ptype, "particle_velocity_x"][i]]*n)
-                vy = yt.YTArray([data_source[ptype, "particle_velocity_y"][i]]*n)
-                vz = yt.YTArray([data_source[ptype, "particle_velocity_z"][i]]*n)
-                x_lm.append(x.to("kpc"))
-                y_lm.append(y.to("kpc"))
-                z_lm.append(z.to("kpc"))
-                vx_lm.append(vx.to("km/s"))
-                vy_lm.append(vy.to("km/s"))
-                vz_lm.append(vz.to("km/s"))
+                lum = YTArray(10**invcdf_l(randvec)*1.0e38, "erg/s")
+                x = YTArray(prng.normal(scale=scale[i], size=n), "kpc")
+                y = YTArray(prng.normal(scale=scale[i], size=n), "kpc")
+                z = YTArray(prng.normal(scale=scale[i], size=n), "kpc")
+                x += data_source[ptype, "particle_position_x"][i].to("kpc")
+                y += data_source[ptype, "particle_position_y"][i].to("kpc")
+                z += data_source[ptype, "particle_position_z"][i].to("kpc")
+                vx = YTArray([data_source[ptype, "particle_velocity_x"][i]]*n).to('km/s')
+                vy = YTArray([data_source[ptype, "particle_velocity_y"][i]]*n).to('km/s')
+                vz = YTArray([data_source[ptype, "particle_velocity_z"][i]]*n).to('km/s')
+                x_lm.append(x)
+                y_lm.append(y)
+                z_lm.append(z)
+                vx_lm.append(vx)
+                vy_lm.append(vy)
+                vz_lm.append(vz)
                 l_lm.append(lum)
 
         x_lm = uconcatenate(x_lm)
@@ -436,13 +463,16 @@ def make_xrb_particles(data_source, metallicity_field, age_field,
         for i, n in enumerate(N_h):
             if n > 0:
                 randvec = prng.uniform(size=n)
-                lum = yt.YTArray(10**invcdf_h(randvec)*1.0e38, "erg/s")
-                x = data_source[ptype, "particle_position_x"][i] + prng.normal(scale=1.0, size=n)*u.kpc
-                y = data_source[ptype, "particle_position_y"][i] + prng.normal(scale=1.0, size=n)*u.kpc
-                z = data_source[ptype, "particle_position_z"][i] + prng.normal(scale=1.0, size=n)*u.kpc
-                vx = yt.YTArray([data_source[ptype, "particle_velocity_x"][i]]*n)
-                vy = yt.YTArray([data_source[ptype, "particle_velocity_y"][i]]*n)
-                vz = yt.YTArray([data_source[ptype, "particle_velocity_z"][i]]*n)
+                lum = YTArray(10**invcdf_h(randvec)*1.0e38, "erg/s")
+                x = YTArray(prng.normal(scale=scale[i], size=n), "kpc")
+                y = YTArray(prng.normal(scale=scale[i], size=n), "kpc")
+                z = YTArray(prng.normal(scale=scale[i], size=n), "kpc")
+                x += data_source[ptype, "particle_position_x"][i].to("kpc")
+                y += data_source[ptype, "particle_position_y"][i].to("kpc")
+                z += data_source[ptype, "particle_position_z"][i].to("kpc")
+                vx = YTArray([data_source[ptype, "particle_velocity_x"][i]]*n).to('km/s')
+                vy = YTArray([data_source[ptype, "particle_velocity_y"][i]]*n).to('km/s')
+                vz = YTArray([data_source[ptype, "particle_velocity_z"][i]]*n).to('km/s')
                 x_hm.append(x)
                 y_hm.append(y)
                 z_hm.append(z)
@@ -472,8 +502,8 @@ def make_xrb_particles(data_source, metallicity_field, age_field,
 
     bbox = np.array([[dle[i], dre[i]] for i in range(3)])
 
-    new_ds = yt.load_particles(data, bbox=bbox, length_unit="kpc", 
-                               time_unit="Myr", mass_unit="Msun", 
-                               velocity_unit="km/s")
+    new_ds = load_particles(data, bbox=bbox, length_unit="kpc", 
+                            time_unit="Myr", mass_unit="Msun", 
+                            velocity_unit="km/s")
 
     return new_ds
