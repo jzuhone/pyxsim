@@ -5,6 +5,7 @@ from yt.units.yt_array import uconcatenate, YTArray, \
 from scipy.integrate import quad
 from scipy.interpolate import InterpolatedUnivariateSpline
 from six import string_types
+from pyxsim.source_models import PowerLawSourceModel
 from pyxsim.utils import mylog
 
 t_lm = np.array([7.07038000e-03,   7.42810000e-03,   7.90964000e-03,
@@ -507,3 +508,8 @@ def make_xrb_particles(data_source, metallicity_field, age_field,
                             velocity_unit="km/s")
 
     return new_ds
+
+def make_xrb_photon_models(e0, emin, emax, alpha_lmxb, alpha_hmxb, prng=None):
+    lmxb_model = PowerLawSourceModel(e0, emin, emax, alpha_lmxb, prng=prng)
+    hmxb_model = PowerLawSourceModel(e0, emin, emax, alpha_hmxb, prng=prng)
+    return lmxb_model, hmxb_model
