@@ -338,7 +338,7 @@ def make_xrb_particles(data_source, metallicity_field, age_field,
 
     if scale_field is None:
         if isinstance(scale_length, tuple):
-            scale = YTArray([scale_length[0]]*npart, scale_length[0])
+            scale = YTArray([scale_length[0]]*npart, scale_length[1])
         elif isinstance(scale_length, YTQuantity):
             scale = YTArray([scale_length]*npart)
         else:
