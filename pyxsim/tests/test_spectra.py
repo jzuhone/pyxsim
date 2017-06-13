@@ -1,5 +1,4 @@
-from pyxsim import \
-    TableApecModel, XSpecThermalModel
+from pyxsim import TableApecModel
 from yt.utilities.answer_testing.framework import \
     GenericArrayTest
 from yt.testing import requires_module, fake_random_ds
