@@ -70,9 +70,9 @@ def test_sloshing():
     test_sloshing.__name__ = test1.description
     yield test1
 
-    test2 = GenericArrayTest(ds, return_photons, args=["events"])
+    test2 = GenericArrayTest(ds, return_events, args=["events"])
     test_sloshing.__name__ = test2.description
-    yield test1
+    yield test2
 
     photons1.write_h5_file("test_photons.h5")
     events1.write_h5_file("test_events.h5")
