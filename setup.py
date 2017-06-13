@@ -1,8 +1,8 @@
 #!/usr/bin/env python
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(name='pyxsim',
-      packages=['pyxsim'],
+      packages=find_packages(),
       version='2.0.0',
       description='Python package for simulating X-ray observations of astrophysical sources',
       author='John ZuHone',
@@ -16,6 +16,7 @@ setup(name='pyxsim',
           'Operating System :: OS Independent',
           'Programming Language :: Python :: 2.7',
           'Programming Language :: Python :: 3.5',
+          'Programming Language :: Python :: 3.6',
           'Topic :: Scientific/Engineering :: Visualization',
       ],
       )

@@ -30,3 +30,6 @@ from pyxsim.instruments import \
 
 from pyxsim.light_cone import \
     XrayLightCone
+
+from pyxsim.source_generators import \
+    make_xrb_particles
