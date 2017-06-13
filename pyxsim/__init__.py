@@ -32,4 +32,6 @@ from pyxsim.light_cone import \
     XrayLightCone
 
 from pyxsim.source_generators import \
-    make_xrb_particles
+    make_xrb_particles, \
+    create_cylindrical_dataset, \
+    create_spherical_dataset
