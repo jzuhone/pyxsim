@@ -53,7 +53,6 @@ def plaw_fit(alpha_sim):
                  units="keV**-1*s**-1")
 
     nH_sim = 0.02
-    abs_model = WabsModel(nH_sim)
 
     A = YTQuantity(2000., "cm**2")
     exp_time = YTQuantity(2.0e5, "s")
@@ -71,9 +70,9 @@ def plaw_fit(alpha_sim):
     dist_fac = 1.0/(4.*np.pi*D_A*D_A*(1.+redshift)**3).in_cgs()
     norm_sim = float((sphere["hard_emission"]).sum()*dist_fac.in_cgs())*(1.+redshift)
 
-    events = photons.project_photons("z", [30., 45.], absorb_model=abs_model,
-                                     prng=bms.prng,
-                                     no_shifting=True)
+    events = photons.project_photons("z", [30., 45.], absorb_model="wabs",
+                                     nH=nH_sim, prng=bms.prng, no_shifting=True)
+
     ACIS_I(events, "plaw_model_evt.fits", convolve_energies_only=True, 
            instr_bkgnd=False, ptsrc_bkgnd=False, foreground=False, prng=prng)
 

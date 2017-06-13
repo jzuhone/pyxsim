@@ -66,7 +66,6 @@ def do_beta_model(source, v_field, em_field):
     nH_sim = 0.02
 
     apec_model = TableApecModel(0.1, 11.5, 20000, thermal_broad=True)
-    abs_model = TBabsModel(nH_sim)
 
     sphere = ds.sphere("c", (0.5, "Mpc"))
 
@@ -87,8 +86,8 @@ def do_beta_model(source, v_field, em_field):
     sigma_sim = float(v1.in_units("km/s"))
     mu_sim = -float(v2.in_units("km/s"))
 
-    events = photons.project_photons("z", [30.0, 45.0], absorb_model=abs_model,
-                                     prng=source.prng)
+    events = photons.project_photons("z", [30.0, 45.0], absorb_model="tbabs",
+                                     nH=nH_sim, prng=source.prng)
 
     XRS_Calorimeter(events, "beta_model_evt.fits", convolve_energies_only=True,
                     instr_bkgnd=False, foreground=False, ptsrc_bkgnd=False,

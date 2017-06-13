@@ -172,7 +172,7 @@ class TBabsModel(TableAbsorbModel):
     Parameters
     ----------
     nH : float
-        The foreground column density *nH* in units of 10^22 cm^{-2}.
+        The foreground column density in units of 10^22 cm^{-2}.
 
     Examples
     --------
@@ -189,7 +189,7 @@ class WabsModel(AbsorptionModel):
     Parameters
     ----------
     nH : float
-        The foreground column density *nH* in units of 10^22 cm^{-2}.
+        The foreground column density in units of 10^22 cm^{-2}.
 
     Examples
     --------

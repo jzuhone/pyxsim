@@ -520,7 +520,7 @@ class PhotonList(object):
 
     def project_photons(self, normal, sky_center, area_new=None, 
                         exp_time_new=None, redshift_new=None, 
-                        dist_new=None, absorb_model=None, 
+                        dist_new=None, absorb_model=None, nH=None,
                         no_shifting=False, north_vector=None,
                         prng=None):
         r"""
@@ -555,6 +555,9 @@ class PhotonList(object):
             of events before being detected. This cannot be applied here if you 
             already did this step previously in the creation of the 
             :class:`~pyxsim.photon_list.PhotonList` instance.
+        nH : float, optional
+            The foreground column density in units of 10^22 cm^{-2}. Only used if
+            absorption is applied.
         no_shifting : boolean, optional
             If set, the photon energies will not be Doppler shifted.
         north_vector : a sequence of floats
@@ -586,6 +589,11 @@ class PhotonList(object):
 
         if isinstance(absorb_model, string_types):
             absorb_model = absorb_models[absorb_model]
+        if absorb_model is not None:
+            if nH is None:
+                raise RuntimeError("You specified an absorption model, but didn't "
+                                   "specify a value for nH!")
+            absorb_model = absorb_model(nH)
 
         sky_center = YTArray(sky_center, "degree")
 

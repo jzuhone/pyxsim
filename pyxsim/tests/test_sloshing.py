@@ -3,7 +3,7 @@ Answer test pyxsim.
 """
 
 from pyxsim import \
-    TableApecModel, TBabsModel, ThermalSourceModel, \
+    TableApecModel, ThermalSourceModel, \
     PhotonList, EventList, merge_files
 from yt.utilities.answer_testing.framework import requires_ds, \
     GenericArrayTest, data_dir_load
@@ -40,7 +40,6 @@ def test_sloshing():
     redshift = 0.1
 
     apec_model = TableApecModel(0.1, 11.0, 10000)
-    tbabs_model = TBabsModel(0.1)
 
     sphere = ds.sphere("c", (0.1, "Mpc"))
     sphere.set_field_parameter("X_H", 0.75)
@@ -62,7 +61,7 @@ def test_sloshing():
     return_photons = return_data(new_photons)
 
     events1 = photons1.project_photons([1.0,-0.5,0.2], [30., 45.], area_new=1500.,
-                                       absorb_model=tbabs_model, prng=prng)
+                                       absorb_model="tbabs", nH=0.1, prng=prng)
     events1["xsky"]
     return_events = return_data(events1.events)
 
@@ -87,16 +86,16 @@ def test_sloshing():
         else:
             arr1 = photons1[k]
             arr2 = photons2[k]
-        yield assert_array_equal, arr1, arr2
+        assert_array_equal(arr1, arr2)
     for k in events1.keys():
-        yield assert_array_equal, events1[k], events2[k]
+        assert_array_equal(events1[k], events2[k])
 
     nevents = 0
 
     for i in range(4):
         events = photons1.project_photons([1.0,-0.5,0.2], [30., 45.],
                                           exp_time_new=0.25*exp_time,
-                                          absorb_model=tbabs_model,
+                                          absorb_model="tbabs", nH=0.1,
                                           prng=prng)
         events.write_h5_file("split_events_%d.h5" % i)
         nevents += len(events["xsky"])
