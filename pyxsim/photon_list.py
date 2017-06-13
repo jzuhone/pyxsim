@@ -13,6 +13,7 @@ from yt.utilities.parallel_tools.parallel_analysis_interface import \
     communication_system, get_mpi_type, parallel_capable, parallel_objects
 from yt.units.yt_array import YTQuantity, YTArray, uconcatenate
 import h5py
+from pyxsim.spectral_models import absorb_models
 from pyxsim.utils import parse_value, force_unicode, validate_parameters, \
     key_warning, ParameterDict
 from pyxsim.event_list import EventList
@@ -546,7 +547,7 @@ class PhotonList(object):
             This may be optionally supplied instead of it being determined from the
             cosmology. If units are not specified, it is assumed to be in Mpc. To 
             use this, the redshift must be zero. 
-        absorb_model : :class:`~pyxsim.spectral_models.AbsorptionModel` 
+        absorb_model : string or :class:`~pyxsim.spectral_models.AbsorptionModel` 
             A model for foreground galactic absorption, to simulate the absorption
             of events before being detected. This cannot be applied here if you 
             already did this step previously in the creation of the 
@@ -580,6 +581,8 @@ class PhotonList(object):
             raise RuntimeError("You may specify a new redshift or distance, "
                                "but not both!")
 
+        if isinstance(absorb_model, string_types):
+            absorb_model = absorb_models[absorb_model]
 
         sky_center = YTArray(sky_center, "degree")
 
