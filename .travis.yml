@@ -20,9 +20,9 @@ before_install:
 
     - wget http://yt-project.org/data/GasSloshingLowRes.tar.gz
     - tar -zxvf GasSloshingLowRes.tar.gz
-    - wget http://hea-www.cfa.harvard.edu/~jzuhone/pyxsim11_2.tar.gz
+    - wget http://hea-www.cfa.harvard.edu/~jzuhone/pyxsim12_2.tar.gz
     - tar -zxvf pyxsim12_2.tar.gz		
-    - wget http://hea-www.cfa.harvard.edu/~jzuhone/pyxsim11_3.tar.gz
+    - wget http://hea-www.cfa.harvard.edu/~jzuhone/pyxsim12_3.tar.gz
     - tar -zxvf pyxsim12_3.tar.gz		
     - mkdir ~/.yt
     - printf "[yt]\ntest_data_dir = $PWD" >> ~/.yt/config
