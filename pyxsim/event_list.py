@@ -2,7 +2,7 @@
 Classes for generating lists of detected events
 """
 import numpy as np
-from yt.funcs import ensure_list
+from six import string_types
 from pyxsim.utils import mylog
 try:
     from yt.visualization.fits_image import assert_same_wcs
@@ -14,14 +14,22 @@ from yt.units.yt_array import YTQuantity, YTArray, uconcatenate
 import astropy.io.fits as pyfits
 import astropy.wcs as pywcs
 import h5py
-from pyxsim.utils import validate_parameters, parse_value, \
+from pyxsim.utils import force_unicode, validate_parameters, parse_value, \
     ParameterDict
 from soxs.simput import write_photon_list
+from soxs.instrument import RedistributionMatrixFile
+import os
 
 old_parameter_keys = {"ExposureTime": "exp_time",
                       "Area": "area",
                       "Redshift": "redshift",
-                      "AngularDiameterDistance": "d_a"}
+                      "AngularDiameterDistance": "d_a",
+                      "RMF": "rmf",
+                      "ARF": "arf",
+                      "Telescope": "telescope",
+                      "Instrument": "instrument",
+                      "Mission": "mission",
+                      "ChannelType": "channel_type"}
 
 class EventList(object):
 
@@ -38,6 +46,7 @@ class EventList(object):
             self.wcs.wcs.cunit = ["deg"]*2
         else:
             self.wcs = wcs
+        self.events["energy"] = self.events["eobs"]
 
     @classmethod
     def create_empty_list(cls, exp_time, area, wcs, parameters=None):
@@ -87,7 +96,7 @@ class EventList(object):
             k1, v1 = item1
             k2, v2 = item2
             events[k1] = uconcatenate([v1,v2])
-        return EventList(events, self.parameters)
+        return type(self)(events, self.parameters, wcs=self.wcs)
 
     def filter_events(self, region):
         """
@@ -108,7 +117,7 @@ class EventList(object):
         new_events = {}
         for k, v in self.items():
             new_events[k] = v[idxs]
-        return EventList(new_events, self.parameters)
+        return type(self)(new_events, self.parameters, wcs=self.wcs)
 
     @classmethod
     def from_h5_file(cls, h5file):
@@ -135,15 +144,28 @@ class EventList(object):
         events["xpix"] = d["xpix"][:]
         events["ypix"] = d["ypix"][:]
         events["eobs"] = YTArray(d["eobs"][:], "keV")
+        if "rmf" in p:
+            parameters["rmf"] = force_unicode(p["rmf"].value)
+            parameters["arf"] = force_unicode(p["arf"].value)
+            parameters["channel_type"] = force_unicode(p["channel_type"].value)
+            parameters["mission"] = force_unicode(p["mission"].value)
+            parameters["telescope"] = force_unicode(p["telescope"].value)
+            parameters["instrument"] = force_unicode(p["instrument"].value)
+            chantype = parameters["channel_type"]
+            events[chantype] = d[chantype][:]
 
         f.close()
 
-        return cls(events, parameters)
+        if "rmf" in p:
+            return ConvolvedEventList(events, parameters)
+        else:
+            return EventList(events, parameters)
 
     @classmethod
     def from_fits_file(cls, fitsfile):
         """
-        Initialize an :class:`~pyxsim.event_list.EventList` from a FITS file with filename *fitsfile*.
+        Initialize an :class:`~pyxsim.event_list.EventList` from a FITS 
+        file with filename *fitsfile*.
         """
         hdulist = pyfits.open(fitsfile)
 
@@ -165,7 +187,22 @@ class EventList(object):
         events["ypix"] = tblhdu.data["Y"]
         events["eobs"] = YTArray(tblhdu.data["ENERGY"]/1000., "keV")
 
-        return cls(events, parameters)
+        if "rmf" in tblhdu.header:
+            chan_type = parameters["channel_type"].upper()
+            parameters["rmf"] = tblhdu.header["RMF"]
+            parameters["arf"] = tblhdu.header["ARF"]
+            parameters["channel_type"] = tblhdu.header["CHANTYPE"]
+            parameters["mission"] = tblhdu.header["MISSION"]
+            parameters["telescope"] = tblhdu.header["TELESCOP"]
+            parameters["instrument"] = tblhdu.header["INSTRUME"]
+            events[chan_type] = tblhdu.data[chan_type]
+
+        hdulist.close()
+
+        if "rmf" in tblhdu.header:
+            return ConvolvedEventList(events, parameters)
+        else:
+            return EventList(events, parameters)
 
     @parallel_root_only
     def write_fits_file(self, fitsfile, overwrite=False):
@@ -177,6 +214,10 @@ class EventList(object):
 
         exp_time = float(self.parameters["exp_time"])
 
+        t_begin = Time.now()
+        dt = TimeDelta(exp_time, format='sec')
+        t_end = t_begin + dt
+
         col_e = pyfits.Column(name='ENERGY', format='E', unit='eV',
                               array=self["eobs"].in_units("eV").d)
         col_x = pyfits.Column(name='X', format='D', unit='pixel',
@@ -185,6 +226,22 @@ class EventList(object):
                               array=self["ypix"])
 
         cols = [col_e, col_x, col_y]
+
+        if "channel_type" in self.parameters:
+            chantype = self.parameters["channel_type"]
+            if chantype == "pha":
+                cunit = "adu"
+            elif chantype == "pi":
+                cunit = "Chan"
+            col_ch = pyfits.Column(name=chantype.upper(), format='1J',
+                                   unit=cunit, array=self.events[chantype])
+            cols.append(col_ch)
+
+            time = np.random.uniform(size=self.num_events, low=0.0,
+                                     high=float(self.parameters["ExposureTime"]))
+            col_t = pyfits.Column(name="TIME", format='1D', unit='s',
+                                  array=time)
+            cols.append(col_t)
 
         coldefs = pyfits.ColDefs(cols)
         tbhdu = pyfits.BinTableHDU.from_columns(coldefs)
@@ -206,6 +263,17 @@ class EventList(object):
         tbhdu.header["TLMIN3"] = 0.5
         tbhdu.header["TLMAX2"] = 2.*self.parameters["pix_center"][0]-0.5
         tbhdu.header["TLMAX3"] = 2.*self.parameters["pix_center"][1]-0.5
+        if "channel_type" in self.parameters:
+            rmf = RedistributionMatrixFile(self.parameters["rmf"])
+            tbhdu.header["TLMIN4"] = rmf.cmin
+            tbhdu.header["TLMAX4"] = rmf.cmax
+            tbhdu.header["RESPFILE"] = os.path.split(self.parameters["rmf"])[-1]
+            tbhdu.header["PHA_BINS"] = rmf.n_ch
+            tbhdu.header["ANCRFILE"] = os.path.split(self.parameters["arf"])[-1]
+            tbhdu.header["CHANTYPE"] = self.parameters["channel_type"]
+            tbhdu.header["MISSION"] = self.parameters["mission"]
+            tbhdu.header["TELESCOP"] = self.parameters["telescope"]
+            tbhdu.header["INSTRUME"] = self.parameters["instrument"]
         tbhdu.header["EXPOSURE"] = exp_time
         tbhdu.header["TSTART"] = 0.0
         tbhdu.header["TSTOP"] = exp_time
@@ -220,8 +288,32 @@ class EventList(object):
         tbhdu.header["HDUCLASS"] = "OGIP"
         tbhdu.header["HDUCLAS1"] = "EVENTS"
         tbhdu.header["HDUCLAS2"] = "ACCEPTED"
+        tbhdu.header["DATE"] = t_begin.tt.isot
+        tbhdu.header["DATE-OBS"] = t_begin.tt.isot
+        tbhdu.header["DATE-END"] = t_end.tt.isot
 
         hdulist = [pyfits.PrimaryHDU(), tbhdu]
+
+        if "channel_type" in self.parameters:
+            start = pyfits.Column(name='START', format='1D', unit='s',
+                                  array=np.array([0.0]))
+            stop = pyfits.Column(name='STOP', format='1D', unit='s',
+                                 array=np.array([exp_time]))
+
+            tbhdu_gti = pyfits.BinTableHDU.from_columns([start,stop])
+            tbhdu_gti.update_ext_name("STDGTI")
+            tbhdu_gti.header["TSTART"] = 0.0
+            tbhdu_gti.header["TSTOP"] = exp_time
+            tbhdu_gti.header["HDUCLASS"] = "OGIP"
+            tbhdu_gti.header["HDUCLAS1"] = "GTI"
+            tbhdu_gti.header["HDUCLAS2"] = "STANDARD"
+            tbhdu_gti.header["RADECSYS"] = "FK5"
+            tbhdu_gti.header["EQUINOX"] = 2000.0
+            tbhdu_gti.header["DATE"] = t_begin.tt.isot
+            tbhdu_gti.header["DATE-OBS"] = t_begin.tt.isot
+            tbhdu_gti.header["DATE-END"] = t_end.tt.isot
+
+            hdulist.append(tbhdu_gti)
 
         pyfits.HDUList(hdulist).writeto(fitsfile, overwrite=overwrite)
 
@@ -278,6 +370,15 @@ class EventList(object):
         d.create_dataset("xsky", data=self["xsky"].d)
         d.create_dataset("ysky", data=self["ysky"].d)
         d.create_dataset("eobs", data=self["eobs"].d)
+        if "rmf" in self.parameters:
+            p.create_dataset("arf", data=self.parameters["arf"])
+            p.create_dataset("rmf", data=self.parameters["rmf"])
+            p.create_dataset("channel_type", data=self.parameters["channel_type"])
+            p.create_dataset("mission", data=self.parameters["mission"])
+            p.create_dataset("telescope", data=self.parameters["telescope"])
+            p.create_dataset("instrument", data=self.parameters["instrument"])
+            chantype = self.parameters["channel_type"]
+            d.create_dataset(chantype, data=self.events[chantype])
 
         f.close()
 
@@ -391,6 +492,72 @@ class EventList(object):
         tbhdu.header["MISSION"] = "none"
         tbhdu.header["TELESCOP"] = "none"
         tbhdu.header["INSTRUME"] = "none"
+        tbhdu.header["AREASCAL"] = 1.0
+        tbhdu.header["CORRSCAL"] = 0.0
+        tbhdu.header["BACKSCAL"] = 1.0
+
+        hdulist = pyfits.HDUList([pyfits.PrimaryHDU(), tbhdu])
+
+        hdulist.writeto(specfile, overwrite=overwrite)
+
+class ConvolvedEventList(EventList):
+
+    @parallel_root_only
+    def write_simput_file(self, prefix, overwrite=False, emin=None, emax=None):
+        mylog.error("Writing SIMPUT files is only supported if you didn't convolve with responses!")
+        raise TypeError("Writing SIMPUT files is only supported if you didn't convolve with responses!")
+
+    @parallel_root_only
+    def write_channel_spectrum(self, specfile, overwrite=False):
+        r"""
+        Bin event channels into a spectrum and write it to a FITS binary table. 
+
+        Parameters
+        ----------
+        specfile : string
+            The name of the FITS file to be written.
+        overwrite : boolean, optional
+            Set to True to overwrite a previous file.
+        """
+        spectype = self.parameters["channel_type"]
+        rmf = RedistributionMatrixFile(self.parameters["rmf"])
+        minlength = rmf.n_ch
+        if rmf.cmin == 1: minlength += 1
+        spec = np.bincount(self[spectype], minlength=minlength)
+        if rmf.cmin == 1: spec = spec[1:]
+        bins = (np.arange(rmf.n_ch)+rmf.cmin).astype("int32")
+
+        col1 = pyfits.Column(name='CHANNEL', format='1J', array=bins)
+        col2 = pyfits.Column(name=spectype.upper(), format='1D', array=bins.astype("float64"))
+        col3 = pyfits.Column(name='COUNTS', format='1J', array=spec.astype("int32"))
+        col4 = pyfits.Column(name='COUNT_RATE', format='1D', array=spec/float(self.parameters["exp_time"]))
+
+        coldefs = pyfits.ColDefs([col1, col2, col3, col4])
+
+        tbhdu = pyfits.BinTableHDU.from_columns(coldefs)
+        tbhdu.name = "SPECTRUM"
+
+        tbhdu.header["DETCHANS"] = spec.shape[0]
+        tbhdu.header["TOTCTS"] = spec.sum()
+        tbhdu.header["EXPOSURE"] = float(self.parameters["exp_time"])
+        tbhdu.header["LIVETIME"] = float(self.parameters["exp_time"])
+        tbhdu.header["CONTENT"] = spectype
+        tbhdu.header["HDUCLASS"] = "OGIP"
+        tbhdu.header["HDUCLAS1"] = "SPECTRUM"
+        tbhdu.header["HDUCLAS2"] = "TOTAL"
+        tbhdu.header["HDUCLAS3"] = "TYPE:I"
+        tbhdu.header["HDUCLAS4"] = "COUNT"
+        tbhdu.header["HDUVERS"] = "1.1.0"
+        tbhdu.header["HDUVERS1"] = "1.1.0"
+        tbhdu.header["CHANTYPE"] = spectype
+        tbhdu.header["BACKFILE"] = "none"
+        tbhdu.header["CORRFILE"] = "none"
+        tbhdu.header["POISSERR"] = True
+        tbhdu.header["RESPFILE"] = os.path.split(self.parameters["rmf"])[-1]
+        tbhdu.header["ANCRFILE"] = os.path.split(self.parameters["arf"])[-1]
+        tbhdu.header["MISSION"] = self.parameters["mission"]
+        tbhdu.header["TELESCOP"] = self.parameters["telescope"]
+        tbhdu.header["INSTRUME"] = self.parameters["instrument"]
         tbhdu.header["AREASCAL"] = 1.0
         tbhdu.header["CORRSCAL"] = 0.0
         tbhdu.header["BACKSCAL"] = 1.0

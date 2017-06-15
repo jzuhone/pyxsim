@@ -6,16 +6,13 @@ from pyxsim.tests.utils import \
 from yt.units.yt_array import YTQuantity
 import numpy as np
 from yt.testing import requires_module
-from numpy.random import RandomState
 import os
 import shutil
 import tempfile
-from soxs.events import write_spectrum
 from yt.utilities.physical_constants import mp
 from sherpa.astro.ui import load_user_model, add_user_pars, \
     load_pha, ignore, fit, set_model, set_stat, set_method, \
     covar, get_covar_results, set_covar_opt
-from pyxsim.instruments import specs
 from numpy.random import RandomState
 
 prng = RandomState(27)
@@ -73,13 +70,11 @@ def plaw_fit(alpha_sim):
     events = photons.project_photons("z", [30., 45.], absorb_model="wabs",
                                      nH=nH_sim, prng=bms.prng, no_shifting=True)
 
-    ACIS_I(events, "plaw_model_evt.fits", convolve_energies_only=True, 
-           instr_bkgnd=False, ptsrc_bkgnd=False, foreground=False, prng=prng)
+    new_events = ACIS_I(events, prng=bms.prng)
 
-    os.system("cp %s ." % specs[ACIS_I.inst_name]["arf"])
-    os.system("cp %s ." % specs[ACIS_I.inst_name]["rmf"])
+    os.system("cp %s %s ." % (ACIS_I.arf.filename, ACIS_I.rmf.filename))
 
-    write_spectrum("plaw_model_evt.fits", "plaw_model_evt.pi", overwrite=True)
+    new_events.write_channel_spectrum("plaw_model_evt.pi", overwrite=True)
 
     load_user_model(mymodel, "wplaw")
     add_user_pars("wplaw", ["nH", "norm", "redshift", "alpha"],

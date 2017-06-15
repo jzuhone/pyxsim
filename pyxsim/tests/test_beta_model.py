@@ -5,7 +5,7 @@ A unit test for the pyxsim analysis module.
 from pyxsim import \
     TableApecModel, TBabsModel, \
     ThermalSourceModel, PhotonList, \
-    XRS_Calorimeter
+    Lynx_Calorimeter
 from pyxsim.tests.utils import \
     BetaModelSource, ParticleBetaModelSource
 from yt.testing import requires_module
@@ -18,7 +18,6 @@ from sherpa.astro.ui import load_user_model, add_user_pars, \
     load_pha, ignore, fit, set_model, set_stat, set_method, \
     covar, get_covar_results, set_covar_opt, thaw
 from soxs.utils import convert_rmf
-from soxs.events import write_spectrum
 from soxs.instrument import RedistributionMatrixFile, AuxiliaryResponseFile
 from soxs.instrument_registry import get_instrument_from_registry
 
@@ -89,14 +88,12 @@ def do_beta_model(source, v_field, em_field):
     events = photons.project_photons("z", [30.0, 45.0], absorb_model="tbabs",
                                      nH=nH_sim, prng=source.prng)
 
-    XRS_Calorimeter(events, "beta_model_evt.fits", convolve_energies_only=True,
-                    instr_bkgnd=False, foreground=False, ptsrc_bkgnd=False,
-                    prng=source.prng)
+    new_events = Lynx_Calorimeter(events, prng=source.prng)
 
-    os.system("cp %s ." % arf.filename)
+    os.system("cp %s %s ." % (arf.filename, rmf.filename))
     convert_rmf(rmf.filename)
 
-    write_spectrum("beta_model_evt.fits", "beta_model_evt.pi", overwrite=True)
+    new_events.write_channel_spectrum("beta_model_evt.pi", overwrite=True)
 
     load_user_model(mymodel, "tbapec")
     add_user_pars("tbapec", ["nH", "kT", "metallicity", "redshift", "norm", "velocity"],

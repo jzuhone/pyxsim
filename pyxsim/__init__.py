@@ -13,7 +13,8 @@ from pyxsim.utils import \
     merge_files
 
 from pyxsim.event_list import \
-    EventList
+    EventList, \
+    ConvolvedEventList
 
 from pyxsim.spectral_models import \
     TableApecModel, \
@@ -23,6 +24,6 @@ from pyxsim.spectral_models import \
 from pyxsim.instruments import \
     InstrumentSimulator, \
     ACIS_I, ACIS_S, \
-    XRS_Imager, XRS_Calorimeter, \
+    Lynx_Imager, Lynx_Calorimeter, \
     Hitomi_SXS, Athena_WFI, \
     Athena_XIFU
