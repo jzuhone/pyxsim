@@ -74,8 +74,6 @@ class EventList(object):
         return self.events.values()
 
     def __getitem__(self,key):
-        if key == "energy":
-            return self.events["eobs"]
         if key not in self.events:
             if key == "xsky" or key == "ysky":
                 x,y = self.wcs.wcs_pix2world(self.events["xpix"], self.events["ypix"], 1)
