@@ -46,7 +46,6 @@ class EventList(object):
             self.wcs.wcs.cunit = ["deg"]*2
         else:
             self.wcs = wcs
-        self.events["energy"] = self.events["eobs"]
 
     @classmethod
     def create_empty_list(cls, exp_time, area, wcs, parameters=None):
@@ -75,6 +74,8 @@ class EventList(object):
         return self.events.values()
 
     def __getitem__(self,key):
+        if key == "energy":
+            return self.events["eobs"]
         if key not in self.events:
             if key == "xsky" or key == "ysky":
                 x,y = self.wcs.wcs_pix2world(self.events["xpix"], self.events["ypix"], 1)
@@ -97,6 +98,9 @@ class EventList(object):
             k2, v2 = item2
             events[k1] = uconcatenate([v1,v2])
         return type(self)(events, self.parameters, wcs=self.wcs)
+
+    def __iter__(self):
+        return iter(self.events)
 
     def filter_events(self, region):
         """

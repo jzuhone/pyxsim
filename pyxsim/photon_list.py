@@ -128,6 +128,9 @@ class PhotonList(object):
             return True
         return key in self.photons
 
+    def __iter__(self):
+        return iter(self.photons)
+
     def __repr__(self):
         return self.photons.__repr__()
 
