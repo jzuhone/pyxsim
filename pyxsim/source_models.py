@@ -2,10 +2,12 @@
 Classes for specific source models
 """
 import numpy as np
+from six import string_types
 from yt.funcs import get_pbar, ensure_numpy_array
 from pyxsim.utils import mylog
 from yt.units.yt_array import YTQuantity
 from yt.utilities.physical_constants import mp, clight, kboltz
+from pyxsim.spectral_models import thermal_models
 from pyxsim.utils import parse_value
 from yt.utilities.exceptions import YTUnitConversionError
 
@@ -41,8 +43,15 @@ class ThermalSourceModel(SourceModel):
 
     Parameters
     ----------
-    spectral_model : :class:`~pyxsim.spectral_models.SpectralModel`
-        A thermal spectral model instance, either of :class:`~pyxsim.spectral_models.XSpecThermalModel` or :class:`~pyxsim.spectral_models.TableApecModel`.
+    spectral_model : string or :class:`~pyxsim.spectral_models.SpectralModel`
+        A thermal spectral model instance, e.g.
+       :class:`~pyxsim.spectral_models.TableApecModel`.
+    emin : float
+        The minimum energy for the spectrum in keV.
+    emax : float
+        The maximum energy for the spectrum in keV.
+    nchan : integer
+        The number of channels in the spectrum.
     temperature_field : string or (ftype, fname) tuple, optional
         The yt temperature field to use for the thermal modeling. Must have units
         of Kelvin. If not specified, the default temperature field for the dataset
@@ -67,7 +76,16 @@ class ThermalSourceModel(SourceModel):
         The method used to generate the photon energies from the spectrum:
         "invert_cdf": Invert the cumulative distribution function of the spectrum.
         "accept_reject": Acceptance-rejection method using the spectrum. 
-        The first method should be sufficient for most cases. 
+        The first method should be sufficient for most cases.
+    thermal_broad : boolean, optional
+        Whether or not the spectral lines should be thermally
+        broadened.
+    model_root : string, optional
+        The directory root where the model files are stored. If 
+        not provided, the default SOXS-provided files are used.
+    model_vers : string, optional
+        The version identifier string for the model files, e.g.
+        "2.0.2". Default depends on the model used.
     prng : :class:`~numpy.random.RandomState` object or :mod:`~numpy.random`, optional
         A pseudo-random number generator. Typically will only be specified
         if you have a reason to generate the same set of random numbers, such as for a
@@ -78,13 +96,20 @@ class ThermalSourceModel(SourceModel):
     >>> spec_model = TableApecModel(0.05, 50.0, 1000)
     >>> source_model = ThermalSourceModel(spec_model, Zmet="metallicity")
     """
-    def __init__(self, spectral_model, temperature_field=None,
-                 emission_measure_field=None, kT_min=0.008,
-                 kT_max=64.0, n_kT=10000, kT_scale="linear", 
-                 Zmet=0.3, method="invert_cdf", prng=None):
+    def __init__(self, spectral_model, emin, emax, nchan, 
+                 temperature_field=None, emission_measure_field=None, 
+                 kT_min=0.008, kT_max=64.0, n_kT=10000, 
+                 kT_scale="linear", Zmet=0.3, method="invert_cdf", 
+                 thermal_broad=False, model_root=None, model_vers=None, 
+                 prng=None):
+        if isinstance(spectral_model, string_types):
+            spectral_model = thermal_models[spectral_model]
         self.temperature_field = temperature_field
         self.Zmet = Zmet
-        self.spectral_model = spectral_model
+        self.spectral_model = spectral_model(emin, emax, nchan, 
+                                             thermal_broad=thermal_broad,
+                                             model_root=model_root,
+                                             model_vers=model_vers)
         self.method = method
         if prng is None:
             self.prng = np.random

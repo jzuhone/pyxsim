@@ -3,8 +3,9 @@ Answer test pyxsim.
 """
 
 from pyxsim import \
-    TableApecModel, ThermalSourceModel, \
-    PhotonList, EventList, merge_files
+    ThermalSourceModel, \
+    PhotonList, EventList, \
+    merge_files
 from yt.utilities.answer_testing.framework import requires_ds, \
     GenericArrayTest, data_dir_load
 from numpy.testing import assert_array_equal
@@ -39,12 +40,11 @@ def test_sloshing():
     exp_time = 1.0e4
     redshift = 0.1
 
-    apec_model = TableApecModel(0.1, 11.0, 10000)
-
     sphere = ds.sphere("c", (0.1, "Mpc"))
     sphere.set_field_parameter("X_H", 0.75)
 
-    thermal_model = ThermalSourceModel(apec_model, Zmet=0.3, prng=prng)
+    thermal_model = ThermalSourceModel("apec", 0.1, 11.0, 10000, Zmet=0.3, 
+                                       prng=prng)
     photons1 = PhotonList.from_data_source(sphere, redshift, A, exp_time,
                                            thermal_model)
 

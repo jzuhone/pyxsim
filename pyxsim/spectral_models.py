@@ -29,13 +29,12 @@ class TableApecModel(ApecGenerator):
         The maximum energy for the spectral model.
     nchan : integer
         The number of channels in the spectral model.
-    apec_root : string
-        The directory root where the APEC model files are stored. If 
-        not provided, the default is to look for them in the pyxsim
-        "spectral_files" directory.
-    apec_vers : string, optional
+    model_root : string, optional
+        The directory root where the model files are stored. If 
+        not provided, the default SOXS-provided files are used.
+    model_vers : string, optional
         The version identifier string for the APEC files, e.g.
-        "2.0.2"
+        "3.0.3". Default: 2.0.2
     thermal_broad : boolean, optional
         Whether or not the spectral lines should be thermally
         broadened.
@@ -45,10 +44,12 @@ class TableApecModel(ApecGenerator):
     >>> apec_model = TableApecModel(0.05, 50.0, 1000, apec_vers="3.0.3",
     ...                             thermal_broad=True)
     """
-    def __init__(self, emin, emax, nchan, apec_root=None,
-                 apec_vers="2.0.2", thermal_broad=False):
-        super(TableApecModel, self).__init__(emin, emax, nchan, apec_root=apec_root,
-                                             apec_vers=apec_vers, broadening=thermal_broad)
+    def __init__(self, emin, emax, nchan, model_root=None,
+                 model_vers=None, thermal_broad=False):
+        if model_vers is None:
+            model_vers = "2.0.2"
+        super(TableApecModel, self).__init__(emin, emax, nchan, apec_root=model_root,
+                                             apec_vers=model_vers, broadening=thermal_broad)
         self.nchan = self.nbins
 
     def prepare_spectrum(self, zobs):
@@ -97,6 +98,7 @@ class TableApecModel(ApecGenerator):
                                                         redshift, norm, velocity=velocity)
         return YTArray(spec.flux*spec.de, "photons/s/cm**2")
 
+thermal_models = {"apec": TableApecModel}
 
 class AbsorptionModel(object):
     def __init__(self, nH, emid, sigma):

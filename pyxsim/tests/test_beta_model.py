@@ -64,14 +64,14 @@ def do_beta_model(source, v_field, em_field):
     redshift = 0.05
     nH_sim = 0.02
 
-    apec_model = TableApecModel(0.1, 11.5, 20000, thermal_broad=True)
-
     sphere = ds.sphere("c", (0.5, "Mpc"))
 
     kT_sim = source.kT
     Z_sim = source.Z
 
-    thermal_model = ThermalSourceModel(apec_model, Zmet=Z_sim, prng=source.prng)
+    thermal_model = ThermalSourceModel("apec", 0.1, 11.5, 20000, 
+                                       thermal_broad=True, Zmet=Z_sim, 
+                                       prng=source.prng)
     photons = PhotonList.from_data_source(sphere, redshift, A, exp_time,
                                           thermal_model)
 
