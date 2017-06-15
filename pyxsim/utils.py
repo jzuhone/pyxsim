@@ -168,7 +168,7 @@ class ParameterDict(object):
 
     def __getitem__(self, key):
         if key in self.old_keys:
-            k = self.old_keys
+            k = self.old_keys[key]
             mylog.warning(key_warning % ("%s parameters" % self.list_type, k))
         else:
             k = key
