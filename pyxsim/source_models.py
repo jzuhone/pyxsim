@@ -28,10 +28,6 @@ class SourceModel(object):
         self.spectral_norm = spectral_norm
         self.redshift = redshift
 
-    def cleanup_model(self):
-        self.spectral_norm = None
-        self.redshift = None
-
 particle_dens_fields = [("io", "density"),
                         ("PartType0", "Density"),
                         ("Gas", "Density")]
@@ -287,13 +283,6 @@ class ThermalSourceModel(SourceModel):
 
         return number_of_photons[active_cells], idxs, energies[:end_e].copy()
 
-    def cleanup_model(self):
-        self.pbar.finish()
-        self.redshift = None
-        self.pbar = None
-        self.spectral_norm = None
-        self.kT_bins = None
-        self.dkT = None
 
 class PowerLawSourceModel(SourceModel):
     r"""
@@ -385,9 +374,6 @@ class PowerLawSourceModel(SourceModel):
 
         return number_of_photons[active_cells], active_cells, energies[:end_e].copy()
 
-    def cleanup_model(self):
-        self.redshift = None
-        self.spectral_norm = None
 
 class LineSourceModel(SourceModel):
     r"""
@@ -479,6 +465,3 @@ class LineSourceModel(SourceModel):
 
         return number_of_photons[active_cells], active_cells, energies
 
-    def cleanup_model(self):
-        self.redshift = None
-        self.spectral_norm = None
