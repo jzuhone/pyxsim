@@ -11,7 +11,8 @@ except ImportError:
 from yt.utilities.parallel_tools.parallel_analysis_interface import \
     parallel_root_only
 from yt.units.yt_array import YTQuantity, YTArray, uconcatenate
-from yt.utilities.on_demand_imports import _astropy
+import astropy.io.fits as pyfits
+import astropy.wcs as pywcs
 import h5py
 from pyxsim.utils import validate_parameters, parse_value, \
     ParameterDict
@@ -29,7 +30,7 @@ class EventList(object):
         self.parameters = ParameterDict(parameters, "EventList", old_parameter_keys)
         self.num_events = events["xpix"].shape[0]
         if wcs is None:
-            self.wcs = _astropy.pywcs.WCS(naxis=2)
+            self.wcs = pywcs.WCS(naxis=2)
             self.wcs.wcs.crpix = parameters["pix_center"]
             self.wcs.wcs.crval = parameters["sky_center"].d
             self.wcs.wcs.cdelt = [-parameters["dtheta"].value, parameters["dtheta"].value]
@@ -144,7 +145,7 @@ class EventList(object):
         """
         Initialize an :class:`~pyxsim.event_list.EventList` from a FITS file with filename *fitsfile*.
         """
-        hdulist = _astropy.pyfits.open(fitsfile)
+        hdulist = pyfits.open(fitsfile)
 
         tblhdu = hdulist["EVENTS"]
 
@@ -172,7 +173,7 @@ class EventList(object):
         Write events to a FITS binary table file with filename *fitsfile*.
         Set *overwrite* to True if you need to overwrite a previous file.
         """
-        pyfits = _astropy.pyfits
+        from astropy.time import Time, TimeDelta
 
         exp_time = float(self.parameters["exp_time"])
 
@@ -318,7 +319,7 @@ class EventList(object):
                                            self["ypix"][mask],
                                            bins=[xbins,ybins])
 
-        hdu = _astropy.pyfits.PrimaryHDU(H.T)
+        hdu = pyfits.PrimaryHDU(H.T)
 
         hdu.header["MTYPE1"] = "EQPOS"
         hdu.header["MFORM1"] = "RA,DEC"
@@ -355,7 +356,6 @@ class EventList(object):
         overwrite : boolean, optional
             Set to True to overwrite a previous file.
         """
-        pyfits = _astropy.pyfits
         espec = self["eobs"].d
         spec, ee = np.histogram(espec, bins=nchan, range=(emin, emax))
         bins = 0.5*(ee[1:]+ee[:-1])
