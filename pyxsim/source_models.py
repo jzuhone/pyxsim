@@ -193,7 +193,7 @@ class ThermalSourceModel(SourceModel):
         kT = (kboltz*data_source[self.temperature_field]).in_units("keV").v
         num_cells = np.logical_and(kT > self.kT_min, kT < self.kT_max).sum()
         self.source_type = data_source.ds._get_field_info(self.emission_measure_field).name[0]
-        self.pbar = get_pbar("Generating photons ", num_cells)
+        self.pbar = get_pbar("Processing cells/particles ", num_cells)
 
     def __call__(self, chunk):
 
