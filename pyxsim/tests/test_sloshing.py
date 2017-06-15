@@ -65,13 +65,12 @@ def test_sloshing():
     events1["xsky"]
     return_events = return_data(events1.events)
 
-    test1 = GenericArrayTest(ds, return_photons, args=["photons"])
-    test_sloshing.__name__ = test1.description
-    test1()
+    tests = [GenericArrayTest(ds, return_photons, args=["photons"]),
+             GenericArrayTest(ds, return_events, args=["events"])]
 
-    test2 = GenericArrayTest(ds, return_events, args=["events"])
-    test_sloshing.__name__ = test2.description
-    test2()
+    for test in tests:
+        test_sloshing.__name__ = test.description
+        yield test
 
     photons1.write_h5_file("test_photons.h5")
     events1.write_h5_file("test_events.h5")
