@@ -50,7 +50,7 @@ class InstrumentSimulator(object):
         emax = events["eobs"].max().value
         new_events = {}
         new_events.update(events.events)
-        new_events["energy"] = events.pop("eobs")
+        new_events["energy"] = new_events.pop("eobs")
         new_events = self.arf.detect_events(new_events, exp_time, flux,
                                             [emin, emax], prng=prng)
         new_events = self.rmf.scatter_energies(new_events, prng=prng)
