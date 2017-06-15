@@ -290,7 +290,6 @@ class ThermalSourceModel(SourceModel):
     def cleanup_model(self):
         self.pbar.finish()
         self.redshift = None
-        self.spectral_model.cleanup_spectrum()
         self.pbar = None
         self.spectral_norm = None
         self.kT_bins = None

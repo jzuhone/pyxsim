@@ -93,12 +93,10 @@ class TableApecModel(ApecGenerator):
         velocity : float, optional
             Velocity broadening parameter in km/s. Default: 0.0
         """
-        spec = super(TableApecModel, self).get_spectrum(temperature, metallicity, redshift, norm,
-                                                        velocity=velocity)
+        spec = super(TableApecModel, self).get_spectrum(temperature, metallicity, 
+                                                        redshift, norm, velocity=velocity)
         return YTArray(spec.flux*spec.de, "photons/s/cm**2")
 
-    def cleanup_spectrum(self):
-        pass
 
 class AbsorptionModel(object):
     def __init__(self, nH, emid, sigma):
@@ -106,18 +104,12 @@ class AbsorptionModel(object):
         self.emid = YTArray(emid, "keV")
         self.sigma = YTArray(sigma, "cm**2")
 
-    def prepare_spectrum(self):
-        pass
-
     def get_absorb(self, e):
         """
         Get the absorption spectrum.
         """
         sigma = np.interp(e, self.emid, self.sigma, left=0.0, right=0.0)
         return np.exp(-sigma*self.nH)
-
-    def cleanup_spectrum(self):
-        pass
 
     def absorb_photons(self, eobs, prng=np.random):
         r"""
@@ -134,11 +126,9 @@ class AbsorptionModel(object):
             test. Default is the :mod:`numpy.random` module.
         """
         mylog.info("Absorbing.")
-        self.prepare_spectrum()
         absorb = self.get_absorb(eobs)
         randvec = prng.uniform(size=eobs.shape)
         detected = randvec < absorb
-        self.cleanup_spectrum()
         return detected
 
 class TableAbsorbModel(AbsorptionModel):
