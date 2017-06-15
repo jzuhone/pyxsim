@@ -27,4 +27,4 @@ def test_apec():
 
     test = GenericArrayTest(ds, spec_test)
     test_apec.__name__ = test.description
-    test()
+    yield test
