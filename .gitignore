@@ -1,9 +1,6 @@
 syntax: glob
-*.so
-*.o
 *.pyc
 pyxsim.egg-info
-cutils.c
 doc/build
 doc/source/*.fits
 build
