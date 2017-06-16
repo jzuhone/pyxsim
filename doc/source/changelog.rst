@@ -74,6 +74,7 @@ Other changes:
 * Thermal spectral models no longer require a ``cleanup_spectrum`` method. Spectral
   absorption models no longer require ``setup_spectrum`` and ``cleanup_spectrum`` 
   methods. Source models no longer require a ``cleanup_model`` method.
+* pyXSIM now has `SciPy <http://www.scipy.org>`_ as a required dependence.
 
 Version 1.2.6
 -------------
