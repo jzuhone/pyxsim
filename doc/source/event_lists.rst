@@ -20,6 +20,7 @@ arguments to customize the resulting projection. The arguments are:
 
 * ``normal``: The line of sight direction to project along. Accepts either a coordinate axis (``"x"``,
   ``"y"``, or ``"z"``), or a three-vector for an off-axis projection, e.g. ``[1.0, -0.3, 0.24]``. 
+* ``sky_center``: Central RA, Dec of the events in degrees.
 * ``area_new`` (optional): The (constant) collecting area to assume for the observation. Used to reduce
   the number of events from the initially large sample of photons. The default value is the value used 
   when the :class:`~pyxsim.photon_list.PhotonList` was created. Units are in :math:`cm^2`.
@@ -33,9 +34,11 @@ arguments to customize the resulting projection. The arguments are:
   sources instead of the redshift. If units are not specified, it is assumed to be in Mpc. Used to reduce the
   of events from the initially large sample of photons. The default value is the value used when the 
   :class:`~pyxsim.photon_list.PhotonList` was created. To use this, the redshift must be set to zero. 
-* ``absorb_model`` (optional): :class:`~pyxsim.spectral_models.AbsorptionModel` A model for foreground 
-  galactic absorption. See :ref:`absorb-models` for details on how to construct one.  
-* ``sky_center`` (optional): Central RA, Dec of the events in degrees. Default ``(30.0, 45.0)``.
+* ``absorb_model`` (optional): A string or :class:`~pyxsim.spectral_models.AbsorptionModel` class 
+  representing a model for foreground galactic absorption. This parameter can take a string or the 
+  class itself. See :ref:`absorb-models` for more details on how to use them.
+* ``nH`` (optional): The foreground galactic column density in units of 
+  :math:`10^{22} \rm{atoms} \rm{cm}^{-2}`, for use when one is applying foreground galactic absorption.
 * ``no_shifting`` (optional): If set to True, the photon energies will not be velocity Doppler shifted. Default False.
 * ``north_vector`` (optional): A vector defining the "up" direction, e.g. ``[0.0, 1.0, 0.0]``.
   This option sets the orientation of the plane of projection. If not set, an arbitrary grid-aligned 
@@ -45,9 +48,6 @@ arguments to customize the resulting projection. The arguments are:
   :mod:`~numpy.random` is the default. Use this if you have a reason to generate the same set of random 
   numbers, such as for a test. 
 
-This is also the stage where foreground galactic absorption can be applied. See :ref:`absorb-models` for
-details on how to construct models for absorption. 
-
 Assuming one then has a :class:`~pyxsim.photon_list.PhotonList` ``photons``, example invocations could look
 like this:
 
@@ -55,36 +55,36 @@ A simple projection along an axis:
 
 .. code-block:: python
 
-    events = photons.project_photons("z")
+    events = photons.project_photons("z", (30.0, 45.0))
         
 An off-axis projection with altered exposure time and redshift:
 
 .. code-block:: python
 
-    events = photons.project_photons([0.1, -0.3, 0.5], area_new=(200., "cm**2"), redshift_new=1.0)
+    events = photons.project_photons([0.1, -0.3, 0.5], (30.0, 45.0), area_new=(200., "cm**2"), 
+                                     redshift_new=1.0)
 
-An on-axis projection with absorption and given a particular coordinate center:
+An on-axis projection with absorption:
 
 .. code-block:: python
 
-    abs_model = pyxsim.TBabsModel(0.01)
-    events = photons.project_photons("y", absorb_model=abs_model, sky_center=(12.0, -30.0))
+    events = photons.project_photons("y", (12.0, -30.0), absorb_model="tbabs", nH=0.01)
 
-An off-axis projection with a ``north_vector``, without Doppler velocity shifting, and a specific
-random number generator:
+An off-axis projection with a ``north_vector``, without Doppler velocity shifting, 
+and a specific random number generator:
 
 .. code-block:: python
     
     from numpy.random import RandomState
     prng = RandomState(25)
-    events = photons.project_photons([0.1, -0.3, 0.5], no_shifting=True, 
+    events = photons.project_photons([0.1, -0.3, 0.5], (12.0, -30.0), no_shifting=True, 
                                      north_vector=[1.0,0.0,0.0], prng=prng)
 
 .. note::
 
-    Unlike the ``photon_simulator`` analysis module in yt, the ability to convolve the event energies
-    using an ARF and RMF has been taken out of this step entirely and moved into a new instrument 
-    simulator step. See :ref:`instruments` for details. 
+    Unlike the ``photon_simulator`` analysis module in yt, the ability to convolve 
+    the event energies using an ARF and RMF has been taken out of this step entirely 
+    and moved into a new instrument simulator step. See :ref:`instruments` for details. 
     
 Saving/Reading Raw Events to/from Disk
 --------------------------------------
@@ -151,6 +151,11 @@ or not an existing file will be overwritten and the minimum and maximum energies
 events written to the file. Currently, SIMPUT files are used for export only; they
 cannot be used to read events back into pyXSIM. 
 
+.. note::
+
+    This method is not implemented for :class:`~pyxsim.event_list.ConvolvedEventList`
+    instances.
+
 Manipulating Event Lists
 ------------------------
 
@@ -202,7 +207,7 @@ events).
 Spectra
 +++++++
 
-To produce a binned spectrum, call :meth:`~pyxsim.event_list.EventList.write_spectrum`. 
+To produce a spectrum binned on energy, call :meth:`~pyxsim.event_list.EventList.write_spectrum`. 
 
 .. code-block:: python
 
@@ -215,3 +220,24 @@ To produce a binned spectrum, call :meth:`~pyxsim.event_list.EventList.write_spe
 This bins the unconvolved event energies using the ``emin``, ``emax``, and ``nchan`` 
 arguments into a histogram which will be written to the file as a spectrum. As usual, 
 the ``overwrite`` argument determines whether or not a file can be overwritten. 
+
+``ConvolvedEventList`` Instances
+--------------------------------
+
+:class:`~pyxsim.event_list.ConvolvedEventList` is a subclass of 
+:class:`~pyxsim.event_list.EventList` which contains data and parameters for convolved
+events, specifically PI or PHA channels and related data. These events have been convolved
+with an ARF and an RMF using an :class:`~pyxsim.instruments.InstrumentSimulator`. Most
+of the :class:`~pyxsim.event_list.EventList` methods are still available (with the exception
+that one is unable to write SIMPUT files from these objects). One additional method is 
+provided, :meth:`~pyxsim.event_list.ConvolvedEventList.write_channel_spectrum`, which 
+writes the spectrum binned according to PI or PHA channel to a file which can then by
+analyzed by standard X-ray spectral analysis tools:
+
+.. code-block:: python
+
+    specfile = "spec.pi" # filename to write to
+    events.write_channel_spectrum(specfile, overwrite=True)
+
+For more information on creating :class:`~pyxsim.event_list.ConvolvedEventList` objects,
+see :ref:`instruments`.
