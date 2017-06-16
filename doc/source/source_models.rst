@@ -30,7 +30,24 @@ expensive, the cells are binned into a 1-D table of temperatures, and for each b
 a spectrum is calculated. Provided the bins are finely spaced enough, the accuracy of 
 this method is sufficient for most purposes. 
 
-There are a number of other optional parameters which can be set:
+By default, setting up a :class:`~pyxsim.source_models.ThermalSourceModel` object
+requires the following arguments:
+
+* ``spectral_model``: The thermal spectral model to assume. Can be a string or 
+  :class:`~pyxsim.spectral_models.SpectralModel` instance. Currently, the only
+  string value built into pyXSIM is ``"apec"``. 
+* ``emin``: The minimum energy for the spectrum in keV.
+* ``emax``: The maximum energy for the spectrum in keV.
+* ``nchan``: The number of channels in the spectrum.
+
+So creating a default instance is rather simple:
+
+.. code-block:: python
+
+    thermal_model = pyxsim.ThermalSourceModel("apec", 0.1, 11.0, 10000)
+
+However, this model is very customizable. There are a number of other optional 
+parameters which can be set:
 
 * ``temperature_field``: The yt field to use as the temperature. Must have dimensions
   of temperature. The default is ``("gas", "temperature")`` for grid-based datasets and
@@ -50,55 +67,17 @@ There are a number of other optional parameters which can be set:
   a yt field for a spatially-varying metallicity. Default is 0.3.
 * ``method``: The method used to generate the photon energies from the spectrum. Either ``"invert_cdf"``,
   which inverts the cumulative distribution function of the spectrum, or ``"accept_reject"``, which uses 
-  the acceptance-rejection method on the spectrum. The first method should be sufficient for most cases. 
+  the acceptance-rejection method on the spectrum. The first method should be sufficient for most cases.
+* ``thermal_broad``: A boolean specifying whether or not the spectral lines should be thermally
+  broadened. Default: True
+* ``model_root``: A path specifying where the model files are stored. If not provided, a default
+  location known to pyXSIM is used.
+* ``model_vers``: The version identifier string for the model files, e.g. "2.0.2". The default 
+  depends on the model used.
 * ``prng``: A pseudo-random number generator. Typically will only be specified
   if you have a reason to generate the same set of random numbers, such as for a 
   test or a comparison. Default is the :mod:`numpy.random` module, but a 
-  :class:`~numpy.random.RandomState` object can also be used. 
-
-Thermal Spectra
-+++++++++++++++
-
-For thermal plasmas, pyXSIM provides the :class:`~pyxsim.spectral_models.TableApecModel` class
-for modeling emission that is dependent on temperature and metallicity, e.g. :math:`\Lambda(T,Z)`. 
-It can serve as input to the :class:`~pyxsim.source_models.ThermalSourceModel` class.
-:class:`~pyxsim.spectral_models.TableApecModel` generates a thermal emission spectrum
-from the APEC plasma emission tables available from `AtomDB <http://www.atomdb.org>`_:
-
-.. code-block:: python
-
-    emin = 0.01 # The minimum energy of the spectrum in keV
-    emax = 20.0 # The maximum energy of the spectrum in keV
-    nchan = 10000 # The number of spectral channels
-    apec_vers = "3.0.3" # The version identifier string for the APEC files. Default: "2.0.2"
-    apec_root = "/Users/jzuhone/atomdb" # The directory where the APEC model files are stored.
-                                        # Optional, the native pyxsim files will be used if
-                                        # a location is not provided.
-    spec_model = pyxsim.TableApecModel(emin, emax, nchan, apec_root=apec_root,
-                                       apec_vers=apec_vers, thermal_broad=False)
-
-They keyword argument ``thermal_broad`` should be set to ``True`` or ``False`` depending on
-whether or not you want the spectral lines thermally broadened. You will need to set up a
-:class:`~pyxsim.spectral_models.TableApecModel` in your script and pass it as the first argument 
-to :class:`~pyxsim.source_models.ThermalSourceModel`.
-
-Though a :class:`~pyxsim.spectral_models.TableApecModel` is mainly used internally by the 
-:class:`~pyxsim.source_models.ThermalSourceModel` to construct spectra, there is also a method
-:meth:`~pyxsim.source_models.TableApecModel.return_spectrum` which can be used to return a 
-spectrum (in an array) for a given temperature, metallicity, redshift, normalization, and
-(optionally) a velocity parameter:
-
-.. code-block:: python
-
-    kT = 6.0 # in keV
-    metallicity = 0.3 # in solar units
-    z = 0.05 # redshift
-    norm = 1.0e-3 # standard "Xspec" normalization of APEC spectrum
-    velocity = 300.0 # velocity broadening parameter in units of km/s
-  
-    spec = spec_model.return_spectrum(kT, metallicity, z, norm, velocity=velocity)
-
-The units of the returned spectrum are in :math:`{\rm photons~s^{-1}~cm^{-2}}`.
+  :class:`~numpy.random.RandomState` object or an integer seed can also be used. 
 
 Tweaking the Temperature Bins
 +++++++++++++++++++++++++++++
@@ -123,40 +102,47 @@ Some degree of trial and error may be necessary to determine the correct setup o
 Examples
 ++++++++
 
-Here, we will show several examples of constructing :class:`~pyxsim.source_models.ThermalSourceModel`
-objects. First, construct a thermal spectral model:
-
-.. code-block:: python
-
-    spec_model = pyxsim.TableApecModel(0.1, 20.0, 10000, thermal_broad=True)
+Here, we will show several examples of constructing 
+:class:`~pyxsim.source_models.ThermalSourceModel` objects. 
 
 An example where we use the default parameters, except we set a constant metallicity:
 
 .. code-block:: python
 
-    thermal_model = pyxsim.ThermalSourceModel(spec_model, Zmet=0.5)
+    thermal_model = pyxsim.ThermalSourceModel("apec", 0.1, 20.0, 10000, Zmet=0.5)
 
 An example where we use a metallicity field and change the temperature field:
 
 .. code-block:: python
 
-    thermal_model = pyxsim.ThermalSourceModel(spec_model, Zmet=("gas", "metallicity"),
+    thermal_model = pyxsim.ThermalSourceModel("apec", 0.1, 20.0, 10000, 
+                                              Zmet=("gas", "metallicity"),
                                               temperature_field="hot_gas_temp")
 
 An example where we change the limits and number of the temperature bins:
 
 .. code-block:: python
 
-    thermal_model = pyxsim.ThermalSourceModel(spec_model, kT_min=0.1, kT_max=100.,
+    thermal_model = pyxsim.ThermalSourceModel("apec", 0.1, 20.0, 10000, 
+                                              kT_min=0.1, kT_max=100.,
                                               n_kT=50000)
+                                              
+An example where we turn off thermal broadening of spectral lines, specify a
+directory to find the model files, and specify the model version:
+
+.. code-block:: python
+
+    thermal_model = pyxsim.ThermalSourceModel("apec", 0.1, 20.0, 10000,
+                                              thermal_broad=False, 
+                                              model_root="/Users/jzuhone/data",
+                                              model_vers="3.0.3")
 
 An example where we specify a random number generator:
 
 .. code-block:: python
 
-    from numpy.random import RandomState
-    prng = RandomState(25)
-    thermal_model = pyxsim.ThermalSourceModel(spec_model, prng=prng)
+    thermal_model = pyxsim.ThermalSourceModel("apec", 0.1, 20.0, 10000, 
+                                              prng=25)
 
 .. _power-law-sources:
 
@@ -386,14 +372,3 @@ what is going on.
         active_cells = number_of_photons > 0
 
         return number_of_photons[active_cells], active_cells, energies[:end_e].copy()
-
-Finally, your source model needs a ``cleanup_model`` method to free memory, close file handles, and
-reset the values of parameters that it used, in case you want to use the same source model instance
-to generate photons for a different redshift, distance, etc. The ``cleanup_model`` method for
-:class:`~pyxsim.source_models.PowerLawSourceModel` is very simple:
-
-.. code-block:: python
-
-    def cleanup_model(self):
-        self.redshift = None
-        self.spectral_norm = None

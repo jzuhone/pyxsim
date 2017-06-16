@@ -6,85 +6,76 @@ Convolving Events with Instrumental Responses
 Built-In Instrument Simulators
 ------------------------------
 
-pyXSIM provides the ability to perform "quick-and-dirty" convolutions with approximate
-representations of real X-ray instruments. The accuracy of these representations is 
-limited, since they assume the following simplifications:
+pyXSIM provides the ability to perform "quick-and-dirty" convolutions with 
+approximate representations of real X-ray instruments using the 
+[SOXS](http://hea-www.cfa.harvard.edu/~jzuhone/soxs) software package as a 
+backend. The accuracy of these representations is limited, since they 
+assume the following simplifications:
 
-* A square field of view without chip gaps
-* The spectral response, PSF, and effective area are position-independent.
-* The PSF is assumed to have a Gaussian shape
-* No instrumental background is added
+* The field of view and angular resolution of the observation is the same
+  as the unconvolved events (e.g., whatever they are from the particular
+  data object you generated the events from). No rebinning of the event
+  positions based on actual values of the field of view and/or angular
+  resolution of the telescope is performed.
+* The spectral response and effective area are position-independent.
+* No spatial PSF is applied. 
 
-If you only need an approximate representation of what an X-ray observation of your source
-would look like, using a built-in instrument simulator should be sufficient for your purposes. 
-
-.. warning::
-
-    If you want to export simulated events to an external instrument simulator
-    such as MARX or SIMX (see below), DO NOT use any of these built-in instrument 
-    simulators within pyXSIM. This will be the job of the instrument simulator itself to do.
+If you only need to represent how many X-ray counts you expect for a given
+observation and perhaps make spectra, using a built-in instrument simulator 
+should be sufficient for your purposes. For anything more complicated, using
+one of the software packages mentioned below in :ref:`realism` is recommended.
 
 Using a Built-In Instrument Simulator
 +++++++++++++++++++++++++++++++++++++
 
 pyXSIM comes with the following built-in instrument simulators:
 
-* ``ACIS_I``: ACIS-I Cycle 18 on-axis ARF and RMF, with 0.492" central pixel and 0.5" FWHM PSF
-* ``ACIS_S``: ACIS-S Cycle 18 on-axis ARF and RMF, with 0.492" central pixel and 0.5" FWHM PSF
-* ``Hitomi_SXS``: Hitomi Soft X-ray Spectrometer ARF and RMF, with 30.64" central pixel and 1.2' FWHM PSF
-* ``Athena_WFI``: Athena Wide-Field Imager ARF and RMF, with 2.23" central pixel and 5.0" FWHM PSF
-* ``Athena_XIFU``: Athena X-ray Integral Field Unit ARF and RMF, with 4.56" central pixel and 5.0" FWHM PSF
-* ``XRS_Imager``: X-ray Surveyor Imager ARF and RMF, with 0.33" central pixel and 0.5" FWHM PSF
-* ``XRS_Calorimeter``: X-ray Surveyor Calorimeter ARF and RMF, with 1.03" central pixel and 0.5" FWHM PSF
+* ``ACIS_I``: ACIS-I Cycle 18 on-axis ARF and RMF
+* ``ACIS_S``: ACIS-S Cycle 18 on-axis ARF and RMF
+* ``Hitomi_SXS``: Hitomi Soft X-ray Spectrometer ARF and RMF
+* ``Athena_WFI``: Athena Wide-Field Imager ARF and RMF
+* ``Athena_XIFU``: Athena X-ray Integral Field Unit ARF and RMF
+* ``Lynx_Imager``: X-ray Surveyor Imager ARF and RMF
+* ``Lynx_Calorimeter``: X-ray Surveyor Calorimeter ARF and RMF
 
-When an instrument simulator is called, the following operations are applied to the input events, in
-this order.
+When an instrument simulator is called, the following operations are applied 
+to the input events, in this order:
 
-1. The event positions are re-binned from the original simulation pixelization to the one appropriate
-   for the detector simulation.
-2. The event positions are smoothed using a Gaussian PSF. 
-3. Using the effective area curve from the selected ARF, events are selected or rejected for observation.
-4. The observed event energies are convolved with the selected RMF to produce the observed energy channels. 
+1. Using the effective area curve from the selected ARF, events are selected 
+   or rejected for observation.
+2. The observed event energies are convolved with the selected RMF to produce 
+   the observed energy channels. 
 
-Assuming one has an :class:`~pyxsim.event_list.EventList` object handy, to generate a new event list
-passed through one of these :class:`~pyxsim.instruments.InstrumentSimulator` classes, one only needs to call
-the instrument simulator with the events as an argument:
-
-.. code-block:: python
-
-    >>> from pyxsim import ACIS_S, Hitomi_SXS
-    >>> aciss_events = ACIS_S(events)
-    >>> hitomi_events = Hitomi_SXS(events)
-
-The specific effects of the instrument simulator can be turned on or off, which are handled with the
-following boolean keyword arguments, all of which default to ``True``:
-
-* ``rebin``: Controls whether or not the events are rebinned.
-* ``convolve_psf``: Controls whether or not the PSF smoothing is applied.
-* ``convolve_arf``: Controls whether or not the events are selected according to the effective area curve.
-* ``convolve_rmf``: Controls whether or not the event energies are convolved with the spectral response. Note that
-  if ``convolve_arf=False``, the energies will not be convolved either. 
-
-For example, if one only wanted to detect events using the ARF and convolve the energies with the RMF, one
-could do this:
+An :class:`~pyxsim.instruments.InstrumentSimulator` takes an 
+:class:`~pyxsim.event_list.EventList`, performs the above operations, and returns
+a :class:`~pyxsim.event_list.ConvolvedEventList`, containing the events which remain
+after being "observed" with the instrument's effective area and the convolved channel
+energies (PI or PHA depending on the RMF). For more information about the convolved
+events, see :ref:`convolved_events`. Using an :class:`~pyxsim.instruments.InstrumentSimulator`
+is very simple:
 
 .. code-block:: python
 
     >>> from pyxsim import ACIS_S
-    >>> new_events = ACIS_S(events, rebin=False, convolve_psf=False)
+    >>> new_events = ACIS_S(events)
+
+Then, event files or spectra can be written:
+
+.. code-block:: python
+
+    >>> new_events.write_fits_file("acis_events.fits", overwrite=True)
+    >>> new_events.write_channel_spectrum("acis_spec.pi", overwrite=True)
 
 Designing Your Own Instrument Simulator
 +++++++++++++++++++++++++++++++++++++++
 
-If you want to design an instrument simulator yourself for use with pyXSIM, it is fairly simple.
-You need to provide the following parameters in the call to :class:`~pyxsim.instruments.InstrumentSimulator`, 
-in this order: 
+If you want to design an instrument simulator yourself for use with pyXSIM,  
+it is fairly simple. You need only to provide the following parameters in the
+call to :class:`~pyxsim.instruments.InstrumentSimulator`, in this order: 
 
-* ``dtheta``: The width of the reference (central) pixel in degrees.
-* ``nx``: The number of resolution elements (pixels) on a side across the field of view.
-* ``psf_scale``: The FWHM of the Gaussian PSF in degrees. 
-* ``arf``: The path to the ARF file you want to use. 
-* ``rmf``: The path to the RMF file you want to use. 
+* ``name``: The short-hand name for the instrument.
+* ``arf_file``: The path to the ARF file you want to use. 
+* ``rmf_file``: The path to the RMF file you want to use. 
 
 .. warning::
 
@@ -98,17 +89,19 @@ uses for the built-in ACIS-S simulator:
 
     from pyxsim import InstrumentSimulator
 
-    ACIS_S = InstrumentSimulator(0.0001366667, 8192, 0.0001388889,
-                                 "aciss_aimpt_cy18.arf",
+    ACIS_S = InstrumentSimulator("acis-s", "aciss_aimpt_cy18.arf",
                                  "aciss_aimpt_cy18.rmf")
+
+.. _realism:
 
 Producing More Realistic Observations Using External Packages
 -------------------------------------------------------------
 
 If you want to produce a more realistic simulation of a particular instrumental configuration,
 pyXSIM provides options for exporting its event lists to external packages. For 
-`MARX <http://space.mit.edu/ASC/MARX/>`_ and `SIMX <http://hea-www.cfa.harvard.edu/simx/>`_,
-one can use SIMPUT files. 
+`MARX <http://space.mit.edu/ASC/MARX/>`_ and `SIMX <http://hea-www.cfa.harvard.edu/simx/>`_, or
+for more fine-tuned use of `SOXS <http://hea-www.cfa.harvard.edu/~jzuhone/soxs>`_, one can use 
+SIMPUT files. 
 
 MARX
 ++++
@@ -159,6 +152,22 @@ pyXSIM:
     pset simx OutputFileName=spiral_242959_noshift_xrs
     simx
 
-Refer to the relevant documentation for both of those packages for
-more details, as well as the :ref:`simput` section of the :class:`~pyxsim.event_list.EventList`
-documentation.
+SOXS
+++++
+
+Here is an example set of SOXS commands that uses a SIMPUT file made with
+pyXSIM:
+
+.. code-block:: python
+
+    from soxs import instrument_simulator
+    simput_file = "snr_simput.fits" # SIMPUT file to be read
+    out_file = "evt_mucal.fits" # event file to be written
+    exp_time = 30000. # The exposure time in seconds
+    instrument = "mucal" # short name for instrument to be used
+    sky_center = [30., 45.] # RA, Dec of pointing in degrees
+    instrument_simulator(simput_file, out_file, exp_time, instrument,
+                         sky_center, overwrite=True)
+
+Refer to the relevant documentation for all of those packages for more details, as well 
+as the :ref:`simput` section of the :class:`~pyxsim.event_list.EventList` documentation.

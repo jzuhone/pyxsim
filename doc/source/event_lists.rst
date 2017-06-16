@@ -20,6 +20,7 @@ arguments to customize the resulting projection. The arguments are:
 
 * ``normal``: The line of sight direction to project along. Accepts either a coordinate axis (``"x"``,
   ``"y"``, or ``"z"``), or a three-vector for an off-axis projection, e.g. ``[1.0, -0.3, 0.24]``. 
+* ``sky_center``: Central RA, Dec of the events in degrees.
 * ``area_new`` (optional): The (constant) collecting area to assume for the observation. Used to reduce
   the number of events from the initially large sample of photons. The default value is the value used 
   when the :class:`~pyxsim.photon_list.PhotonList` was created. Units are in :math:`cm^2`.
@@ -33,20 +34,20 @@ arguments to customize the resulting projection. The arguments are:
   sources instead of the redshift. If units are not specified, it is assumed to be in Mpc. Used to reduce the
   of events from the initially large sample of photons. The default value is the value used when the 
   :class:`~pyxsim.photon_list.PhotonList` was created. To use this, the redshift must be set to zero. 
-* ``absorb_model`` (optional): :class:`~pyxsim.spectral_models.AbsorptionModel` A model for foreground 
-  galactic absorption. See :ref:`absorb-models` for details on how to construct one.  
-* ``sky_center`` (optional): Central RA, Dec of the events in degrees. Default ``(30.0, 45.0)``.
+* ``absorb_model`` (optional): A string or :class:`~pyxsim.spectral_models.AbsorptionModel` class 
+  representing a model for foreground galactic absorption. This parameter can take a string or the 
+  class itself. See :ref:`absorb-models` for more details on how to use them. Known options for 
+  strings are ``"wabs"`` and ``"tbabs"``.
+* ``nH`` (optional): The foreground galactic column density in units of 
+  :math:`10^{22} \rm{atoms} \rm{cm}^{-2}`, for use when one is applying foreground galactic absorption.
 * ``no_shifting`` (optional): If set to True, the photon energies will not be velocity Doppler shifted. Default False.
 * ``north_vector`` (optional): A vector defining the "up" direction, e.g. ``[0.0, 1.0, 0.0]``.
   This option sets the orientation of the plane of projection. If not set, an arbitrary grid-aligned 
   ``north_vector`` is chosen. Ignored in the case where a particular axis (e.g., "x", "y", or "z") is 
   explicitly specified.
-* ``prng`` (optional): A pseudo-random number generator, :class:`~numpy.random.RandomState` object, or
-  :mod:`~numpy.random` is the default. Use this if you have a reason to generate the same set of random 
-  numbers, such as for a test. 
-
-This is also the stage where foreground galactic absorption can be applied. See :ref:`absorb-models` for
-details on how to construct models for absorption. 
+* ``prng`` (optional): An integer seed, pseudo-random number generator, :class:`~numpy.random.RandomState` 
+  object, or :mod:`~numpy.random` (the default). Use this if you have a reason to generate the same 
+  set of random numbers, such as for a test. 
 
 Assuming one then has a :class:`~pyxsim.photon_list.PhotonList` ``photons``, example invocations could look
 like this:
@@ -55,36 +56,34 @@ A simple projection along an axis:
 
 .. code-block:: python
 
-    events = photons.project_photons("z")
+    events = photons.project_photons("z", (30.0, 45.0))
         
 An off-axis projection with altered exposure time and redshift:
 
 .. code-block:: python
 
-    events = photons.project_photons([0.1, -0.3, 0.5], area_new=(200., "cm**2"), redshift_new=1.0)
+    events = photons.project_photons([0.1, -0.3, 0.5], (30.0, 45.0), area_new=(200., "cm**2"), 
+                                     redshift_new=1.0)
 
-An on-axis projection with absorption and given a particular coordinate center:
+An on-axis projection with absorption:
 
 .. code-block:: python
 
-    abs_model = pyxsim.TBabsModel(0.01)
-    events = photons.project_photons("y", absorb_model=abs_model, sky_center=(12.0, -30.0))
+    events = photons.project_photons("y", (12.0, -30.0), absorb_model="tbabs", nH=0.01)
 
-An off-axis projection with a ``north_vector``, without Doppler velocity shifting, and a specific
-random number generator:
+An off-axis projection with a ``north_vector``, without Doppler velocity shifting, 
+and a specific random number generator:
 
 .. code-block:: python
     
-    from numpy.random import RandomState
-    prng = RandomState(25)
-    events = photons.project_photons([0.1, -0.3, 0.5], no_shifting=True, north_vector=[1.0,0.0,0.0],
-                                     prng=prng)
+    events = photons.project_photons([0.1, -0.3, 0.5], (12.0, -30.0), no_shifting=True, 
+                                     north_vector=[1.0,0.0,0.0], prng=34)
 
 .. note::
 
-    Unlike the ``photon_simulator`` analysis module in yt, the ability to convolve the event energies
-    using an ARF and RMF has been taken out of this step entirely and moved into a new instrument 
-    simulator step. See :ref:`instruments` for details. 
+    Unlike the ``photon_simulator`` analysis module in yt, the ability to convolve 
+    the event energies using an ARF and RMF has been taken out of this step entirely 
+    and moved into a new instrument simulator step. See :ref:`instruments` for details. 
     
 Saving/Reading Raw Events to/from Disk
 --------------------------------------
@@ -119,23 +118,15 @@ method:
 
 .. code-block:: python
 
-    events.write_fits_file("cluster_events.fits", clobber=True)
+    events.write_fits_file("cluster_events.fits", overwrite=True)
     
-The ``clobber`` keyword argument is used to allow (or prevent) overwrites of 
+The ``overwrite`` keyword argument is used to allow (or prevent) overwrites of 
 files if they already exist. To read previously stored events back from disk, 
 use the :meth:`~pyxsim.event_list.EventList.from_fits_file` method:
 
 .. code-block:: python
 
     events = EventList.from_fits_file("cluster_events.fits")
-
-.. note::
-
-    If the events have convolved with responses using a built-in instrument model (see 
-    :ref:`instruments` for more details), then the characteristics of the convolved events
-    are stored in the HDF5 or FITS file, including the spectral channels. In the case of the
-    FITS files, they are "standard" events files which may be read and analyzed by other X-ray 
-    software tools such as ds9, CIAO, HEATOOLS, etc.
 
 .. _simput:
 
@@ -144,13 +135,14 @@ SIMPUT
 
 An :class:`~pyxsim.event_list.EventList` can be exported to the SIMPUT file format for
 reading in by other packages that simulate particular instruments, such as
-`MARX <http://space.mit.edu/ASC/MARX/>`_ or `SIMX <http://hea-www.cfa.harvard.edu/simx/>`_
+`SOXS <http://hea-www.cfa.harvard.edu/~jzuhone/soxs>`_, 
+`MARX <http://space.mit.edu/ASC/MARX/>`_, or `SIMX <http://hea-www.cfa.harvard.edu/simx/>`_
 (see also :ref:`instruments`). This is done by calling the 
 :meth:`~pyxsim.event_list.EventList.write_simput_file` method:
 
 .. code-block:: python
 
-    events.write_simput_file("my_great_events", clobber=False, emin=0.1, emax=9.0)
+    events.write_simput_file("my_great_events", overwrite=False, emin=0.1, emax=9.0)
 
 where the first argument is the prefix for the files that will be created (the SIMPUT 
 file and a photon list sidecar file), and the other optional arguments control whether
@@ -158,90 +150,10 @@ or not an existing file will be overwritten and the minimum and maximum energies
 events written to the file. Currently, SIMPUT files are used for export only; they
 cannot be used to read events back into pyXSIM. 
 
-Adding Background and Point Source Events
------------------------------------------
-
-Methods are provided for adding background and point source events to an existing 
-:class:`~pyxsim.event_list.EventList`. To add background photons, call
-:meth:`~pyxsim.event_list.EventList.add_background`, which takes the following arguments:
- 
-* ``energy_bins``: :class:`~yt.units.yt_array.YTArray` with units of keV, shape M+1. The edges of the 
-  energy bins for the spectra, where M is the number of bins.
-* ``spectrum``: :class:`~yt.units.yt_array.YTArray` with units of photons/s/cm**2, 
-  with shape M (the number of bins). This is the spectrum for the background. 
-* ``prng`` (optional): A pseudo-random number generator, :class:`~numpy.random.RandomState` object 
-  or simply :mod:`numpy.random` as the default. Typically will only be needed if you have a reason
-  to generate the same set of random numbers, such as for a test.
-* ``absorb_model`` (optional): :class:`~pyxsim.spectral_models.AbsorptionModel`, a model for 
-  galactic foreground absorption.
-
-The background is assumed to be spatially constant over the entire region. A simple example: 
-
-.. code-block:: python
-
-    from yt import YTArray
-    import numpy as np
-    from numpy.random import RandomState
-    
-    prng = RandomState(25)
-
-    # Not terribly realistic, but this example simulates a constant background
-    # with respect to energy
-    
-    nbins = 10000 # The number of bins in the simulated background spectrum
-    ebins = YTArray(np.linspace(0.01, 50.0, nbins+1)) # The bin edges (note nbins+1 size)
-    spec = YTArray(1.0e-9*np.ones(nbins), "photons/cm**2/s") # The spectrum itself
-    new_events = events.add_background(ebins, spec, prng=prng, absorb_model=tbabs_model)
-
-Similarly, to add point sources, call :meth:`~pyxsim.event_list.EventList.add_point_sources`, which
-takes several arguments:
-
-* ``positions``: An array of source positions, shape 2xN, in RA, Dec, where N is the number of point
-  sources. Coordinates should be in degrees. 
-* ``energy_bins``: :class:`~yt.units.yt_array.YTArray` with units of keV, shape M+1. The edges of the 
-  energy bins for the spectra, where M is the number of bins.
-* ``spectra``: list (size N) of :class:`~yt.units.yt_array.YTArray`\s with units of photons/s/cm**2, 
-  each with shape M. The spectra for the point sources, where M is the number of bins and N is
-  the number of point sources.
-* ``prng`` (optional): A pseudo-random number generator, :class:`~numpy.random.RandomState` object 
-  or simply :mod:`numpy.random` as the default. Typically will only be needed if you have a reason
-  to generate the same set of random numbers, such as for a test.
-* ``absorb_model`` (optional): :class:`~pyxsim.spectral_models.AbsorptionModel`, a model for 
-  galactic foreground absorption.
-
-A simple example: 
-
-.. code-block:: python
-
-    from yt import YTArray, YTQuantity
-    import numpy as np
-    from numpy.random import RandomState
-    
-    prng = RandomState(25)
-
-    # Simulate two point sources with power-law spectra
-
-    alpha1 = -1.0 # The power-law slopes of the two point sources
-    alpha2 = -1.5
-    E0 = YTQuantity(1.0, "keV") # The reference energy for the power-law spectrum
-    
-    nbins = 10000 # The number of bins in the simulated background spectrum
-    ebins = YTArray(np.linspace(0.01, 50.0, nbins+1)) # The bin edges (note nbins+1 size)
-    emid = 0.5*(ebins[1:]+ebins[:-1]) # Compute the bin centers
-    
-    spec1 = YTArray(1.0e-10*(emid/E0)**alpha1, "photons/cm**2/s") # The spectra
-    spec2 = YTArray(1.0e-10*(emid/E0)**alpha2, "photons/cm**2/s")
-
-    positions = np.array([[30.01, 44.99], [29.98, 45.03]]) # The RA, Dec positions of the two sources
-    
-    new_events = events.add_point_sources(positions, ebins, [spec1, spec2], prng=prng, absorb_model=tbabs_model)
-
-For the ``absorb_model`` argument for either of these methods, it should be the same model that
-was provided when the :class:`~pyxsim.event_list.EventList` was created, for consistency.
-
 .. note::
 
-    Both of these methods return a new event list with *both* the original and new events together.
+    This method is not implemented for :class:`~pyxsim.event_list.ConvolvedEventList`
+    instances.
 
 Manipulating Event Lists
 ------------------------
@@ -283,10 +195,10 @@ method:
 
 .. code-block:: python
 
-    events.write_fits_image("myimage.fits", clobber=True, emin=0.5, emax=7.0)
+    events.write_fits_image("myimage.fits", overwrite=True, emin=0.5, emax=7.0)
 
 which writes an image binned at the finest resolution of the simulation in the file
-``"myimage.fits"``. Set ``clobber=True`` if the file is already there and you 
+``"myimage.fits"``. Set ``overwrite=True`` if the file is already there and you 
 want to overwrite it. The ``emin`` and ``emax`` parameters control the energy range
 of the events which will be included in the image (default is to include all of the
 events).
@@ -294,22 +206,39 @@ events).
 Spectra
 +++++++
 
-To produce a binned spectrum, call :meth:`~pyxsim.event_list.EventList.write_spectrum`. 
+To produce a spectrum binned on energy, call :meth:`~pyxsim.event_list.EventList.write_spectrum`. 
 
 .. code-block:: python
 
-    events.write_spectrum("myspec.fits", bin_type="energy", emin=0.1,
-                          emax=10.0, nchan=2000, clobber=False)
+    specfile = "myspec.fits" # filename to write to
+    emin = 0.1 # minimum energy of spectrum
+    emax = 10.0 # maximum energy of spectrum
+    nchan = 2000 # number of bins in spectrum
+    events.write_spectrum(specfile, emin, emax, nchan, overwrite=False)
 
-In this case, we have chosen ``"energy"`` as the ``bin_type``, which will bin the unconvolved
-event energies using the ``emin``, ``emax``, and ``nchan`` arguments into a histogram which
-will be written to the file as a spectrum. If ``bin_type="channel``:
+This bins the unconvolved event energies using the ``emin``, ``emax``, and ``nchan`` 
+arguments into a histogram which will be written to the file as a spectrum. As usual, 
+the ``overwrite`` argument determines whether or not a file can be overwritten. 
+
+.. _convolved_events:
+
+``ConvolvedEventList`` Instances
+--------------------------------
+
+:class:`~pyxsim.event_list.ConvolvedEventList` is a subclass of 
+:class:`~pyxsim.event_list.EventList` which contains data and parameters for convolved
+events, specifically PI or PHA channels and related data. These events have been convolved
+with an ARF and an RMF using an :class:`~pyxsim.instruments.InstrumentSimulator`. Most
+of the :class:`~pyxsim.event_list.EventList` methods are still available (with the exception
+that one is unable to write SIMPUT files from these objects). One additional method is 
+provided, :meth:`~pyxsim.event_list.ConvolvedEventList.write_channel_spectrum`, which 
+writes the spectrum binned according to PI or PHA channel to a file which can then by
+analyzed by standard X-ray spectral analysis tools:
 
 .. code-block:: python
 
-    events.write_spectrum("myspec.fits", bin_type="channel")
+    specfile = "spec.pi" # filename to write to
+    events.write_channel_spectrum(specfile, overwrite=True)
 
-the spectrum will be binned by channel instead. This is particularly useful if the events
-were convolved with an instrument simulator, as this spectrum can be read and fit using programs
-such as XSPEC. As usual, the ``clobber`` argument determines whether or not a file can
-be overwritten. 
+For more information on creating :class:`~pyxsim.event_list.ConvolvedEventList` objects,
+see :ref:`instruments`.

@@ -15,17 +15,16 @@ from sherpa.astro.ui import load_user_model, add_user_pars, \
     covar, get_covar_results, set_covar_opt
 from numpy.random import RandomState
 
-prng = RandomState(27)
-
 def setup():
     from yt.config import ytcfg
     ytcfg["yt", "__withintesting"] = "True"
 
 def mymodel(pars, x, xhi=None):
     dx = x[1]-x[0]
+    xmid = x+0.5*dx
     wm = WabsModel(pars[0])
-    wabs = wm.get_absorb(x)
-    plaw = pars[1]*dx*(x*(1.0+pars[2]))**(-pars[3])
+    wabs = wm.get_absorb(xmid)
+    plaw = pars[1]*dx*(xmid*(1.0+pars[2]))**(-pars[3])
     return wabs*plaw
 
 @requires_module("sherpa")
@@ -45,35 +44,35 @@ def plaw_fit(alpha_sim):
 
     def _hard_emission(field, data):
         return YTQuantity(1.0e-18, "s**-1*keV**-1")*data["density"]*data["cell_volume"]/mp
-    ds.add_field(("gas", "hard_emission"), function=_hard_emission, units="keV**-1*s**-1")
+    ds.add_field(("gas", "hard_emission"), function=_hard_emission, 
+                 units="keV**-1*s**-1")
 
     nH_sim = 0.02
-    abs_model = WabsModel(nH_sim)
 
     A = YTQuantity(2000., "cm**2")
     exp_time = YTQuantity(2.0e5, "s")
     redshift = 0.01
 
-    sphere = ds.sphere("c", (100.,"kpc"))
+    sphere = ds.sphere("c", (100., "kpc"))
 
     plaw_model = PowerLawSourceModel(1.0, 0.01, 11.0, "hard_emission", 
-                                     alpha_sim, prng=prng)
+                                     alpha_sim, prng=27)
 
     photons = PhotonList.from_data_source(sphere, redshift, A, exp_time,
                                           plaw_model)
 
-    D_A = photons.parameters["FiducialAngularDiameterDistance"]
+    D_A = photons.parameters["fid_d_a"]
     dist_fac = 1.0/(4.*np.pi*D_A*D_A*(1.+redshift)**3).in_cgs()
     norm_sim = float((sphere["hard_emission"]).sum()*dist_fac.in_cgs())*(1.+redshift)
 
-    events = photons.project_photons("z", absorb_model=abs_model,
-                                     prng=bms.prng,
-                                     no_shifting=True)
-    events = ACIS_I(events, rebin=False, convolve_psf=False, prng=bms.prng)
-    events.write_spectrum("plaw_model_evt.pi", clobber=True)
+    events = photons.project_photons("z", [30., 45.], absorb_model="wabs",
+                                     nH=nH_sim, prng=bms.prng, no_shifting=True)
 
-    os.system("cp %s ." % events.parameters["ARF"])
-    os.system("cp %s ." % events.parameters["RMF"])
+    new_events = ACIS_I(events, prng=bms.prng)
+
+    os.system("cp %s %s ." % (ACIS_I.arf.filename, ACIS_I.rmf.filename))
+
+    new_events.write_channel_spectrum("plaw_model_evt.pi", overwrite=True)
 
     load_user_model(mymodel, "wplaw")
     add_user_pars("wplaw", ["nH", "norm", "redshift", "alpha"],

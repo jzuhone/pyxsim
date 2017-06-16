@@ -17,8 +17,8 @@ else:
     stream = sys.stderr
 
 level = min(max(ytcfg.getint("yt", "loglevel"), 0), 50)
-ufstring = "%(name)-3s: [%(levelname)-9s] %(asctime)s %(message)s"
-cfstring = "%(name)-3s: [%(levelname)-18s] %(asctime)s %(message)s"
+ufstring = "%(name)-3s : [%(levelname)-9s] %(asctime)s %(message)s"
+cfstring = "%(name)-3s : [%(levelname)-18s] %(asctime)s %(message)s"
 
 pyxsim_sh = logging.StreamHandler(stream=stream)
 # create formatter and add it to the handlers
@@ -80,7 +80,7 @@ def validate_parameters(first, second, skip=[]):
                 raise RuntimeError("The values for the parameter '%s' in the two inputs" % k1 +
                                    " are not identical (%s vs. %s)!" % (v1, v2))
 
-def merge_files(input_files, output_file, clobber=False,
+def merge_files(input_files, output_file, overwrite=False,
                 add_exposure_times=False):
     r"""
     Helper function for merging PhotonList or EventList HDF5 files.
@@ -91,7 +91,7 @@ def merge_files(input_files, output_file, clobber=False,
         List of filenames that will be merged together.
     output_file : string
         Name of the merged file to be outputted.
-    clobber : boolean, default False
+    overwrite : boolean, default False
         If a the output file already exists, set this to True to
         overwrite it.
     add_exposure_times : boolean, default False
@@ -102,7 +102,7 @@ def merge_files(input_files, output_file, clobber=False,
     --------
     >>> from pyxsim import merge_files
     >>> merge_files(["events_0.h5","events_1.h5","events_3.h5"], "events.h5",
-    ...             clobber=True, add_exposure_times=True)
+    ...             overwrite=True, add_exposure_times=True)
 
     Notes
     -----
@@ -110,9 +110,9 @@ def merge_files(input_files, output_file, clobber=False,
     same values, with the exception of the exposure time parameter "exp_time". If
     add_exposure_times=False, the maximum exposure time will be used.
     """
-    if os.path.exists(output_file) and not clobber:
+    if os.path.exists(output_file) and not overwrite:
         raise IOError("Cannot overwrite existing file %s. " % output_file +
-                      "If you want to do this, set clobber=True.")
+                      "If you want to do this, set overwrite=True.")
 
     f_in = h5py.File(input_files[0], "r")
     f_out = h5py.File(output_file, "w")
@@ -153,3 +153,38 @@ def merge_files(input_files, output_file, clobber=False,
         d.create_dataset(k, data=np.concatenate(data[k]))
 
     f_out.close()
+
+key_warning = "As of pyXSIM v2.0.0 this key to the %s has been deprecated, " + \
+              "and will be removed in a future release. Use the '%s' key instead."
+
+class ParameterDict(object):
+    def __init__(self, param_dict, list_type, old_keys):
+        self.param_dict = param_dict
+        self.list_type = list_type
+        self.old_keys = old_keys
+
+    def __setitem__(self, key, value):
+        self.param_dict[key] = value
+
+    def __getitem__(self, key):
+        if key in self.old_keys:
+            k = self.old_keys[key]
+            mylog.warning(key_warning % ("%s parameters" % self.list_type, k))
+        else:
+            k = key
+        return self.param_dict[k]
+
+    def keys(self):
+        return self.param_dict.keys()
+
+    def values(self):
+        return self.param_dict.values()
+
+    def items(self):
+        return self.param_dict.items()
+
+    def __contains__(self, key):
+        if key in self.old_keys:
+            mylog.warning(key_warning % ("%s parameters" % self.list_type, self.old_keys[key]))
+            return True
+        return key in self.param_dict

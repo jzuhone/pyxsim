@@ -16,8 +16,6 @@ def test_line_emission():
     bms = BetaModelSource()
     ds = bms.ds
 
-    prng = RandomState(32)
-
     def _dm_emission(field, data):
         return cross_section*(data["dark_matter_density"]/m_chi)**2*data["cell_volume"]
     ds.add_field(("gas","dm_emission"), function=_dm_emission, units="s**-1")
@@ -33,16 +31,16 @@ def test_line_emission():
     sphere = ds.sphere("c", (100.,"kpc"))
 
     line_model = LineSourceModel(location, "dm_emission", 
-                                 sigma="dark_matter_dispersion", prng=prng)
+                                 sigma="dark_matter_dispersion", prng=32)
 
     photons = PhotonList.from_data_source(sphere, redshift, A, exp_time,
                                           line_model)
 
-    D_A = photons.parameters["FiducialAngularDiameterDistance"]
+    D_A = photons.parameters["fid_d_a"]
     dist_fac = 1.0/(4.*np.pi*D_A*D_A*(1.+redshift)**3)
     dm_E = (sphere["dm_emission"]).sum()
 
-    E = uconcatenate(photons["Energy"])
+    E = uconcatenate(photons["energy"])
     n_E = len(E)
 
     n_E_pred = (exp_time*A*dm_E*dist_fac).in_units("dimensionless")

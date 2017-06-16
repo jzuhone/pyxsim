@@ -62,7 +62,7 @@ class BetaModelSource(object):
 class ParticleBetaModelSource(object):
     def __init__(self):
 
-        self.prng = RandomState(24)
+        self.prng = RandomState(22)
         self.kT = kT
         self.Z = Z
 
@@ -103,8 +103,8 @@ class ParticleBetaModelSource(object):
         self.ds = load_particles(data, length_unit=(2*R, "Mpc"), bbox=bbox)
 
 def create_dummy_wcs():
-    from yt.utilities.on_demand_imports import _astropy
-    wcs = _astropy.pywcs.WCS(naxis=2)
+    import astropy.wcs as pywcs
+    wcs = pywcs.WCS(naxis=2)
     wcs.wcs.crpix = [512.5, 512.5]
     wcs.wcs.crval = [30.0, 45.0]
     wcs.wcs.cdelt = [-0.001, 0.001]

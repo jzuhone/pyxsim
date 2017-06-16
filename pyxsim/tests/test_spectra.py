@@ -1,5 +1,4 @@
-from pyxsim import \
-    TableApecModel, XSpecThermalModel
+from pyxsim import TableApecModel
 from yt.utilities.answer_testing.framework import \
     GenericArrayTest
 from yt.testing import requires_module, fake_random_ds
@@ -21,7 +20,7 @@ def test_apec():
 
     spec2 = amod.return_spectrum(6.0, 0.3, 0.2, 1.0e-14)
 
-    yield assert_allclose, spec.v, spec2.v
+    assert_allclose(spec.v, spec2.v)
 
     def spec_test():
         return spec.v
