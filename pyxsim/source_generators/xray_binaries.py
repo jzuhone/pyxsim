@@ -7,6 +7,7 @@ from scipy.interpolate import InterpolatedUnivariateSpline
 from six import string_types
 from pyxsim.source_models import PowerLawSourceModel
 from pyxsim.utils import mylog
+from soxs.utils import parse_prng
 
 t_lm = np.array([7.07038000e-03,   7.42810000e-03,   7.90964000e-03,
                  8.42238000e-03,   8.92825000e-03,   9.42208000e-03,
@@ -317,8 +318,7 @@ def make_xrb_particles(data_source, metallicity_field, age_field,
     age_field : string or (type, name) field tuple
         The stellar age field.
     """
-    if prng is None:
-        prng = np.random
+    prng = parse_prng(prng)
 
     ds = data_source.ds
 
@@ -510,6 +510,7 @@ def make_xrb_particles(data_source, metallicity_field, age_field,
     return new_ds
 
 def make_xrb_photon_models(e0, emin, emax, alpha_lmxb, alpha_hmxb, prng=None):
+    prng = parse_prng(prng)
     lmxb_model = PowerLawSourceModel(e0, emin, emax, alpha_lmxb, prng=prng)
     hmxb_model = PowerLawSourceModel(e0, emin, emax, alpha_hmxb, prng=prng)
     return lmxb_model, hmxb_model
