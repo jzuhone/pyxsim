@@ -67,7 +67,7 @@ class XrayLightCone(LightCone):
             for off_ax in axes_lookup[ax]:
                 le[off_ax] -= 0.5*width
                 re[off_ax] += 0.5*width
-            reg = ds.region(output["projection_center"], le, re)
+            reg = ds.box(le, re)
             photons = PhotonList.from_data_source(reg, output['redshift'], area,
                                                   exp_time, source_model,
                                                   parameters=parameters,
