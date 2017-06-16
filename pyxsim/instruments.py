@@ -4,6 +4,7 @@ from pyxsim.utils import pyxsim_path
 from soxs.instrument import \
     AuxiliaryResponseFile, \
     RedistributionMatrixFile
+from soxs.utils import parse_prng
 import os
 
 aciss_arf = os.path.join(pyxsim_path, "response_files", "aciss_aimpt_cy18.arf")
@@ -41,8 +42,21 @@ class InstrumentSimulator(object):
         return self._rmf
 
     def __call__(self, events, prng=None):
-        if prng is None:
-            prng = np.random
+        """
+        Calling method for :class:`~pyxsim.instruments.InstrumentSimulator`.
+
+        Parameters
+        ----------
+        events : :class:`~pyxsim.events.EventList`
+            An EventList instance of unconvolved events.
+        prng : integer, :class:`~numpy.random.RandomState` object, or :mod:`~numpy.random`, optional
+            A pseudo-random number generator. Typically will only be specified
+            if you have a reason to generate the same set of random numbers, such as for a
+            test. Default is the :mod:`numpy.random` module.
+        """
+        if "pi" in events or "pha" in events:
+            raise RuntimeError("These events have already been convolved with a response!!")
+        prng = parse_prng(prng)
         flux = np.sum(events["eobs"]).to("erg") / \
                events.parameters["exp_time"]/events.parameters["area"]
         exp_time = events.parameters["exp_time"]

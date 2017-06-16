@@ -10,6 +10,7 @@ from yt.utilities.physical_constants import mp, clight, kboltz
 from pyxsim.spectral_models import thermal_models
 from pyxsim.utils import parse_value
 from yt.utilities.exceptions import YTUnitConversionError
+from soxs.utils import parse_prng
 
 sqrt_two = np.sqrt(2.)
 
@@ -18,10 +19,7 @@ class SourceModel(object):
     def __init__(self, prng=None):
         self.spectral_norm = None
         self.redshift = None
-        if prng is None:
-            self.prng = np.random
-        else:
-            self.prng = prng
+        self.prng = parse_prng(prng)
 
     def __call__(self, chunk):
         pass
@@ -87,7 +85,7 @@ class ThermalSourceModel(SourceModel):
     model_vers : string, optional
         The version identifier string for the model files, e.g.
         "2.0.2". Default depends on the model used.
-    prng : :class:`~numpy.random.RandomState` object or :mod:`~numpy.random`, optional
+    prng : integer, :class:`~numpy.random.RandomState` object or :mod:`~numpy.random`, optional
         A pseudo-random number generator. Typically will only be specified
         if you have a reason to generate the same set of random numbers, such as for a
         test. Default is the :mod:`numpy.random` module.
@@ -114,10 +112,7 @@ class ThermalSourceModel(SourceModel):
                                              model_root=model_root,
                                              model_vers=model_vers)
         self.method = method
-        if prng is None:
-            self.prng = np.random
-        else:
-            self.prng = prng
+        self.prng = parse_prng(prng)
         self.kT_min = kT_min
         self.kT_max = kT_max
         self.kT_scale = kT_scale
@@ -334,7 +329,7 @@ class PowerLawSourceModel(SourceModel):
     index : float, string, or (ftype, fname) tuple
         The power-law index of the spectrum. Either a float for a single power law or
         the name of a field that corresponds to the power law.
-    prng : :class:`~numpy.random.RandomState` object or :mod:`~numpy.random`, optional
+    prng : integer, :class:`~numpy.random.RandomState` object or :mod:`~numpy.random`, optional
         A pseudo-random number generator. Typically will only be specified
         if you have a reason to generate the same set of random numbers, such as for a
         test. Default is the :mod:`numpy.random` module.
@@ -352,10 +347,7 @@ class PowerLawSourceModel(SourceModel):
         self.emax = parse_value(emax, "keV")
         self.emission_field = emission_field
         self.alpha = alpha
-        if prng is None:
-            self.prng = np.random
-        else:
-            self.prng = prng
+        self.prng = parse_prng(prng)
         self.spectral_norm = None
         self.redshift = None
 
@@ -423,7 +415,7 @@ class LineSourceModel(SourceModel):
         are assumed to be in keV. If set to a field name, the line broadening
         is assumed to be based on this field (in units of velocity or energy).
         If set to None (the default), it is assumed that the line is unbroadened.
-    prng : :class:`~numpy.random.RandomState` object or :mod:`~numpy.random`, optional
+    prng : integer, :class:`~numpy.random.RandomState` object or :mod:`~numpy.random`, optional
         A pseudo-random number generator. Typically will only be specified
         if you have a reason to generate the same set of random numbers, such as for a
         test. Default is the :mod:`numpy.random` module.
@@ -452,10 +444,7 @@ class LineSourceModel(SourceModel):
             # Either no broadening or a field name
             self.sigma = sigma
         self.emission_field = emission_field
-        if prng is None:
-            self.prng = np.random
-        else:
-            self.prng = prng
+        self.prng = parse_prng(prng)
         self.spectral_norm = None
         self.redshift = None
 

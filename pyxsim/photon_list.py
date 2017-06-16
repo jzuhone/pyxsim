@@ -17,6 +17,7 @@ from pyxsim.spectral_models import absorb_models
 from pyxsim.utils import parse_value, force_unicode, validate_parameters, \
     key_warning, ParameterDict
 from pyxsim.event_list import EventList
+from soxs.utils import parse_prng
 
 comm = communication_system.communicators[-1]
 
@@ -567,7 +568,7 @@ class PhotonList(object):
             the plane of projection. If not set, an arbitrary grid-aligned north_vector
             is chosen. Ignored in the case where a particular axis (e.g., "x", "y", or
             "z") is explicitly specified.
-        prng : :class:`~numpy.random.RandomState` object or :mod:`~numpy.random`, optional
+        prng : integer, :class:`~numpy.random.RandomState` object, or :mod:`~numpy.random`, optional
             A pseudo-random number generator. Typically will only be specified
             if you have a reason to generate the same set of random numbers, such as for a
             test. Default is the :mod:`numpy.random` module.
@@ -578,9 +579,7 @@ class PhotonList(object):
         >>> events = my_photons.project_photons(L, [30., 45.], area_new=10000.,
         ...                                     redshift_new=0.05)
         """
-
-        if prng is None:
-            prng = np.random
+        prng = parse_prng(prng)
 
         change_redshift = redshift_new is not None
         change_dist = dist_new is not None

@@ -2,7 +2,6 @@
 Classes for generating lists of detected events
 """
 import numpy as np
-from six import string_types
 from pyxsim.utils import mylog
 try:
     from yt.visualization.fits_image import assert_same_wcs

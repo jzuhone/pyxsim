@@ -5,6 +5,7 @@ import numpy as np
 import h5py
 
 from soxs.spectra import ApecGenerator, get_wabs_absorb
+from soxs.utils import parse_prng
 from pyxsim.utils import mylog, check_file_location
 from yt.units.yt_array import YTArray, YTQuantity
 from yt.utilities.physical_constants import hcgs, clight
@@ -113,7 +114,7 @@ class AbsorptionModel(object):
         sigma = np.interp(e, self.emid, self.sigma, left=0.0, right=0.0)
         return np.exp(-sigma*self.nH)
 
-    def absorb_photons(self, eobs, prng=np.random):
+    def absorb_photons(self, eobs, prng=None):
         r"""
         Determine which photons will be absorbed by foreground
         galactic absorption.
@@ -122,11 +123,12 @@ class AbsorptionModel(object):
         ----------
         eobs : array_like
             The energies of the photons in keV.
-        prng : :class:`~numpy.random.RandomState` object or :mod:`~numpy.random`, optional
+        prng : integer, :class:`~numpy.random.RandomState` object or :mod:`~numpy.random`, optional
             A pseudo-random number generator. Typically will only be specified
             if you have a reason to generate the same set of random numbers, such as for a
             test. Default is the :mod:`numpy.random` module.
         """
+        prng = parse_prng(prng)
         mylog.info("Absorbing.")
         absorb = self.get_absorb(eobs)
         randvec = prng.uniform(size=eobs.shape)
