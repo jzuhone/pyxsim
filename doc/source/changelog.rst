@@ -76,6 +76,8 @@ Other changes:
   absorption models no longer require ``setup_spectrum`` and ``cleanup_spectrum`` 
   methods. Source models no longer require a ``cleanup_model`` method.
 * pyXSIM now has `SciPy <http://www.scipy.org>`_ as a required dependence.
+* Throughout the code, pseudo-random number generators can now be specified simply
+  as integer seeds in signatures to functions which take the keyword argument ``prng``.
 
 Version 1.2.6
 -------------
