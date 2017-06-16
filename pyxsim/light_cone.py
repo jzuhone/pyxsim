@@ -77,13 +77,13 @@ class XrayLightCone(LightCone):
                 events = photons.project_photons("xyz"[ax], sky_center,
                                                  absorb_model=absorb_model, nH=nH,
                                                  no_shifting=no_shifting, prng=prng)
+                if events.parameters["dtheta"].v < dtheta:
+                    dtheta = events.parameters["dtheta"].v
+                    pix_center = events.parameters["pix_center"]
                 if events.num_events > 0:
                     tot_events["xsky"].append(events["xsky"])
                     tot_events["ysky"].append(events["ysky"])
                     tot_events["eobs"].append(events["eobs"])
-                    if events.parameters["dtheta"].v < dtheta:
-                        dtheta = events.parameters["dtheta"].v
-                        pix_center = events.parameters["pix_center"]
                 del events
 
             del photons
