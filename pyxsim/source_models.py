@@ -80,8 +80,8 @@ class ThermalSourceModel(SourceModel):
         Whether or not the spectral lines should be thermally
         broadened. Default: True
     model_root : string, optional
-        The directory root where the model files are stored. If 
-        not provided, the default SOXS-provided files are used.
+        The directory root where the model files are stored. If not provided, 
+        a default location known to pyXSIM is used. 
     model_vers : string, optional
         The version identifier string for the model files, e.g.
         "2.0.2". Default depends on the model used.
