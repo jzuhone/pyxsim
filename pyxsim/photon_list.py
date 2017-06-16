@@ -741,8 +741,7 @@ class PhotonList(object):
         events["ypix"] = ysky[detected]/dx_min.v + 0.5*(nx+1)
         events["eobs"] = eobs[detected]
 
-
-        num_events = len(events["xpix"])
+        num_events = comm.mpi_allreduce(events["xpix"].shape[0])
 
         if comm.rank == 0:
             mylog.info("Total number of observed photons: %d" % num_events)
