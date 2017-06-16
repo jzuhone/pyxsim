@@ -45,9 +45,9 @@ arguments to customize the resulting projection. The arguments are:
   This option sets the orientation of the plane of projection. If not set, an arbitrary grid-aligned 
   ``north_vector`` is chosen. Ignored in the case where a particular axis (e.g., "x", "y", or "z") is 
   explicitly specified.
-* ``prng`` (optional): A pseudo-random number generator, :class:`~numpy.random.RandomState` object, or
-  :mod:`~numpy.random` is the default. Use this if you have a reason to generate the same set of random 
-  numbers, such as for a test. 
+* ``prng`` (optional): An integer seed, pseudo-random number generator, :class:`~numpy.random.RandomState` 
+  object, or :mod:`~numpy.random` is the default. Use this if you have a reason to generate the same 
+  set of random numbers, such as for a test. 
 
 Assuming one then has a :class:`~pyxsim.photon_list.PhotonList` ``photons``, example invocations could look
 like this:
@@ -76,10 +76,8 @@ and a specific random number generator:
 
 .. code-block:: python
     
-    from numpy.random import RandomState
-    prng = RandomState(25)
     events = photons.project_photons([0.1, -0.3, 0.5], (12.0, -30.0), no_shifting=True, 
-                                     north_vector=[1.0,0.0,0.0], prng=prng)
+                                     north_vector=[1.0,0.0,0.0], prng=34)
 
 .. note::
 
