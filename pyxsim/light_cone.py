@@ -6,7 +6,14 @@ from pyxsim.photon_list import PhotonList
 from pyxsim.event_list import EventList
 from pyxsim.utils import parse_value
 
-from yt.analysis_modules.cosmological_observation.api import LightCone
+try:
+    from yt_astro_analysis.cosmological_observation.api import LightCone
+except ImportError:
+    try:
+        from yt.analysis_modules.cosmological_observation.api import LightCone
+    except ImportError:
+        raise ImportError("Cannot import LightCone from yt or yt_astro_analysis!")
+
 from yt.convenience import load
 from yt.units.yt_array import uconcatenate, YTArray, YTQuantity
 
