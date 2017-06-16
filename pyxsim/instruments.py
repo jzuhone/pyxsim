@@ -68,6 +68,7 @@ class InstrumentSimulator(object):
         new_events = self.arf.detect_events(new_events, exp_time, flux,
                                             [emin, emax], prng=prng)
         new_events = self.rmf.scatter_energies(new_events, prng=prng)
+        new_events["eobs"] = new_events.pop("energy")
         parameters = {}
         parameters.update(events.parameters)
         parameters["channel_type"] = self.rmf.header["CHANTYPE"]
