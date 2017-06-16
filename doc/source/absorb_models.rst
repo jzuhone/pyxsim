@@ -29,7 +29,7 @@ This file must have two top-level datasets:
   is the number of bins
 
 An example file is provided with pyXSIM, ``tbabs_table.h5``, containing a table of the 
-`tbabs <http://pulsar.sternwarte.uni-erlangen.de/wilms/research/tbabs/>`_ cross sections,
+`TBabs <http://pulsar.sternwarte.uni-erlangen.de/wilms/research/tbabs/>`_ cross sections,
 generated from XSPEC. 
 
 A new absorption model class can be created in this way:

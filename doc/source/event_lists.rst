@@ -46,7 +46,7 @@ arguments to customize the resulting projection. The arguments are:
   ``north_vector`` is chosen. Ignored in the case where a particular axis (e.g., "x", "y", or "z") is 
   explicitly specified.
 * ``prng`` (optional): An integer seed, pseudo-random number generator, :class:`~numpy.random.RandomState` 
-  object, or :mod:`~numpy.random` is the default. Use this if you have a reason to generate the same 
+  object, or :mod:`~numpy.random` (the default). Use this if you have a reason to generate the same 
   set of random numbers, such as for a test. 
 
 Assuming one then has a :class:`~pyxsim.photon_list.PhotonList` ``photons``, example invocations could look
