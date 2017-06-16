@@ -7,8 +7,6 @@ try:
     from yt.visualization.fits_image import assert_same_wcs
 except ImportError:
     from yt.utilities.fits_image import assert_same_wcs
-from yt.utilities.parallel_tools.parallel_analysis_interface import \
-    parallel_root_only
 from yt.units.yt_array import YTQuantity, YTArray, uconcatenate
 import astropy.io.fits as pyfits
 import astropy.wcs as pywcs
@@ -18,6 +16,8 @@ from pyxsim.utils import force_unicode, validate_parameters, parse_value, \
 from soxs.simput import write_photon_list
 from soxs.instrument import RedistributionMatrixFile
 import os
+from yt.utilities.parallel_tools.parallel_analysis_interface import \
+    communication_system
 
 old_parameter_keys = {"ExposureTime": "exp_time",
                       "Area": "area",
@@ -30,12 +30,14 @@ old_parameter_keys = {"ExposureTime": "exp_time",
                       "Mission": "mission",
                       "ChannelType": "channel_type"}
 
+comm = communication_system.communicators[-1]
+
 class EventList(object):
 
     def __init__(self, events, parameters, wcs=None):
         self.events = events
         self.parameters = ParameterDict(parameters, "EventList", old_parameter_keys)
-        self.num_events = events["xpix"].shape[0]
+        self.num_events = comm.mpi_allreduce(events["xpix"].shape[0])
         if wcs is None:
             self.wcs = pywcs.WCS(naxis=2)
             self.wcs.wcs.crpix = parameters["pix_center"]
