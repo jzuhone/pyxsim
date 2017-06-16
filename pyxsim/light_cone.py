@@ -1,14 +1,18 @@
 import time
 
+import astropy.wcs as pywcs
+
 from pyxsim.photon_list import PhotonList
 from pyxsim.event_list import EventList
 from pyxsim.utils import parse_value
 
 from yt.analysis_modules.cosmological_observation.api import LightCone
 from yt.convenience import load
-from yt.units.yt_array import uconcatenate
+from yt.units.yt_array import uconcatenate, YTArray, YTQuantity
 
 from soxs.utils import parse_prng
+
+from collections import defaultdict
 
 axes_lookup = [(1,2), (2,0), (0,1)]
 
@@ -35,8 +39,14 @@ class XrayLightCone(LightCone):
 
         prng = parse_prng(prng)
 
-        events_by_snapshot = []
+        area = parse_value(area, "cm**2")
+        exp_time = parse_value(exp_time, "s")
         aw = parse_value(angular_width, "deg")
+
+        tot_events = defaultdict(list)
+
+        dtheta = 1.0e88
+        pix_center = None
 
         for output in self.light_cone_solution:
             ds = load(output["filename"])
@@ -56,26 +66,35 @@ class XrayLightCone(LightCone):
                                                   parameters=parameters,
                                                   velocity_fields=velocity_fields,
                                                   cosmology=ds.cosmology)
-            if sum(photons["number_of_photons"]) > 0:
+            if sum(photons["num_photons"]) > 0:
                 events = photons.project_photons("xyz"[ax], sky_center,
                                                  absorb_model=absorb_model, nH=nH,
                                                  no_shifting=no_shifting, prng=prng)
-                events_by_snapshot.append(events)
+                tot_events["xsky"].append(events["xsky"])
+                tot_events["ysky"].append(events["ysky"])
+                tot_events["eobs"].append(events["eobs"])
+                if events.parameters["dtheta"].v < dtheta:
+                    dtheta = events.parameters["dtheta"].v
+                    pix_center = events.parameters["pix_center"]
+                del events
+
             del photons
 
-        parameters = {}
-        parameters.update(events_by_snapshot[-1].parameters)
-        parameters.pop("d_a")
-        parameters.pop("redshift")
-        wcs = events_by_snapshot[-1].wcs
+        wcs = pywcs.WCS(naxis=2)
+        wcs.wcs.crpix = pix_center
+        wcs.wcs.crval = list(sky_center)
+        wcs.wcs.cdelt = [-dtheta, dtheta]
+        wcs.wcs.ctype = ["RA---TAN","DEC--TAN"]
+        wcs.wcs.cunit = ["deg"]*2
 
-        tot_events = {}
-        for key in ["eobs", "xsky", "ysky"]:
-            tot_events[key] = events_by_snapshot[0][key]
+        parameters = {"exp_time": exp_time.v,
+                      "area": area.v, 
+                      "sky_center": YTArray(sky_center, "deg"),
+                      "pix_center": pix_center,
+                      "dtheta": YTQuantity(dtheta, "deg")}
 
-        for events in events_by_snapshot[1:]:
-            for key in ["eobs", "xsky", "ysky"]:
-                tot_events[key] = uconcatenate(tot_events[key], events[key])
+        for key in tot_events:
+            tot_events[key] = uconcatenate(tot_events[key])
 
         x, y = wcs.wcs_world2pix(tot_events["xsky"].d, tot_events["ysky"].d, 1)
         tot_events["xpix"] = x
