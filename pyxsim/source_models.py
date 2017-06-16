@@ -45,7 +45,8 @@ class ThermalSourceModel(SourceModel):
     ----------
     spectral_model : string or :class:`~pyxsim.spectral_models.SpectralModel`
         A thermal spectral model instance, e.g.
-       :class:`~pyxsim.spectral_models.TableApecModel`.
+       :class:`~pyxsim.spectral_models.TableApecModel`. Known options for 
+       strings are "apec".
     emin : float
         The minimum energy for the spectrum in keV.
     emax : float
@@ -103,6 +104,8 @@ class ThermalSourceModel(SourceModel):
                  thermal_broad=False, model_root=None, model_vers=None, 
                  prng=None):
         if isinstance(spectral_model, string_types):
+            if spectral_model not in thermal_models:
+                raise KeyError("%s is not a known thermal spectral model!" % spectral_model)
             spectral_model = thermal_models[spectral_model]
         self.temperature_field = temperature_field
         self.Zmet = Zmet

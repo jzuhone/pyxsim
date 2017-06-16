@@ -36,7 +36,8 @@ arguments to customize the resulting projection. The arguments are:
   :class:`~pyxsim.photon_list.PhotonList` was created. To use this, the redshift must be set to zero. 
 * ``absorb_model`` (optional): A string or :class:`~pyxsim.spectral_models.AbsorptionModel` class 
   representing a model for foreground galactic absorption. This parameter can take a string or the 
-  class itself. See :ref:`absorb-models` for more details on how to use them.
+  class itself. See :ref:`absorb-models` for more details on how to use them. Known options for 
+  strings are ``"wabs"`` and ``"tbabs"``.
 * ``nH`` (optional): The foreground galactic column density in units of 
   :math:`10^{22} \rm{atoms} \rm{cm}^{-2}`, for use when one is applying foreground galactic absorption.
 * ``no_shifting`` (optional): If set to True, the photon energies will not be velocity Doppler shifted. Default False.

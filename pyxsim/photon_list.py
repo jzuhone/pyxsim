@@ -555,7 +555,8 @@ class PhotonList(object):
             A model for foreground galactic absorption, to simulate the absorption
             of events before being detected. This cannot be applied here if you 
             already did this step previously in the creation of the 
-            :class:`~pyxsim.photon_list.PhotonList` instance.
+            :class:`~pyxsim.photon_list.PhotonList` instance. Known options for 
+            strings are "wabs" and "tbabs".
         nH : float, optional
             The foreground column density in units of 10^22 cm^{-2}. Only used if
             absorption is applied.
@@ -589,6 +590,8 @@ class PhotonList(object):
                                "but not both!")
 
         if isinstance(absorb_model, string_types):
+            if absorb_model not in absorb_models:
+                raise KeyError("%s is not a known absorption model!" % absorb_model)
             absorb_model = absorb_models[absorb_model]
         if absorb_model is not None:
             if nH is None:
