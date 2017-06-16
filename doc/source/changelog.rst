@@ -27,6 +27,7 @@ Changes related to thermal source modeling:
   This method now takes the name of the spectral model as a parameter. Consequently, 
   arguments needed for the creation of spectra now need to be passed to 
   :class:`~pyxsim.source_models.ThermalSourceModel` upon creation of a new instance. 
+* Thermal broadening of spectral lines is now on by default.
 
 Changes related to modeling of foreground Galactic absorption:
 
