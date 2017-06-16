@@ -741,7 +741,6 @@ class PhotonList(object):
         events["ypix"] = ysky[detected]/dx_min.v + 0.5*(nx+1)
         events["eobs"] = eobs[detected]
 
-        events = comm.par_combine_object(events, datatype="dict", op="cat")
 
         num_events = len(events["xpix"])
 
