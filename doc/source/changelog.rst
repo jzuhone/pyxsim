@@ -3,6 +3,75 @@
 ChangeLog
 =========
 
+Version 2.0.0
+-------------
+
+This is a major new release of pyXSIM, which fixes bugs, adds a number of new features,
+but most importantly, implements a simpler API in many aspects. A number of the changes 
+in this version are backwards-incompatible with previous versions, and where applicable
+is noted below.
+
+The largest (and largely hidden) change in this release is the outsourcing of 
+much of pyXSIM's capabilities to [SOXS](http://hea-www.cfa.harvard.edu/~jzuhone/soxs), 
+which is a spin-off package from pyXSIM which models thermal spectra, foreground
+galactic absorption, and convolving with instrument models. This results in far 
+less duplication between the code bases of these two closely related projects.
+
+Changes related to thermal source modeling:
+
+* pyXSIM now uses SOXS to implement APEC-based thermal spectral models.
+* The previously deprecated XSPEC-based thermal spectral models have been 
+  completely removed from this version, as they proved too difficult to maintain. 
+* It is no longer necessary to create a thermal spectral model object explicitly,
+  as this is now handled by :class:`~pyxsim.source_models.ThermalSourceModel`.
+  This method now takes the name of the spectral model as a parameter. Consequently, 
+  arguments needed for the creation of spectra now need to be passed to 
+  :class:`~pyxsim.source_models.ThermalSourceModel` upon creation of a new instance. 
+
+Changes related to modeling of foreground Galactic absorption:
+
+* pyXSIM now uses SOXS to implement the `wabs` foreground absorption model.
+* The previously deprecated XSPEC-based spectral absorption models have been 
+  completely removed from this version, as they proved too difficult to maintain. 
+* It is no longer necessary to create a spectral absorption model object explicitly,
+  as this is now handled by :meth:`~pyxsim.photon_list.PhotonList.project_photons`.
+  This method now takes the name of the absorption model as a parameter. Consequently, 
+  the ``nH`` parameter for the hydrogen column is now a parameter which is passed 
+  to :meth:`~pyxsim.photon_list.PhotonList.project_photons`.
+
+The following changes arise from a refactor of :class:`~pyxsim.instruments.InstrumentSimulator`:
+
+* The :class:`~pyxsim.instruments.InstrumentSimulator` class now uses the SOXS machinery
+  for convolving with instrumental responses.
+* The only operations performed by :class:`~pyxsim.instruments.InstrumentSimulator` are
+  convolution with the effective area curve (using the ARF) and with the response matrix
+  (using the RMF). No spatial PSF convolutions or rebinning operations can be applied. For
+  more detailed instrument simulation, users are advised to write events to SIMPUT files
+  and use SOXS directly. 
+* New *Hitomi* response files have been supplied with this version. 
+
+The following interrelated changes arise from a refactor of :class:`~pyxsim.event_list.EventList`:
+
+* Instrument simulators now return a new :class:`~pyxsim.event_list.ConvolvedEventList`
+  instance, which contains the data and parameters for convolved events. It is no longer
+  possible for :class:`~pyxsim.event_list.EventList` instances to contain convolved events.
+* The :meth:`~pyxsim.event_list.EventList.write_spectrum` now only bins on unconvolved
+  energy.
+* The new :class:`~pyxsim.event_list.ConvolvedEventList` class has a method, 
+  :meth:`~pyxsim.event_list.ConvolvedEventList.write_channel_spectrum`, which writes a
+  spectrum binned on PI or PHA channels.
+
+Other changes:
+
+* The ``sky_center`` parameter to :meth:`~pyxsim.photon_list.PhotonList.project_photons`
+  is now a required argument. This is a backwards-incompatible change.
+* The ``clobber`` keyword argument for overwriting files has been changed to ``overwrite``.
+  This is a backwards-incompatible change.
+* :class:`~pyxsim.photon_list.PhotonList` and :class:`~pyxsim.event_list.EventList`
+  instances now use the same keys as their corresponding HDF5 files. The old keys will 
+  still work for the time being, but are deprecated. This is a backwards-incompatible 
+  change.
+
 Version 1.2.6
 -------------
 
