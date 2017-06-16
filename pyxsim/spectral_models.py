@@ -37,15 +37,15 @@ class TableApecModel(ApecGenerator):
         "3.0.3". Default: 2.0.2
     thermal_broad : boolean, optional
         Whether or not the spectral lines should be thermally
-        broadened.
+        broadened. Default: True
 
     Examples
     --------
     >>> apec_model = TableApecModel(0.05, 50.0, 1000, apec_vers="3.0.3",
-    ...                             thermal_broad=True)
+    ...                             thermal_broad=False)
     """
     def __init__(self, emin, emax, nchan, model_root=None,
-                 model_vers=None, thermal_broad=False):
+                 model_vers=None, thermal_broad=True):
         if model_vers is None:
             model_vers = "2.0.2"
         super(TableApecModel, self).__init__(emin, emax, nchan, apec_root=model_root,

@@ -31,7 +31,7 @@ mucal_spec = get_instrument_from_registry("mucal")
 
 rmf = RedistributionMatrixFile(mucal_spec["rmf"])
 arf = AuxiliaryResponseFile(mucal_spec['arf'])
-fit_model = TableApecModel(rmf.elo[0], rmf.ehi[-1], rmf.n_de, thermal_broad=True)
+fit_model = TableApecModel(rmf.elo[0], rmf.ehi[-1], rmf.n_de)
 
 def mymodel(pars, x, xhi=None):
     dx = x[1]-x[0]
@@ -70,8 +70,7 @@ def do_beta_model(source, v_field, em_field):
     Z_sim = source.Z
 
     thermal_model = ThermalSourceModel("apec", 0.1, 11.5, 20000, 
-                                       thermal_broad=True, Zmet=Z_sim, 
-                                       prng=source.prng)
+                                       Zmet=Z_sim, prng=source.prng)
     photons = PhotonList.from_data_source(sphere, redshift, A, exp_time,
                                           thermal_model)
 

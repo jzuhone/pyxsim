@@ -80,7 +80,7 @@ class ThermalSourceModel(SourceModel):
         The first method should be sufficient for most cases.
     thermal_broad : boolean, optional
         Whether or not the spectral lines should be thermally
-        broadened.
+        broadened. Default: True
     model_root : string, optional
         The directory root where the model files are stored. If 
         not provided, the default SOXS-provided files are used.
@@ -97,11 +97,11 @@ class ThermalSourceModel(SourceModel):
     >>> spec_model = TableApecModel(0.05, 50.0, 1000)
     >>> source_model = ThermalSourceModel(spec_model, Zmet="metallicity")
     """
-    def __init__(self, spectral_model, emin, emax, nchan, 
-                 temperature_field=None, emission_measure_field=None, 
-                 kT_min=0.008, kT_max=64.0, n_kT=10000, 
-                 kT_scale="linear", Zmet=0.3, method="invert_cdf", 
-                 thermal_broad=False, model_root=None, model_vers=None, 
+    def __init__(self, spectral_model, emin, emax, nchan,
+                 temperature_field=None, emission_measure_field=None,
+                 kT_min=0.008, kT_max=64.0, n_kT=10000,
+                 kT_scale="linear", Zmet=0.3, method="invert_cdf",
+                 thermal_broad=True, model_root=None, model_vers=None,
                  prng=None):
         if isinstance(spectral_model, string_types):
             if spectral_model not in thermal_models:
