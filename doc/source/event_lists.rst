@@ -220,6 +220,8 @@ This bins the unconvolved event energies using the ``emin``, ``emax``, and ``nch
 arguments into a histogram which will be written to the file as a spectrum. As usual, 
 the ``overwrite`` argument determines whether or not a file can be overwritten. 
 
+.. _convolved_events:
+
 ``ConvolvedEventList`` Instances
 --------------------------------
 
