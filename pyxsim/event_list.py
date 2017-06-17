@@ -234,7 +234,7 @@ class EventList(object):
         end_e = (comm.rank+1)*num_events//comm.size
         events["xpix"] = tblhdu.data["X"][start_e:end_e]
         events["ypix"] = tblhdu.data["Y"][start_e:end_e]
-        events["eobs"] = YTArray(tblhdu.data["ENERGY"]start_e:end_e/1000., "keV")
+        events["eobs"] = YTArray(tblhdu.data["ENERGY"][start_e:end_e]/1000., "keV")
 
         if "rmf" in tblhdu.header:
             chan_type = parameters["channel_type"].upper()
