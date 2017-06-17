@@ -211,7 +211,7 @@ class EventList(object):
         Initialize an :class:`~pyxsim.event_list.EventList` from a FITS 
         file with filename *fitsfile*.
         """
-        hdulist = pyfits.open(fitsfile)
+        hdulist = pyfits.open(fitsfile, memmap=True)
 
         tblhdu = hdulist["EVENTS"]
 
@@ -229,9 +229,9 @@ class EventList(object):
         parameters["dtheta"] = YTQuantity(tblhdu.header["TCRVL3"], "deg")
 
         num_events = tblhdu.header["NAXIS2"]
-
         start_e = comm.rank*num_events//comm.size
         end_e = (comm.rank+1)*num_events//comm.size
+
         events["xpix"] = tblhdu.data["X"][start_e:end_e]
         events["ypix"] = tblhdu.data["Y"][start_e:end_e]
         events["eobs"] = YTArray(tblhdu.data["ENERGY"][start_e:end_e]/1000., "keV")
