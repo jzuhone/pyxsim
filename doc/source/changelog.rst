@@ -17,6 +17,13 @@ which is a spin-off package from pyXSIM which models thermal spectra, foreground
 galactic absorption, and convolving with instrument models. This results in far 
 less duplication between the code bases of these two closely related projects.
 
+New features:
+
+* A new class, :class:`~pyxsim.light_cone.XrayLightCone`, has been added which takes
+  a number of redshift snapshots from a cosmological simulation and produces a light
+  cone simulation of events from them. This is an experimental feature which should
+  be considered in "beta".
+
 Changes related to thermal source modeling:
 
 * pyXSIM now uses SOXS to implement APEC-based thermal spectral models.
@@ -64,6 +71,10 @@ The following interrelated changes arise from a refactor of :class:`~pyxsim.even
 
 Other changes:
 
+* :class:`~pyxsim.event_list.EventList` instances no longer contain all events on all 
+  processors when created in parallel, but each processor now contains a subset of the
+  events. The I/O routines for :class:`~pyxsim.event_list.EventList` have been rewritten
+  so that all events are still written to the file. 
 * The ``sky_center`` parameter to :meth:`~pyxsim.photon_list.PhotonList.project_photons`
   is now a required argument. This is a backwards-incompatible change.
 * The ``clobber`` keyword argument for overwriting files has been changed to ``overwrite``.
