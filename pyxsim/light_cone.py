@@ -98,8 +98,8 @@ class XrayLightCone(LightCone):
         wcs.wcs.ctype = ["RA---TAN","DEC--TAN"]
         wcs.wcs.cunit = ["deg"]*2
 
-        parameters = {"exp_time": exp_time.v,
-                      "area": area.v, 
+        parameters = {"exp_time": exp_time,
+                      "area": area, 
                       "sky_center": YTArray(sky_center, "deg"),
                       "pix_center": pix_center,
                       "dtheta": YTQuantity(dtheta, "deg")}
