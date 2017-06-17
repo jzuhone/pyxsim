@@ -42,7 +42,8 @@ class XrayLightCone(LightCone):
     def generate_events(self, area, exp_time, angular_width, 
                         source_model, sky_center, parameters=None, 
                         velocity_fields=None, absorb_model=None, 
-                        nH=None, no_shifting=False, prng=None):
+                        nH=None, no_shifting=False, smooth_positions=False,
+                        prng=None):
 
         prng = parse_prng(prng)
 
@@ -76,7 +77,9 @@ class XrayLightCone(LightCone):
             if sum(photons["num_photons"]) > 0:
                 events = photons.project_photons("xyz"[ax], sky_center,
                                                  absorb_model=absorb_model, nH=nH,
-                                                 no_shifting=no_shifting, prng=prng)
+                                                 no_shifting=no_shifting, 
+                                                 smooth_positions=smooth_positions, 
+                                                 prng=prng)
                 if events.parameters["dtheta"].v < dtheta:
                     dtheta = events.parameters["dtheta"].v
                     pix_center = events.parameters["pix_center"]
