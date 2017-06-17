@@ -410,6 +410,7 @@ class EventList(object):
         """
         Write an :class:`~pyxsim.event_list.EventList` to the HDF5 file given by *h5file*.
         """
+        self['xsky']
         events = communicate_events(self.events)
 
         if comm.rank == 0:
