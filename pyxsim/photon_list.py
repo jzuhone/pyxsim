@@ -186,7 +186,7 @@ class PhotonList(object):
 
         d = f["/data"]
 
-        num_cells = d["x"][:].shape[0]
+        num_cells = d["x"].size
         start_c = comm.rank*num_cells//comm.size
         end_c = (comm.rank+1)*num_cells//comm.size
 
