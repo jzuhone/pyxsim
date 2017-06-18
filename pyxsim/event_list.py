@@ -37,7 +37,7 @@ def communicate_events(my_events, root=0):
         new_events = {}
         mpi_int = get_mpi_type("int32")
         mpi_double = get_mpi_type("float64")
-        local_num_events = my_events["xpix"].size
+        local_num_events = my_events["xsky"].size
         sizes = comm.comm.gather(local_num_events, root=root)
         if comm.rank == 0:
             num_events = sum(sizes)
@@ -70,32 +70,21 @@ def communicate_events(my_events, root=0):
 
 class EventList(object):
 
-    def __init__(self, events, parameters, wcs=None):
+    def __init__(self, events, parameters):
         self.events = events
         self.parameters = ParameterDict(parameters, "EventList", old_parameter_keys)
         self.num_events = comm.mpi_allreduce(events["xpix"].shape[0])
-        if wcs is None:
-            self.wcs = pywcs.WCS(naxis=2)
-            self.wcs.wcs.crpix = parameters["pix_center"]
-            self.wcs.wcs.crval = parameters["sky_center"].d
-            self.wcs.wcs.cdelt = [-parameters["dtheta"].value, parameters["dtheta"].value]
-            self.wcs.wcs.ctype = ["RA---TAN","DEC--TAN"]
-            self.wcs.wcs.cunit = ["deg"]*2
-        else:
-            self.wcs = wcs
 
     @classmethod
     def create_empty_list(cls, exp_time, area, wcs, parameters=None):
-        events = {"xpix": np.array([]),
-                  "ypix": np.array([]),
+        events = {"xsky": np.array([]),
+                  "ysky": np.array([]),
                   "eobs": YTArray([], "keV")}
         if parameters is None:
             parameters = {}
         parameters["exp_time"] = parse_value(exp_time, "s")
         parameters["area"] = parse_value(area, "cm**2")
-        parameters["pix_center"] = wcs.wcs.crpix[:]
         parameters["sky_center"] = YTArray(wcs.wcs.crval[:], "deg")
-        parameters["dtheta"] = YTQuantity(wcs.wcs.cdelt[0], "deg")
         return cls(events, parameters)
 
     def keys(self):
@@ -111,11 +100,6 @@ class EventList(object):
         return self.events.values()
 
     def __getitem__(self,key):
-        if key not in self.events:
-            if key == "xsky" or key == "ysky":
-                x,y = self.wcs.wcs_pix2world(self.events["xpix"], self.events["ypix"], 1)
-                self.events["xsky"] = YTArray(x, "degree")
-                self.events["ysky"] = YTArray(y, "degree")
         return self.events[key]
 
     def __repr__(self):
@@ -132,31 +116,10 @@ class EventList(object):
             k1, v1 = item1
             k2, v2 = item2
             events[k1] = uconcatenate([v1,v2])
-        return type(self)(events, self.parameters, wcs=self.wcs)
+        return type(self)(events, self.parameters)
 
     def __iter__(self):
         return iter(self.events)
-
-    def filter_events(self, region):
-        """
-        Filter events using a ds9 *region*. Requires the `pyregion <http://pyregion.readthedocs.org/en/latest/>`_ package.
-        Returns a new :class:`~pyxsim.event_list.EventList`.
-        """
-        import pyregion
-        import os
-        if os.path.exists(region):
-            reg = pyregion.open(region)
-        else:
-            reg = pyregion.parse(region)
-        r = reg.as_imagecoord(header=self.wcs.to_header())
-        f = r.get_filter()
-        idxs = f.inside_x_y(self["xpix"], self["ypix"])
-        if idxs.sum() == 0:
-            raise RuntimeError("No events are inside this region!")
-        new_events = {}
-        for k, v in self.items():
-            new_events[k] = v[idxs]
-        return type(self)(new_events, self.parameters, wcs=self.wcs)
 
     @classmethod
     def from_h5_file(cls, h5file):
@@ -176,17 +139,15 @@ class EventList(object):
         if "d_a" in p:
             parameters["d_a"] = YTQuantity(p["d_a"].value, "Mpc")
         parameters["sky_center"] = YTArray(p["sky_center"][:], "deg")
-        parameters["dtheta"] = YTQuantity(p["dtheta"].value, "deg")
-        parameters["pix_center"] = p["pix_center"][:]
 
         d = f["/data"]
 
-        num_events = d["xpix"].size
+        num_events = d["xsky"].size
         start_e = comm.rank*num_events//comm.size
         end_e = (comm.rank+1)*num_events//comm.size
 
-        events["xpix"] = d["xpix"][start_e:end_e]
-        events["ypix"] = d["ypix"][start_e:end_e]
+        events["xsky"] = d["xsky"][start_e:end_e]
+        events["ysky"] = d["ysky"][start_e:end_e]
         events["eobs"] = YTArray(d["eobs"][start_e:end_e], "keV")
         if "rmf" in p:
             parameters["rmf"] = force_unicode(p["rmf"].value)
@@ -224,16 +185,26 @@ class EventList(object):
             parameters["redshift"] = tblhdu.header["REDSHIFT"]
         if "D_A" in tblhdu.header:
             parameters["d_a"] = YTQuantity(tblhdu.header["D_A"], "Mpc")
-        parameters["sky_center"] = YTArray([tblhdu.header["TCRVL2"], tblhdu.header["TCRVL3"]], "deg")
-        parameters["pix_center"] = np.array([tblhdu.header["TCRVL2"], tblhdu.header["TCRVL3"]])
-        parameters["dtheta"] = YTQuantity(tblhdu.header["TCRVL3"], "deg")
+        parameters["sky_center"] = YTArray([tblhdu.header["TCRVL2"], 
+                                            tblhdu.header["TCRVL3"]], "deg")
 
         num_events = tblhdu.header["NAXIS2"]
         start_e = comm.rank*num_events//comm.size
         end_e = (comm.rank+1)*num_events//comm.size
 
-        events["xpix"] = tblhdu.data["X"][start_e:end_e]
-        events["ypix"] = tblhdu.data["Y"][start_e:end_e]
+        wcs = pywcs.WCS(naxis=2)
+        wcs.wcs.crpix = [tblhdu.header["TCRPX2"], tblhdu.header["TCRPX3"]]
+        wcs.wcs.crval = parameters["sky_center"].d
+        wcs.wcs.cdelt = [tblhdu.header["TCDLT2"], tblhdu.header["TCDLT3"]]
+        wcs.wcs.ctype = ["RA---TAN", "DEC--TAN"]
+        wcs.wcs.cunit = ["deg"]*2
+
+        xx = tblhdu.data["X"][start_e:end_e]
+        yy = tblhdu.data["Y"][start_e:end_e]
+        xx, yy = wcs.wcs_pix2world(xx, yy, 1)
+
+        events["xsky"] = xx
+        events["ysky"] = yy
         events["eobs"] = YTArray(tblhdu.data["ENERGY"][start_e:end_e]/1000., "keV")
 
         if "rmf" in tblhdu.header:
@@ -253,7 +224,7 @@ class EventList(object):
         else:
             return EventList(events, parameters)
 
-    def write_fits_file(self, fitsfile, overwrite=False):
+    def write_fits_file(self, fitsfile, fov, nx, overwrite=False):
         """
         Write events to a FITS binary table file with filename *fitsfile*.
         Set *overwrite* to True if you need to overwrite a previous file.
@@ -261,6 +232,8 @@ class EventList(object):
         from astropy.time import Time, TimeDelta
 
         events = communicate_events(self.events)
+
+        fov = parse_value(fov, "arcmin")
 
         if comm.rank == 0:
 
@@ -270,12 +243,23 @@ class EventList(object):
             dt = TimeDelta(exp_time, format='sec')
             t_end = t_begin + dt
 
+            dtheta = fov.to("deg").v / nx
+
+            wcs = pywcs.WCS(naxis=2)
+            wcs.wcs.crpix = [0.5*(nx+1)]*2
+            wcs.wcs.crval = self.parameters["sky_center"].d
+            wcs.wcs.cdelt = [-dtheta, dtheta]
+            wcs.wcs.ctype = ["RA---TAN", "DEC--TAN"]
+            wcs.wcs.cunit = ["deg"] * 2
+
+            xx, yy = wcs.wcs_world2pix(self["xsky"].d, self["ysky"].d, 1)
+
             col_e = pyfits.Column(name='ENERGY', format='E', unit='eV',
                                   array=events["eobs"].in_units("eV").d)
             col_x = pyfits.Column(name='X', format='D', unit='pixel',
-                                  array=events["xpix"])
+                                  array=xx)
             col_y = pyfits.Column(name='Y', format='D', unit='pixel',
-                                  array=events["ypix"])
+                                  array=yy)
 
             cols = [col_e, col_x, col_y]
 
@@ -307,14 +291,14 @@ class EventList(object):
             tbhdu.header["TCTYP3"] = "DEC--TAN"
             tbhdu.header["TCRVL2"] = float(self.parameters["sky_center"][0])
             tbhdu.header["TCRVL3"] = float(self.parameters["sky_center"][1])
-            tbhdu.header["TCDLT2"] = -float(self.parameters["dtheta"])
-            tbhdu.header["TCDLT3"] = float(self.parameters["dtheta"])
-            tbhdu.header["TCRPX2"] = self.parameters["pix_center"][0]
-            tbhdu.header["TCRPX3"] = self.parameters["pix_center"][1]
+            tbhdu.header["TCDLT2"] = -dtheta
+            tbhdu.header["TCDLT3"] = dtheta
+            tbhdu.header["TCRPX2"] = 0.5*(nx+1)
+            tbhdu.header["TCRPX3"] = 0.5*(nx+1)
             tbhdu.header["TLMIN2"] = 0.5
             tbhdu.header["TLMIN3"] = 0.5
-            tbhdu.header["TLMAX2"] = 2.*self.parameters["pix_center"][0]-0.5
-            tbhdu.header["TLMAX3"] = 2.*self.parameters["pix_center"][1]-0.5
+            tbhdu.header["TLMAX2"] = float(nx)+0.5
+            tbhdu.header["TLMAX3"] = float(nx)+0.5
             if "channel_type" in self.parameters:
                 rmf = RedistributionMatrixFile(self.parameters["rmf"])
                 tbhdu.header["TLMIN4"] = rmf.cmin
@@ -410,7 +394,6 @@ class EventList(object):
         """
         Write an :class:`~pyxsim.event_list.EventList` to the HDF5 file given by *h5file*.
         """
-        self['xsky']
         events = communicate_events(self.events)
 
         if comm.rank == 0:
@@ -425,12 +408,8 @@ class EventList(object):
             if "d_a" in self.parameters:
                 p.create_dataset("d_a", data=float(self.parameters["d_a"]))
             p.create_dataset("sky_center", data=self.parameters["sky_center"].d)
-            p.create_dataset("pix_center", data=self.parameters["pix_center"])
-            p.create_dataset("dtheta", data=float(self.parameters["dtheta"]))
 
             d = f.create_group("data")
-            d.create_dataset("xpix", data=events["xpix"])
-            d.create_dataset("ypix", data=events["ypix"])
             d.create_dataset("xsky", data=events["xsky"].d)
             d.create_dataset("ysky", data=events["ysky"].d)
             d.create_dataset("eobs", data=events["eobs"].d)
@@ -448,8 +427,8 @@ class EventList(object):
 
         comm.barrier()
 
-    def write_fits_image(self, imagefile, overwrite=False,
-                         emin=None, emax=None):
+    def write_fits_image(self, imagefile, fov, nx, emin=None, 
+                         emax=None, overwrite=False):
         r"""
         Generate a image by binning X-ray counts and write it to a FITS file.
 
@@ -457,13 +436,15 @@ class EventList(object):
         ----------
         imagefile : string
             The name of the image file to write.
-        overwrite : boolean, optional
-            Set to True to overwrite a previous file.
         emin : float, optional
             The minimum energy of the photons to put in the image, in keV.
         emax : float, optional
             The maximum energy of the photons to put in the image, in keV.
+        overwrite : boolean, optional
+            Set to True to overwrite a previous file.
         """
+        fov = parse_value(fov, "arcmin")
+
         if emin is None:
             mask_emin = np.ones(self.num_events, dtype='bool')
         else:
@@ -475,15 +456,22 @@ class EventList(object):
 
         mask = np.logical_and(mask_emin, mask_emax)
 
-        nx = int(2*self.parameters["pix_center"][0]-1.)
-        ny = int(2*self.parameters["pix_center"][1]-1.)
+        dtheta = fov.to("deg").v/nx
 
         xbins = np.linspace(0.5, float(nx)+0.5, nx+1, endpoint=True)
-        ybins = np.linspace(0.5, float(ny)+0.5, ny+1, endpoint=True)
+        ybins = np.linspace(0.5, float(nx)+0.5, nx+1, endpoint=True)
 
-        H, xedges, yedges = np.histogram2d(self["xpix"][mask],
-                                           self["ypix"][mask],
-                                           bins=[xbins,ybins])
+        wcs = pywcs.WCS(naxis=2)
+        wcs.wcs.crpix = [0.5*(nx+1)]*2
+        wcs.wcs.crval = self.parameters["sky_center"].d
+        wcs.wcs.cdelt = [-dtheta, dtheta]
+        wcs.wcs.ctype = ["RA---TAN","DEC--TAN"]
+        wcs.wcs.cunit = ["deg"]*2
+
+        xx, yy = wcs.wcs_world2pix(self["xsky"].d, self["ysky"].d, 1)
+
+        H, xedges, yedges = np.histogram2d(xx[mask], yy[mask],
+                                           bins=[xbins, ybins])
 
         if parallel_capable:
             H = comm.comm.reduce(H, root=0)
@@ -502,8 +490,8 @@ class EventList(object):
             hdu.header["CRVAL2"] = float(self.parameters["sky_center"][1])
             hdu.header["CUNIT1"] = "deg"
             hdu.header["CUNIT2"] = "deg"
-            hdu.header["CDELT1"] = -float(self.parameters["dtheta"])
-            hdu.header["CDELT2"] = float(self.parameters["dtheta"])
+            hdu.header["CDELT1"] = -dtheta
+            hdu.header["CDELT2"] = dtheta
             hdu.header["EXPOSURE"] = float(self.parameters["exp_time"])
 
             hdu.writeto(imagefile, overwrite=overwrite)

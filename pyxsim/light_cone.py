@@ -53,9 +53,6 @@ class XrayLightCone(LightCone):
 
         tot_events = defaultdict(list)
 
-        dtheta = 1.0e88
-        pix_center = None
-
         for output in self.light_cone_solution:
             ds = load(output["filename"])
             ax = output["projection_axis"]
@@ -80,9 +77,6 @@ class XrayLightCone(LightCone):
                                                  no_shifting=no_shifting, 
                                                  smooth_positions=smooth_positions, 
                                                  prng=prng)
-                if events.parameters["dtheta"].v < dtheta:
-                    dtheta = events.parameters["dtheta"].v
-                    pix_center = events.parameters["pix_center"]
                 if events.num_events > 0:
                     tot_events["xsky"].append(events["xsky"])
                     tot_events["ysky"].append(events["ysky"])
@@ -91,24 +85,11 @@ class XrayLightCone(LightCone):
 
             del photons
 
-        wcs = pywcs.WCS(naxis=2)
-        wcs.wcs.crpix = pix_center
-        wcs.wcs.crval = list(sky_center)
-        wcs.wcs.cdelt = [-dtheta, dtheta]
-        wcs.wcs.ctype = ["RA---TAN","DEC--TAN"]
-        wcs.wcs.cunit = ["deg"]*2
-
         parameters = {"exp_time": exp_time,
                       "area": area, 
-                      "sky_center": YTArray(sky_center, "deg"),
-                      "pix_center": pix_center,
-                      "dtheta": YTQuantity(dtheta, "deg")}
+                      "sky_center": YTArray(sky_center, "deg")}
 
         for key in tot_events:
             tot_events[key] = uconcatenate(tot_events[key])
 
-        x, y = wcs.wcs_world2pix(tot_events["xsky"].d, tot_events["ysky"].d, 1)
-        tot_events["xpix"] = x
-        tot_events["ypix"] = y
-
-        return EventList(tot_events, parameters, wcs=wcs)
+        return EventList(tot_events, parameters)

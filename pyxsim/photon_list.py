@@ -18,6 +18,7 @@ from pyxsim.utils import parse_value, force_unicode, validate_parameters, \
     key_warning, ParameterDict
 from pyxsim.event_list import EventList
 from soxs.utils import parse_prng
+import astropy.wcs as pywcs
 
 comm = communication_system.communicators[-1]
 
@@ -37,8 +38,6 @@ old_parameter_keys = {"FiducialExposureTime": "fid_exp_time",
                       "FiducialArea": "fid_area",
                       "FiducialRedshift": "fid_redshift",
                       "FiducialAngularDiameterDistance": "fid_d_a",
-                      "Width": "width",
-                      "Dimension": "dimension",
                       "HubbleConstant": "hubble",
                       "OmegaLambda": "omega_lambda",
                       "OmegaMatter": "omega_matter",
@@ -168,14 +167,6 @@ class PhotonList(object):
         parameters["fid_area"] = YTQuantity(p["fid_area"].value, "cm**2")
         parameters["fid_redshift"] = p["fid_redshift"].value
         parameters["fid_d_a"] = YTQuantity(p["fid_d_a"].value, "Mpc")
-        dims = p["dimension"].value
-        if not isinstance(dims, np.ndarray):
-            dims = np.array([dims]*3)
-        parameters["dimension"] = dims
-        width = p["width"].value
-        if not isinstance(width, np.ndarray):
-            width = np.array([width]*3)
-        parameters["width"] = YTArray(width, "kpc")
         parameters["hubble"] = p["hubble"].value
         parameters["omega_matter"] = p["omega_matter"].value
         parameters["omega_lambda"] = p["omega_lambda"].value
@@ -363,9 +354,6 @@ class PhotonList(object):
         dds_min = get_smallest_dds(ds, parameters["data_type"])
         le = np.rint((le-ds.domain_left_edge)/dds_min)*dds_min+ds.domain_left_edge
         re = ds.domain_right_edge-np.rint((ds.domain_right_edge-re)/dds_min)*dds_min
-        width = re-le
-        parameters["dimension"] = np.rint(width/dds_min).astype("int")
-        parameters["width"] = parameters["dimension"]*dds_min.in_units("kpc")
 
         citer = data_source.chunks([], "io")
 
@@ -499,8 +487,6 @@ class PhotonList(object):
             p.create_dataset("omega_matter", data=self.parameters["omega_matter"])
             p.create_dataset("omega_lambda", data=self.parameters["omega_lambda"])
             p.create_dataset("fid_d_a", data=float(self.parameters["fid_d_a"]))
-            p.create_dataset("dimension", data=self.parameters["dimension"])
-            p.create_dataset("width", data=self.parameters["width"].v)
             p.create_dataset("data_type", data=self.parameters["data_type"])
 
             # Data
@@ -608,17 +594,6 @@ class PhotonList(object):
         sky_center = YTArray(sky_center, "degree")
 
         dx = self.photons["dx"].d
-        if isinstance(normal, string_types):
-            # if on-axis, just use the maximum width of the plane perpendicular
-            # to that axis
-            w = self.parameters["width"].copy()
-            w["xyz".index(normal)] = 0.0
-            ax_idx = np.argmax(w)
-        else:
-            # if off-axis, just use the largest width to make sure we get everything
-            ax_idx = np.argmax(self.parameters["width"])
-        nx = self.parameters["dimension"][ax_idx]
-        dx_min = (self.parameters["width"]/self.parameters["dimension"])[ax_idx]
 
         if not isinstance(normal, string_types):
             L = np.array(normal)
@@ -742,20 +717,33 @@ class PhotonList(object):
 
         events = {}
 
-        dtheta = YTQuantity(np.rad2deg(dx_min/D_A), "degree")
-
-        events["xpix"] = xsky[detected]/dx_min.v + 0.5*(nx+1)
-        events["ypix"] = ysky[detected]/dx_min.v + 0.5*(nx+1)
+        xx = xsky[detected]
+        yy = ysky[detected]
         events["eobs"] = eobs[detected]
 
         num_det = detected.sum()
 
         if smooth_positions:
-            sigma = 0.5*delta[detected]/dx_min.v
-            events["xpix"] += sigma*prng.normal(loc=0.0, scale=1.0,
-                                                size=num_det)
-            events["ypix"] += sigma*prng.normal(loc=0.0, scale=1.0,
-                                                size=num_det)
+            sigma = 0.5*delta[detected]
+            xx += sigma*prng.normal(loc=0.0, scale=1.0, size=num_det)
+            yy += sigma*prng.normal(loc=0.0, scale=1.0, size=num_det)
+
+        xx = np.rad2deg(xx/D_A)*3600.0 # to arcsec
+        yy = np.rad2deg(yy/D_A)*3600.0 # to arcsec
+
+        # We set a dummy pixel size of 1 arcsec just to compute a WCS
+        dtheta = 1.0/3600.0
+
+        wcs = pywcs.WCS(naxis=2)
+        wcs.wcs.crpix = [0.0, 0.0]
+        wcs.wcs.crval = list(sky_center)
+        wcs.wcs.cdelt = [-dtheta, dtheta]
+        wcs.wcs.ctype = ["RA---TAN","DEC--TAN"]
+        wcs.wcs.cunit = ["deg"]*2
+
+        xx, yy = wcs.wcs_pix2world(xx, yy, 1)
+        events["xsky"] = YTArray(xx, "degree")
+        events["ysky"] = YTArray(yy, "degree")
 
         num_events = comm.mpi_allreduce(num_det)
 
@@ -773,7 +761,5 @@ class PhotonList(object):
         parameters["redshift"] = zobs
         parameters["d_a"] = D_A.in_units("Mpc")
         parameters["sky_center"] = sky_center
-        parameters["pix_center"] = np.array([0.5*(nx+1)]*2)
-        parameters["dtheta"] = dtheta
 
         return EventList(events, parameters)

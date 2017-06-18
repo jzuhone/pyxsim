@@ -77,7 +77,7 @@ class InstrumentSimulator(object):
         parameters["telescope"] = self.rmf.header["TELESCOP"]
         parameters["arf"] = self.arf.filename
         parameters["rmf"] = self.rmf.filename
-        return ConvolvedEventList(new_events, parameters, wcs=events.wcs)
+        return ConvolvedEventList(new_events, parameters)
 
 # Specific instrument approximations
 

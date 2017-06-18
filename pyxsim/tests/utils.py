@@ -101,13 +101,3 @@ class ParticleBetaModelSource(object):
         data["io", "smoothing_length"] = (0.02/(2.*R)*np.ones(num_particles), "code_length")
 
         self.ds = load_particles(data, length_unit=(2*R, "Mpc"), bbox=bbox)
-
-def create_dummy_wcs():
-    import astropy.wcs as pywcs
-    wcs = pywcs.WCS(naxis=2)
-    wcs.wcs.crpix = [512.5, 512.5]
-    wcs.wcs.crval = [30.0, 45.0]
-    wcs.wcs.cdelt = [-0.001, 0.001]
-    wcs.wcs.ctype = ["RA---TAN","DEC--TAN"]
-    wcs.wcs.cunit = ["deg"]*2
-    return wcs
