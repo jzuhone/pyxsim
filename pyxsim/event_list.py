@@ -3,10 +3,6 @@ Classes for generating lists of detected events
 """
 import numpy as np
 from pyxsim.utils import mylog
-try:
-    from yt.visualization.fits_image import assert_same_wcs
-except ImportError:
-    from yt.utilities.fits_image import assert_same_wcs
 from yt.units.yt_array import YTQuantity, YTArray, uconcatenate
 import astropy.io.fits as pyfits
 import astropy.wcs as pywcs
@@ -109,7 +105,6 @@ class EventList(object):
         return key in self.events
 
     def __add__(self, other):
-        assert_same_wcs(self.wcs, other.wcs)
         validate_parameters(self.parameters, other.parameters)
         events = {}
         for item1, item2 in zip(self.items(), other.items()):
