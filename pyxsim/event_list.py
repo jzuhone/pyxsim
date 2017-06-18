@@ -69,7 +69,7 @@ class EventList(object):
     def __init__(self, events, parameters):
         self.events = events
         self.parameters = ParameterDict(parameters, "EventList", old_parameter_keys)
-        self.num_events = comm.mpi_allreduce(events["xpix"].shape[0])
+        self.num_events = comm.mpi_allreduce(events["xsky"].shape[0])
 
     @classmethod
     def create_empty_list(cls, exp_time, area, wcs, parameters=None):
