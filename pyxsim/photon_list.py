@@ -635,7 +635,8 @@ class PhotonList(object):
             else:
                 if dist_new is not None:
                     if redshift_new is not None and redshift_new > 0.0:
-                        mylog.warning("Redshift must be zero for nearby sources. Resetting redshift to 0.0.")
+                        mylog.warning("Redshift must be zero for nearby sources. "
+                                      "Resetting redshift to 0.0.")
                         zobs = 0.0
                     D_A = parse_value(dist_new, "Mpc")
                 else:
@@ -729,8 +730,9 @@ class PhotonList(object):
             xx += sigma*prng.normal(loc=0.0, scale=1.0, size=num_det)
             yy += sigma*prng.normal(loc=0.0, scale=1.0, size=num_det)
 
-        xx = np.rad2deg(xx/D_A)*3600.0 # to arcsec
-        yy = np.rad2deg(yy/D_A)*3600.0 # to arcsec
+        d_a = D_A.to("kpc").v
+        xx = np.rad2deg(xx/d_a)*3600.0 # to arcsec
+        yy = np.rad2deg(yy/d_a)*3600.0 # to arcsec
 
         # We set a dummy pixel size of 1 arcsec just to compute a WCS
         dtheta = 1.0/3600.0
