@@ -26,7 +26,7 @@ def test_light_cone():
     exp_time = 1.0e4
     fov = (0.5, "deg")
 
-    lc = XrayLightCone('%s/32Mpc_32.enzo' % etc[:-7], 'Enzo', 0., 0.1,
+    lc = XrayLightCone('%s/32Mpc_32.enzo' % etc[:-14], 'Enzo', 0., 0.1,
                        seed=24)
 
     source_model = ThermalSourceModel("apec", 0.1, 10.0, 1000)
