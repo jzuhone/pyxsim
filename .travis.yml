@@ -4,7 +4,7 @@ env:
     global:
         # Set defaults to avoid repeating in most cases
         - NUMPY_VERSION=1.11
-        - ANSWER_VER=pyxsim_13
+        - ANSWER_VER=pyxsim13
 matrix:
     include:
 
