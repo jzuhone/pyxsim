@@ -1,4 +1,4 @@
-.. _xray-light-cone:
+.. _light-cone:
 
 Generating Light Cone Simulations of X-rays
 ===========================================
