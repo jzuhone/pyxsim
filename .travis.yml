@@ -26,7 +26,8 @@ before_install:
     - wget http://hea-www.cfa.harvard.edu/~jzuhone/${ANSWER_VER}_3.tar.gz
     - tar -zxvf ${ANSWER_VER}_3.tar.gz		
     - mkdir ~/.yt
-    - printf "[yt]\ntest_data_dir = $PWD" >> ~/.yt/config
+    - printf "[yt]\ntest_data_dir = $PWD" >> $HOME/.yt/config
+    - echo "suppressStreamLogging = True" >> $HOME/.yt/config
     # Use utf8 encoding. Should be default, but this is insurance against
     # future changes
     - export PYTHONIOENCODING=UTF8
