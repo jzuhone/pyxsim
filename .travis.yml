@@ -4,26 +4,26 @@ env:
     global:
         # Set defaults to avoid repeating in most cases
         - NUMPY_VERSION=1.11
-        - ANSWER_VER=13
+        - ANSWER_VER=pyxsim_13
 matrix:
     include:
 
         # Try all python versions with the latest numpy
         - python: 2.7
-          env: CMD='nosetests --nologcapture -sv --with-answer-testing --local --local-dir . --answer-name=$ANSWER_VER_2 pyxsim/tests'; PYTHON='python'
+          env: CMD='nosetests --nologcapture -sv --with-answer-testing --local --local-dir . --answer-name=${ANSWER_VER}_2 pyxsim/tests'; PYTHON='python'
         - python: 3.5
-          env: CMD='nosetests --nologcapture -sv --with-answer-testing --local --local-dir . --answer-name=$ANSWER_VER_3 pyxsim/tests --with-coverage --cover-package=pyxsim'; PYTHON='python3'
+          env: CMD='nosetests --nologcapture -sv --with-answer-testing --local --local-dir . --answer-name=${ANSWER_VER}_3 pyxsim/tests --with-coverage --cover-package=pyxsim'; PYTHON='python3'
         - python: 3.6
-          env: CMD='nosetests --nologcapture -sv --with-answer-testing --local --local-dir . --answer-name=$ANSWER_VER_3 pyxsim/tests'; PYTHON='python3'
+          env: CMD='nosetests --nologcapture -sv --with-answer-testing --local --local-dir . --answer-name=${ANSWER_VER}_3 pyxsim/tests'; PYTHON='python3'
 
 before_install:
 
     - wget http://yt-project.org/data/GasSloshingLowRes.tar.gz
     - tar -zxvf GasSloshingLowRes.tar.gz
-    - wget http://hea-www.cfa.harvard.edu/~jzuhone/$ANSWER_VER_2.tar.gz
-    - tar -zxvf $ANSWER_VER_2.tar.gz		
-    - wget http://hea-www.cfa.harvard.edu/~jzuhone/$ANSWER_VER_3.tar.gz
-    - tar -zxvf $ANSWER_VER_3.tar.gz		
+    - wget http://hea-www.cfa.harvard.edu/~jzuhone/${ANSWER_VER}_2.tar.gz
+    - tar -zxvf ${ANSWER_VER}_2.tar.gz		
+    - wget http://hea-www.cfa.harvard.edu/~jzuhone/${ANSWER_VER}_3.tar.gz
+    - tar -zxvf ${ANSWER_VER}_3.tar.gz		
     - mkdir ~/.yt
     - printf "[yt]\ntest_data_dir = $PWD" >> ~/.yt/config
     # Use utf8 encoding. Should be default, but this is insurance against
