@@ -20,6 +20,10 @@ from yt.units.yt_array import uconcatenate, YTArray
 from soxs.utils import parse_prng
 
 from collections import defaultdict
+from yt.utilities.parallel_tools.parallel_analysis_interface import \
+    communication_system, parallel_capable
+
+comm = communication_system.communicators[-1]
 
 axes_lookup = [(1,2), (2,0), (0,1)]
 
@@ -31,6 +35,8 @@ class XrayLightCone(LightCone):
                  minimum_coherent_box_fraction=0.0):
         if seed is None:
             seed = time.time()
+            if parallel_capable:
+                seed = comm.comm.bcast(seed, root=0)
         super(XrayLightCone, self).__init__(parameter_filename, simulation_type,
                                             near_redshift, far_redshift,
                                             observer_redshift=observer_redshift,
