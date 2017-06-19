@@ -51,7 +51,7 @@ def test_sloshing():
     photons1 = PhotonList.from_data_source(sphere, redshift, A, exp_time,
                                            thermal_model)
 
-    return_photons = return_data(new_photons)
+    return_photons = return_data(photons1)
 
     events1 = photons1.project_photons([1.0,-0.5,0.2], [30., 45.], area_new=1500.,
                                        absorb_model="tbabs", nH=0.1, prng=prng)
