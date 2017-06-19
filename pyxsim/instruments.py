@@ -69,9 +69,11 @@ class InstrumentSimulator(object):
                                             [emin, emax], prng=prng)
         new_events = self.rmf.scatter_energies(new_events, prng=prng)
         new_events["eobs"] = new_events.pop("energy")
+        chantype = self.rmf.header["CHANTYPE"].lower()
+        new_events[chantype] = new_events.pop(self.rmf.header["CHANTYPE"])
         parameters = {}
         parameters.update(events.parameters)
-        parameters["channel_type"] = self.rmf.header["CHANTYPE"]
+        parameters["channel_type"] = chantype
         parameters["mission"] = self.rmf.header.get("MISSION", "")
         parameters["instrument"] = self.rmf.header["INSTRUME"]
         parameters["telescope"] = self.rmf.header["TELESCOP"]

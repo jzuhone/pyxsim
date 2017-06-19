@@ -202,15 +202,14 @@ class EventList(object):
         events["ysky"] = YTArray(yy, "degree")
         events["eobs"] = YTArray(tblhdu.data["ENERGY"][start_e:end_e]/1000., "keV")
 
-        if "rmf" in tblhdu.header:
-            chan_type = parameters["channel_type"].upper()
-            parameters["rmf"] = tblhdu.header["RMF"]
-            parameters["arf"] = tblhdu.header["ARF"]
-            parameters["channel_type"] = tblhdu.header["CHANTYPE"]
+        if "RESPFILE" in tblhdu.header:
+            parameters["rmf"] = tblhdu.header["RESPFILE"]
+            parameters["arf"] = tblhdu.header["ANCRFILE"]
+            parameters["channel_type"] = tblhdu.header["CHANTYPE"].lower()
             parameters["mission"] = tblhdu.header["MISSION"]
             parameters["telescope"] = tblhdu.header["TELESCOP"]
             parameters["instrument"] = tblhdu.header["INSTRUME"]
-            events[chan_type] = tblhdu.data[chan_type][start_e:end_e]
+            events[parameters["channel_type"]] = tblhdu.data[parameters["channel_type"]][start_e:end_e]
 
         hdulist.close()
 
@@ -291,7 +290,7 @@ class EventList(object):
                 cols.append(col_ch)
 
                 time = np.random.uniform(size=n_events, low=0.0,
-                                         high=float(self.parameters["ExposureTime"]))
+                                         high=float(self.parameters["exp_time"]))
                 col_t = pyfits.Column(name="TIME", format='1D', unit='s',
                                       array=time)
                 cols.append(col_t)
@@ -354,7 +353,7 @@ class EventList(object):
                                      array=np.array([exp_time]))
 
                 tbhdu_gti = pyfits.BinTableHDU.from_columns([start,stop])
-                tbhdu_gti.update_ext_name("STDGTI")
+                tbhdu_gti.name = "STDGTI"
                 tbhdu_gti.header["TSTART"] = 0.0
                 tbhdu_gti.header["TSTOP"] = exp_time
                 tbhdu_gti.header["HDUCLASS"] = "OGIP"
