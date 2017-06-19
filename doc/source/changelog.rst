@@ -64,17 +64,22 @@ The following interrelated changes arise from a refactor of :class:`~pyxsim.even
   instance, which contains the data and parameters for convolved events. It is no longer
   possible for :class:`~pyxsim.event_list.EventList` instances to contain convolved events.
 * The :meth:`~pyxsim.event_list.EventList.write_spectrum` now only bins on unconvolved
-  energy.
+  energy (see next bullet for the new way to bin on channel).
 * The new :class:`~pyxsim.event_list.ConvolvedEventList` class has a method, 
   :meth:`~pyxsim.event_list.ConvolvedEventList.write_channel_spectrum`, which writes a
   spectrum binned on PI or PHA channels.
-
-Other changes:
-
+* :class:`~pyxsim.event_list.EventList` instances no longer contain pixelated coordinates
+  for events based on the resolution of the simulation, but only sky coordinates. The
+  :meth:`~pyxsim.event_list.EventList.write_fits_file` and 
+  :meth:`~pyxsim.event_list.EventList.write_fits_image` methods now accept arguments
+  which create custom pixelizations for event files and images.
 * :class:`~pyxsim.event_list.EventList` instances no longer contain all events on all 
   processors when created in parallel, but each processor now contains a subset of the
   events. The I/O routines for :class:`~pyxsim.event_list.EventList` have been rewritten
   so that all events are still written to the file. 
+
+Other changes:
+
 * The ``sky_center`` parameter to :meth:`~pyxsim.photon_list.PhotonList.project_photons`
   is now a required argument. This is a backwards-incompatible change.
 * The ``clobber`` keyword argument for overwriting files has been changed to ``overwrite``.
