@@ -510,7 +510,7 @@ class PhotonList(object):
                         exp_time_new=None, redshift_new=None, 
                         dist_new=None, absorb_model=None, nH=None,
                         no_shifting=False, north_vector=None,
-                        smooth_positions=False, prng=None):
+                        smooth_positions=None, prng=None):
         r"""
         Projects photons onto an image plane given a line of sight.
         Returns a new :class:`~pyxsim.event_list.EventList`.
@@ -554,13 +554,14 @@ class PhotonList(object):
             the plane of projection. If not set, an arbitrary grid-aligned north_vector
             is chosen. Ignored in the case where a particular axis (e.g., "x", "y", or
             "z") is explicitly specified.
-        smooth_positions : boolean, optional
+        smooth_positions : float, optional
             Apply a gaussian smoothing operation to the sky positions of the events. 
             This may be useful when the binned events appear blocky due to their uniform
             distribution within simulation cells. However, this will move the events away
             from their originating position on the sky, and so may distort surface brightness
             profiles and/or spectra. Should probably only be used for visualization purposes.
-            Default: False
+            Supply a float here to smooth with a standard deviation with this fraction 
+            of the cell or particle size. Default: None
         prng : integer, :class:`~numpy.random.RandomState` object, or :mod:`~numpy.random`, optional
             A pseudo-random number generator. Typically will only be specified
             if you have a reason to generate the same set of random numbers, such as for a
@@ -723,8 +724,8 @@ class PhotonList(object):
 
         num_det = detected.sum()
 
-        if smooth_positions:
-            sigma = 0.5*delta[detected]
+        if smooth_positions is not None:
+            sigma = smooth_positions*delta[detected]
             xx += sigma*prng.normal(loc=0.0, scale=1.0, size=num_det)
             yy += sigma*prng.normal(loc=0.0, scale=1.0, size=num_det)
 
