@@ -16,6 +16,7 @@ from yt.units.yt_array import uconcatenate
 import os
 import tempfile
 import shutil
+import astropy.io.fits as pyfits
 
 def setup():
     from yt.config import ytcfg
@@ -68,8 +69,23 @@ def test_sloshing():
 
     return_events = return_data(events2.events)
 
+    events1.write_spectrum("test_events_spec.fits", 0.2, 10.0, 2000)
+
+    f = pyfits.open("test_events_spec.fits")
+    return_spec = return_data(f["SPECTRUM"].data["COUNTS"])
+    f.close()
+
+    events1.write_fits_image("test_events_img.fits", (20.0, "arcmin"), 
+                             1024)
+
+    f = pyfits.open("test_events_spec.fits")
+    return_img = return_data(f[0].data)
+    f.close()
+
     tests = [GenericArrayTest(ds, return_photons, args=["photons"]),
-             GenericArrayTest(ds, return_events, args=["events"])]
+             GenericArrayTest(ds, return_events, args=["events"]),
+             GenericArrayTest(ds, return_spec, args=["spec"]),
+             GenericArrayTest(ds, return_img, args=["img"])]
 
     for test in tests:
         test_sloshing.__name__ = test.description
