@@ -114,11 +114,15 @@ FITS
 
 Any :class:`~pyxsim.event_list.EventList` instance may be saved to disk in the
 FITS format by calling the :meth:`~pyxsim.event_list.EventList.write_fits_file`
-method:
+method. Since the :class:`~pyxsim.event_list.EventList` does not have an
+intrinsic binning, we need to provide a field of view ``fov`` and a resolution
+``nx``:
 
 .. code-block:: python
 
-    events.write_fits_file("cluster_events.fits", overwrite=True)
+    fov = (10.0, "arcmin") # the field of view / width of the image
+    nx = 256 # The resolution of the image on a side
+    events.write_fits_file("cluster_events.fits", fov, nx, overwrite=True)
     
 The ``overwrite`` keyword argument is used to allow (or prevent) overwrites of 
 files if they already exist. To read previously stored events back from disk, 
