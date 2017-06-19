@@ -4,8 +4,9 @@ Answer test pyxsim.
 
 from pyxsim import \
     ThermalSourceModel, \
-    PhotonList, EventList, \
-    merge_files
+    PhotonList, ConvolvedEventList, \
+    merge_files, EventList, \
+    ACIS_S
 from yt.utilities.answer_testing.framework import requires_ds, \
     GenericArrayTest, data_dir_load
 from numpy.testing import assert_array_equal, \
@@ -63,7 +64,9 @@ def test_sloshing():
 
     events1 = photons1.project_photons([1.0,-0.5,0.2], [30., 45.], area_new=1500.,
                                        absorb_model="tbabs", nH=0.1, prng=prng)
-    return_events = return_data(events1.events)
+    events2 = ACIS_S(events1, prng=prng)
+
+    return_events = return_data(events2.events)
 
     tests = [GenericArrayTest(ds, return_photons, args=["photons"]),
              GenericArrayTest(ds, return_events, args=["events"])]
@@ -73,12 +76,12 @@ def test_sloshing():
         yield test
 
     photons1.write_h5_file("test_photons.h5")
-    events1.write_h5_file("test_events.h5")
-    events1.write_fits_file("test_events.fits", 60.0, 1024)
+    events2.write_h5_file("test_events.h5")
+    events2.write_fits_file("test_events.fits", 60.0, 1024)
 
     photons2 = PhotonList.from_file("test_photons.h5")
-    events2 = EventList.from_h5_file("test_events.h5")
-    events3 = EventList.from_fits_file("test_events.fits")
+    events3 = ConvolvedEventList.from_h5_file("test_events.h5")
+    events4 = ConvolvedEventList.from_fits_file("test_events.fits")
 
     for k in photons1.keys():
         if k == "energy":
@@ -88,9 +91,9 @@ def test_sloshing():
             arr1 = photons1[k]
             arr2 = photons2[k]
         assert_array_equal(arr1, arr2)
-    for k in events1.keys():
-        assert_array_equal(events1[k], events2[k])
-        assert_allclose(events1[k], events3[k], rtol=1.0e-6)
+    for k in events2.keys():
+        assert_array_equal(events2[k], events3[k])
+        assert_allclose(events2[k], events4[k], rtol=1.0e-6)
 
     nevents = 0
 
