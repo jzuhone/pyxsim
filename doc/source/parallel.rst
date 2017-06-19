@@ -15,3 +15,8 @@ before doing anything else:
     import pyxsim
     
     # rest of code goes here...
+
+When pyXSIM is run in parallel, :class:`~pyxsim.photon_list.PhotonList` and
+:class:`~pyxsim.photon_list.EventList` instances will have the photon and event
+data spread out amongst the processors, though when products are written to disk
+the data will be brought together beforehand and written to a single file.
