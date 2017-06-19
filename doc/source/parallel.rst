@@ -1,7 +1,4 @@
-.. _misc:
-
-Miscellaneous
--------------
+.. _parallel:
 
 Running in Parallel
 ===================
