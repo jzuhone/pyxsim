@@ -221,8 +221,21 @@ class EventList(object):
 
     def write_fits_file(self, fitsfile, fov, nx, overwrite=False):
         """
-        Write events to a FITS binary table file with filename *fitsfile*.
-        Set *overwrite* to True if you need to overwrite a previous file.
+        Write events to a FITS binary table file. The result is a
+        standard "event file" which can be processed by standard
+        X-ray analysis tools.
+
+        Parameters
+        ----------
+        fitsfile : string
+            The name of the event file to write.
+        fov : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`.
+            The field of view of the event file. If units are not 
+            provided, they are assumed to be in arcminutes.
+        nx : integer
+            The resolution of the image (number of pixels on a side). 
+        overwrite : boolean, optional
+            Set to True to overwrite a previous file.
         """
         from astropy.time import Time, TimeDelta
 
@@ -440,6 +453,11 @@ class EventList(object):
         ----------
         imagefile : string
             The name of the image file to write.
+        fov : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`.
+            The field of view of the image. If units are not provided, they
+            are assumed to be in arcminutes.
+        nx : integer
+            The resolution of the image (number of pixels on a side). 
         emin : float, optional
             The minimum energy of the photons to put in the image, in keV.
         emax : float, optional
