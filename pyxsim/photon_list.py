@@ -742,8 +742,6 @@ class PhotonList(object):
         wcs.wcs.cunit = ["deg"]*2
 
         xx, yy = wcs.wcs_pix2world(xx, yy, 1)
-        events["xpix"] = xx
-        events["ypix"] = yy
         events["xsky"] = YTArray(xx, "degree")
         events["ysky"] = YTArray(yy, "degree")
 
