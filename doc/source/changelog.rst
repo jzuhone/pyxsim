@@ -88,6 +88,10 @@ Other changes:
   instances now use the same keys as their corresponding HDF5 files. The old keys will 
   still work for the time being, but are deprecated. This is a backwards-incompatible 
   change.
+* The optional argument ``smooth_positions`` has been added to the
+  :meth:`~pyxsim.photon_list.PhotonList.project_photons` method, which allows one to 
+  smooth the event positions to avoid block-shaped artifcats in images with lots of
+  counts.
 * Thermal spectral models no longer require a ``cleanup_spectrum`` method. Spectral
   absorption models no longer require ``setup_spectrum`` and ``cleanup_spectrum`` 
   methods. Source models no longer require a ``cleanup_model`` method.
