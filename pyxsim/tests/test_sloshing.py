@@ -51,16 +51,6 @@ def test_sloshing():
     photons1 = PhotonList.from_data_source(sphere, redshift, A, exp_time,
                                            thermal_model)
 
-    # Hack to not change answers just yet
-    new_photons = {}
-    for key, value in photons1.photons.items():
-        if key == "num_photons":
-            new_photons["NumberOfPhotons"] = value
-        elif key == "energy":
-            new_photons["Energy"] = value
-        else:
-            new_photons[key] = value
-
     return_photons = return_data(new_photons)
 
     events1 = photons1.project_photons([1.0,-0.5,0.2], [30., 45.], area_new=1500.,
@@ -78,7 +68,7 @@ def test_sloshing():
     events1.write_fits_image("test_events_img.fits", (20.0, "arcmin"), 
                              1024)
 
-    f = pyfits.open("test_events_spec.fits")
+    f = pyfits.open("test_events_img.fits")
     return_img = return_data(f[0].data)
     f.close()
 
@@ -93,7 +83,7 @@ def test_sloshing():
 
     photons1.write_h5_file("test_photons.h5")
     events2.write_h5_file("test_events.h5")
-    events2.write_fits_file("test_events.fits", 60.0, 1024)
+    events2.write_fits_file("test_events.fits", 20.0, 1024)
 
     photons2 = PhotonList.from_file("test_photons.h5")
     events3 = ConvolvedEventList.from_h5_file("test_events.h5")
