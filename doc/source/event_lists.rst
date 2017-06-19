@@ -62,8 +62,8 @@ An off-axis projection with altered exposure time and redshift:
 
 .. code-block:: python
 
-    events = photons.project_photons([0.1, -0.3, 0.5], (30.0, 45.0), area_new=(200., "cm**2"), 
-                                     redshift_new=1.0)
+    events = photons.project_photons([0.1, -0.3, 0.5], (30.0, 45.0), 
+                                     area_new=(200., "cm**2"), redshift_new=1.0)
 
 An on-axis projection with absorption:
 
@@ -170,17 +170,6 @@ together to return a new :class:`~pyxsim.event_list.EventList`:
     
 An error will be thrown if the parameters do not match between the two lists. 
 
-The second way an :class:`~pyxsim.event_list.EventList` can be changed is by using a region file.
-This requires the `pyregion <http://pyregion.readthedocs.io/>`_ package to be installed. If you have
-a region file, simply provide it to the :meth:`~pyxsim.event_list.EventList.filter_events` method:
-
-.. code-block:: python
-
-    some_events = events.filter_events("annulus.reg")
-
-which creates a new :class:`~pyxsim.event_list.EventList` object with only the events which fall within
-the region. 
-
 Saving Derived Products from Event Lists
 ----------------------------------------
 
@@ -195,13 +184,16 @@ method:
 
 .. code-block:: python
 
-    events.write_fits_image("myimage.fits", overwrite=True, emin=0.5, emax=7.0)
+    fov = (20.0, "arcmin") # the field of view / width of the image
+    nx = 1024 # The resolution of the image on a side
+    events.write_fits_image("myimage.fits", fov, nx, overwrite=True, 
+                            emin=0.5, emax=7.0)
 
-which writes an image binned at the finest resolution of the simulation in the file
-``"myimage.fits"``. Set ``overwrite=True`` if the file is already there and you 
-want to overwrite it. The ``emin`` and ``emax`` parameters control the energy range
-of the events which will be included in the image (default is to include all of the
-events).
+which writes an image binned using the ``fov`` (width in angle) and ``nx`` (resolution)
+parameters to the file ``"myimage.fits"``. Set ``overwrite=True`` if the file is already 
+there and you want to overwrite it. The ``emin`` and ``emax`` parameters control the 
+energy range of the events which will be included in the image (default is to include 
+all of the events).
 
 Spectra
 +++++++

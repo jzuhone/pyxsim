@@ -22,7 +22,7 @@ New features:
 * A new class, :class:`~pyxsim.light_cone.XrayLightCone`, has been added which takes
   a number of redshift snapshots from a cosmological simulation and produces a light
   cone simulation of events from them. This is an experimental feature which should
-  be considered in "beta".
+  be considered in "beta", and currently only works with Enzo cosmological simulations.
 
 Changes related to thermal source modeling:
 

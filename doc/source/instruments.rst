@@ -14,7 +14,7 @@ assume the following simplifications:
 
 * The field of view and angular resolution of the observation is the same
   as the unconvolved events (e.g., whatever they are from the particular
-  data object you generated the events from). No rebinning of the event
+  data object you generated the events from). No binning of the event
   positions based on actual values of the field of view and/or angular
   resolution of the telescope is performed.
 * The spectral response and effective area are position-independent.
