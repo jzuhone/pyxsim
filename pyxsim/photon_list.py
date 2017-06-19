@@ -725,29 +725,32 @@ class PhotonList(object):
 
         num_det = detected.sum()
 
-        if smooth_positions is not None:
-            sigma = smooth_positions*delta[detected]
-            xx += sigma*prng.normal(loc=0.0, scale=1.0, size=num_det)
-            yy += sigma*prng.normal(loc=0.0, scale=1.0, size=num_det)
+        if num_det > 0:
+            
+            if smooth_positions is not None:
+                sigma = smooth_positions*delta[detected]
+                xx += sigma*prng.normal(loc=0.0, scale=1.0, size=num_det)
+                yy += sigma*prng.normal(loc=0.0, scale=1.0, size=num_det)
 
-        d_a = D_A.to("kpc").v
-        xx = np.rad2deg(xx/d_a)*3600.0 # to arcsec
-        yy = np.rad2deg(yy/d_a)*3600.0 # to arcsec
+            d_a = D_A.to("kpc").v
+            xx = np.rad2deg(xx/d_a)*3600.0 # to arcsec
+            yy = np.rad2deg(yy/d_a)*3600.0 # to arcsec
 
-        # We set a dummy pixel size of 1 arcsec just to compute a WCS
-        dtheta = 1.0/3600.0
+            # We set a dummy pixel size of 1 arcsec just to compute a WCS
+            dtheta = 1.0/3600.0
 
-        wcs = pywcs.WCS(naxis=2)
-        wcs.wcs.crpix = [0.0, 0.0]
-        wcs.wcs.crval = list(sky_center)
-        wcs.wcs.cdelt = [-dtheta, dtheta]
-        wcs.wcs.ctype = ["RA---TAN","DEC--TAN"]
-        wcs.wcs.cunit = ["deg"]*2
+            wcs = pywcs.WCS(naxis=2)
+            wcs.wcs.crpix = [0.0, 0.0]
+            wcs.wcs.crval = list(sky_center)
+            wcs.wcs.cdelt = [-dtheta, dtheta]
+            wcs.wcs.ctype = ["RA---TAN","DEC--TAN"]
+            wcs.wcs.cunit = ["deg"]*2
 
-        xx, yy = wcs.wcs_pix2world(xx, yy, 1)
+            xx, yy = wcs.wcs_pix2world(xx, yy, 1)
+        
         events["xsky"] = YTArray(xx, "degree")
         events["ysky"] = YTArray(yy, "degree")
-
+            
         num_events = comm.mpi_allreduce(num_det)
 
         if comm.rank == 0:

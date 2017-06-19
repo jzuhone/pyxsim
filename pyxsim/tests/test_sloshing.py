@@ -8,7 +8,8 @@ from pyxsim import \
     merge_files
 from yt.utilities.answer_testing.framework import requires_ds, \
     GenericArrayTest, data_dir_load
-from numpy.testing import assert_array_equal
+from numpy.testing import assert_array_equal, \
+    assert_allclose
 from numpy.random import RandomState
 from yt.units.yt_array import uconcatenate
 import os
@@ -89,7 +90,7 @@ def test_sloshing():
         assert_array_equal(arr1, arr2)
     for k in events1.keys():
         assert_array_equal(events1[k], events2[k])
-        assert_array_equal(events1[k], events3[k])
+        assert_allclose(events1[k], events3[k], rtol=1.0e-6)
 
     nevents = 0
 

@@ -198,8 +198,8 @@ class EventList(object):
         yy = tblhdu.data["Y"][start_e:end_e]
         xx, yy = wcs.wcs_pix2world(xx, yy, 1)
 
-        events["xsky"] = xx
-        events["ysky"] = yy
+        events["xsky"] = YTArray(xx, "degree")
+        events["ysky"] = YTArray(yy, "degree")
         events["eobs"] = YTArray(tblhdu.data["ENERGY"][start_e:end_e]/1000., "keV")
 
         if "rmf" in tblhdu.header:
