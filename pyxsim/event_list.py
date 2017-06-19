@@ -249,12 +249,21 @@ class EventList(object):
 
             xx, yy = wcs.wcs_world2pix(self["xsky"].d, self["ysky"].d, 1)
 
+            keepx = np.logical_and(xx >= 0.5, xx <= float(nx)+0.5)
+            keepy = np.logical_and(yy >= 0.5, yy <= float(nx)+0.5)
+            keep = np.logical_and(keepx, keepy)
+
+            n_events = keep.sum()
+
+            mylog.info("Threw out %d events because " % (xx.size-n_events) +
+                       "they fell outside the field of view.")
+
             col_e = pyfits.Column(name='ENERGY', format='E', unit='eV',
-                                  array=events["eobs"].in_units("eV").d)
+                                  array=events["eobs"].in_units("eV").d[keep])
             col_x = pyfits.Column(name='X', format='D', unit='pixel',
-                                  array=xx)
+                                  array=xx[keep])
             col_y = pyfits.Column(name='Y', format='D', unit='pixel',
-                                  array=yy)
+                                  array=yy[keep])
 
             cols = [col_e, col_x, col_y]
 
@@ -265,10 +274,10 @@ class EventList(object):
                 elif chantype == "pi":
                     cunit = "Chan"
                 col_ch = pyfits.Column(name=chantype.upper(), format='1J',
-                                       unit=cunit, array=events[chantype])
+                                       unit=cunit, array=events[chantype][keep])
                 cols.append(col_ch)
 
-                time = np.random.uniform(size=self.num_events, low=0.0,
+                time = np.random.uniform(size=n_events, low=0.0,
                                          high=float(self.parameters["ExposureTime"]))
                 col_t = pyfits.Column(name="TIME", format='1D', unit='s',
                                       array=time)
