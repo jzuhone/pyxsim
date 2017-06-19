@@ -57,6 +57,8 @@ The following changes arise from a refactor of :class:`~pyxsim.instruments.Instr
   more detailed instrument simulation, users are advised to write events to SIMPUT files
   and use SOXS directly. 
 * New *Hitomi* response files have been supplied with this version. 
+* The ``XRS_Imager`` and ``XRS_Calorimeter`` instruments have been renamed to 
+  ``Lynx_Imager`` and ``Lynx_Calorimeter``.
 
 The following interrelated changes arise from a refactor of :class:`~pyxsim.event_list.EventList`:
 
