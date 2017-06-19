@@ -73,9 +73,11 @@ def test_sloshing():
 
     photons1.write_h5_file("test_photons.h5")
     events1.write_h5_file("test_events.h5")
+    events1.write_fits_file("test_events.fits", 60.0, 1024)
 
     photons2 = PhotonList.from_file("test_photons.h5")
     events2 = EventList.from_h5_file("test_events.h5")
+    events3 = EventList.from_fits_file("test_events.fits")
 
     for k in photons1.keys():
         if k == "energy":
@@ -87,6 +89,7 @@ def test_sloshing():
         assert_array_equal(arr1, arr2)
     for k in events1.keys():
         assert_array_equal(events1[k], events2[k])
+        assert_array_equal(events1[k], events3[k])
 
     nevents = 0
 
