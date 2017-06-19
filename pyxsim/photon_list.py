@@ -224,10 +224,10 @@ class PhotonList(object):
             The data source from which the photons will be generated.
         redshift : float
             The cosmological redshift for the photons.
-        area : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`.
+        area : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`
             The collecting area to determine the number of photons. If units are
             not specified, it is assumed to be in cm^2.
-        exp_time : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`.
+        exp_time : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`
             The exposure time to determine the number of photons. If units are
             not specified, it is assumed to be in seconds.
         source_model : :class:`~pyxsim.source_models.SourceModel`

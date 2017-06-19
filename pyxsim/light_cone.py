@@ -39,12 +39,61 @@ class XrayLightCone(LightCone):
                                             minimum_coherent_box_fraction=minimum_coherent_box_fraction)
         self.calculate_light_cone_solution(seed=seed)
 
-    def generate_events(self, area, exp_time, angular_width, 
-                        source_model, sky_center, parameters=None, 
-                        velocity_fields=None, absorb_model=None, 
+    def generate_events(self, area, exp_time, angular_width,
+                        source_model, sky_center, parameters=None,
+                        velocity_fields=None, absorb_model=None,
                         nH=None, no_shifting=False, smooth_positions=False,
                         prng=None):
+        """
+        Generate projected events from a light cone simulation. 
 
+        Parameters
+        ----------
+        area : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`
+            The collecting area to determine the number of events. If units are
+            not specified, it is assumed to be in cm^2.
+        exp_time : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`
+            The exposure time to determine the number of events. If units are
+            not specified, it is assumed to be in seconds.
+        angular_width float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`
+            The angular width of the light cone simulation. If units are not
+            specified, it is assumed to be in degrees.
+        source_model : :class:`~pyxsim.source_models.SourceModel`
+            A source model used to generate the events.
+        sky_center : array-like
+            Center RA, Dec of the events in degrees.
+        parameters : dict, optional
+            A dictionary of parameters to be passed for the source model to use,
+            if necessary.
+        velocity_fields : list of fields
+            The yt fields to use for the velocity. If not specified, the following will
+            be assumed:
+            ['velocity_x', 'velocity_y', 'velocity_z'] for grid datasets
+            ['particle_velocity_x', 'particle_velocity_y', 'particle_velocity_z'] for particle datasets
+        absorb_model : string or :class:`~pyxsim.spectral_models.AbsorptionModel` 
+            A model for foreground galactic absorption, to simulate the absorption
+            of events before being detected. This cannot be applied here if you 
+            already did this step previously in the creation of the 
+            :class:`~pyxsim.photon_list.PhotonList` instance. Known options for 
+            strings are "wabs" and "tbabs".
+        nH : float, optional
+            The foreground column density in units of 10^22 cm^{-2}. Only used if
+            absorption is applied.
+        no_shifting : boolean, optional
+            If set, the photon energies will not be Doppler shifted.
+        smooth_positions : float, optional
+            Apply a gaussian smoothing operation to the sky positions of the events. 
+            This may be useful when the binned events appear blocky due to their uniform
+            distribution within simulation cells. However, this will move the events away
+            from their originating position on the sky, and so may distort surface brightness
+            profiles and/or spectra. Should probably only be used for visualization purposes.
+            Supply a float here to smooth with a standard deviation with this fraction 
+            of the cell or particle size. Default: None
+        prng : integer, :class:`~numpy.random.RandomState` object, or :mod:`~numpy.random`, optional
+            A pseudo-random number generator. Typically will only be specified
+            if you have a reason to generate the same set of random numbers, such as for a
+            test. Default is the :mod:`numpy.random` module.
+        """
         prng = parse_prng(prng)
 
         area = parse_value(area, "cm**2")
