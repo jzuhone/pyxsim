@@ -16,7 +16,9 @@ from pyxsim.photon_list import \
 
 from pyxsim.source_generators import \
     make_xrb_particles, \
-    XrayLightCone
+    XrayLightCone, \
+    make_background, \
+    make_point_sources
 
 from pyxsim.source_models import \
    SourceModel, \
