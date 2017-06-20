@@ -29,7 +29,7 @@ def test_light_cone():
     lc = XrayLightCone('%s/32Mpc_32.enzo' % etc[:-14], 'Enzo', 0., 0.1,
                        seed=24)
 
-    source_model = ThermalSourceModel("apec", 0.1, 10.0, 1000)
+    source_model = ThermalSourceModel("apec", 0.1, 10.0, 1000, prng=prng)
 
     events = lc.generate_events(A, exp_time, fov, source_model, (30.0, 45.0),
                                 absorb_model="wabs", nH=0.02,
