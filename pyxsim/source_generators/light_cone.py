@@ -1,7 +1,5 @@
 import time
 
-import astropy.wcs as pywcs
-
 from pyxsim.photon_list import PhotonList
 from pyxsim.event_list import EventList
 from pyxsim.utils import parse_value

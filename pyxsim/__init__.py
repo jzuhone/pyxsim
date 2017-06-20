@@ -1,25 +1,8 @@
 __version__ = "2.0.0"
 
-from pyxsim.source_models import \
-   SourceModel, \
-   ThermalSourceModel, \
-   LineSourceModel, \
-   PowerLawSourceModel
-
-from pyxsim.photon_list import \
-    PhotonList
-
-from pyxsim.utils import \
-    merge_files
-
 from pyxsim.event_list import \
     EventList, \
     ConvolvedEventList
-
-from pyxsim.spectral_models import \
-    TableApecModel, \
-    TableAbsorbModel, \
-    TBabsModel, WabsModel
 
 from pyxsim.instruments import \
     InstrumentSimulator, \
@@ -28,10 +11,23 @@ from pyxsim.instruments import \
     Hitomi_SXS, Athena_WFI, \
     Athena_XIFU
 
-from pyxsim.light_cone import \
-    XrayLightCone
+from pyxsim.photon_list import \
+    PhotonList
 
 from pyxsim.source_generators import \
     make_xrb_particles, \
-    create_cylindrical_dataset, \
-    create_spherical_dataset
+    XrayLightCone
+
+from pyxsim.source_models import \
+   SourceModel, \
+   ThermalSourceModel, \
+   LineSourceModel, \
+   PowerLawSourceModel
+
+from pyxsim.spectral_models import \
+    TableApecModel, \
+    TableAbsorbModel, \
+    TBabsModel, WabsModel
+
+from pyxsim.utils import \
+    merge_files
