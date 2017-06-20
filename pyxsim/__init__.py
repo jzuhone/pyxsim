@@ -28,7 +28,7 @@ from pyxsim.source_models import \
 
 from pyxsim.spectral_models import \
     TableApecModel, \
-    TableAbsorbModel, \
+    AbsorptionModel, \
     TBabsModel, WabsModel
 
 from pyxsim.utils import \

@@ -4,7 +4,8 @@ Photon emission and absoprtion models.
 import numpy as np
 import h5py
 
-from soxs.spectra import ApecGenerator, get_wabs_absorb
+from soxs.spectra import ApecGenerator, \
+    get_wabs_absorb, get_tbabs_absorb
 from soxs.utils import parse_prng
 from pyxsim.utils import mylog, check_file_location
 from yt.units.yt_array import YTArray, YTQuantity
@@ -102,10 +103,10 @@ class TableApecModel(ApecGenerator):
 thermal_models = {"apec": TableApecModel}
 
 class AbsorptionModel(object):
-    def __init__(self, nH, emid, sigma):
+    def __init__(self, nH, energy, cross_section):
         self.nH = YTQuantity(nH*1.0e22, "cm**-2")
-        self.emid = YTArray(emid, "keV")
-        self.sigma = YTArray(sigma, "cm**2")
+        self.emid = YTArray(energy, "keV")
+        self.sigma = YTArray(cross_section, "cm**2")
 
     def get_absorb(self, e):
         """
@@ -135,30 +136,7 @@ class AbsorptionModel(object):
         detected = randvec < absorb
         return detected
 
-class TableAbsorbModel(AbsorptionModel):
-    r"""
-    Initialize an absorption model from a table stored in an HDF5 file.
-
-    Parameters
-    ----------
-    filename : string
-        The name of the table file.
-    nH : float
-        The foreground column density *nH* in units of 10^22 cm^{-2}.
-
-    Examples
-    --------
-    >>> abs_model = TableAbsorbModel("tbabs_table.h5", 0.1)
-    """
-    def __init__(self, filename, nH):
-        self.filename = check_file_location(filename, "spectral_files")
-        f = h5py.File(self.filename,"r")
-        emid = YTArray(0.5*(f["energy"][1:]+f["energy"][:-1]), "keV")
-        sigma = YTArray(f["cross_section"][:], "cm**2")
-        f.close()
-        super(TableAbsorbModel, self).__init__(nH, emid, sigma)
-
-class TBabsModel(TableAbsorbModel):
+class TBabsModel(AbsorptionModel):
     r"""
     Initialize a Tuebingen-Boulder (Wilms, J., Allen, A., & 
     McCray, R. 2000, ApJ, 542, 914) ISM absorption model.
@@ -173,7 +151,11 @@ class TBabsModel(TableAbsorbModel):
     >>> tbabs_model = TBabsModel(0.1)
     """
     def __init__(self, nH):
-        super(TBabsModel, self).__init__("tbabs_table.h5", nH)
+        self.nH = YTQuantity(nH, "1.0e22*cm**-2")
+
+    def get_absorb(self, e):
+        e = np.array(e)
+        return get_tbabs_absorb(e, self.nH.v)
 
 class WabsModel(AbsorptionModel):
     r"""

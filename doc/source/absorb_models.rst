@@ -21,26 +21,26 @@ An absorption model may be specified in the call to
 If one has their own absorption model that they would like to use, you can create a new
 absorption model class based on pyXSIM's :class:`~pyxsim.spectral_models.TableAbsorbModel` 
 class and supply it to :meth:`~pyxsim.photon_list.PhotonList.project_photons` instead. 
-In this case, a table of the cross sections is required, to be stored in an HDF5 file. 
-This file must have two top-level datasets:
+In this case, a table of the cross sections is required, in the form of two NumPy arrays,
+which should be:
 
-* ``"energy"``: A 1-D array of M+1 energies in units of keV, where M is the number of bins
-* ``"cross_section"``: A 1-D array of M cross-sections in units of :math:`\rm{cm}^2`, where M
+* ``energy``: A 1-D array of M energies in units of keV, where M is the number of bins
+* ``cross_section``: A 1-D array of M cross-sections in units of :math:`\rm{cm}^2`, where M
   is the number of bins
-
-An example file is provided with pyXSIM, ``tbabs_table.h5``, containing a table of the 
-`TBabs <http://pulsar.sternwarte.uni-erlangen.de/wilms/research/tbabs/>`_ cross sections,
-generated from XSPEC. 
 
 A new absorption model class can be created in this way:
 
 .. code-block:: python
 
-    from pyxsim import TableAbsorbModel
+    from pyxsim import AbsorptionModel
 
-    class MyAbsorbModel(TableAbsorbModel):
+    # define energy and cross_section as NumPy arrays somewhere here
+    energy = ...
+    cross_section = ...
+ 
+    class MyAbsorbModel(AbsorptionModel):
         def __init__(self, nH):
-            super(TBabsModel, self).__init__("absorb_table.h5", nH)
+            super(AbsorptionModel, self).__init__(nH, energy, cross_section)
     
 Then, the name of the new class can be supplied to 
 :meth:`~pyxsim.photon_list.PhotonList.project_photons`:
