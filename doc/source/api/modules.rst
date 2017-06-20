@@ -9,4 +9,4 @@ pyXSIM API
    source_models
    spectral_models
    instruments
-   light_cone
+   source_generators
