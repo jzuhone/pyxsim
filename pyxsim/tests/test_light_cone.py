@@ -23,7 +23,7 @@ def test_light_cone():
     ds = data_dir_load(etc)
 
     A = 2000.
-    exp_time = 1.0e4
+    exp_time = 1.0e5
     fov = (0.5, "deg")
 
     lc = XrayLightCone('%s/32Mpc_32.enzo' % etc[:-14], 'Enzo', 0., 0.1,
