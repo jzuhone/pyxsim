@@ -57,18 +57,6 @@ def determine_fields(ds, source_type):
         width_field = None
     return position_fields, velocity_fields, width_field
 
-def get_smallest_dds(ds, ds_type):
-    if ds_type == "cells":
-        if hasattr(ds.index, "select_grids"):
-            dds = ds.index.select_grids(ds.index.grid_levels.max())[0].dds[:]
-        else:
-            dds = ds.domain_width / (ds.domain_dimensions * 2**(ds.max_level))
-    else:
-        ML = ds.index.oct_handler.max_level
-        dds = 1.0/(ds.domain_dimensions*2**ML)
-        dds = dds * (ds.domain_right_edge - ds.domain_left_edge)
-    return dds
-
 def concatenate_photons(photons):
     for key in photons:
         if len(photons[key]) > 0:
@@ -350,10 +338,6 @@ class PhotonList(object):
             re = ds.arr(np.zeros(3), "code_length")
             for i, ax in enumerate(p_fields):
                 le[i], re[i] = data_source.quantities.extrema(ax)
-
-        dds_min = get_smallest_dds(ds, parameters["data_type"])
-        le = np.rint((le-ds.domain_left_edge)/dds_min)*dds_min+ds.domain_left_edge
-        re = ds.domain_right_edge-np.rint((ds.domain_right_edge-re)/dds_min)*dds_min
 
         citer = data_source.chunks([], "io")
 
