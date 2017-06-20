@@ -3,6 +3,20 @@
 Generating Light Cone Simulations of X-rays
 ===========================================
 
+Light cones are created by stacking multiple datasets together to continuously 
+span a given redshift interval. To make a projection of a field through a light 
+cone, the width of individual slices is adjusted such that each slice has the 
+same angular size. Each slice is randomly shifted and projected along a random 
+axis to ensure that the same structures are not sampled multiple times. For more 
+information about how light cones are created and used in yt, 
+see `the yt documentation <http://yt-project.org/doc/analyzing/analysis_modules/light_cone_generator.html>`_.
+
+The :class:`~pyxsim.light_cone.XrayLightCone` object allows one to make a projected
+set of X-ray events from a light cone solution, combining yt's light cone machinery
+with the X-ray photon generation capabilities of pyXSIM. The dataset used in this 
+example is the `Enzo_64 <http://yt-project.org/data/Enzo_64.tar.gz>`_ dataset and 
+can be downloaded from http://yt-project.org/data.
+
 .. warning::
 
     This feature is currently in beta, and only works for Enzo cosmological
@@ -14,10 +28,36 @@ First, one needs to create the :class:`~pyxsim.light_cone.XrayLightCone` object:
 
 .. code-block:: python
 
-    lc = pyxsim.XrayLightCone('Enzo_64/64.param', 'Enzo', 0.0, 0.9)
+    parameter_filename = 'Enzo_64/64.param' # parameters for the simulation
+    simulation_type = "Enzo" # For now, this is the only option that works
+    near_redshift = 0.0
+    far_redshift = 0.9
+    lc = pyxsim.XrayLightCone(parameter_filename, simulation_type, near_redshift, 
+                              far_redshift)
     
-This simply takes a simulation
+This takes a time series of datasets from the cosmological simulation and creates
+the light cone solution. There are additional optional keyword arguments (which 
+are the same as those taken by
+:class:`~yt.analysis_modules.cosmological_observation.light_cone.light_cone.LightCone`).
+They are:
 
+* ``seed`` (integer): If an integer is supplied here, a constant set of random
+  numbers will be used to construct the light cone. Default: None, which will
+  use the current system time to seed the random number generator. 
+* ``use_minimum_datasets`` (boolean): If True, the minimum number of datasets 
+  is used to connect the initial and final redshift. If False, the light cone 
+  solution will contain as many entries as possible within the redshift 
+  interval. Default: True.
+* ``deltaz_min`` (float): Specifies the minimum :math:`\Delta{z}` between 
+  consecutive datasets. Default: 0.0.
+* ``minimum_coherent_box_fraction`` (float): Used with ``use_minimum_datasets`` 
+  set to False, this parameter specifies the fraction of the total box size to 
+  be traversed before rerandomizing the projection axis and center. This was 
+  invented to allow light cones with thin slices to sample coherent large 
+  scale structure, but in practice does not work so well. Try setting this 
+  parameter to 1 and see what happens. Default: 0.0.
+
+output_prefix (string): The prefix of all images and data files. Default: ‘LightCone’.
 After the :class:`~pyxsim.light_cone.XrayLightCone` has been created, we have to 
 implement a source model to determine how the photons will be generated from the
 source properties (as usual). In this case, we'll simply use the 
@@ -52,3 +92,7 @@ visualization purposes.
 
 If we make an image of this :class:`~pyxsim.event_list.EventList`, it looks
 like this:
+
+.. code-block:: python
+
+    events.write_fits_image("light_cone_img.fits", fov, 1024)
