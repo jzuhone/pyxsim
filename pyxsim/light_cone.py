@@ -35,8 +35,6 @@ class XrayLightCone(LightCone):
                  minimum_coherent_box_fraction=0.0):
         if seed is None:
             seed = time.time()
-            if parallel_capable:
-                seed = comm.comm.bcast(seed, root=0)
         super(XrayLightCone, self).__init__(parameter_filename, simulation_type,
                                             near_redshift, far_redshift,
                                             observer_redshift=observer_redshift,
