@@ -9,8 +9,6 @@ import os
 
 aciss_arf = os.path.join(pyxsim_path, "response_files", "aciss_aimpt_cy18.arf")
 aciss_rmf = os.path.join(pyxsim_path, "response_files", "aciss_aimpt_cy18.rmf")
-sxs_arf = os.path.join(pyxsim_path, "response_files", "hitomi_sxs.arf")
-sxs_rmf = os.path.join(pyxsim_path, "response_files", "hitomi_sxs.rmf")
 
 class InstrumentSimulator(object):
     def __init__(self, name, arf_file, rmf_file):
@@ -86,7 +84,8 @@ class InstrumentSimulator(object):
 ACIS_S = InstrumentSimulator("acis-s", aciss_arf, aciss_rmf)
 ACIS_I = InstrumentSimulator("acis-i", "acisi_aimpt_cy18.arf",
                              "acisi_aimpt_cy18.rmf")
-Hitomi_SXS = InstrumentSimulator("hitomi_sxs", sxs_arf, sxs_rmf)
+Hitomi_SXS = InstrumentSimulator("hitomi_sxs", "hitomi_sxs_ptsrc.arf", 
+                                 "hitomi_sxs.rmf")
 Athena_WFI = InstrumentSimulator("athena_wfi",
                                  "athena_wfi_1469_onaxis_w_filter_v20150326.arf",
                                  "athena_wfi_rmf_v20150326.rmf")
