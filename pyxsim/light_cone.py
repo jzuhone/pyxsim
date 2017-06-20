@@ -30,14 +30,12 @@ axes_lookup = [(1,2), (2,0), (0,1)]
 class XrayLightCone(LightCone):
     def __init__(self, parameter_filename, simulation_type,
                  near_redshift, far_redshift, seed=None,
-                 observer_redshift=0.0,
                  use_minimum_datasets=True, deltaz_min=0.0,
                  minimum_coherent_box_fraction=0.0):
         if seed is None:
             seed = time.time()
         super(XrayLightCone, self).__init__(parameter_filename, simulation_type,
                                             near_redshift, far_redshift,
-                                            observer_redshift=observer_redshift,
                                             use_minimum_datasets=use_minimum_datasets,
                                             deltaz_min=deltaz_min,
                                             minimum_coherent_box_fraction=minimum_coherent_box_fraction)
