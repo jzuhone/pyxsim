@@ -38,7 +38,8 @@ Changes related to thermal source modeling:
 
 Changes related to modeling of foreground Galactic absorption:
 
-* pyXSIM now uses SOXS to implement the `wabs` foreground absorption model.
+* pyXSIM now uses SOXS to implement the `wabs` and `tbabs` foreground absorption 
+  models.
 * The previously deprecated XSPEC-based spectral absorption models have been 
   completely removed from this version, as they proved too difficult to maintain. 
 * It is no longer necessary to create a spectral absorption model object explicitly,
