@@ -36,7 +36,7 @@ class TableApecModel(ApecGenerator):
         not provided, the default SOXS-provided files are used.
     model_vers : string, optional
         The version identifier string for the APEC files, e.g.
-        "3.0.3". Default: 2.0.2
+        "3.0.3". Default: 3.0.8
     thermal_broad : boolean, optional
         Whether or not the spectral lines should be thermally
         broadened. Default: True
@@ -49,7 +49,7 @@ class TableApecModel(ApecGenerator):
     def __init__(self, emin, emax, nchan, model_root=None,
                  model_vers=None, thermal_broad=True):
         if model_vers is None:
-            model_vers = "2.0.2"
+            model_vers = "3.0.8"
         super(TableApecModel, self).__init__(emin, emax, nchan, apec_root=model_root,
                                              apec_vers=model_vers, broadening=thermal_broad)
         self.nchan = self.nbins
