@@ -48,8 +48,8 @@ def test_point_source():
 
     positions = [(30.01, 45.0)]
 
-    events = make_point_sources(area, exp_time, positions, spec, 
-                                (30.0, 45.0), prng=prng)
+    events = make_point_sources(area, exp_time, positions, (30.0, 45.0),
+                                spec, prng=prng)
 
     new_events = ACIS_S(events, prng=prng)
 

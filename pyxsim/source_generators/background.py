@@ -16,10 +16,10 @@ def make_background(area, exp_time, fov, sky_center, spectrum, prng=None):
     Parameters
     ----------
     area : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`
-        The collecting area to determine the number of photons. If units are
+        The collecting area to determine the number of events. If units are
         not specified, it is assumed to be in cm^2.
     exp_time : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`
-        The exposure time to determine the number of photons. If units are
+        The exposure time to determine the number of events. If units are
         not specified, it is assumed to be in seconds.
     fov : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`.
         The field of view of the event file. If units are not 
@@ -28,10 +28,10 @@ def make_background(area, exp_time, fov, sky_center, spectrum, prng=None):
         Center RA, Dec of the events in degrees.
     spectrum : :class:`~soxs.spectra.Spectrum`
         The spectrum for the background.
-    prng : integer, :class:`~numpy.random.RandomState` object, or :mod:`numpy.random`, optional
+    prng : integer or :class:`~numpy.random.RandomState` object 
         A pseudo-random number generator. Typically will only be specified
         if you have a reason to generate the same set of random numbers, such as for a
-        test. Default is the :mod:`numpy.random` module.
+        test. Default is to use the :mod:`numpy.random` module.
     """
     prng = parse_prng(prng)
 

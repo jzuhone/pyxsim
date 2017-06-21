@@ -47,10 +47,10 @@ class InstrumentSimulator(object):
         ----------
         events : :class:`~pyxsim.events.EventList`
             An EventList instance of unconvolved events.
-        prng : integer, :class:`~numpy.random.RandomState` object, or :mod:`~numpy.random`, optional
+        prng : integer or :class:`~numpy.random.RandomState` object 
             A pseudo-random number generator. Typically will only be specified
             if you have a reason to generate the same set of random numbers, such as for a
-            test. Default is the :mod:`numpy.random` module.
+            test. Default is to use the :mod:`numpy.random` module.
         """
         if "pi" in events or "pha" in events:
             raise RuntimeError("These events have already been convolved with a response!!")

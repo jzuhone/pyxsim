@@ -8,8 +8,8 @@ from pyxsim.event_list import EventList
 
 comm = communication_system.communicators[-1]
 
-def make_point_sources(area, exp_time, positions, spectra,
-                       sky_center, prng=None):
+def make_point_sources(area, exp_time, positions, sky_center,
+                       spectra, prng=None):
     r"""
     Create a new :class:`~pyxsim.event_list.EventList` which contains
     point sources.
@@ -17,23 +17,23 @@ def make_point_sources(area, exp_time, positions, spectra,
     Parameters
     ----------
     area : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`
-        The collecting area to determine the number of photons. If units are
+        The collecting area to determine the number of events. If units are
         not specified, it is assumed to be in cm^2.
     exp_time : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`
-        The exposure time to determine the number of photons. If units are
+        The exposure time to determine the number of events. If units are
         not specified, it is assumed to be in seconds.
     positions : array of source positions, shape 2xN
         The positions of the point sources in RA, Dec, where N is the
         number of point sources. Coordinates should be in degrees.
-    spectra : list (size N) of 
-        The spectra for the point sources, where M is the number of bins and N is
-        the number of point sources. Assumed to be in the observer frame.
     sky_center : array-like
         Center RA, Dec of the events in degrees.
-    prng : integer, :class:`~numpy.random.RandomState` object, or :mod:`numpy.random`, optional
+    spectra : list (size N) of :class:`~soxs.spectra.Spectrum` objects
+        The spectra for the point sources, where N is the number 
+        of point sources. Assumed to be in the observer frame.
+    prng : integer or :class:`~numpy.random.RandomState` object 
         A pseudo-random number generator. Typically will only be specified
         if you have a reason to generate the same set of random numbers, such as for a
-        test. Default is the :mod:`numpy.random` module.
+        test. Default is to use the :mod:`numpy.random` module.
     """
     prng = parse_prng(prng)
 

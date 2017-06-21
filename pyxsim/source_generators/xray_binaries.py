@@ -317,6 +317,10 @@ def make_xrb_particles(data_source, metallicity_field, age_field,
         The stellar metallicity field.
     age_field : string or (type, name) field tuple
         The stellar age field.
+    prng : integer or :class:`~numpy.random.RandomState` object 
+        A pseudo-random number generator. Typically will only be specified
+        if you have a reason to generate the same set of random numbers, such as for a
+        test. Default is to use the :mod:`numpy.random` module.
     """
     prng = parse_prng(prng)
 

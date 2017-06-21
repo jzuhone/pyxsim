@@ -85,10 +85,10 @@ class ThermalSourceModel(SourceModel):
     model_vers : string, optional
         The version identifier string for the model files, e.g.
         "2.0.2". Default depends on the model used.
-    prng : integer, :class:`~numpy.random.RandomState` object or :mod:`~numpy.random`, optional
+    prng : integer or :class:`~numpy.random.RandomState` object 
         A pseudo-random number generator. Typically will only be specified
         if you have a reason to generate the same set of random numbers, such as for a
-        test. Default is the :mod:`numpy.random` module.
+        test. Default is to use the :mod:`numpy.random` module.
 
     Examples
     --------
@@ -329,10 +329,10 @@ class PowerLawSourceModel(SourceModel):
     index : float, string, or (ftype, fname) tuple
         The power-law index of the spectrum. Either a float for a single power law or
         the name of a field that corresponds to the power law.
-    prng : integer, :class:`~numpy.random.RandomState` object or :mod:`~numpy.random`, optional
+    prng : integer or :class:`~numpy.random.RandomState` object 
         A pseudo-random number generator. Typically will only be specified
         if you have a reason to generate the same set of random numbers, such as for a
-        test. Default is the :mod:`numpy.random` module.
+        test. Default is to use the :mod:`numpy.random` module.
 
     Examples
     --------
@@ -415,10 +415,10 @@ class LineSourceModel(SourceModel):
         are assumed to be in keV. If set to a field name, the line broadening
         is assumed to be based on this field (in units of velocity or energy).
         If set to None (the default), it is assumed that the line is unbroadened.
-    prng : integer, :class:`~numpy.random.RandomState` object or :mod:`~numpy.random`, optional
+    prng : integer or :class:`~numpy.random.RandomState` object 
         A pseudo-random number generator. Typically will only be specified
         if you have a reason to generate the same set of random numbers, such as for a
-        test. Default is the :mod:`numpy.random` module.
+        test. Default is to use the :mod:`numpy.random` module.
 
     Examples
     --------

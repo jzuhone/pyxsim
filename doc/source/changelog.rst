@@ -80,6 +80,9 @@ The following interrelated changes arise from a refactor of :class:`~pyxsim.even
   processors when created in parallel, but each processor now contains a subset of the
   events. The I/O routines for :class:`~pyxsim.event_list.EventList` have been rewritten
   so that all events are still written to the file. 
+* The methods for generating events from point sources and backgrounds have been removed
+  from :class:`~pyxsim.event_list.EventList` and now exist as "source generators" which
+  return new event lists. See :ref:`source-generators` for more information.
 
 Other changes:
 
