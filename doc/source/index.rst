@@ -77,7 +77,7 @@ Table of Contents
    absorb_models    
    event_lists
    instruments
-   light_cone
+   source_generators
    parallel
    getting_help
    faq
