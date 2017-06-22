@@ -5,9 +5,22 @@ from yt.units.yt_array import uconcatenate, YTArray, \
 from scipy.integrate import quad
 from scipy.interpolate import InterpolatedUnivariateSpline
 from six import string_types
+from pyxsim.photon_list import PhotonList
 from pyxsim.source_models import PowerLawSourceModel
 from pyxsim.utils import mylog
 from soxs.utils import parse_prng
+
+"""
+Papers referenced throughout this code:
+
+
+Fragos, T., Lehmer, B., Tremmel, M., et al. 2013, ApJ, 764, 41
+
+"""
+
+# Begin Fragos et al. 2013 arrays derived from Figure 2
+
+# Luminosity as function of age arrays
 
 t_lm = np.array([7.07038000e-03,   7.42810000e-03,   7.90964000e-03,
                  8.42238000e-03,   8.92825000e-03,   9.42208000e-03,
@@ -100,6 +113,8 @@ L_hm = np.array([42.4149,  42.3929,  42.3561,  42.3084,  42.2680,  42.2239,
                  39.5673,  39.5269,  39.4425,  39.3543,  39.2735,  39.2074,
                  39.1119,  39.0311,  38.9723,  38.9209,  38.8768,  38.8291,
                  38.7483,  38.6712,  38.6198,  38.5537,  38.4875])
+
+# Conversion factor table for the two metallicity bins as function of age
 
 t_zlo = np.array([  7.02778000e-03,   7.58466000e-03,   8.11267000e-03,
                     8.87417000e-03,   9.57748000e-03,   1.03365000e-02,
@@ -204,8 +219,51 @@ f_zlo = np.array([  5.38123,   6.15319,   7.46849,   8.93035,  11.0019 ,  13.554
                     2.23196,   2.83325,   4.23753,   5.62521,   7.46732,   9.20045,
                     9.19985,   7.46574])
 
+# Two metallicity bins (solar units)
+
 Z_lo = 0.1
 Z_hi = 1.5
+
+# End Fragos et al. 2013 arrays
+
+# Function to calculate the scale factor for a power
+# law with F = K*E**-alpha (K in units of ct/s/keV)
+def get_scale_factor(ind, emin, emax):
+    if ind == 2.0:
+        k = np.log(emax/emin)
+    else:
+        k = (emax**(2.0-ind)-emin**(2.0-ind))/(2.0-ind)
+    return 1.0/k
+
+# Function to convert between two different energy
+# bands for a single power law
+def convert_bands(ind, emin_a, emax_a, emin_b, emax_b):
+    if ind == 2.0:
+        k = np.log(emax_a/emin_a)
+        k /=  np.log(emax_b/emin_b)
+    else:
+        k = (emax_a**(2.0-ind)-emin_a**(2.0-ind))
+        k /= (emax_b**(2.0-ind)-emin_b**(2.0-ind))
+    return k
+
+# Spectral indices for both types of XRBs
+
+alpha_lmxb = 1.56
+alpha_hmxb = 2.0
+
+# Energy bands for luminosities in XRB 
+# distribution functions
+
+emin_lmxb = 0.5
+emax_lmxb = 8.0
+
+emin_hmxb = 2.0
+emax_hmxb = 10.0
+
+emin_lum = 2.0
+emax_lum = 10.0
+
+# Range of luminosities common to both types of XRBs
 
 Lmin = 1.0e-3
 Lcut = 500.0
@@ -214,14 +272,23 @@ Lbins = np.logspace(np.log10(Lmin), np.log10(Lcut), nbins+1)
 logLbins = np.log10(Lbins)
 logLmid = 0.5*(logLbins[1:]+logLbins[:-1])
 
-# low mass 
+# LMXB distribution function
 
 alpha1 = 1.0
 alpha2 = 1.86
 alpha3 = 4.8
 
-Lb1 = 0.19
-Lb2 = 5.0
+# The luminosities from Gilfanov 2004 are
+# in the 0.5-8 keV band. Here we convert
+# to 2-10 keV assuming our spectral index
+# so that both LMXBs and HMXBs have the 
+# same band
+
+kappa = convert_bands(alpha_lmxb, emin_hmxb, emax_hmxb,
+                      emin_lmxb, emax_lmxb)
+
+Lb1 = 0.19*kappa
+Lb2 = 5.0*kappa
 
 K1 = 1.0
 K2 = K1*(Lb1/Lb2)**alpha2
@@ -260,7 +327,7 @@ def lmxb_pdf(L):
         dNdL = 0.0
     return dNdL
 
-# high mass
+# HMXB distribution function
 
 gamma1 = 1.58
 gamma2 = 2.73
@@ -293,6 +360,9 @@ def hmxb_pdf(L):
     else:
         dNdL = 0.0
     return dNdL
+
+# Function to compute number of XRBs from
+# distribution function
 
 def make_xrbs(Ls, Lfunc, Nfunc, prng):
     dL = lambda L: L*Lfunc(L)
@@ -377,6 +447,17 @@ def make_xrb_particles(data_source, metallicity_field, age_field,
     l_l.convert_to_units("erg/s")
     l_h.convert_to_units("erg/s")
 
+    # These are bolometric luminosities. Now convert them
+    # to the emin_lum-emax_lum keV band assuming the 
+    # "low-hard" state conversion factor uncorrected for
+    # absorption in the 2-10 keV band from Table 2 of 
+    # Fragos et al 2013.
+
+    bolometric_correction = 0.3
+
+    l_l *= bolometric_correction
+    l_h *= bolometric_correction
+
     N_l = make_xrbs(l_l, lmxb_pdf, lmxb_cdf, prng)
     N_h = make_xrbs(l_h, hmxb_pdf, hmxb_cdf, prng)
 
@@ -394,7 +475,20 @@ def make_xrb_particles(data_source, metallicity_field, age_field,
     if N_all == 0:
         raise RuntimeError("There are no X-ray binaries to generate!")
 
-    data = {}
+    # Compute conversion factors from luminosity to count rate
+
+    lmxb_factor = get_scale_factor(alpha_lmxb, emin_lum, emax_lum)
+    hmxb_factor = get_scale_factor(alpha_hmxb, emin_lum, emax_lum)
+
+    xp = []
+    yp = []
+    zp = []
+    vxp = []
+    vyp = []
+    vzp = []
+    lp = []
+    rp = []
+    ap = []
 
     if N_l.sum() > 0:
 
@@ -404,18 +498,11 @@ def make_xrb_particles(data_source, metallicity_field, age_field,
         F_l /= F_l[-1]
         invcdf_l = InterpolatedUnivariateSpline(F_l, logLbins)
 
-        x_lm = []
-        y_lm = []
-        z_lm = []
-        vx_lm = []
-        vy_lm = []
-        vz_lm = []
-        l_lm = []
-
         for i, n in enumerate(N_l):
             if n > 0:
                 randvec = prng.uniform(size=n)
-                lum = YTArray(10**invcdf_l(randvec)*1.0e38, "erg/s")
+                l = YTArray(10**invcdf_l(randvec)*1.0e38, "erg/s")
+                r = YTArray(l.v*lmxb_factor, "photon/s/keV")
                 x = YTArray(prng.normal(scale=scale[i], size=n), "kpc")
                 y = YTArray(prng.normal(scale=scale[i], size=n), "kpc")
                 z = YTArray(prng.normal(scale=scale[i], size=n), "kpc")
@@ -425,29 +512,15 @@ def make_xrb_particles(data_source, metallicity_field, age_field,
                 vx = YTArray([data_source[ptype, "particle_velocity_x"][i]]*n).to('km/s')
                 vy = YTArray([data_source[ptype, "particle_velocity_y"][i]]*n).to('km/s')
                 vz = YTArray([data_source[ptype, "particle_velocity_z"][i]]*n).to('km/s')
-                x_lm.append(x)
-                y_lm.append(y)
-                z_lm.append(z)
-                vx_lm.append(vx)
-                vy_lm.append(vy)
-                vz_lm.append(vz)
-                l_lm.append(lum)
-
-        x_lm = uconcatenate(x_lm)
-        y_lm = uconcatenate(y_lm)
-        z_lm = uconcatenate(z_lm)
-        vx_lm = uconcatenate(vx_lm)
-        vy_lm = uconcatenate(vy_lm)
-        vz_lm = uconcatenate(vz_lm)
-        l_lm = uconcatenate(l_lm)
-
-        data["lm_xrb", "particle_position_x"] = x_lm
-        data["lm_xrb", "particle_position_y"] = y_lm
-        data["lm_xrb", "particle_position_z"] = z_lm
-        data["lm_xrb", "particle_velocity_x"] = vx_lm
-        data["lm_xrb", "particle_velocity_y"] = vy_lm
-        data["lm_xrb", "particle_velocity_z"] = vz_lm
-        data["lm_xrb", "particle_luminosity"] = l_lm
+                xp.append(x)
+                yp.append(y)
+                zp.append(z)
+                vxp.append(vx)
+                vyp.append(vy)
+                vzp.append(vz)
+                lp.append(l)
+                rp.append(r)
+                ap.append(np.array([alpha_lmxb]*n))
 
     if N_h.sum() > 0:
 
@@ -457,18 +530,11 @@ def make_xrb_particles(data_source, metallicity_field, age_field,
         F_h /= F_h[-1]
         invcdf_h = InterpolatedUnivariateSpline(F_h, logLbins)
 
-        x_hm = []
-        y_hm = []
-        z_hm = []
-        vx_hm = []
-        vy_hm = []
-        vz_hm = []
-        l_hm = []
-
         for i, n in enumerate(N_h):
             if n > 0:
                 randvec = prng.uniform(size=n)
-                lum = YTArray(10**invcdf_h(randvec)*1.0e38, "erg/s")
+                l = YTArray(10**invcdf_h(randvec)*1.0e38, "erg/s")
+                r = YTArray(l.v*hmxb_factor, "photon/s/keV")
                 x = YTArray(prng.normal(scale=scale[i], size=n), "kpc")
                 y = YTArray(prng.normal(scale=scale[i], size=n), "kpc")
                 z = YTArray(prng.normal(scale=scale[i], size=n), "kpc")
@@ -478,29 +544,35 @@ def make_xrb_particles(data_source, metallicity_field, age_field,
                 vx = YTArray([data_source[ptype, "particle_velocity_x"][i]]*n).to('km/s')
                 vy = YTArray([data_source[ptype, "particle_velocity_y"][i]]*n).to('km/s')
                 vz = YTArray([data_source[ptype, "particle_velocity_z"][i]]*n).to('km/s')
-                x_hm.append(x)
-                y_hm.append(y)
-                z_hm.append(z)
-                vx_hm.append(vx)
-                vy_hm.append(vy)
-                vz_hm.append(vz)
-                l_hm.append(lum)
+                xp.append(x)
+                yp.append(y)
+                zp.append(z)
+                vxp.append(vx)
+                vyp.append(vy)
+                vzp.append(vz)
+                lp.append(l)
+                rp.append(r)
+                ap.append(np.array([alpha_hmxb]*n))
 
-        x_hm = uconcatenate(x_hm)
-        y_hm = uconcatenate(y_hm)
-        z_hm = uconcatenate(z_hm)
-        vx_hm = uconcatenate(vx_hm)
-        vy_hm = uconcatenate(vy_hm)
-        vz_hm = uconcatenate(vz_hm)
-        l_hm = uconcatenate(l_hm)
+    xp = uconcatenate(xp)
+    yp = uconcatenate(yp)
+    zp = uconcatenate(zp)
+    vxp = uconcatenate(vxp)
+    vyp = uconcatenate(vyp)
+    vzp = uconcatenate(vzp)
+    lp = uconcatenate(lp)
+    rp = uconcatenate(rp)
+    ap = uconcatenate(ap)
 
-        data["hm_xrb", "particle_position_x"] = x_hm
-        data["hm_xrb", "particle_position_y"] = y_hm
-        data["hm_xrb", "particle_position_z"] = z_hm
-        data["hm_xrb", "particle_velocity_x"] = vx_hm
-        data["hm_xrb", "particle_velocity_y"] = vy_hm
-        data["hm_xrb", "particle_velocity_z"] = vz_hm
-        data["hm_xrb", "particle_luminosity"] = l_hm
+    data = {("io", "particle_position_x"): xp,
+            ("io", "particle_position_y"): yp,
+            ("io", "particle_position_z"): zp,
+            ("io", "particle_velocity_x"): vxp,
+            ("io", "particle_velocity_y"): vyp,
+            ("io", "particle_velocity_z"): vzp,
+            ("io", "particle_luminosity"): lp,
+            ("io", "particle_count_rate"): rp,
+            ("io", "particle_index"): ap}
 
     dle = ds.domain_left_edge.to("kpc").v
     dre = ds.domain_right_edge.to("kpc").v
@@ -513,8 +585,15 @@ def make_xrb_particles(data_source, metallicity_field, age_field,
 
     return new_ds
 
-def make_xrb_photon_models(e0, emin, emax, alpha_lmxb, alpha_hmxb, prng=None):
+def make_xrb_photons(ds, area, exp_time, redshift, emin, emax, 
+                     center="c", cosmology=None, prng=None):
+    dd = ds.all_data()
+    e0 = (1.0, "keV")
     prng = parse_prng(prng)
-    lmxb_model = PowerLawSourceModel(e0, emin, emax, alpha_lmxb, prng=prng)
-    hmxb_model = PowerLawSourceModel(e0, emin, emax, alpha_hmxb, prng=prng)
-    return lmxb_model, hmxb_model
+    xrb_model = PowerLawSourceModel(e0, emin, emax, 
+                                    ("io", "particle_count_rate"),
+                                    ("io", "particle_index"), prng=prng)
+    photons = PhotonList.from_data_source(dd, redshift, area, exp_time,
+                                          xrb_model, center=center,
+                                          cosmology=cosmology)
+    return photons
