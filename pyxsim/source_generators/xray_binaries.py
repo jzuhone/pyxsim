@@ -13,8 +13,11 @@ from soxs.utils import parse_prng
 """
 Papers referenced throughout this code:
 
+Gilfanov, M. 2004, MNRAS, 349, 146
 
 Fragos, T., Lehmer, B., Tremmel, M., et al. 2013, ApJ, 764, 41
+
+Mineo, S., Gilfanov, M., & Sunyaev, R. 2012, MNRAS, 419, 2095 
 
 """
 
@@ -272,7 +275,7 @@ Lbins = np.logspace(np.log10(Lmin), np.log10(Lcut), nbins+1)
 logLbins = np.log10(Lbins)
 logLmid = 0.5*(logLbins[1:]+logLbins[:-1])
 
-# LMXB distribution function
+# LMXB distribution function from Gilfanov 2004
 
 alpha1 = 1.0
 alpha2 = 1.86
@@ -327,7 +330,7 @@ def lmxb_pdf(L):
         dNdL = 0.0
     return dNdL
 
-# HMXB distribution function
+# HMXB distribution function from Mineo et al. 2012
 
 gamma1 = 1.58
 gamma2 = 2.73

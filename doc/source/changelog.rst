@@ -26,7 +26,7 @@ New features:
 * A module has been added to generate X-ray photons from a population of X-ray
   binaries, both low-mass and high-mass. This assumes as input a simulation with star 
   particles which have masses, ages, and metallicities. See :ref:`xray-binaries` for
-  more information.
+  more information. This is an experimental feature which should be considered in "beta".
 
 Changes related to thermal source modeling:
 
