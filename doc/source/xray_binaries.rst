@@ -6,6 +6,15 @@ Generating Photons from X-ray Binaries
 Generating the XRB Particle Dataset
 -----------------------------------
 
+:func:`~pyxsim.source_generators.xray_binaries.make_xrb_particles`
+
+.. code-block:: python
+
+    metallicity_field = ("PartType0", "Metallicity")
+    age_field = ("PartType0", "particle_age")
+    new_ds = make_xrb_particles(sp, metallicity_field, age_field,
+                                scale_length, output_lums="lums.dat")
+
 This returns a yt "in-memory" particle dataset which functions in the 
 same way as any other dataset understandable by pyXSIM. 
 
@@ -39,7 +48,7 @@ age and metallicity is determined from Figure 2 of
  <http://adsabs.harvard.edu/abs/2013ApJ...764...41F>`_, and the bolometric corrections
 are determined from their Table 2.
 
-The probability distribution function :math:`dN/dL` for the LMXBs is given by Equation
+The probability distribution function :math:`dN/dL` for the LMXBs is given by Equation 8
 of `Gilfanov, M. 2004, MNRAS, 349, 146 <http://adsabs.harvard.edu/abs/2004MNRAS.349..146G>`_,
-and that of the HMXBs is given by Equation of
+and that of the HMXBs is given by Equation 18 of
 `Mineo, S., Gilfanov, M., & Sunyaev, R. 2012, MNRAS, 419, 2095 <http://adsabs.harvard.edu/abs/2012MNRAS.419.2095M>`_.
