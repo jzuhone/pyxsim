@@ -188,3 +188,6 @@ class ParameterDict(object):
             mylog.warning(key_warning % ("%s parameters" % self.list_type, self.old_keys[key]))
             return True
         return key in self.param_dict
+
+    def __repr__(self):
+        self.param_dict.__repr__()
