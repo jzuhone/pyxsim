@@ -62,7 +62,7 @@ class BetaModelSource(object):
 class ParticleBetaModelSource(object):
     def __init__(self):
 
-        self.prng = RandomState(22)
+        self.prng = RandomState(35)
         self.kT = kT
         self.Z = Z
 

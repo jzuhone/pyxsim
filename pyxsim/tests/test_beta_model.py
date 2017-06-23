@@ -104,7 +104,7 @@ def do_beta_model(source, v_field, em_field):
     load_pha("beta_model_evt.pi")
     set_stat("cstat")
     set_method("levmar")
-    ignore(":0.5, 8.0:")
+    ignore(":0.6, 8.0:")
     set_model("tbapec")
     fit()
     set_covar_opt("sigma", 1.645)
