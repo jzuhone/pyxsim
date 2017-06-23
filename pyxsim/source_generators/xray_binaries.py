@@ -117,6 +117,17 @@ L_hm = np.array([42.4149,  42.3929,  42.3561,  42.3084,  42.2680,  42.2239,
                  39.1119,  39.0311,  38.9723,  38.9209,  38.8768,  38.8291,
                  38.7483,  38.6712,  38.6198,  38.5537,  38.4875])
 
+# These are bolometric luminosities. Now convert them
+# to the emin_lum-emax_lum keV band assuming the 
+# "low-hard" state conversion factor uncorrected for
+# absorption in the 2-10 keV band from Table 2 of 
+# Fragos et al 2013.
+
+bolometric_correction = 0.3
+
+L_lm += np.log10(bolometric_correction)
+L_hm += np.log10(bolometric_correction)
+
 # Conversion factor table for the two metallicity bins as function of age
 
 t_zlo = np.array([  7.02778000e-03,   7.58466000e-03,   8.11267000e-03,
@@ -449,17 +460,6 @@ def make_xrb_particles(data_source, metallicity_field, age_field,
 
     l_l.convert_to_units("erg/s")
     l_h.convert_to_units("erg/s")
-
-    # These are bolometric luminosities. Now convert them
-    # to the emin_lum-emax_lum keV band assuming the 
-    # "low-hard" state conversion factor uncorrected for
-    # absorption in the 2-10 keV band from Table 2 of 
-    # Fragos et al 2013.
-
-    bolometric_correction = 0.3
-
-    l_l *= bolometric_correction
-    l_h *= bolometric_correction
 
     N_l = make_xrbs(l_l, lmxb_pdf, lmxb_cdf, prng)
     N_h = make_xrbs(l_h, hmxb_pdf, hmxb_cdf, prng)
