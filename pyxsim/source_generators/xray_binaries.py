@@ -589,7 +589,7 @@ def make_xrb_particles(data_source, metallicity_field, age_field,
 
     return new_ds
 
-def make_xrb_photons(ds, area, exp_time, redshift, emin, emax, 
+def make_xrb_photons(ds, redshift, area, exp_time, emin, emax, 
                      center="c", cosmology=None, prng=None):
     dd = ds.all_data()
     e0 = (1.0, "keV")
