@@ -2,6 +2,7 @@ import numpy as np
 from yt.frontends.stream.api import load_particles
 from yt.units.yt_array import uconcatenate, YTArray, \
     YTQuantity
+from yt.utilities.physical_ratios import keV_per_erg
 from scipy.integrate import quad
 from scipy.interpolate import InterpolatedUnivariateSpline
 from six import string_types
@@ -247,7 +248,7 @@ def get_scale_factor(ind, emin, emax):
         k = np.log(emax/emin)
     else:
         k = (emax**(2.0-ind)-emin**(2.0-ind))/(2.0-ind)
-    return 1.0/k
+    return keV_per_erg/k
 
 # Function to convert between two different energy
 # bands for a single power law
@@ -505,7 +506,7 @@ def make_xrb_particles(data_source, metallicity_field, age_field,
             if n > 0:
                 randvec = prng.uniform(size=n)
                 l = YTArray(10**invcdf_l(randvec)*1.0e38, "erg/s")
-                r = YTArray(l.v*lmxb_factor, "photon/s/keV")
+                r = YTArray(l.v*lmxb_factor, "photons/s/keV")
                 x = YTArray(prng.normal(scale=scale[i], size=n), "kpc")
                 y = YTArray(prng.normal(scale=scale[i], size=n), "kpc")
                 z = YTArray(prng.normal(scale=scale[i], size=n), "kpc")
@@ -537,7 +538,7 @@ def make_xrb_particles(data_source, metallicity_field, age_field,
             if n > 0:
                 randvec = prng.uniform(size=n)
                 l = YTArray(10**invcdf_h(randvec)*1.0e38, "erg/s")
-                r = YTArray(l.v*hmxb_factor, "photon/s/keV")
+                r = YTArray(l.v*hmxb_factor, "photons/s/keV")
                 x = YTArray(prng.normal(scale=scale[i], size=n), "kpc")
                 y = YTArray(prng.normal(scale=scale[i], size=n), "kpc")
                 z = YTArray(prng.normal(scale=scale[i], size=n), "kpc")
