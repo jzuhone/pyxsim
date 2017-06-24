@@ -3,6 +3,9 @@
 Generating Photons from X-ray Binaries
 ======================================
 
+pyXSIM provides a pair of functions for generating simulated X-ray photons
+which originate from X-ray binaries. 
+
 Generating the XRB Particle Dataset
 -----------------------------------
 
@@ -10,8 +13,9 @@ Generating the XRB Particle Dataset
 
 .. code-block:: python
 
-    metallicity_field = ("PartType0", "Metallicity")
-    age_field = ("PartType0", "particle_age")
+    metallicity_field = ("PartType4", "Metallicity")
+    age_field = ("PartType4", "particle_age")
+    scale_length = ("PartType4", "smoothing_length")
     new_ds = make_xrb_particles(sp, metallicity_field, age_field,
                                 scale_length, output_lums="lums.dat")
 
