@@ -582,7 +582,7 @@ def make_xrb_particles(data_source, metallicity_field, age_field,
             ("io", "particle_velocity_z"): vzp,
             ("io", "particle_luminosity"): lp,
             ("io", "particle_count_rate"): rp,
-            ("io", "particle_index"): ap}
+            ("io", "particle_spectral_index"): ap}
 
     dle = ds.domain_left_edge.to("kpc").v
     dre = ds.domain_right_edge.to("kpc").v
@@ -601,8 +601,8 @@ def make_xrb_photons(ds, redshift, area, exp_time, emin, emax,
     e0 = (1.0, "keV")
     prng = parse_prng(prng)
     xrb_model = PowerLawSourceModel(e0, emin, emax, 
-                                    ("io", "particle_count_rate"),
-                                    ("io", "particle_index"), prng=prng)
+                                    "particle_count_rate",
+                                    "particle_spectral_index", prng=prng)
     photons = PhotonList.from_data_source(dd, redshift, area, exp_time,
                                           xrb_model, center=center,
                                           cosmology=cosmology)
