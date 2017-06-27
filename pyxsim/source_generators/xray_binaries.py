@@ -592,6 +592,11 @@ def make_xrb_particles(data_source, metallicity_field, age_field,
     new_ds = load_particles(data, bbox=bbox, length_unit="kpc", 
                             time_unit="Myr", mass_unit="Msun", 
                             velocity_unit="km/s")
+    # HACK: Something is funny with load_particles pre yt 3.4
+    # so we need to force particle types here for the moment
+    for field in ["particle_luminosity", "particle_count_rate",
+                  "particle_spectral_index"]:
+        getattr(new_ds.fields.io, field).particle_type = True
 
     return new_ds
 
