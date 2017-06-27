@@ -1,7 +1,7 @@
-.. _examples:
+.. _cookbook:
 
-Examples
-========
+pyXSIM Cookbook
+===============
 
 The following examples are downloadable Jupyter notebooks that you can try
 out on your own, using `sample datasets provided by the yt Project <http://yt-project.org/data>`_.

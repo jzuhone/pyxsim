@@ -81,7 +81,7 @@ Table of Contents
    parallel
    getting_help
    faq
-   examples
+   cookbook/index
 
 Indices and tables
 ==================
