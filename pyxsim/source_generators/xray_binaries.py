@@ -574,15 +574,15 @@ def make_xrb_particles(data_source, metallicity_field, age_field,
     rp = uconcatenate(rp)
     ap = uconcatenate(ap)
 
-    data = {("io", "particle_position_x"): xp,
-            ("io", "particle_position_y"): yp,
-            ("io", "particle_position_z"): zp,
-            ("io", "particle_velocity_x"): vxp,
-            ("io", "particle_velocity_y"): vyp,
-            ("io", "particle_velocity_z"): vzp,
-            ("io", "particle_luminosity"): lp,
-            ("io", "particle_count_rate"): rp,
-            ("io", "particle_spectral_index"): ap}
+    data = {"particle_position_x": xp,
+            "particle_position_y": yp,
+            "particle_position_z": zp,
+            "particle_velocity_x": vxp,
+            "particle_velocity_y": vyp,
+            "particle_velocity_z": vzp,
+            "particle_luminosity": lp,
+            "particle_count_rate": rp,
+            "particle_spectral_index": ap}
 
     dle = ds.domain_left_edge.to("kpc").v
     dre = ds.domain_right_edge.to("kpc").v
