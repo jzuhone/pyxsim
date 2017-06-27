@@ -23,6 +23,8 @@ before_install:
     - tar -zxvf enzo_tiny_cosmology.tar.gz
     - wget http://yt-project.org/data/GasSloshingLowRes.tar.gz
     - tar -zxvf GasSloshingLowRes.tar.gz
+    - wget http://yt-project.org/data/FIRE_M12i_ref11.tar.gz
+    - tar -zxvf FIRE_M12i_ref11.tar.gz
     - wget http://hea-www.cfa.harvard.edu/~jzuhone/${ANSWER_VER}_2.tar.gz
     - tar -zxvf ${ANSWER_VER}_2.tar.gz		
     - wget http://hea-www.cfa.harvard.edu/~jzuhone/${ANSWER_VER}_3.tar.gz
