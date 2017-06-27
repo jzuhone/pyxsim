@@ -118,17 +118,6 @@ L_hm = np.array([42.4149,  42.3929,  42.3561,  42.3084,  42.2680,  42.2239,
                  39.1119,  39.0311,  38.9723,  38.9209,  38.8768,  38.8291,
                  38.7483,  38.6712,  38.6198,  38.5537,  38.4875])
 
-# These are bolometric luminosities. Now convert them
-# to the emin_lum-emax_lum keV band assuming the 
-# "low-hard" state conversion factor uncorrected for
-# absorption in the 2-10 keV band from Table 2 of 
-# Fragos et al 2013.
-
-bolometric_correction = 0.3
-
-L_lm += np.log10(bolometric_correction)
-L_hm += np.log10(bolometric_correction)
-
 # Conversion factor table for the two metallicity bins as function of age
 
 t_zlo = np.array([  7.02778000e-03,   7.58466000e-03,   8.11267000e-03,
@@ -278,10 +267,12 @@ emax_hmxb = 10.0
 emin_lum = 2.0
 emax_lum = 10.0
 
+bolometric_correction = 0.3
+
 # Range of luminosities common to both types of XRBs
 
-Lmin = 1.0e-3
-Lcut = 500.0
+Lmin = 1.0e-3*bolometric_correction
+Lcut = 500.0*bolometric_correction
 nbins = 1000
 Lbins = np.logspace(np.log10(Lmin), np.log10(Lcut), nbins+1)
 logLbins = np.log10(Lbins)
@@ -290,8 +281,8 @@ logLmid = 0.5*(logLbins[1:]+logLbins[:-1])
 # LMXB distribution function from Gilfanov 2004
 
 alpha1 = 1.0
-alpha2 = 1.86
-alpha3 = 4.8
+alpha2 = 2.0
+alpha3 = 5.0
 
 # The luminosities from Gilfanov 2004 are
 # in the 0.5-8 keV band. Here we convert
@@ -302,7 +293,7 @@ alpha3 = 4.8
 kappa = convert_bands(alpha_lmxb, emin_hmxb, emax_hmxb,
                       emin_lmxb, emax_lmxb)
 
-Lb1 = 0.19*kappa
+Lb1 = 0.2*kappa
 Lb2 = 5.0*kappa
 
 K1 = 1.0
@@ -385,7 +376,7 @@ def make_xrbs(Ls, Lfunc, Nfunc, prng):
     K = Ls.v / (Ltot*1.0e38)
     Ntot = K*Nfunc(Lcut)
     N = prng.poisson(lam=Ntot)
-    return N
+    return N, Ntot
 
 def make_xrb_particles(data_source, metallicity_field, age_field,
                        scale_length, output_lums=None, prng=None):
@@ -401,7 +392,7 @@ def make_xrb_particles(data_source, metallicity_field, age_field,
     metallicity_field : string or (type, name) field tuple
         The stellar metallicity field.
     age_field : string or (type, name) field tuple
-        The stellar age field.
+        The stellar age field. Must be in some kind of time units. 
     prng : integer or :class:`~numpy.random.RandomState` object 
         A pseudo-random number generator. Typically will only be specified
         if you have a reason to generate the same set of random numbers, such as for a
@@ -459,16 +450,27 @@ def make_xrb_particles(data_source, metallicity_field, age_field,
     l_l *= m
     l_h *= m
 
+    # These are bolometric luminosities. Now convert them
+    # to the emin_lum-emax_lum keV band assuming the 
+    # "low-hard" state conversion factor uncorrected for
+    # absorption in the 2-10 keV band from Table 2 of 
+    # Fragos et al 2013.
+
+    l_l *= bolometric_correction
+    l_h *= bolometric_correction
+
     l_l.convert_to_units("erg/s")
     l_h.convert_to_units("erg/s")
 
-    N_l = make_xrbs(l_l, lmxb_pdf, lmxb_cdf, prng)
-    N_h = make_xrbs(l_h, hmxb_pdf, hmxb_cdf, prng)
+    N_l, lam_l = make_xrbs(l_l, lmxb_pdf, lmxb_cdf, prng)
+    N_h, lam_h = make_xrbs(l_h, hmxb_pdf, hmxb_cdf, prng)
 
     if output_lums is not None:
-        np.savetxt("%s_lmxb.dat" % output_lums, np.transpose([l_l, N_l]),
+        np.savetxt("%s_lmxb.dat" % output_lums, 
+                   np.transpose([l_l/bolometric_correction, lam_l, N_l]),
                    delimiter="\t")
-        np.savetxt("%s_hmxb.dat" % output_lums, np.transpose([l_h, N_h]),
+        np.savetxt("%s_hmxb.dat" % output_lums, 
+                   np.transpose([l_h/bolometric_correction, lam_h, N_h]),
                    delimiter="\t")
 
     N_all = (N_l+N_h).sum()
@@ -507,6 +509,8 @@ def make_xrb_particles(data_source, metallicity_field, age_field,
                 randvec = prng.uniform(size=n)
                 l = YTArray(10**invcdf_l(randvec)*1.0e38, "erg/s")
                 r = YTArray(l.v*lmxb_factor, "photons/s/keV")
+                # Now convert output luminosities back to bolometric
+                l /= bolometric_correction
                 x = YTArray(prng.normal(scale=scale[i], size=n), "kpc")
                 y = YTArray(prng.normal(scale=scale[i], size=n), "kpc")
                 z = YTArray(prng.normal(scale=scale[i], size=n), "kpc")
@@ -539,6 +543,8 @@ def make_xrb_particles(data_source, metallicity_field, age_field,
                 randvec = prng.uniform(size=n)
                 l = YTArray(10**invcdf_h(randvec)*1.0e38, "erg/s")
                 r = YTArray(l.v*hmxb_factor, "photons/s/keV")
+                # Now convert output luminosities back to bolometric
+                l /= bolometric_correction
                 x = YTArray(prng.normal(scale=scale[i], size=n), "kpc")
                 y = YTArray(prng.normal(scale=scale[i], size=n), "kpc")
                 z = YTArray(prng.normal(scale=scale[i], size=n), "kpc")
