@@ -3,8 +3,11 @@ from yt.utilities.answer_testing.framework import \
 from pyxsim.source_generators.xray_binaries import \
     make_xrb_photons, make_xrb_particles, \
     bolometric_correction
-from yt.units.yt_array import uconcatenate
+from yt.units.yt_array import uconcatenate, loadtxt
 import numpy as np
+import tempfile
+import os
+import shutil
 
 def setup():
     from yt.config import ytcfg
@@ -15,6 +18,12 @@ galaxy = "FIRE_M12i_ref11/snapshot_600.hdf5"
 @requires_ds(galaxy)
 def test_xray_binaries():
 
+    tmpdir = tempfile.mkdtemp()
+    curdir = os.getcwd()
+    os.chdir(tmpdir)
+
+    prng = 25
+
     ds = data_dir_load(galaxy)
 
     def _age(field, data):
@@ -23,7 +32,8 @@ def test_xray_binaries():
         age.convert_to_units("Gyr")
         return age
 
-    ds.add_field(("PartType4", "particle_age"), function=_age, units="Gyr", particle_type=True)
+    ds.add_field(("PartType4", "particle_age"), function=_age, units="Gyr", 
+                 particle_type=True)
 
     sp = ds.sphere("max", (0.25, "Mpc"))
 
@@ -31,8 +41,9 @@ def test_xray_binaries():
     scale_length = (1.0, "kpc")
     age_field = ("PartType4", "particle_age")
 
-    new_ds = make_xrb_particles(sp, metallicity_field,
-                                age_field, scale_length)
+    new_ds = make_xrb_particles(sp, metallicity_field, age_field,
+                                scale_length, output_lums="output_lums",
+                                prng=prng)
 
     dd = new_ds.all_data()
 
@@ -44,7 +55,8 @@ def test_xray_binaries():
 
     photons_xrb = make_xrb_photons(new_ds, redshift, area, 
                                    exp_time, emin, emax,
-                                   center=sp.center, cosmology=ds.cosmology)
+                                   center=sp.center, 
+                                   cosmology=ds.cosmology, prng=prng)
 
     D_L = ds.cosmology.luminosity_distance(0.0, redshift)
 
@@ -57,4 +69,18 @@ def test_xray_binaries():
     n1 = fluxes.sum()*exp_time*area/E_mean
     n2 = idxs.sum()
     dn = np.sqrt(n2)
+
     assert np.abs(n1-n2) < 1.645*dn
+
+    l_l, N_l = loadtxt("output_lums_lmxb.dat")
+    l_h, N_h = loadtxt("output_lums_hmxb.dat")
+
+    fluxes2 = (l_l+l_h)*bolometric_correction
+    fluxes2 /= 4.0*np.pi*D_L*D_L
+
+    n3 = fluxes2.sum()*exp_time*area/E_mean
+
+    assert np.abs(n1-n3) < 1.645*dn
+
+    os.chdir(curdir)
+    shutil.rmtree(tmpdir)
