@@ -1,7 +1,7 @@
 import numpy as np
 from yt.frontends.stream.api import load_particles
 from yt.units.yt_array import uconcatenate, YTArray, \
-    YTQuantity
+    YTQuantity, savetxt
 from yt.utilities.physical_ratios import keV_per_erg
 from scipy.integrate import quad
 from scipy.interpolate import InterpolatedUnivariateSpline
@@ -10,6 +10,7 @@ from pyxsim.photon_list import PhotonList
 from pyxsim.source_models import PowerLawSourceModel
 from pyxsim.utils import mylog
 from soxs.utils import parse_prng
+import sys
 
 """
 Papers referenced throughout this code:
@@ -376,7 +377,7 @@ def make_xrbs(Ls, Lfunc, Nfunc, prng):
     K = Ls.v / (Ltot*1.0e38)
     Ntot = K*Nfunc(Lcut)
     N = prng.poisson(lam=Ntot)
-    return N, Ntot
+    return N
 
 def make_xrb_particles(data_source, metallicity_field, age_field,
                        scale_length, output_lums=None, prng=None):
@@ -470,16 +471,14 @@ def make_xrb_particles(data_source, metallicity_field, age_field,
     l_l.convert_to_units("erg/s")
     l_h.convert_to_units("erg/s")
 
-    N_l, lam_l = make_xrbs(l_l, lmxb_pdf, lmxb_cdf, prng)
-    N_h, lam_h = make_xrbs(l_h, hmxb_pdf, hmxb_cdf, prng)
+    N_l = make_xrbs(l_l, lmxb_pdf, lmxb_cdf, prng)
+    N_h = make_xrbs(l_h, hmxb_pdf, hmxb_cdf, prng)
 
     if output_lums is not None:
-        np.savetxt("%s_lmxb.dat" % output_lums, 
-                   np.transpose([l_l/bolometric_correction, lam_l, N_l]),
-                   delimiter="\t")
-        np.savetxt("%s_hmxb.dat" % output_lums, 
-                   np.transpose([l_h/bolometric_correction, lam_h, N_h]),
-                   delimiter="\t")
+        savetxt("%s_lmxb.dat" % output_lums, [l_l/bolometric_correction, N_l],
+                delimiter="\t")
+        savetxt("%s_hmxb.dat" % output_lums, [l_h/bolometric_correction, N_h],
+                delimiter="\t")
 
     N_all = (N_l+N_h).sum()
 
@@ -597,18 +596,20 @@ def make_xrb_particles(data_source, metallicity_field, age_field,
 
     bbox = np.array([[dle[i], dre[i]] for i in range(3)])
 
-    new_ds = load_particles(data, bbox=bbox, length_unit="kpc", 
+    new_ds = load_particles(data, bbox=bbox, length_unit="kpc",
                             time_unit="Myr", mass_unit="Msun", 
                             velocity_unit="km/s")
     # HACK: Something is funny with load_particles pre yt 3.4
-    # so we need to force particle types here for the moment
-    for field in ["particle_luminosity", "particle_count_rate",
-                  "particle_spectral_index"]:
-        getattr(new_ds.fields.io, field).particle_type = True
+    # and in Python 2 so we need to force particle types here 
+    # for the moment
+    if sys.version_info == (2, 7):
+        for field in ["particle_luminosity", "particle_count_rate",
+                      "particle_spectral_index"]:
+            getattr(new_ds.fields.io, field).particle_type = True
 
     return new_ds
 
-def make_xrb_photons(ds, redshift, area, exp_time, emin, emax, 
+def make_xrb_photons(ds, redshift, area, exp_time, emin, emax,
                      center="c", cosmology=None, prng=None):
     r"""
     Take a dataset produced by 
