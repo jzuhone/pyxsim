@@ -393,6 +393,14 @@ def make_xrb_particles(data_source, metallicity_field, age_field,
         The stellar metallicity field.
     age_field : string or (type, name) field tuple
         The stellar age field. Must be in some kind of time units. 
+    scale_length : string, (ftype, fname) tuple, (value, unit) tuple, or YTQuantity
+        The radial length scale over which to scatter the XRB particles
+        from their parent star particle. Can be the name of a smoothing
+        length field for the stars, a (value, unit) tuple, or a YTQuantity.
+    output_lums : string, optional
+        The prefix for two ASCII text files to be written to disk, which
+        contain the total XRB luminosity for each particle and the number
+        of XRBs generated. Only really useful for testing.
     prng : integer or :class:`~numpy.random.RandomState` object 
         A pseudo-random number generator. Typically will only be specified
         if you have a reason to generate the same set of random numbers, such as for a
@@ -602,6 +610,41 @@ def make_xrb_particles(data_source, metallicity_field, age_field,
 
 def make_xrb_photons(ds, redshift, area, exp_time, emin, emax, 
                      center="c", cosmology=None, prng=None):
+    r"""
+    Take a dataset produced by 
+    :func:`~pyxsim.source_generators.xray_binaries.make_xrb_particles`
+    and produce a :class:`~pyxsim.photon_list.PhotonList`.
+
+    Parameters
+    ----------
+    ds : :class:`~yt.data_objects.static_output.Dataset`
+        The dataset of XRB particles to use to make the photons.
+    redshift : float
+        The cosmological redshift for the photons.
+    area : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`
+        The collecting area to determine the number of photons. If units are
+        not specified, it is assumed to be in cm^2.
+    exp_time : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`
+        The exposure time to determine the number of photons. If units are
+        not specified, it is assumed to be in seconds.
+    emin : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`
+        The minimum energy of the photons to be generated, in the rest frame of
+        the source. If units are not given, they are assumed to be in keV.
+    emax : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`
+        The maximum energy of the photons to be generated, in the rest frame of
+        the source. If units are not given, they are assumed to be in keV.
+    center : string or array_like, optional
+        The origin of the photon spatial coordinates. Accepts "c", "max", or a coordinate. 
+        If not specified, pyxsim attempts to use the "center" field parameter of the data_source. 
+    cosmology : :class:`~yt.utilities.cosmology.Cosmology`, optional
+        Cosmological information. If not supplied, we try to get
+        the cosmology from the dataset. Otherwise, LCDM with
+        the default yt parameters is assumed.
+    prng : integer or :class:`~numpy.random.RandomState` object 
+        A pseudo-random number generator. Typically will only be specified
+        if you have a reason to generate the same set of random numbers, such as for a
+        test. Default is to use the :mod:`numpy.random` module.
+    """
     dd = ds.all_data()
     e0 = (1.0, "keV")
     prng = parse_prng(prng)
