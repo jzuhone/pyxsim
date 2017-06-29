@@ -19,8 +19,8 @@ can be downloaded from http://yt-project.org/data.
 
 .. warning::
 
-    This feature is currently in beta, and only works for Enzo cosmological
-    simulations. In the future, it will be expanded to other types of 
+    This feature is currently in beta, and only works for Enzo or Gadget-based
+    cosmological simulations. In the future, it will be expanded to other types of
     datasets. If you'd like to see support for your type of dataset, 
     `get in contact <faq.html>`_!
 

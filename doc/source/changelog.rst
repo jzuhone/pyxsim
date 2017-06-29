@@ -22,7 +22,8 @@ New features:
 * A new class, :class:`~pyxsim.light_cone.XrayLightCone`, has been added which takes
   a number of redshift snapshots from a cosmological simulation and produces a light
   cone simulation of events from them. This is an experimental feature which should
-  be considered in "beta", and currently only works with Enzo cosmological simulations.
+  be considered in "beta", and currently only works with Enzo or Gadget-based
+  cosmological simulations.
 * A module has been added to generate X-ray photons from a population of X-ray
   binaries, both low-mass and high-mass. This assumes as input a simulation with star 
   particles which have masses, ages, and metallicities. See :ref:`xray-binaries` for
