@@ -293,7 +293,10 @@ class PhotonList(object):
             else:
                 parameters["center"] = ds.arr(center, "code_length")
         elif center is None:
-            parameters["center"] = data_source.get_field_parameter("center")
+            if hasattr(data_source, "left_edge"):
+                parameters["center"] = 0.5*(data_source.left_edge+data_source.right_edge)
+            else:
+                parameters["center"] = data_source.get_field_parameter("center")
 
         parameters["fid_exp_time"] = parse_value(exp_time, "s")
         parameters["fid_area"] = parse_value(area, "cm**2")
