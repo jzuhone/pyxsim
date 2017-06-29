@@ -321,8 +321,9 @@ class PhotonList(object):
 
         if hasattr(data_source, "left_edge"):
             # Region or grid
-            le = data_source.left_edge
-            re = data_source.right_edge
+            w = data_source.right_edge - data_source.left_edge
+            le = -0.5*w + data_source.center
+            re = 0.5*w + data_source.center
         elif hasattr(data_source, "radius") and not hasattr(data_source, "height"):
             # Sphere
             le = -data_source.radius+data_source.center
@@ -377,11 +378,7 @@ class PhotonList(object):
                 tfr = photons[ax] > re[i].to('kpc')
                 photons[ax][tfl] += dw[i] 
                 photons[ax][tfr] -= dw[i]
-                if tfl.any():
-                    center_shift = 1.0
-                elif tfr.any():
-                    center_shift = -1.0
-            photons[ax] -= parameters["center"][i].in_units("kpc")+center_shift*dw[i]
+            photons[ax] -= parameters["center"][i].in_units("kpc")
 
         mylog.info("Finished generating photons.")
         mylog.info("Number of photons generated: %d" % int(np.sum(photons["num_photons"])))
