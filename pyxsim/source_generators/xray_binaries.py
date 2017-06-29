@@ -602,10 +602,10 @@ def make_xrb_particles(data_source, metallicity_field, age_field,
     # HACK: Something is funny with load_particles pre yt 3.4
     # and in Python 2 so we need to force particle types here 
     # for the moment
-    if sys.version_info == (2, 7):
-        for field in ["particle_luminosity", "particle_count_rate",
-                      "particle_spectral_index"]:
-            getattr(new_ds.fields.io, field).particle_type = True
+    for field in ["particle_luminosity", "particle_count_rate",
+                  "particle_spectral_index"]:
+        fd = getattr(new_ds.fields.io, field)
+        setattr(fd, "particle_type", True)
 
     return new_ds
 
