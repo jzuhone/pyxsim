@@ -42,7 +42,7 @@ class XrayLightCone(LightCone):
     def generate_events(self, area, exp_time, angular_width,
                         source_model, sky_center, parameters=None,
                         velocity_fields=None, absorb_model=None,
-                        nH=None, no_shifting=False, smooth_positions=False,
+                        nH=None, no_shifting=False, smooth_positions=None,
                         prng=None):
         """
         Generate projected events from a light cone simulation. 
