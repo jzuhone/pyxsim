@@ -28,6 +28,9 @@ class SourceModel(object):
         self.spectral_norm = spectral_norm
         self.redshift = redshift
 
+    def cleanup_model(self):
+        pass
+
 particle_dens_fields = [("io", "density"),
                         ("PartType0", "Density"),
                         ("Gas", "Density")]
@@ -192,6 +195,10 @@ class ThermalSourceModel(SourceModel):
         num_cells = np.logical_and(kT > self.kT_min, kT < self.kT_max).sum()
         self.source_type = data_source.ds._get_field_info(self.emission_measure_field).name[0]
         self.pbar = get_pbar("Processing cells/particles ", num_cells)
+
+    def cleanup_model(self):
+        self.emission_measure_field = None
+        self.temperature_field = None
 
     def __call__(self, chunk):
 

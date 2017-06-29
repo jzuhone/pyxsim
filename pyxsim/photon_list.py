@@ -363,6 +363,8 @@ class PhotonList(object):
                 else:
                     photons["dx"].append(chunk[w_field][idxs].in_units("kpc"))
 
+        source_model.cleanup_model()
+
         concatenate_photons(photons)
 
         # Translate photon coordinates to the source center
