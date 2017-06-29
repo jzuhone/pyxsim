@@ -321,9 +321,10 @@ class PhotonList(object):
 
         if hasattr(data_source, "left_edge"):
             # Region or grid
+            c = 0.5*(data_source.left_edge+data_source.right_edge)
             w = data_source.right_edge - data_source.left_edge
-            le = -0.5*w + data_source.center
-            re = 0.5*w + data_source.center
+            le = -0.5*w + c
+            re = 0.5*w + c
         elif hasattr(data_source, "radius") and not hasattr(data_source, "height"):
             # Sphere
             le = -data_source.radius+data_source.center
