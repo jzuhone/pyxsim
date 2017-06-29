@@ -371,12 +371,17 @@ class PhotonList(object):
         # Fix photon coordinates for regions crossing a periodic boundary
         dw = ds.domain_width.to("kpc")
         for i, ax in enumerate("xyz"):
+            center_shift = 0.0
             if ds.periodicity[i] and len(photons[ax]) > 0:
                 tfl = photons[ax] < le[i].to('kpc')
                 tfr = photons[ax] > re[i].to('kpc')
                 photons[ax][tfl] += dw[i] 
                 photons[ax][tfr] -= dw[i]
-            photons[ax] -= parameters["center"][i].in_units("kpc")
+                if tfl.any():
+                    center_shift = 1.0
+                elif tfr.any():
+                    center_shift = -1.0
+            photons[ax] -= parameters["center"][i].in_units("kpc")+center_shift*dw[i]
 
         mylog.info("Finished generating photons.")
         mylog.info("Number of photons generated: %d" % int(np.sum(photons["num_photons"])))
