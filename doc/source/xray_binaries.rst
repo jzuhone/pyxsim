@@ -4,18 +4,37 @@ Generating Photons from X-ray Binaries
 ======================================
 
 pyXSIM provides a pair of functions for generating simulated X-ray photons
-which originate from X-ray binaries within galaxies. 
+which originate from X-ray binaries (XRBs) within galaxies. These functions take
+simulation datasets with star particles possessing age and metallicity fields
+and generates XRB particles via a semi-analytic prescription. Low-mass XRBs (LMXBs)
+and high-mass XRBs (HMXBs) are handled seperately in this framework. This is
+an experimental feature which is currently in beta.
 
-The distribution of LMXB and HMXB luminosities as a function of stellar population
-age and metallicity is determined from Figure 2 of 
-`Fragos, T., Lehmer, B., Tremmel, M., et al. 2013, ApJ, 764, 41
- <http://adsabs.harvard.edu/abs/2013ApJ...764...41F>`_, and the bolometric corrections
-are determined from their Table 2.
+How it Works
+------------
 
-The probability distribution function :math:`dN/dL` for the LMXBs is given by Equation 8
+The first step is to take the star particles and determine what the luminosity of
+LMXBs and HMXBs is for each one. This is done using the luminosity distribution 
+functions from Figure 2 of `Fragos, T., Lehmer, B., Tremmel, M., et al. 2013, ApJ, 764, 41 <http://adsabs.harvard.edu/abs/2013ApJ...764...41F>`_, 
+which are functions of stellar population age and metallicity. To convert the
+bolometric luminosities to a reference band of 2-10 keV, we use the bolometric 
+correction factors from their Table 2.
+
+Given XRB luminosities for each stellar particle, we now need to generate their
+associated populations of LMXBs and HMXBs. We generate the LMXBs using the 
+probability distribution function :math:`dN/dL` given by Equation 8
 of `Gilfanov, M. 2004, MNRAS, 349, 146 <http://adsabs.harvard.edu/abs/2004MNRAS.349..146G>`_,
-and that of the HMXBs is given by Equation 18 of
+and for the HMXBs we use Equation 18 of
 `Mineo, S., Gilfanov, M., & Sunyaev, R. 2012, MNRAS, 419, 2095 <http://adsabs.harvard.edu/abs/2012MNRAS.419.2095M>`_.
+
+Each XRB particle generated inherits the position and velocity of its host stellar
+particle, but is given a small random offset in position from the stellar particle
+position. 
+
+Finally, given new a dataset of the XRB particles, we can use this dataset to 
+generate a :class:`~pyxsim.photon_list.PhotonList` assuming power-law emission
+functions for each XRB particle. LMXBs are given a photon index of :math:`\alpha = 1.56`,
+and HMXBs are given a photon index of :math:`\alpha = 2`.
 
 Generating the XRB Particle Dataset
 -----------------------------------
@@ -31,7 +50,7 @@ will be inherited from the star particles but we want to spread them around a bi
 in the vicinity of the star particle. If the star particles have a smoothing
 length field, that is most ideal, but a (value, unit) tuple such as ``(1.0, "kpc")``
 or a :class:`~yt.units.yt_array.YTQuantity` may also be supplied. This example uses
-a GIZMO FIRE dataset available from http://yt-project.org/data:
+a GIZMO FIRE dataset of a galaxy available from http://yt-project.org/data:
 
 .. code-block:: python
 
@@ -93,3 +112,9 @@ power-law source model for the XRB particles and the creation of the
 Here, we also used the center of the sphere ``sp`` we created earlier as well
 as the :class:`~yt.utilities.cosmology.Cosmology` object from the original dataset.
 All of the XRB particles are used in the creation of the photons. 
+
+We can then use this :class:`~pyxsim.photon_list.PhotonList` in the usual
+pyXSIM way to create a mock observation. The figure below shows an example 
+simulation of XRBs, with projected stellar density on the left and the X-ray
+image (including the thermal emission from the hot gas of the galaxy) on the 
+right.
