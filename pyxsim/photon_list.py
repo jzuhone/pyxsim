@@ -562,6 +562,10 @@ class PhotonList(object):
         """
         prng = parse_prng(prng)
 
+        if smooth_positions is not None and self.parameters["data_type"] == "particles":
+            raise RuntimeError("The 'smooth_positions' argument should not be used with "
+                               "particle-based datasets!")
+
         change_redshift = redshift_new is not None
         change_dist = dist_new is not None
 
