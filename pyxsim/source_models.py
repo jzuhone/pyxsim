@@ -11,6 +11,7 @@ from pyxsim.spectral_models import thermal_models
 from pyxsim.utils import parse_value
 from yt.utilities.exceptions import YTUnitConversionError
 from soxs.utils import parse_prng
+from soxs.constants import elem_names
 
 sqrt_two = np.sqrt(2.)
 
@@ -245,6 +246,16 @@ class ThermalSourceModel(SourceModel):
         else:
             metalZ = chunk[self.Zmet].v[idxs]*self.Zconvert
 
+        elemZ = None
+        if self.num_var_elem > 0:
+            elemZ = np.zeros((self.num_var_elem, num_cells))
+            for elem, value in self.var_elem.items():
+                j = elem_names.index(elem)
+                if isinstance(value, float):
+                    elemZ[j, :] = value
+                else:
+                    elemZ[j, :] = chunk[value].v[idxs]*self.Zconvert
+
         number_of_photons = np.zeros(num_cells, dtype="int64")
         energies = np.zeros(num_photons_max)
 
@@ -268,8 +279,10 @@ class ThermalSourceModel(SourceModel):
 
             if vspec is not None:
                 cell_norm_v = np.zeros(cem.size)
-                for j, Ze in enumerate(abund):
-                    tot_ph_v = vspec.d.sum()
+                for j in range(self.num_var_elem):
+                    tot_ph_v = vspec.d[j, :].sum()
+                    cell_norm_v += tot_ph_v*elemZ[j, ibegin:iend]*cem
+                cell_norm += cell_norm_v
 
             cell_n = ensure_numpy_array(self.prng.poisson(lam=cell_norm))
 
@@ -285,12 +298,13 @@ class ThermalSourceModel(SourceModel):
                 cumspec_v = None
                 if vspec is not None:
                     cumspec_v = np.zeros((self.num_var_elem, nchan+1))
-                    for j in range(len(abund)):
-                        cumspec_v[j,1:] = np.cumsum(vspec.d)
+                    for j in range(self.num_var_elem):
+                        cumspec_v[j, 1:] = np.cumsum(vspec.d[j, :])
 
             ei = start_e
-            for cn, Z in zip(number_of_photons[ibegin:iend], metalZ[ibegin:iend]):
+            for icell in range(ibegin, iend):
                 self.pbar.update()
+                cn = number_of_photons[icell]
                 if cn == 0:
                     continue
                 # The rather verbose form of the few next statements is a
@@ -300,10 +314,10 @@ class ThermalSourceModel(SourceModel):
                 # for details.
                 if self.method == "invert_cdf":
                     cumspec = cumspec_c
-                    cumspec += Z * cumspec_m
+                    cumspec += metalZ[icell] * cumspec_m
                     if cumspec_v is not None:
-                        for j, Ze in enumerate(abund):
-                            cumspec += Ze * cumspec_v[j,:]
+                        for j in range(self.num_var_elem):
+                            cumspec += elemZ[j, icell]*cumspec_v[j, :]
                     norm_factor = 1.0 / cumspec[-1]
                     cumspec *= norm_factor
                     randvec = self.prng.uniform(size=cn)
@@ -311,10 +325,10 @@ class ThermalSourceModel(SourceModel):
                     cell_e = np.interp(randvec, cumspec, ebins)
                 elif self.method == "accept_reject":
                     tot_spec = cspec.d
-                    tot_spec += Z * mspec.d
+                    tot_spec += metalZ[icell] * mspec.d
                     if vspec is not None:
-                        for j, Ze in enumerate(abund):
-                            tot_spec += Ze * vspec.d
+                        for j in range(self.num_var_elem):
+                            tot_spec += elemZ[j, icell]*vspec.d[j, :]
                     norm_factor = 1.0 / tot_spec.sum()
                     tot_spec *= norm_factor
                     eidxs = self.prng.choice(nchan, size=cn, p=tot_spec)
