@@ -49,21 +49,29 @@ class TableApecModel(ApecGenerator):
     >>> apec_model = TableApecModel(0.05, 50.0, 1000, apec_vers="3.0.3",
     ...                             thermal_broad=False)
     """
-    def __init__(self, emin, emax, nchan, model_root=None,
-                 model_vers=None, thermal_broad=True):
+    def __init__(self, emin, emax, nchan, var_elem=None,
+                 model_root=None, model_vers=None, 
+                 thermal_broad=True):
         if model_vers is None:
             model_vers = "3.0.8"
-        super(TableApecModel, self).__init__(emin, emax, nchan, apec_root=model_root,
-                                             apec_vers=model_vers, broadening=thermal_broad)
+        super(TableApecModel, self).__init__(emin, emax, nchan, var_elem=var_elem,
+                                             apec_root=model_root,
+                                             apec_vers=model_vers, 
+                                             broadening=thermal_broad)
         self.nchan = self.nbins
 
     def prepare_spectrum(self, zobs):
         """
         Prepare the thermal model for execution given a redshift *zobs* for the spectrum.
         """
-        specs = self._get_table(list(range(self.nT)), zobs, 0.0)
-        self.cosmic_spec = YTArray(specs[0], "cm**3/s")
-        self.metal_spec = YTArray(specs[1], "cm**3/s")
+        cosmic_spec, metal_spec, var_spec = \
+            self._get_table(list(range(self.nT)), zobs, 0.0)
+        self.cosmic_spec = YTArray(cosmic_spec, "cm**3/s")
+        self.metal_spec = YTArray(metal_spec, "cm**3/s")
+        if var_spec is None:
+            self.var_spec = var_spec
+        else:
+            self.var_spec = YTArray(var_spec, "cm**3/s")
 
     def get_spectrum(self, kT):
         """
@@ -79,7 +87,8 @@ class TableApecModel(ApecGenerator):
         mspec_r = self.metal_spec[tindex+1,:]
         cosmic_spec = cspec_l*(1.-dT)+cspec_r*dT
         metal_spec = mspec_l*(1.-dT)+mspec_r*dT
-        return cosmic_spec, metal_spec
+        var_spec = None
+        return cosmic_spec, metal_spec, var_spec
 
     def return_spectrum(self, temperature, metallicity, redshift, norm, velocity=0.0):
         """
