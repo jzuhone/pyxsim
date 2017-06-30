@@ -322,16 +322,23 @@ class PhotonList(object):
         else:
             parameters["data_type"] = "particles"
 
-        if hasattr(data_source, "left_edge"):
+        if hasattr(data_source, "base_object"):
+            # This a cut region so we'll figure out
+            # its bounds from its parent object
+            data_src = data_source.base_object
+        else:
+            data_src = data_source
+
+        if hasattr(data_src, "left_edge"):
             # Region or grid
-            c = 0.5*(data_source.left_edge+data_source.right_edge)
-            w = data_source.right_edge - data_source.left_edge
+            c = 0.5*(data_src.left_edge+data_src.right_edge)
+            w = data_src.right_edge - data_src.left_edge
             le = -0.5*w + c
             re = 0.5*w + c
-        elif hasattr(data_source, "radius") and not hasattr(data_source, "height"):
+        elif hasattr(data_src, "radius") and not hasattr(data_src, "height"):
             # Sphere
-            le = -data_source.radius+data_source.center
-            re = data_source.radius+data_source.center
+            le = -data_src.radius+data_src.center
+            re = data_src.radius+data_src.center
         else:
             # Compute rough boundaries of the object
             # DOES NOT WORK for objects straddling periodic 

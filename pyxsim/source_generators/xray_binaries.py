@@ -245,7 +245,7 @@ def get_scale_factor(ind, emin, emax):
 def convert_bands(ind, emin_a, emax_a, emin_b, emax_b):
     if ind == 2.0:
         k = np.log(emax_a/emin_a)
-        k /=  np.log(emax_b/emin_b)
+        k /= np.log(emax_b/emin_b)
     else:
         k = (emax_a**(2.0-ind)-emin_a**(2.0-ind))
         k /= (emax_b**(2.0-ind)-emin_b**(2.0-ind))
