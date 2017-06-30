@@ -66,6 +66,40 @@ def concatenate_photons(photons):
         else:
             photons[key] = YTArray([], photon_units[key])
 
+def find_object_bounds(data_source):
+    # This logic is required to determine the bounds of 
+    # the object, which is solely for fixing coordinates 
+    # at periodic boundaries
+
+    if hasattr(data_source, "base_object"):
+        # This a cut region so we'll figure out
+        # its bounds from its parent object
+        data_src = data_source.base_object
+    else:
+        data_src = data_source
+
+    if hasattr(data_src, "left_edge"):
+        # Region or grid
+        c = 0.5 * (data_src.left_edge + data_src.right_edge)
+        w = data_src.right_edge - data_src.left_edge
+        le = -0.5 * w + c
+        re = 0.5 * w + c
+    elif hasattr(data_src, "radius") and not hasattr(data_src, "height"):
+        # Sphere
+        le = -data_src.radius + data_src.center
+        re = data_src.radius + data_src.center
+    else:
+        # Not sure what to do with any other object yet, so just
+        # return the domain edges and punt.
+        mylog.warning("You are using a region that is not currently "
+                      "supported for straddling periodic boundaries. "
+                      "Check to make sure that your region does not "
+                      "do so.")
+        le = data_source.ds.domain_left_edge
+        re = data_source.ds.domain_right_edge
+
+    return le, re
+
 class PhotonList(object):
 
     def __init__(self, photons, parameters, cosmo):
@@ -322,36 +356,6 @@ class PhotonList(object):
         else:
             parameters["data_type"] = "particles"
 
-        if hasattr(data_source, "base_object"):
-            # This a cut region so we'll figure out
-            # its bounds from its parent object
-            data_src = data_source.base_object
-        else:
-            data_src = data_source
-
-        if hasattr(data_src, "left_edge"):
-            # Region or grid
-            c = 0.5*(data_src.left_edge+data_src.right_edge)
-            w = data_src.right_edge - data_src.left_edge
-            le = -0.5*w + c
-            re = 0.5*w + c
-        elif hasattr(data_src, "radius") and not hasattr(data_src, "height"):
-            # Sphere
-            le = -data_src.radius+data_src.center
-            re = data_src.radius+data_src.center
-        else:
-            # Compute rough boundaries of the object
-            # DOES NOT WORK for objects straddling periodic 
-            # boundaries yet
-            if sum(ds.periodicity) > 0:
-                mylog.warning("You are using a region that is not currently "
-                              "supported for straddling periodic boundaries. "
-                              "Check to make sure that this is not the case.")
-            le = ds.arr(np.zeros(3), "code_length")
-            re = ds.arr(np.zeros(3), "code_length")
-            for i, ax in enumerate(p_fields):
-                le[i], re[i] = data_source.quantities.extrema(ax)
-
         citer = data_source.chunks([], "io")
 
         photons = defaultdict(list)
@@ -379,16 +383,21 @@ class PhotonList(object):
 
         concatenate_photons(photons)
 
-        # Translate photon coordinates to the source center
-        # Fix photon coordinates for regions crossing a periodic boundary
-        dw = ds.domain_width.to("kpc")
+        if sum(ds.periodicity) > 0:
+            # Fix photon coordinates for regions crossing a periodic boundary
+            dw = ds.domain_width.to("kpc")
+            le, re = find_object_bounds(data_source)
+            for i, ax in enumerate("xyz"):
+                if ds.periodicity[i] and len(photons[ax]) > 0:
+                    tfl = photons[ax] < le[i].to('kpc')
+                    tfr = photons[ax] > re[i].to('kpc')
+                    photons[ax][tfl] += dw[i]
+                    photons[ax][tfr] -= dw[i]
+
+        # Re-center all coordinates
         for i, ax in enumerate("xyz"):
-            if ds.periodicity[i] and len(photons[ax]) > 0:
-                tfl = photons[ax] < le[i].to('kpc')
-                tfr = photons[ax] > re[i].to('kpc')
-                photons[ax][tfl] += dw[i] 
-                photons[ax][tfr] -= dw[i]
-            photons[ax] -= parameters["center"][i].in_units("kpc")
+            if len(photons[ax]) > 0:
+                photons[ax] -= parameters["center"][i].in_units("kpc")
 
         mylog.info("Finished generating photons.")
         mylog.info("Number of photons generated: %d" % int(np.sum(photons["num_photons"])))
