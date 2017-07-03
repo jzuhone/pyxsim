@@ -395,10 +395,6 @@ class PhotonList(object):
                     tfr = photons[ax] > re[i]
                     photons[ax][tfl] += dw[i]
                     photons[ax][tfr] -= dw[i]
-                    if tfl.any():
-                        c[i] += dw[i]
-                    elif tfr.any():
-                        c[i] -= dw[i]
 
         # Re-center all coordinates
         for i, ax in enumerate("xyz"):
