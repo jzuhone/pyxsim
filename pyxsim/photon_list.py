@@ -98,7 +98,7 @@ def find_object_bounds(data_source):
         le = data_source.ds.domain_left_edge
         re = data_source.ds.domain_right_edge
 
-    return le, re
+    return le.to("kpc"), re.to("kpc")
 
 class PhotonList(object):
 
@@ -383,21 +383,27 @@ class PhotonList(object):
 
         concatenate_photons(photons)
 
+        c = parameters["center"].to("kpc")
+
         if sum(ds.periodicity) > 0:
             # Fix photon coordinates for regions crossing a periodic boundary
             dw = ds.domain_width.to("kpc")
             le, re = find_object_bounds(data_source)
             for i, ax in enumerate("xyz"):
                 if ds.periodicity[i] and len(photons[ax]) > 0:
-                    tfl = photons[ax] < le[i].to('kpc')
-                    tfr = photons[ax] > re[i].to('kpc')
+                    tfl = photons[ax] < le[i]
+                    tfr = photons[ax] > re[i]
                     photons[ax][tfl] += dw[i]
                     photons[ax][tfr] -= dw[i]
+                    if tfl.any():
+                        c[i] += dw[i]
+                    elif tfr.any():
+                        c[i] -= dw[i]
 
         # Re-center all coordinates
         for i, ax in enumerate("xyz"):
             if len(photons[ax]) > 0:
-                photons[ax] -= parameters["center"][i].in_units("kpc")
+                photons[ax] -= c[i]
 
         mylog.info("Finished generating photons.")
         mylog.info("Number of photons generated: %d" % int(np.sum(photons["num_photons"])))
