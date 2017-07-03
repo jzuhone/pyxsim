@@ -118,6 +118,7 @@ class XrayLightCone(LightCone):
             photons = PhotonList.from_data_source(reg, output['redshift'], area,
                                                   exp_time, source_model,
                                                   parameters=parameters,
+                                                  center=output["projection_center"],
                                                   velocity_fields=velocity_fields,
                                                   cosmology=ds.cosmology)
             if sum(photons["num_photons"]) > 0:
