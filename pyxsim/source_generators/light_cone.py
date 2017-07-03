@@ -105,8 +105,9 @@ class XrayLightCone(LightCone):
         for output in self.light_cone_solution:
             ds = load(output["filename"])
             ax = output["projection_axis"]
-            le = output["projection_center"].copy()
-            re = output["projection_center"].copy()
+            c = output["projection_center"]*ds.domain_width + ds.domain_left_edge
+            le = c.copy()
+            re = c.copy()
             width = ds.quan(aw*output["box_width_per_angle"], "unitary").to("code_length")
             depth = ds.domain_width[ax].in_units("code_length")*output["box_depth_fraction"]
             le[ax] -= 0.5*depth
@@ -118,7 +119,7 @@ class XrayLightCone(LightCone):
             photons = PhotonList.from_data_source(reg, output['redshift'], area,
                                                   exp_time, source_model,
                                                   parameters=parameters,
-                                                  center=output["projection_center"],
+                                                  center=c,
                                                   velocity_fields=velocity_fields,
                                                   cosmology=ds.cosmology)
             if sum(photons["num_photons"]) > 0:
