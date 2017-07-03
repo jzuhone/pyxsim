@@ -37,13 +37,10 @@ def test_xray_binaries():
 
     sp = ds.sphere("max", (0.25, "Mpc"))
 
-    metallicity_field = ("PartType4", "Metallicity_00")
     scale_length = (1.0, "kpc")
     age_field = ("PartType4", "particle_age")
 
-    new_ds = make_xrb_particles(sp, metallicity_field, age_field,
-                                scale_length, output_lums="output_lums",
-                                prng=prng)
+    new_ds = make_xrb_particles(sp, age_field, scale_length, prng=prng)
 
     dd = new_ds.all_data()
 
@@ -55,7 +52,7 @@ def test_xray_binaries():
 
     photons_xrb = make_xrb_photons(new_ds, redshift, area, 
                                    exp_time, emin, emax,
-                                   center=sp.center, 
+                                   center=sp.center,
                                    cosmology=ds.cosmology, prng=prng)
 
     D_L = ds.cosmology.luminosity_distance(0.0, redshift)
@@ -71,16 +68,6 @@ def test_xray_binaries():
     dn = np.sqrt(n2)
 
     assert np.abs(n1-n2) < 1.645*dn
-
-    l_l, N_l = loadtxt("output_lums_lmxb.dat")
-    l_h, N_h = loadtxt("output_lums_hmxb.dat")
-
-    fluxes2 = (l_l+l_h)*bolometric_correction
-    fluxes2 /= 4.0*np.pi*D_L*D_L
-
-    n3 = fluxes2.sum()*exp_time*area/E_mean
-
-    assert np.abs(n1-n3) < 1.645*dn
 
     os.chdir(curdir)
     shutil.rmtree(tmpdir)
