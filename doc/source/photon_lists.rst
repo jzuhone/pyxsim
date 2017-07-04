@@ -117,7 +117,7 @@ parameters to disk. To read previously stored photons back from disk, use the
 
 .. code-block:: python
 
-    photons = PhotonList.from_file("cluster_photons.h5")
+    photons = pyxsim.PhotonList.from_file("cluster_photons.h5")
 
 Merging Photon Lists
 --------------------
