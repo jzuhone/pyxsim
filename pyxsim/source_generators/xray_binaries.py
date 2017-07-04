@@ -217,7 +217,7 @@ def make_xrb_particles(data_source, age_field, scale_length,
     # Fragos et al 2013.
 
     N_l = lmxb_cdf(Lcut)*mtot.v*1.0e-11
-    N_h = hmxb_cdf(Lcut)*mtot.v*1.0e-11*sfr
+    N_h = hmxb_cdf(Lcut)*sfr
 
     N_all = N_l+N_h
 
