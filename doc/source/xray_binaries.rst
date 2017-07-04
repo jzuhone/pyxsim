@@ -54,7 +54,6 @@ period of time previous to the current simulation time is computed. This time is
 1.0 Gyr by default, but may be set by suppling a new value to the ``sfr_time_range``
 parameter.
 
-
 This example uses a GIZMO FIRE dataset of a galaxy available from 
 http://yt-project.org/data:
 
@@ -79,15 +78,15 @@ http://yt-project.org/data:
     ds.add_field(("PartType4", "particle_age"), function=_age, units="Gyr", 
                  particle_type=True)
 
-    # Create a sphere object centered on the maximum density
-    sp = ds.sphere("max", (0.25, "Mpc"))
-
     age_field = ("PartType4", "particle_age") # Age field
     scale_length = (1.0, "kpc") # No smoothing length here, so providing
                                 # a scalar
     sfr_time_range = (2.0, "Gyr") # Recent duration over which to compute
                                   # the star formation rate
-                              
+
+    # Create a sphere object centered on the maximum density
+    sp = ds.sphere("max", (0.25, "Mpc"))
+
     # Create the dataset
     new_ds = make_xrb_particles(sp, age_field, scale_length)
 
@@ -124,3 +123,50 @@ pyXSIM way to create a mock observation. The figure below shows an example
 simulation of XRBs, with projected stellar density on the left and the X-ray
 image (including the thermal emission from the hot gas of the galaxy) on the 
 right.
+
+Other Examples
+--------------
+
+The following two examples use galaxy datasets which can be downloaded 
+from http://yt-project.org/data. Only the code necessary to make the 
+XRB particles is shown here, the rest is the same. 
+
+An ART dataset:
+
+.. code-block:: python
+
+    import yt
+    import pyxsim
+
+    ds = yt.load("sizmbhloz-clref04SNth-rs9_a0.9011/sizmbhloz-clref04SNth-rs9_a0.9011.art")
+    
+    scale_length = (1.0, "kpc")
+    age_field = ("STAR", "age")
+    mass_field = ("STAR", "particle_mass")
+    
+    sp = ds.sphere("max", (0.25, "Mpc"))
+
+    new_ds = make_xrb_particles(sp, age_field, scale_length)
+
+An Enzo dataset:
+
+.. code-block:: python
+
+    import yt
+    import pyxsim
+
+    @yt.particle_filter(requires=["particle_type"], filtered_type='all')
+    def stars(pfilter, data):
+        filter = data[(pfilter.filtered_type, "particle_type")] == 2
+        return filter
+    
+    ds = yt.load('IsolatedGalaxy/galaxy0030/galaxy0030')
+    ds.add_particle_filter('stars')
+    
+    scale_length = (1.0, "kpc")
+    age_field = ("stars", "age")
+    mass_field = ("stars", "particle_mass")
+
+    sp = ds.sphere("max", (0.25, "Mpc"))
+
+    new_ds = make_xrb_particles(sp, age_field, scale_length)
