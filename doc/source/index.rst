@@ -70,6 +70,7 @@ Table of Contents
    :maxdepth: 2
 
    installing
+   v1_to_v2
    how_it_works
    basic_yt_concepts
    photon_lists

@@ -8,11 +8,11 @@ Dependencies
 
 pyXSIM is compatible with Python 2.7 or 3.5+, and requires the following Python packages:
 
-- `yt <http://yt-project.org>`_ (version 3.3.1 or higher)
-- `soxs <http://hea-www.cfa.harvard.edu/~jzuhone/soxs>`_ (version 1.0.1 or higher)
+- `yt <http://yt-project.org>`_ (version 3.3.5 or higher)
+- `soxs <http://hea-www.cfa.harvard.edu/~jzuhone/soxs>`_ (version 1.2.0 or higher)
 - `NumPy <http://www.numpy.org>`_
 - `SciPy <http://www.scipy.org>`_
-- `AstroPy <http://www.astropy.org>`_
+- `AstroPy <http://www.astropy.org>`_ (version 1.3 or higher)
 - `h5py <http://www.h5py.org>`_
 - `six <https://pythonhosted.org/six/>`_
 
