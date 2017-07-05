@@ -7,6 +7,7 @@ import h5py
 import os
 import sys
 from yt.config import ytcfg
+from astropy.units import Quantity
 import logging
 
 pyxsimLogger = logging.getLogger("pyxsim")
@@ -50,12 +51,14 @@ def force_unicode(value):
         return value
 
 def parse_value(value, default_units, ds=None):
+    if isinstance(value, Quantity):
+        value = YTQuantity.from_astropy(value)
     if ds is None:
         quan = YTQuantity
     else:
         quan = ds.quan
     if isinstance(value, YTQuantity):
-        return quan(value).in_units(default_units)
+        return quan(value.v, value.units).in_units(default_units)
     elif iterable(value):
         return quan(value[0], value[1]).in_units(default_units)
     else:
