@@ -58,9 +58,9 @@ class TableApecModel(ApecGenerator):
         """
         Prepare the thermal model for execution given a redshift *zobs* for the spectrum.
         """
-        cosmic_spec, metal_spec = self._get_table(list(range(self.nT)), zobs, 0.0)
-        self.cosmic_spec = YTArray(cosmic_spec, "cm**3/s")
-        self.metal_spec = YTArray(metal_spec, "cm**3/s")
+        specs = self._get_table(list(range(self.nT)), zobs, 0.0)
+        self.cosmic_spec = YTArray(specs[0], "cm**3/s")
+        self.metal_spec = YTArray(specs[1], "cm**3/s")
 
     def get_spectrum(self, kT):
         """
