@@ -228,7 +228,7 @@ class EventList(object):
         ----------
         fitsfile : string
             The name of the event file to write.
-        fov : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`.
+        fov : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
             The field of view of the event file. If units are not 
             provided, they are assumed to be in arcminutes.
         nx : integer
@@ -452,7 +452,7 @@ class EventList(object):
         ----------
         imagefile : string
             The name of the image file to write.
-        fov : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`.
+        fov : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
             The field of view of the image. If units are not provided, they
             are assumed to be in arcminutes.
         nx : integer

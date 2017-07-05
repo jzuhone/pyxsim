@@ -246,10 +246,10 @@ class PhotonList(object):
             The data source from which the photons will be generated.
         redshift : float
             The cosmological redshift for the photons.
-        area : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`
+        area : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
             The collecting area to determine the number of photons. If units are
             not specified, it is assumed to be in cm^2.
-        exp_time : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`
+        exp_time : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
             The exposure time to determine the number of photons. If units are
             not specified, it is assumed to be in seconds.
         source_model : :class:`~pyxsim.source_models.SourceModel`
@@ -259,7 +259,7 @@ class PhotonList(object):
         center : string or array_like, optional
             The origin of the photon spatial coordinates. Accepts "c", "max", or a coordinate. 
             If not specified, pyxsim attempts to use the "center" field parameter of the data_source. 
-        dist : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`, optional
+        dist : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
             The angular diameter distance, used for nearby sources. This may be
             optionally supplied instead of it being determined from the *redshift*
             and given *cosmology*. If units are not specified, it is assumed to be
@@ -533,17 +533,17 @@ class PhotonList(object):
             should be an off-axis normal vector, e.g [1.0, 2.0, -3.0]
         sky_center : array-like
             Center RA, Dec of the events in degrees.
-        area_new : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`, optional
+        area_new : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
             A value for the (constant) collecting area of the detector. If
             units are not specified, is assumed to be in cm**2.
-        exp_time_new : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`, optional
+        exp_time_new : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
             A new value for the exposure time. If units are not specified
             it is assumed to be in seconds.
         redshift_new : float, optional
             A new value for the cosmological redshift. Cannot be specified
             if you applied foreground galactic absorption already in the 
             :class:`~pyxsim.photon_list.PhotonList` instance.
-        dist_new : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`, optional
+        dist_new : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
             The new value for the angular diameter distance, used for nearby sources.
             This may be optionally supplied instead of it being determined from the
             cosmology. If units are not specified, it is assumed to be in Mpc. To 
@@ -740,7 +740,7 @@ class PhotonList(object):
         num_det = detected.sum()
 
         if num_det > 0:
-            
+
             if smooth_positions is not None:
                 sigma = smooth_positions*delta[detected]
                 xx += sigma*prng.normal(loc=0.0, scale=1.0, size=num_det)
@@ -761,10 +761,10 @@ class PhotonList(object):
             wcs.wcs.cunit = ["deg"]*2
 
             xx, yy = wcs.wcs_pix2world(xx, yy, 1)
-        
+
         events["xsky"] = YTArray(xx, "degree")
         events["ysky"] = YTArray(yy, "degree")
-            
+
         num_events = comm.mpi_allreduce(num_det)
 
         if comm.rank == 0:
