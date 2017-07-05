@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(name='pyxsim',
       packages=find_packages(),
-      version='2.0-dev',
+      version='2.0.0',
       description='Python package for simulating X-ray observations of astrophysical sources',
       author='John ZuHone',
       author_email='jzuhone@gmail.com',

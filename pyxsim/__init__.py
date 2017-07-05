@@ -1,4 +1,4 @@
-__version__ = "2.0-dev"
+__version__ = "2.0.0"
 
 from pyxsim.event_list import \
     EventList, \
