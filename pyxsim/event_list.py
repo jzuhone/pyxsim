@@ -71,18 +71,6 @@ class EventList(object):
         self.parameters = ParameterDict(parameters, "EventList", old_parameter_keys)
         self.num_events = comm.mpi_allreduce(events["xsky"].shape[0])
 
-    @classmethod
-    def create_empty_list(cls, exp_time, area, wcs, parameters=None):
-        events = {"xsky": np.array([]),
-                  "ysky": np.array([]),
-                  "eobs": YTArray([], "keV")}
-        if parameters is None:
-            parameters = {}
-        parameters["exp_time"] = parse_value(exp_time, "s")
-        parameters["area"] = parse_value(area, "cm**2")
-        parameters["sky_center"] = YTArray(wcs.wcs.crval[:], "deg")
-        return cls(events, parameters)
-
     def keys(self):
         return self.events.keys()
 
