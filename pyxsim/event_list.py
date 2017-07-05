@@ -375,6 +375,10 @@ class EventList(object):
         e_max : float, optional
             The maximum energy of the photons to save in keV.
         """
+        if isinstance(self, ConvolvedEventList):
+            mylog.error("Writing SIMPUT files is only supported if you didn't convolve with responses!")
+            raise NotImplementedError("Writing SIMPUT files is only supported if you didn't convolve with responses!")
+
         events = communicate_events(self.events)
 
         if comm.rank == 0:
@@ -576,10 +580,6 @@ class EventList(object):
         comm.barrier()
 
 class ConvolvedEventList(EventList):
-
-    def write_simput_file(self, prefix, overwrite=False, emin=None, emax=None):
-        mylog.error("Writing SIMPUT files is only supported if you didn't convolve with responses!")
-        raise TypeError("Writing SIMPUT files is only supported if you didn't convolve with responses!")
 
     def write_channel_spectrum(self, specfile, overwrite=False):
         r"""
