@@ -137,6 +137,7 @@ X-ray image (including the thermal emission from any hot gas in the galaxy)
 on the right, produced using the ACIS-I simulator built into SOXS.
 
 .. image:: _images/gizmo_xrbs.png
+    :width: 600px
 
 Other Examples
 --------------
@@ -166,6 +167,7 @@ ART Dataset
 Left: Projected stellar density. Right: X-ray events.
 
 .. image:: _images/art_xrbs.png
+    :width: 600px
 
 Enzo Dataset
 ++++++++++++
@@ -194,3 +196,4 @@ Enzo Dataset
 Left: Projected stellar density. Right: X-ray events.
 
 .. image:: _images/enzo_xrbs.png
+    :width: 600px
