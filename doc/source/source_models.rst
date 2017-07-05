@@ -38,7 +38,9 @@ requires the following arguments:
   string value built into pyXSIM is ``"apec"``. 
 * ``emin``: The minimum energy for the spectrum in keV.
 * ``emax``: The maximum energy for the spectrum in keV.
-* ``nchan``: The number of channels in the spectrum.
+* ``nchan``: The number of channels in the spectrum. If one is thermally broadening
+  lines (the default), it is recommended that this number create an energy resolution
+  per channel of roughly 1 eV.
 
 So creating a default instance is rather simple:
 

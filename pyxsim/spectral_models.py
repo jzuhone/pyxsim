@@ -30,7 +30,10 @@ class TableApecModel(ApecGenerator):
     emax : float
         The maximum energy for the spectral model.
     nchan : integer
-        The number of channels in the spectral model.
+        The number of channels in the spectral model. If one
+        is thermally broadening lines, it is recommended that 
+        this value result in an energy resolution per channel
+        of roughly 1 eV.
     model_root : string, optional
         The directory root where the model files are stored. If 
         not provided, the default SOXS-provided files are used.
