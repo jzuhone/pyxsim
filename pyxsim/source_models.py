@@ -320,13 +320,13 @@ class PowerLawSourceModel(SourceModel):
 
     Parameters
     ----------
-    e0 : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`
+    e0 : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
         The reference energy of the power law, in the rest frame of the source.
         If units are not given, they are assumed to be in keV.
-    emin : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`
+    emin : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
         The minimum energy of the photons to be generated, in the rest frame of
         the source. If units are not given, they are assumed to be in keV.
-    emax : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`
+    emax : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
         The maximum energy of the photons to be generated, in the rest frame of
         the source. If units are not given, they are assumed to be in keV.
     emission_field : string or (ftype, fname) tuple
@@ -408,14 +408,14 @@ class LineSourceModel(SourceModel):
 
     Parameters
     ----------
-    e0 : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`
+    e0 : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
         The location of the emission line in energy in the rest frame of the
         source. If units are not given, they are assumed to be in keV.
     emission_field : string or (ftype, fname) tuple
         The field corresponding to the photon count rate per cell or particle,
         in the rest frame of the source, which serves as the normalization for
         the line. Must be in counts/s.
-    sigma : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or field name, optional
+    sigma : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
         The standard intrinsic deviation of the emission line (not from Doppler
         broadening, which is handled in the projection step). Units of
         velocity or energy are accepted. If units are not given, they
