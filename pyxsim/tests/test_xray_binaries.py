@@ -2,7 +2,8 @@ from yt.utilities.answer_testing.framework import \
     requires_ds, data_dir_load
 from pyxsim.source_generators.xray_binaries import \
     make_xrb_photons, make_xrb_particles, \
-    bolometric_correction
+    bc_lmxb, bc_hmxb, convert_bands, alpha_lmxb, \
+    emin_lmxb, emax_lmxb, emin_hmxb, emax_hmxb
 from yt.units.yt_array import uconcatenate, loadtxt
 import numpy as np
 import tempfile
@@ -57,13 +58,21 @@ def test_xray_binaries():
 
     D_L = ds.cosmology.luminosity_distance(0.0, redshift)
 
+    kappa = convert_bands(alpha_lmxb, emin_hmxb, emax_hmxb,
+                          emin_lmxb, emax_lmxb)
+
     E = uconcatenate(photons_xrb["energy"])
-    fluxes = dd["particle_luminosity"]*bolometric_correction
-    fluxes /= 4.0*np.pi*D_L*D_L
+
+    lmxb_idxs = dd["particle_spectral_index"] < 2.0
+    hmxb_idxs = np.logical_not(lmxb_idxs)
+
+    flux = dd["particle_luminosity"][lmxb_idxs].sum()*kappa/bc_lmxb
+    flux += dd["particle_luminosity"][hmxb_idxs].sum()/bc_hmxb
+    flux /= 4.0*np.pi*D_L*D_L
 
     idxs = E*(1.0+redshift) > 2.0
     E_mean = E[idxs].mean().to("erg")
-    n1 = fluxes.sum()*exp_time*area/E_mean
+    n1 = flux*exp_time*area/E_mean
     n2 = idxs.sum()
     dn = np.sqrt(n2)
 

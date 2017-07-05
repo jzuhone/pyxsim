@@ -16,10 +16,7 @@ Papers used in this code:
 
 Gilfanov, M. 2004, MNRAS, 349, 146
 
-Fragos, T., Lehmer, B., Tremmel, M., et al. 2013, ApJ, 764, 41
-
 Mineo, S., Gilfanov, M., & Sunyaev, R. 2012, MNRAS, 419, 2095 
-
 """
 
 # Function to calculate the scale factor for a power
@@ -56,17 +53,15 @@ emax_lmxb = 8.0
 emin_hmxb = 2.0
 emax_hmxb = 10.0
 
-emin_lum = 2.0
-emax_lum = 10.0
+# Bolometric corrections 
 
-# Bolometric correction from Fragos et al. 2013
-
-bolometric_correction = 0.3
+bc_lmxb = convert_bands(alpha_lmxb, 0.03, 100.0, emin_lmxb, emax_lmxb)
+bc_hmxb = convert_bands(alpha_hmxb, 0.03, 100.0, emin_hmxb, emax_hmxb)
 
 # Range of luminosities common to both types of XRBs
 
-Lmin = 1.0e-3*bolometric_correction
-Lcut = 500.0*bolometric_correction
+Lmin = 1.0e-3
+Lcut = 1000.0
 nbins = 1000
 Lbins = np.logspace(np.log10(Lmin), np.log10(Lcut), nbins+1)
 logLbins = np.log10(Lbins)
@@ -79,16 +74,10 @@ alpha2 = 1.86
 alpha3 = 4.8
 
 # The luminosities from Gilfanov 2004 are
-# in the 0.5-8 keV band. Here we convert
-# to 2-10 keV assuming our spectral index
-# so that both LMXBs and HMXBs have the 
-# same band
+# in the 0.5-8 keV band. 
 
-kappa = convert_bands(alpha_lmxb, emin_hmxb, emax_hmxb,
-                      emin_lmxb, emax_lmxb)
-
-Lb1 = 0.19*kappa
-Lb2 = 5.0*kappa
+Lb1 = 0.19
+Lb2 = 5.0
 
 K1 = 440.4
 K2 = K1*(Lb1/Lb2)**alpha2
@@ -210,12 +199,6 @@ def make_xrb_particles(data_source, age_field, scale_length,
 
     scale = scale.to('kpc').d
 
-    # These are bolometric luminosities. Now convert them
-    # to the emin_lum-emax_lum keV band assuming the 
-    # "low-hard" state conversion factor uncorrected for
-    # absorption in the 2-10 keV band from Table 2 of 
-    # Fragos et al 2013.
-
     N_l = lmxb_cdf(Lcut)*mtot.v*1.0e-11
     N_h = hmxb_cdf(Lcut)*sfr
 
@@ -226,8 +209,8 @@ def make_xrb_particles(data_source, age_field, scale_length,
 
     # Compute conversion factors from luminosity to count rate
 
-    lmxb_factor = get_scale_factor(alpha_lmxb, emin_lum, emax_lum)
-    hmxb_factor = get_scale_factor(alpha_hmxb, emin_lum, emax_lum)
+    lmxb_factor = get_scale_factor(alpha_lmxb, emin_lmxb, emax_lmxb)
+    hmxb_factor = get_scale_factor(alpha_hmxb, emin_hmxb, emax_hmxb)
 
     xp = []
     yp = []
@@ -256,8 +239,8 @@ def make_xrb_particles(data_source, age_field, scale_length,
                 randvec = prng.uniform(size=n)
                 l = YTArray(10**invcdf_l(randvec)*1.0e38, "erg/s")
                 r = YTArray(l.v*lmxb_factor, "photons/s/keV")
-                # Now convert output luminosities back to bolometric
-                l /= bolometric_correction
+                # Now convert output luminosities to bolometric
+                l *= bc_lmxb
                 x = YTArray(prng.normal(scale=scale[i], size=n), "kpc")
                 y = YTArray(prng.normal(scale=scale[i], size=n), "kpc")
                 z = YTArray(prng.normal(scale=scale[i], size=n), "kpc")
@@ -294,8 +277,8 @@ def make_xrb_particles(data_source, age_field, scale_length,
                 randvec = prng.uniform(size=n)
                 l = YTArray(10**invcdf_h(randvec)*1.0e38, "erg/s")
                 r = YTArray(l.v*hmxb_factor, "photons/s/keV")
-                # Now convert output luminosities back to bolometric
-                l /= bolometric_correction
+                # Now convert output luminosities to bolometric
+                l *= bc_hmxb
                 x = YTArray(prng.normal(scale=scale[i], size=n), "kpc")
                 y = YTArray(prng.normal(scale=scale[i], size=n), "kpc")
                 z = YTArray(prng.normal(scale=scale[i], size=n), "kpc")
