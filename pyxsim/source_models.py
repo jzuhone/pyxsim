@@ -95,8 +95,7 @@ class ThermalSourceModel(SourceModel):
 
     Examples
     --------
-    >>> spec_model = TableApecModel(0.05, 50.0, 1000)
-    >>> source_model = ThermalSourceModel(spec_model, Zmet="metallicity")
+    >>> source_model = ThermalSourceModel("apec", 0.1, 10.0, 10000, Zmet="metallicity")
     """
     def __init__(self, spectral_model, emin, emax, nchan,
                  temperature_field=None, emission_measure_field=None,
