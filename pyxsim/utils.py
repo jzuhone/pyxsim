@@ -193,4 +193,4 @@ class ParameterDict(object):
         return key in self.param_dict
 
     def __repr__(self):
-        self.param_dict.__repr__()
+        return self.param_dict.__repr__()
