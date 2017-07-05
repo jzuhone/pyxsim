@@ -101,7 +101,7 @@ Other changes:
   is now a required argument. This is a backwards-incompatible change.
 * The ``clobber`` keyword argument for overwriting files has been changed to ``overwrite``.
   This is a backwards-incompatible change.
-* Handling for `cut regions <>http://yt-project.org/doc/analyzing/filtering.html#cut-regions`_ 
+* Handling for `cut regions <http://yt-project.org/doc/analyzing/filtering.html#cut-regions>`_ 
   when creating a :class:`~pyxsim.photon_list.PhotonList` for a dataset with periodic 
   boundaries has been improved in this release.
 * :class:`~pyxsim.photon_list.PhotonList` and :class:`~pyxsim.event_list.EventList`

@@ -110,9 +110,21 @@ power-law source model for the XRB particles and the creation of the
     redshift = 0.01 # Original dataset had z = 0, so putting it out just a bit
     emin = 0.1 # in keV
     emax = 10.0 # in keV
-    photons = make_xrb_photons(ds, area, exp_time, redshift, 
-                               emin, emax, center=sp.center, 
-                               cosmology=ds.cosmology)
+    photons_xrb = make_xrb_photons(new_ds, area, exp_time, redshift, 
+                                   emin, emax, center=sp.center, 
+                                   cosmology=ds.cosmology)
+
+    # We now show how to compute photons from the gas, generate events,
+    # and add the events together
+    
+    source_model = pyxsim.ThermalSourceModel("apec", 0.1, 10.0, 10000)
+
+    photons_gas = pyxsim.PhotonList.from_data_source(sp,  redshift, area, exp_time, source_model)
+
+    events_xrb = photons_xrb.project_photons("z", [30.0, 45.0], absorb_model="tbabs", nH=0.02)
+    events_gas = photons_gas.project_photons("z", [30.0, 45.0], absorb_model="tbabs", nH=0.02)
+
+    events = events_xrb + events_gas
 
 Here, we also used the center of the sphere ``sp`` we created earlier as well
 as the :class:`~yt.utilities.cosmology.Cosmology` object from the original dataset.
@@ -120,9 +132,11 @@ All of the XRB particles are used in the creation of the photons.
 
 We can then use this :class:`~pyxsim.photon_list.PhotonList` in the usual
 pyXSIM way to create a mock observation. The figure below shows an example 
-simulation of XRBs, with projected stellar density on the left and the X-ray
-image (including the thermal emission from the hot gas of the galaxy) on the 
-right.
+simulation of XRBs, with projected stellar density on the left and the 
+X-ray image (including the thermal emission from any hot gas in the galaxy)
+on the right, produced using the ACIS-I simulator built into SOXS.
+
+.. image:: _images/gizmo_xrbs.prng
 
 Other Examples
 --------------
@@ -148,6 +162,8 @@ An ART dataset:
 
     new_ds = make_xrb_particles(sp, age_field, scale_length)
 
+.. image:: _images/art_xrbs.prng
+
 An Enzo dataset:
 
 .. code-block:: python
@@ -170,3 +186,5 @@ An Enzo dataset:
     sp = ds.sphere("max", (0.25, "Mpc"))
 
     new_ds = make_xrb_particles(sp, age_field, scale_length)
+
+.. image:: _images/enzo_xrbs.prng
