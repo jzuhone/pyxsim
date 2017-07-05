@@ -9,7 +9,8 @@ Version 2.0.0
 This is a major new release of pyXSIM, which fixes bugs, adds a number of new features,
 but most importantly, implements a simpler API in many aspects. A number of the changes 
 in this version are backwards-incompatible with previous versions, and where applicable
-is noted below.
+is noted below. A useful summary of the API changes with some code examples can be 
+found at :ref:`v1_to_v2`.
 
 The largest (and largely hidden) change in this release is the outsourcing of 
 much of pyXSIM's capabilities to [SOXS](http://hea-www.cfa.harvard.edu/~jzuhone/soxs), 
@@ -38,7 +39,8 @@ Changes related to thermal source modeling:
   as this is now handled by :class:`~pyxsim.source_models.ThermalSourceModel`.
   This method now takes the name of the spectral model as a parameter. Consequently, 
   arguments needed for the creation of spectra now need to be passed to 
-  :class:`~pyxsim.source_models.ThermalSourceModel` upon creation of a new instance. 
+  :class:`~pyxsim.source_models.ThermalSourceModel` upon creation of a new instance.
+  This is a backwards-incompatible change.
 * Thermal broadening of spectral lines is now on by default.
 
 Changes related to modeling of foreground Galactic absorption:
@@ -51,7 +53,8 @@ Changes related to modeling of foreground Galactic absorption:
   as this is now handled by :meth:`~pyxsim.photon_list.PhotonList.project_photons`.
   This method now takes the name of the absorption model as a parameter. Consequently, 
   the ``nH`` parameter for the hydrogen column is now a parameter which is passed 
-  to :meth:`~pyxsim.photon_list.PhotonList.project_photons`.
+  to :meth:`~pyxsim.photon_list.PhotonList.project_photons`. This is a 
+  backwards-incompatible change.
 
 The following changes arise from a refactor of :class:`~pyxsim.instruments.InstrumentSimulator`:
 
