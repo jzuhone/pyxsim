@@ -29,6 +29,9 @@ New features:
   binaries, both low-mass and high-mass. This assumes as input a simulation with star 
   particles which have masses, ages, and metallicities. See :ref:`xray-binaries` for
   more information. This is an experimental feature which should be considered in "beta".
+* A minor feature, but methods and functions that accept arguments such as ``area`` and 
+  ``exp_time`` which accept values with unit information can now accept 
+  :class:`~astropy.units.Quantity` instances. 
 
 Changes related to thermal source modeling:
 
