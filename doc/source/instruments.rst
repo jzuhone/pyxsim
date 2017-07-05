@@ -8,7 +8,7 @@ Built-In Instrument Simulators
 
 pyXSIM provides the ability to perform "quick-and-dirty" convolutions with 
 approximate representations of real X-ray instruments using the 
-[SOXS](http://hea-www.cfa.harvard.edu/~jzuhone/soxs) software package as a 
+`SOXS <http://hea-www.cfa.harvard.edu/~jzuhone/soxs>`_ software package as a 
 backend. The accuracy of these representations is limited, since they 
 assume the following simplifications:
 
@@ -46,13 +46,12 @@ to the input events, in this order:
 2. The observed event energies are convolved with the selected RMF to produce 
    the observed energy channels. 
 
-An :class:`~pyxsim.instruments.InstrumentSimulator` takes an 
-:class:`~pyxsim.event_list.EventList`, performs the above operations, and returns
-a :class:`~pyxsim.event_list.ConvolvedEventList`, containing the events which remain
-after being "observed" with the instrument's effective area and the convolved channel
-energies (PI or PHA depending on the RMF). For more information about the convolved
-events, see :ref:`convolved_events`. Using an :class:`~pyxsim.instruments.InstrumentSimulator`
-is very simple:
+An ``InstrumentSimulator`` takes an :class:`~pyxsim.event_list.EventList`, performs 
+the above operations, and returns a :class:`~pyxsim.event_list.ConvolvedEventList`, 
+containing the events which remain after being "observed" with the instrument's effective 
+area and the convolved channel energies (PI or PHA depending on the RMF). For more 
+information about the convolved events, see :ref:`convolved_events`. Using an 
+``InstrumentSimulator`` is very simple:
 
 .. code-block:: python
 
@@ -71,7 +70,7 @@ Designing Your Own Instrument Simulator
 
 If you want to design an instrument simulator yourself for use with pyXSIM,  
 it is fairly simple. You need only to provide the following parameters in the
-call to :class:`~pyxsim.instruments.InstrumentSimulator`, in this order: 
+call to ``InstrumentSimulator``, in this order: 
 
 * ``name``: The short-hand name for the instrument.
 * ``arf_file``: The path to the ARF file you want to use. 

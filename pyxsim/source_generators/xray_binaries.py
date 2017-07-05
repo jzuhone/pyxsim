@@ -144,10 +144,13 @@ def make_xrb_particles(data_source, age_field, scale_length,
         etc.
     age_field : string or (type, name) field tuple
         The stellar age field. Must be in some kind of time units. 
-    scale_length : string, (ftype, fname) tuple, (value, unit) tuple, or YTQuantity
+    scale_length : string, (ftype, fname) tuple, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
         The radial length scale over which to scatter the XRB particles
         from their parent star particle. Can be the name of a smoothing
         length field for the stars, a (value, unit) tuple, or a YTQuantity.
+    sfr_time_range : string, (ftype, fname) tuple, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`, optional
+        The recent time range over which to calculate the star formation rate from
+        the current time in the dataset. Default: 1.0 Gyr
     prng : integer or :class:`~numpy.random.RandomState` object 
         A pseudo-random number generator. Typically will only be specified
         if you have a reason to generate the same set of random numbers, such as for a
@@ -350,16 +353,16 @@ def make_xrb_photons(ds, redshift, area, exp_time, emin, emax,
         The dataset of XRB particles to use to make the photons.
     redshift : float
         The cosmological redshift for the photons.
-    area : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`
+    area : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
         The collecting area to determine the number of photons. If units are
         not specified, it is assumed to be in cm^2.
-    exp_time : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`
+    exp_time : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
         The exposure time to determine the number of photons. If units are
         not specified, it is assumed to be in seconds.
-    emin : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`
+    emin : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
         The minimum energy of the photons to be generated, in the rest frame of
         the source. If units are not given, they are assumed to be in keV.
-    emax : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`
+    emax : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
         The maximum energy of the photons to be generated, in the rest frame of
         the source. If units are not given, they are assumed to be in keV.
     center : string or array_like, optional

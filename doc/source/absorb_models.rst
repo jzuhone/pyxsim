@@ -6,13 +6,14 @@ Absorption Models
 Foreground galactic absorption can be applied during the creation of events. The two 
 models included in pyXSIM for absorption are:
 
-* ``"wabs"``: Wisconsin (Morrison and McCammon; ApJ 270, 119) absorption model
-* ``"tbabs"``: Tuebingen-Boulder (Wilms, J., Allen, A., & McCray, R. 2000, ApJ, 542, 914)
+* ``"wabs"``: `Wisconsin (Morrison and McCammon; ApJ 270, 119) <http://adsabs.harvard.edu/abs/1983ApJ...270..119M>` 
+  absorption model
+* ``"tbabs"``: `Tuebingen-Boulder (Wilms, J., Allen, A., & McCray, R. 2000, ApJ, 542, 914) <http://adsabs.harvard.edu/abs/2000ApJ...542..914W>`_
   absorption model
 
 An absorption model may be specified in the call to 
 :meth:`~pyxsim.photon_list.PhotonList.project_photons`. The other required parameter is
-``nH``, the neutral hydrogen column density in units of :math:`10^{22} \rm{atoms} \rm{cm}^{-2}`:
+``nH``, the neutral hydrogen column density in units of :math:`10^{22} \rm{atoms}~\rm{cm}^{-2}`:
 
 .. code-block:: python
 

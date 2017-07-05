@@ -55,7 +55,7 @@ class XrayLightCone(LightCone):
         exp_time : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`
             The exposure time to determine the number of events. If units are
             not specified, it is assumed to be in seconds.
-        angular_width float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`
+        angular_width : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`
             The angular width of the light cone simulation. If units are not
             specified, it is assumed to be in degrees.
         source_model : :class:`~pyxsim.source_models.SourceModel`

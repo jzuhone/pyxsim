@@ -136,7 +136,7 @@ simulation of XRBs, with projected stellar density on the left and the
 X-ray image (including the thermal emission from any hot gas in the galaxy)
 on the right, produced using the ACIS-I simulator built into SOXS.
 
-.. image:: _images/gizmo_xrbs.prng
+.. image:: _images/gizmo_xrbs.png
 
 Other Examples
 --------------
@@ -145,7 +145,8 @@ The following two examples use galaxy datasets which can be downloaded
 from http://yt-project.org/data. Only the code necessary to make the 
 XRB particles is shown here, the rest is the same. 
 
-An ART dataset:
+ART Dataset
++++++++++++
 
 .. code-block:: python
 
@@ -162,9 +163,12 @@ An ART dataset:
 
     new_ds = make_xrb_particles(sp, age_field, scale_length)
 
-.. image:: _images/art_xrbs.prng
+Left: Projected stellar density. Right: X-ray events.
 
-An Enzo dataset:
+.. image:: _images/art_xrbs.png
+
+Enzo Dataset
+++++++++++++
 
 .. code-block:: python
 
@@ -187,4 +191,6 @@ An Enzo dataset:
 
     new_ds = make_xrb_particles(sp, age_field, scale_length)
 
-.. image:: _images/enzo_xrbs.prng
+Left: Projected stellar density. Right: X-ray events.
+
+.. image:: _images/enzo_xrbs.png

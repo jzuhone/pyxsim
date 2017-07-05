@@ -13,7 +13,7 @@ is noted below. A useful summary of the API changes with some code examples can 
 found at :ref:`v1_to_v2`.
 
 The largest (and largely hidden) change in this release is the outsourcing of 
-much of pyXSIM's capabilities to [SOXS](http://hea-www.cfa.harvard.edu/~jzuhone/soxs), 
+much of pyXSIM's capabilities to `SOXS <http://hea-www.cfa.harvard.edu/~jzuhone/soxs>`_, 
 which is a spin-off package from pyXSIM which models thermal spectra, foreground
 galactic absorption, and convolving with instrument models. This results in far 
 less duplication between the code bases of these two closely related projects.
@@ -59,15 +59,14 @@ Changes related to modeling of foreground Galactic absorption:
   to :meth:`~pyxsim.photon_list.PhotonList.project_photons`. This is a 
   backwards-incompatible change.
 
-The following changes arise from a refactor of :class:`~pyxsim.instruments.InstrumentSimulator`:
+The following changes arise from a refactor of ``InstrumentSimulator``
 
-* The :class:`~pyxsim.instruments.InstrumentSimulator` class now uses the SOXS machinery
-  for convolving with instrumental responses.
-* The only operations performed by :class:`~pyxsim.instruments.InstrumentSimulator` are
-  convolution with the effective area curve (using the ARF) and with the response matrix
-  (using the RMF). No spatial PSF convolutions or rebinning operations can be applied. For
-  more detailed instrument simulation, users are advised to write events to SIMPUT files
-  and use SOXS directly. 
+* The ``InstrumentSimulator`` class now uses the SOXS machinery for convolving with 
+  instrumental responses.
+* The only operations performed by ``InstrumentSimulator`` are convolution with the 
+  effective area curve (using the ARF) and with the response matrix (using the RMF).
+  No spatial PSF convolutions or rebinning operations can be applied. For more detailed 
+  instrument simulation, users are advised to write events to SIMPUT files and use SOXS directly. 
 * New *Hitomi* response files have been supplied with this version. 
 * The ``XRS_Imager`` and ``XRS_Calorimeter`` instruments have been renamed to 
   ``Lynx_Imager`` and ``Lynx_Calorimeter``.

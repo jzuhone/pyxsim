@@ -231,8 +231,8 @@ the ``overwrite`` argument determines whether or not a file can be overwritten.
 :class:`~pyxsim.event_list.ConvolvedEventList` is a subclass of 
 :class:`~pyxsim.event_list.EventList` which contains data and parameters for convolved
 events, specifically PI or PHA channels and related data. These events have been convolved
-with an ARF and an RMF using an :class:`~pyxsim.instruments.InstrumentSimulator`. Most
-of the :class:`~pyxsim.event_list.EventList` methods are still available (with the exception
+with an ARF and an RMF using an ``InstrumentSimulator``. Most of the 
+:class:`~pyxsim.event_list.EventList` methods are still available (with the exception
 that one is unable to write SIMPUT files from these objects). One additional method is 
 provided, :meth:`~pyxsim.event_list.ConvolvedEventList.write_channel_spectrum`, which 
 writes the spectrum binned according to PI or PHA channel to a file which can then by

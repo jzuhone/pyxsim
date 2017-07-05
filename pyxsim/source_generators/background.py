@@ -15,13 +15,13 @@ def make_background(area, exp_time, fov, sky_center, spectrum, prng=None):
 
     Parameters
     ----------
-    area : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`
+    area : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
         The collecting area to determine the number of events. If units are
         not specified, it is assumed to be in cm^2.
-    exp_time : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`
+    exp_time : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
         The exposure time to determine the number of events. If units are
         not specified, it is assumed to be in seconds.
-    fov : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`.
+    fov : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
         The field of view of the event file. If units are not 
         provided, they are assumed to be in arcminutes.
     sky_center : array-like

@@ -52,15 +52,15 @@ Alternatively:
 Projecting Photons from a Photon List
 -------------------------------------
 
-Two changes to :meth:`~pyxsim.PhotonList.project_photons` are important to note:
+Two changes to :meth:`~pyxsim.photon_list.PhotonList.project_photons` are important to note:
 
 * The ``sky_center`` argument is now a required argument. 
 * The ``absorb_model`` argument now takes a string, ``"wabs"`` or 
   ``"tbabs"``, instead of a :class:`~pyxsim.spectral_models.AbsorptionModel` 
   instance, and ``nH`` has been added as an optional argument
-  to :meth:`~pyxsim.PhotonList.project_photons`. It is no longer
+  to :meth:`~pyxsim.photon_list.PhotonList.project_photons`. It is no longer
   necessary to create the :class:`~pyxsim.spectral_models.AbsorptionModel` 
-  on your own, as :meth:`~pyxsim.PhotonList.project_photons`
+  on your own, as :meth:`~pyxsim.photon_list.PhotonList.project_photons`
   now does this internally. However, it is still possible to pass
   a specific :class:`~pyxsim.spectral_models.AbsorptionModel` class
   itself to this argument, which allows for custom absorption models 
@@ -111,14 +111,14 @@ and :ref:`background` for more information.
 Instrument Simulators
 ---------------------
 
-The only operations now performed by :class:`~pyxsim.instruments.InstrumentSimulator` are
-convolution with the effective area curve (using the ARF) and with the response matrix
-(using the RMF). No spatial PSF convolutions or rebinning operations can be applied. For
-more detailed instrument simulation, users are advised to write events to SIMPUT files
+The only operations now performed by ``InstrumentSimulator`` are convolution with the 
+effective area curve (using the ARF) and with the response matrix (using the RMF). No 
+spatial PSF convolutions or rebinning operations can be applied. For more detailed 
+instrument simulation, users are advised to write events to SIMPUT files
 and use SOXS directly. 
 
-:class:`~pyxsim.instruments.InstrumentSimulator` instances now only take
-a single argument, the :class:`~pyxsim.event_list.EventList`:
+``InstrumentSimulator`` instances now only take a single argument, the 
+:class:`~pyxsim.event_list.EventList`:
 
 .. code-block:: python
 
