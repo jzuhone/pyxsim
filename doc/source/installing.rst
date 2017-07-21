@@ -28,7 +28,9 @@ you have the `Anaconda Python Distribution <https://store.continuum.io/cshop/ana
 
 .. code-block:: bash
 
-    [~]$ conda install -c jzuhone pyxsim
+    [~]$ conda install -c jzuhone -c astropy pyxsim
+
+Note both the ``jzuhone`` and ``astropy`` channels are required.
 
 The second way to install pyXSIM is via pip. pip will attempt to download the dependencies and 
 install them, if they are not already installed in your Python distribution:
