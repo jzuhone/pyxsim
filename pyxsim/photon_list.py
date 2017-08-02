@@ -676,47 +676,16 @@ class PhotonList(object):
         obs_cells = np.searchsorted(self.p_bins, idxs, side='right')-1
         delta = dx[obs_cells]
 
+        events = {}
+
         if isinstance(normal, string_types):
-
-            if self.parameters["data_type"] == "cells":
-                xsky = prng.uniform(low=-0.5, high=0.5, size=my_n_obs)
-                ysky = prng.uniform(low=-0.5, high=0.5, size=my_n_obs)
-            elif self.parameters["data_type"] == "particles":
-                xsky = prng.normal(loc=0.0, scale=1.0, size=my_n_obs)
-                ysky = prng.normal(loc=0.0, scale=1.0, size=my_n_obs)
-            xsky *= delta
-            ysky *= delta
-            xsky += self.photons[axes_lookup[normal][0]].d[obs_cells]
-            ysky += self.photons[axes_lookup[normal][1]].d[obs_cells]
-
             if not no_shifting:
                 vz = self.photons["v%s" % normal]
-
         else:
-
-            if self.parameters["data_type"] == "cells":
-                x = prng.uniform(low=-0.5, high=0.5, size=my_n_obs)
-                y = prng.uniform(low=-0.5, high=0.5, size=my_n_obs)
-                z = prng.uniform(low=-0.5, high=0.5, size=my_n_obs)
-            elif self.parameters["data_type"] == "particles":
-                x = prng.normal(loc=0.0, scale=1.0, size=my_n_obs)
-                y = prng.normal(loc=0.0, scale=1.0, size=my_n_obs)
-                z = prng.normal(loc=0.0, scale=1.0, size=my_n_obs)
-
             if not no_shifting:
                 vz = self.photons["vx"]*z_hat[0] + \
                      self.photons["vy"]*z_hat[1] + \
                      self.photons["vz"]*z_hat[2]
-
-            x *= delta
-            y *= delta
-            z *= delta
-            x += self.photons["x"].d[obs_cells]
-            y += self.photons["y"].d[obs_cells]
-            z += self.photons["z"].d[obs_cells]
-
-            xsky = x*x_hat[0] + y*x_hat[1] + z*x_hat[2]
-            ysky = x*y_hat[0] + y*y_hat[1] + z*y_hat[2]
 
         if no_shifting:
             eobs = self.photons["energy"][idxs]
@@ -731,24 +700,58 @@ class PhotonList(object):
         else:
             detected = absorb_model.absorb_photons(eobs, prng=prng)
 
-        events = {}
-
-        xx = xsky[detected]
-        yy = ysky[detected]
-        events["eobs"] = eobs[detected]
-
         num_det = detected.sum()
+
+        events["eobs"] = eobs[detected]
 
         if num_det > 0:
 
+            deld = delta[detected]
+            ocells = obs_cells[detected]
+
+            if isinstance(normal, string_types):
+
+                if self.parameters["data_type"] == "cells":
+                    xsky = prng.uniform(low=-0.5, high=0.5, size=num_det)
+                    ysky = prng.uniform(low=-0.5, high=0.5, size=num_det)
+                elif self.parameters["data_type"] == "particles":
+                    xsky = prng.normal(loc=0.0, scale=1.0, size=num_det)
+                    ysky = prng.normal(loc=0.0, scale=1.0, size=num_det)
+
+                np.multiply(xsky, deld, xsky)
+                np.multiply(ysky, deld, ysky)
+                np.add(xsky, self.photons[axes_lookup[normal][0]].d[ocells], xsky)
+                np.add(ysky, self.photons[axes_lookup[normal][1]].d[ocells], ysky)
+
+            else:
+
+                if self.parameters["data_type"] == "cells":
+                    x = prng.uniform(low=-0.5, high=0.5, size=num_det)
+                    y = prng.uniform(low=-0.5, high=0.5, size=num_det)
+                    z = prng.uniform(low=-0.5, high=0.5, size=num_det)
+                elif self.parameters["data_type"] == "particles":
+                    x = prng.normal(loc=0.0, scale=1.0, size=num_det)
+                    y = prng.normal(loc=0.0, scale=1.0, size=num_det)
+                    z = prng.normal(loc=0.0, scale=1.0, size=num_det)
+
+                np.multiply(x, deld, x)
+                np.multiply(y, deld, y)
+                np.multiply(z, deld, z)
+                np.add(x, self.photons["x"].d[ocells], x)
+                np.add(y, self.photons["y"].d[ocells], y)
+                np.add(z, self.photons["z"].d[ocells], z)
+    
+                xsky = x*x_hat[0] + y*x_hat[1] + z*x_hat[2]
+                ysky = x*y_hat[0] + y*y_hat[1] + z*y_hat[2]
+
             if smooth_positions is not None:
-                sigma = smooth_positions*delta[detected]
-                xx += sigma*prng.normal(loc=0.0, scale=1.0, size=num_det)
-                yy += sigma*prng.normal(loc=0.0, scale=1.0, size=num_det)
+                sigma = smooth_positions*deld
+                xsky += sigma*prng.normal(loc=0.0, scale=1.0, size=num_det)
+                ysky += sigma*prng.normal(loc=0.0, scale=1.0, size=num_det)
 
             d_a = D_A.to("kpc").v
-            xx = np.rad2deg(xx/d_a)*3600.0 # to arcsec
-            yy = np.rad2deg(yy/d_a)*3600.0 # to arcsec
+            xsky = np.rad2deg(xsky/d_a)*3600.0 # to arcsec
+            ysky = np.rad2deg(ysky/d_a)*3600.0 # to arcsec
 
             # We set a dummy pixel size of 1 arcsec just to compute a WCS
             dtheta = 1.0/3600.0
@@ -760,10 +763,15 @@ class PhotonList(object):
             wcs.wcs.ctype = ["RA---TAN","DEC--TAN"]
             wcs.wcs.cunit = ["deg"]*2
 
-            xx, yy = wcs.wcs_pix2world(xx, yy, 1)
+            xsky, ysky = wcs.wcs_pix2world(xsky, ysky, 1)
 
-        events["xsky"] = YTArray(xx, "degree")
-        events["ysky"] = YTArray(yy, "degree")
+        else:
+
+            xsky = []
+            ysky = []
+
+        events["xsky"] = YTArray(xsky, "degree")
+        events["ysky"] = YTArray(ysky, "degree")
 
         num_events = comm.mpi_allreduce(num_det)
 
