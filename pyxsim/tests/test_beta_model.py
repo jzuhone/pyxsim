@@ -20,6 +20,7 @@ from sherpa.astro.ui import load_user_model, add_user_pars, \
 from soxs.utils import convert_rmf
 from soxs.instrument import RedistributionMatrixFile, AuxiliaryResponseFile
 from soxs.instrument_registry import get_instrument_from_registry
+from soxs.spectra import ApecGenerator
 
 ckms = clight.in_units("km/s").v
 
@@ -32,6 +33,8 @@ mucal_spec = get_instrument_from_registry("mucal")
 rmf = RedistributionMatrixFile(mucal_spec["rmf"])
 arf = AuxiliaryResponseFile(mucal_spec['arf'])
 fit_model = TableApecModel(rmf.elo[0], rmf.ehi[-1], rmf.n_de)
+agen_var = ApecGenerator(rmf.elo[0], rmf.ehi[-1], rmf.n_de,
+                         var_elem=["O", "Ca"], broadening=True)
 
 def mymodel(pars, x, xhi=None):
     dx = x[1]-x[0]
@@ -127,6 +130,75 @@ def do_beta_model(source, v_field, em_field, prng=None):
     os.chdir(curdir)
     shutil.rmtree(tmpdir)
 
+def test_vapec_beta_model():
+
+    bms = ParticleBetaModelSource()
+
+    tmpdir = tempfile.mkdtemp()
+    curdir = os.getcwd()
+    os.chdir(tmpdir)
+
+    ds = bms.ds
+
+    A = 30000.
+    exp_time = 1.0e4
+    redshift = 0.05
+    nH_sim = 0.02
+
+    sphere = ds.sphere("c", (0.5, "Mpc"))
+
+    kT_sim = bms.kT
+    Z_sim = bms.Z
+
+    thermal_model = ThermalSourceModel("apec", 0.1, 11.5, 20000,
+                                       Zmet=("gas","metallicity"), 
+                                       prng=bms.prng)
+
+    photons = PhotonList.from_data_source(sphere, redshift, A, exp_time,
+                                          thermal_model)
+
+    D_A = photons.parameters["fid_d_a"]
+
+    norm_sim = sphere.quantities.total_quantity("emission_measure")
+    norm_sim *= 1.0e-14/(4*np.pi*D_A*D_A*(1.+redshift)*(1.+redshift))
+    norm_sim = float(norm_sim.in_cgs())
+
+    events = photons.project_photons("z", [30.0, 45.0], absorb_model="tbabs",
+                                     nH=nH_sim, prng=bms.prng, no_shifting=True)
+
+    new_events = Lynx_Calorimeter(events, prng=bms.prng)
+
+    os.system("cp %s %s ." % (arf.filename, rmf.filename))
+    convert_rmf(rmf.filename)
+
+    new_events.write_channel_spectrum("beta_model_evt.pi", overwrite=True)
+
+    load_user_model(mymodel, "tbapec")
+    add_user_pars("tbapec", ["nH", "kT", "metallicity", "redshift", "norm", "velocity"],
+                  [0.01, 4.0, 0.2, 0.04, norm_sim*0.8, 300.0],
+                  parmins=[0.0, 0.1, 0.0, -200.0, 0.0, 0.0],
+                  parmaxs=[10.0, 20.0, 10.0, 200.0, 1.0e9, 20000.0],
+                  parfrozen=[False, False, False, False, False, False])
+
+    load_pha("beta_model_evt.pi")
+    set_stat("cstat")
+    set_method("levmar")
+    ignore(":0.6, 8.0:")
+    set_model("tbapec")
+    fit()
+    set_covar_opt("sigma", 1.645)
+    covar()
+    res = get_covar_results()
+
+    assert np.abs(res.parvals[0]-nH_sim) < res.parmaxes[0]
+    assert np.abs(res.parvals[1]-kT_sim) < res.parmaxes[1]
+    assert np.abs(res.parvals[2]-Z_sim) < res.parmaxes[2]
+    assert np.abs(res.parvals[3]-norm_sim) < res.parmaxes[3]
+
+    os.chdir(curdir)
+    shutil.rmtree(tmpdir)
+
 if __name__ == "__main__":
     #test_beta_model()
     test_particle_beta_model()
+    test_vapec_beta_model()

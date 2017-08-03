@@ -55,7 +55,9 @@ class BetaModelSource(object):
         data["velocity_x"] = (np.zeros(ddims), "cm/s")
         data["velocity_y"] = (np.zeros(ddims), "cm/s")
         data["velocity_z"] = (velz, "cm/s")
-
+        data["oxygen"] = (0.5*np.ones(ddims), "Zsun")
+        data["calcium"] = (0.4*np.ones(ddims), "Zsun")
+        data["metallicity"] = (self.Z*np.ones(ddims), "Zsun")
         self.ds = load_uniform_grid(data, ddims, length_unit=(2*R, "Mpc"),
                                     nprocs=64, bbox=bbox)
 
