@@ -726,23 +726,16 @@ class PhotonList(object):
             else:
 
                 if self.parameters["data_type"] == "cells":
-                    x = prng.uniform(low=-0.5, high=0.5, size=num_det)
-                    y = prng.uniform(low=-0.5, high=0.5, size=num_det)
-                    z = prng.uniform(low=-0.5, high=0.5, size=num_det)
+                    r = prng.uniform(low=-0.5, high=0.5, size=(3,num_det))
                 elif self.parameters["data_type"] == "particles":
-                    x = prng.normal(loc=0.0, scale=1.0, size=num_det)
-                    y = prng.normal(loc=0.0, scale=1.0, size=num_det)
-                    z = prng.normal(loc=0.0, scale=1.0, size=num_det)
+                    r = prng.normal(loc=0.0, scale=1.0, size=(3,num_det))
 
-                np.multiply(x, deld, x)
-                np.multiply(y, deld, y)
-                np.multiply(z, deld, z)
-                np.add(x, self.photons["x"].d[ocells], x)
-                np.add(y, self.photons["y"].d[ocells], y)
-                np.add(z, self.photons["z"].d[ocells], z)
-    
-                xsky = x*x_hat[0] + y*x_hat[1] + z*x_hat[2]
-                ysky = x*y_hat[0] + y*y_hat[1] + z*y_hat[2]
+                np.multiply(r, deld, r)
+                r[:,0] += self.photons["x"].d[ocells]
+                r[:,1] += self.photons["y"].d[ocells]
+                r[:,2] += self.photons["z"].d[ocells]
+
+                xsky, ysky = np.dot([x_hat, y_hat], r)
 
             if smooth_positions is not None:
                 sigma = smooth_positions*deld
