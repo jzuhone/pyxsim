@@ -678,21 +678,19 @@ class PhotonList(object):
 
         events = {}
 
-        if isinstance(normal, string_types):
-            if not no_shifting:
-                vz = self.photons["v%s" % normal]
-        else:
-            if not no_shifting:
-                vz = self.photons["vx"]*z_hat[0] + \
-                     self.photons["vy"]*z_hat[1] + \
-                     self.photons["vz"]*z_hat[2]
+        eobs = self.photons["energy"][idxs]
 
-        if no_shifting:
-            eobs = self.photons["energy"][idxs]
-        else:
-            shift = -vz.in_cgs()/clight
-            shift = np.sqrt((1.-shift)/(1.+shift))
-            eobs = self.photons["energy"][idxs]*shift[obs_cells]
+        if not no_shifting:
+            if isinstance(normal, string_types):
+                shift = -self.photons["v%s" % normal][obs_cells].in_cgs()
+            else:
+                shift = -(self.photons["vx"]*z_hat[0] +
+                          self.photons["vy"]*z_hat[1] +
+                          self.photons["vz"]*z_hat[2])[obs_cells].in_cgs()
+            shift /= clight
+            np.sqrt((1.-shift)/(1.+shift), shift)
+            np.multiply(eobs, shift, eobs)
+
         eobs *= scale_factor
 
         if absorb_model is None:
