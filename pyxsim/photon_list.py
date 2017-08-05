@@ -741,20 +741,17 @@ class PhotonList(object):
                 ysky += sigma*prng.normal(loc=0.0, scale=1.0, size=num_det)
 
             d_a = D_A.to("kpc").v
-            xsky = np.rad2deg(xsky/d_a)*3600.0 # to arcsec
-            ysky = np.rad2deg(ysky/d_a)*3600.0 # to arcsec
+            xsky /= d_a
+            ysky /= d_a
 
-            # We set a dummy pixel size of 1 arcsec just to compute a WCS
-            dtheta = 1.0/3600.0
+            D = np.arctan(np.sqrt(xsky**2+ysky**2))
+            B = np.arctan2(-xsky, -ysky)
 
-            wcs = pywcs.WCS(naxis=2)
-            wcs.wcs.crpix = [0.0, 0.0]
-            wcs.wcs.crval = list(sky_center)
-            wcs.wcs.cdelt = [-dtheta, dtheta]
-            wcs.wcs.ctype = ["RA---TAN","DEC--TAN"]
-            wcs.wcs.cunit = ["deg"]*2
+            xsky = np.sin(sky_center[1])*np.sin(D)*np.cos(B)+np.cos(sky_center[1])*np.cos(D)
+            ysky = np.sin(D)*np.sin(B)
 
-            xsky, ysky = wcs.wcs_pix2world(xsky, ysky, 1)
+            xsky = sky_center[0] + np.arctan2(ysky, xsky)
+            ysky = np.arcsin(np.sin(sky_center[1])*np.cos(D)-np.cos(sky_center[1])*np.sin(D)*np.cos(B))
 
         else:
 
