@@ -5,7 +5,7 @@ from six import string_types
 from collections import defaultdict
 import numpy as np
 from yt.funcs import iterable
-from pyxsim.utils import mylog
+from pyxsim.utils import mylog, pixel_to_cel
 from yt.utilities.physical_constants import clight
 from yt.utilities.cosmology import Cosmology
 from yt.utilities.orientation import Orientation
@@ -744,17 +744,7 @@ class PhotonList(object):
             xsky /= d_a
             ysky /= d_a
 
-            D = np.arctan(np.sqrt(xsky**2+ysky**2))
-            B = np.arctan2(-xsky, -ysky)
-
-            skyc = np.deg2rad(sky_center.v)
-
-            xsky = np.sin(skyc[1])*np.sin(D)*np.cos(B)+np.cos(skyc[1])*np.cos(D)
-            ysky = np.sin(D)*np.sin(B)
-
-            xsky = np.rad2deg(skyc[0] + np.arctan2(ysky, xsky))
-            ysky = np.rad2deg(np.arcsin(np.sin(skyc[1])*np.cos(D) -
-                                        np.cos(skyc[1])*np.sin(D)*np.cos(B)))
+            xsky, ysky = pixel_to_cel(xsky, ysky, sky_center)
 
         else:
 
