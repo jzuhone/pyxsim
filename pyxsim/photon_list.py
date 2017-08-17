@@ -747,11 +747,14 @@ class PhotonList(object):
             D = np.arctan(np.sqrt(xsky**2+ysky**2))
             B = np.arctan2(-xsky, -ysky)
 
-            xsky = np.sin(sky_center[1])*np.sin(D)*np.cos(B)+np.cos(sky_center[1])*np.cos(D)
+            skyc = np.deg2rad(sky_center.v)
+
+            xsky = np.sin(skyc[1])*np.sin(D)*np.cos(B)+np.cos(skyc[1])*np.cos(D)
             ysky = np.sin(D)*np.sin(B)
 
-            xsky = sky_center[0] + np.arctan2(ysky, xsky)
-            ysky = np.arcsin(np.sin(sky_center[1])*np.cos(D)-np.cos(sky_center[1])*np.sin(D)*np.cos(B))
+            xsky = np.rad2deg(skyc[0] + np.arctan2(ysky, xsky))
+            ysky = np.rad2deg(np.arcsin(np.sin(skyc[1])*np.cos(D) -
+                                        np.cos(skyc[1])*np.sin(D)*np.cos(B)))
 
         else:
 
