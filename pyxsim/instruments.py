@@ -1,14 +1,10 @@
 import numpy as np
 from pyxsim.event_list import ConvolvedEventList
-from pyxsim.utils import pyxsim_path
 from soxs.instrument import \
     AuxiliaryResponseFile, \
     RedistributionMatrixFile
 from soxs.utils import parse_prng
 import os
-
-aciss_arf = os.path.join(pyxsim_path, "response_files", "aciss_aimpt_cy18.arf")
-aciss_rmf = os.path.join(pyxsim_path, "response_files", "aciss_aimpt_cy18.rmf")
 
 class InstrumentSimulator(object):
     def __init__(self, name, arf_file, rmf_file):
@@ -81,9 +77,10 @@ class InstrumentSimulator(object):
 
 # Specific instrument approximations
 
-ACIS_S = InstrumentSimulator("acis-s", aciss_arf, aciss_rmf)
-ACIS_I = InstrumentSimulator("acis-i", "acisi_aimpt_cy18.arf",
-                             "acisi_aimpt_cy18.rmf")
+ACIS_S = InstrumentSimulator("acis-s", "aciss_aimpt_cy19.arf",
+                             "aciss_aimpt_cy19.rmf")
+ACIS_I = InstrumentSimulator("acis-i", "acisi_aimpt_cy19.arf",
+                             "acisi_aimpt_cy19.rmf")
 Hitomi_SXS = InstrumentSimulator("hitomi_sxs", "hitomi_sxs_ptsrc.arf", 
                                  "hitomi_sxs.rmf")
 Athena_WFI = InstrumentSimulator("athena_wfi",
