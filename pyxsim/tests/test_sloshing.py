@@ -53,6 +53,22 @@ def test_sloshing():
 
     return_photons = return_data(photons1.photons)
 
+    nphots = 0
+    for i in range(4):
+        phots = PhotonList.from_data_source(sphere, redshift, A, 0.25*exp_time,
+                                            thermal_model)
+
+        phots.write_h5_file("split_photons_%d.h5" % i)
+        nphots += len(phots.photons["energy"])
+
+    merge_files(["split_photons_%d.h5" % i for i in range(4)],
+                "merged_photons.h5", add_exposure_times=True,
+                overwrite=True)
+
+    merged_photons = PhotonList.from_file("merged_photons.h5")
+    assert len(merged_photons.photons["energy"]) == nphots
+    assert merged_photons.parameters["fid_exp_time"] == exp_time
+
     events1 = photons1.project_photons([1.0,-0.5,0.2], [30., 45.], area_new=1500.,
                                        absorb_model="tbabs", nH=0.1, prng=prng)
     events2 = ACIS_S(events1, prng=prng)
