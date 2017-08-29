@@ -66,15 +66,15 @@ def parse_value(value, default_units, ds=None):
 
 def validate_parameters(first, second, skip=[]):
     keys1 = list(first.keys())
-    keys2 = list(first.keys())
+    keys2 = list(second.keys())
     keys1.sort()
     keys2.sort()
     if keys1 != keys2:
         raise RuntimeError("The two inputs do not have the same parameters!")
     for k1, k2 in zip(keys1, keys2):
         if k1 not in skip:
-            v1 = first[k1]
-            v2 = second[k2]
+            v1 = first[k1].value
+            v2 = second[k2].value
             if isinstance(v1, string_types) or isinstance(v2, string_types):
                 check_equal = v1 == v2
             else:
@@ -149,7 +149,7 @@ def merge_files(input_files, output_file, overwrite=False,
             data[key].append(f["/data"][key][:])
         f.close()
 
-    p_out["exp_time"] = tot_exp_time
+    p_out[exp_time_key] = tot_exp_time
 
     d = f_out.create_group("data")
     for k in data:
