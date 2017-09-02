@@ -778,8 +778,6 @@ class PhotonList(object):
             parameters["area"] = self.parameters["fid_area"]
         else:
             parameters["area"] = area_new
-        parameters["redshift"] = zobs
-        parameters["d_a"] = D_A.in_units("Mpc")
         parameters["sky_center"] = sky_center
 
         return EventList(events, parameters)

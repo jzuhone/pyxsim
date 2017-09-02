@@ -93,13 +93,13 @@ class EventList(object):
         return key in self.events
 
     def __add__(self, other):
-        validate_parameters(self.parameters, other.parameters)
+        validate_parameters(self.parameters, other.parameters, skip=["sky_center"])
         events = {}
         for item1, item2 in zip(self.items(), other.items()):
             k1, v1 = item1
             k2, v2 = item2
             events[k1] = uconcatenate([v1,v2])
-        return type(self)(events, self.parameters)
+        return type(self)(events, dict(self.parameters))
 
     def __iter__(self):
         return iter(self.events)
@@ -117,10 +117,6 @@ class EventList(object):
         p = f["/parameters"]
         parameters["exp_time"] = YTQuantity(p["exp_time"].value, "s")
         parameters["area"] = YTQuantity(p["area"].value, "cm**2")
-        if "redshift" in p:
-            parameters["redshift"] = p["redshift"].value
-        if "d_a" in p:
-            parameters["d_a"] = YTQuantity(p["d_a"].value, "Mpc")
         parameters["sky_center"] = YTArray(p["sky_center"][:], "deg")
 
         d = f["/data"]
@@ -129,8 +125,8 @@ class EventList(object):
         start_e = comm.rank*num_events//comm.size
         end_e = (comm.rank+1)*num_events//comm.size
 
-        events["xsky"] = d["xsky"][start_e:end_e]
-        events["ysky"] = d["ysky"][start_e:end_e]
+        events["xsky"] = YTArray(d["xsky"][start_e:end_e], "deg")
+        events["ysky"] = YTArray(d["ysky"][start_e:end_e], "deg")
         events["eobs"] = YTArray(d["eobs"][start_e:end_e], "keV")
         if "rmf" in p:
             parameters["rmf"] = force_unicode(p["rmf"].value)
@@ -164,10 +160,6 @@ class EventList(object):
 
         parameters["exp_time"] = YTQuantity(tblhdu.header["EXPOSURE"], "s")
         parameters["area"] = YTQuantity(tblhdu.header["AREA"], "cm**2")
-        if "REDSHIFT" in tblhdu.header:
-            parameters["redshift"] = tblhdu.header["REDSHIFT"]
-        if "D_A" in tblhdu.header:
-            parameters["d_a"] = YTQuantity(tblhdu.header["D_A"], "Mpc")
         parameters["sky_center"] = YTArray([tblhdu.header["TCRVL2"], 
                                             tblhdu.header["TCRVL3"]], "deg")
 
@@ -318,10 +310,6 @@ class EventList(object):
             tbhdu.header["TSTART"] = 0.0
             tbhdu.header["TSTOP"] = exp_time
             tbhdu.header["AREA"] = float(self.parameters["area"])
-            if "d_a" in self.parameters:
-                tbhdu.header["D_A"] = float(self.parameters["d_a"])
-            if "redshift" in self.parameters:
-                tbhdu.header["REDSHIFT"] = self.parameters["redshift"]
             tbhdu.header["HDUVERS"] = "1.1.0"
             tbhdu.header["RADECSYS"] = "FK5"
             tbhdu.header["EQUINOX"] = 2000.0
@@ -411,10 +399,6 @@ class EventList(object):
             p = f.create_group("parameters")
             p.create_dataset("exp_time", data=float(self.parameters["exp_time"]))
             p.create_dataset("area", data=float(self.parameters["area"]))
-            if "redshift" in self.parameters:
-                p.create_dataset("redshift", data=self.parameters["redshift"])
-            if "d_a" in self.parameters:
-                p.create_dataset("d_a", data=float(self.parameters["d_a"]))
             p.create_dataset("sky_center", data=self.parameters["sky_center"].d)
 
             d = f.create_group("data")
