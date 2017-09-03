@@ -31,6 +31,10 @@ before_install:
     - tar -zxvf ${ANSWER_VER}_3.tar.gz		
     - mkdir -p ~/.config/yt
     - printf "[yt]\ntest_data_dir = $PWD" >> $HOME/.config/yt/ytrc
+    - wget http://hea-www.cfa.harvard.edu/~jzuhone/soxs_responses.tar.gz
+    - tar -zxvf soxs_responses.tar.gz
+    - mkdir -p $HOME/.config/soxs
+    - printf "[soxs]\nresponse_path = $PWD/soxs_responses" >> $HOME/.config/soxs/soxs.cfg    
     # Use utf8 encoding. Should be default, but this is insurance against
     # future changes
     - export PYTHONIOENCODING=UTF8
