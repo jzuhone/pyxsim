@@ -656,10 +656,10 @@ class PhotonList(object):
                 else:
                     zobs = redshift_new
                     D_A = self.cosmo.angular_diameter_distance(0.0,zobs).in_units("Mpc")
-                    scale_factor = (1.+zobs0)/(1.+zobs)
                 Dratio = D_A0*D_A0*(1.+zobs0)**3 / \
                          (D_A*D_A*(1.+zobs)**3)
             fak = Aratio*Tratio*Dratio
+            scale_factor = (1. + zobs0) / (1. + zobs)
             if fak > 1:
                 raise ValueError("This combination of requested parameters results in "
                                  "%g%% more photons collected than are " % (100.*(fak-1.)) +
