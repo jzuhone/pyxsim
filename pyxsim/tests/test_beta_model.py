@@ -49,13 +49,17 @@ def test_beta_model():
 @requires_module("sherpa")
 def test_particle_beta_model():
     bms = ParticleBetaModelSource()
-    do_beta_model(bms, "particle_velocity_z", ("io", "emission_measure"))
+    do_beta_model(bms, "particle_velocity_z", 
+                  ("io", "emission_measure"), prng=29)
 
-def do_beta_model(source, v_field, em_field):
+def do_beta_model(source, v_field, em_field, prng=None):
 
     tmpdir = tempfile.mkdtemp()
     curdir = os.getcwd()
     os.chdir(tmpdir)
+    
+    if prng is None:
+        prng = source.prng
 
     ds = source.ds
 
@@ -70,7 +74,7 @@ def do_beta_model(source, v_field, em_field):
     Z_sim = source.Z
 
     thermal_model = ThermalSourceModel("apec", 0.1, 11.5, 20000, 
-                                       Zmet=Z_sim, prng=source.prng)
+                                       Zmet=Z_sim, prng=prng)
     photons = PhotonList.from_data_source(sphere, redshift, A, exp_time,
                                           thermal_model)
 
@@ -85,9 +89,9 @@ def do_beta_model(source, v_field, em_field):
     mu_sim = -float(v2.in_units("km/s"))
 
     events = photons.project_photons("z", [30.0, 45.0], absorb_model="tbabs",
-                                     nH=nH_sim, prng=source.prng)
+                                     nH=nH_sim, prng=prng)
 
-    new_events = Lynx_Calorimeter(events, prng=source.prng)
+    new_events = Lynx_Calorimeter(events, prng=prng)
 
     os.system("cp %s %s ." % (arf.filename, rmf.filename))
     convert_rmf(rmf.filename)
@@ -124,5 +128,5 @@ def do_beta_model(source, v_field, em_field):
     shutil.rmtree(tmpdir)
 
 if __name__ == "__main__":
-    test_beta_model()
+    #test_beta_model()
     test_particle_beta_model()

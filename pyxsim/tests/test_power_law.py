@@ -31,9 +31,9 @@ def mymodel(pars, x, xhi=None):
 def test_power_law():
     plaw_fit(1.1)
     plaw_fit(0.8)
-    plaw_fit(1.0)
+    plaw_fit(1.0, prng=23)
 
-def plaw_fit(alpha_sim):
+def plaw_fit(alpha_sim, prng=None):
 
     tmpdir = tempfile.mkdtemp()
     curdir = os.getcwd()
@@ -41,6 +41,9 @@ def plaw_fit(alpha_sim):
 
     bms = BetaModelSource()
     ds = bms.ds
+
+    if prng is None:
+        prng = bms.prng
 
     def _hard_emission(field, data):
         return YTQuantity(1.0e-18, "s**-1*keV**-1")*data["density"]*data["cell_volume"]/mp
@@ -56,7 +59,7 @@ def plaw_fit(alpha_sim):
     sphere = ds.sphere("c", (100., "kpc"))
 
     plaw_model = PowerLawSourceModel(1.0, 0.01, 11.0, "hard_emission", 
-                                     alpha_sim, prng=27)
+                                     alpha_sim, prng=prng)
 
     photons = PhotonList.from_data_source(sphere, redshift, A, exp_time,
                                           plaw_model)
@@ -68,7 +71,7 @@ def plaw_fit(alpha_sim):
     events = photons.project_photons("z", [30., 45.], absorb_model="wabs",
                                      nH=nH_sim, prng=bms.prng, no_shifting=True)
 
-    new_events = ACIS_I(events, prng=bms.prng)
+    new_events = ACIS_I(events, prng=prng)
 
     os.system("cp %s %s ." % (ACIS_I.arf.filename, ACIS_I.rmf.filename))
 
