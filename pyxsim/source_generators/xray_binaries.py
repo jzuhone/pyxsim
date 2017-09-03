@@ -9,7 +9,6 @@ from pyxsim.photon_list import PhotonList
 from pyxsim.source_models import PowerLawSourceModel
 from pyxsim.utils import mylog, parse_value
 from soxs.utils import parse_prng
-import sys
 
 """
 Papers used in this code:
@@ -329,14 +328,6 @@ def make_xrb_particles(data_source, age_field, scale_length,
     new_ds = load_particles(data, bbox=bbox, length_unit="kpc",
                             time_unit="Myr", mass_unit="Msun", 
                             velocity_unit="km/s")
-    # HACK: Something is funny with load_particles pre yt 3.4
-    # and in Python 2 so we need to force particle types here 
-    # for the moment
-    if sys.version_info < (3, 6):
-        for field in ["particle_luminosity", "particle_count_rate",
-                      "particle_spectral_index"]:
-            fd = getattr(new_ds.fields.io, field)
-            setattr(fd, "particle_type", True)
 
     return new_ds
 
