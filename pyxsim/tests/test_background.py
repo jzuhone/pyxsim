@@ -20,7 +20,7 @@ def setup():
     from yt.config import ytcfg
     ytcfg["yt", "__withintesting"] = "True"
 
-acis_spec = get_instrument_from_registry("acisi_cy18")
+acis_spec = get_instrument_from_registry("acisi_cy19")
 
 rmf = RedistributionMatrixFile(acis_spec["rmf"])
 arf = AuxiliaryResponseFile(acis_spec['arf'])
