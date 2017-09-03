@@ -42,15 +42,16 @@ def make_background(area, exp_time, fov, sky_center, spectrum, prng=None):
     t_exp = exp_time.value/comm.size
 
     e = spectrum.generate_energies(t_exp, area.value, prng=prng)
-    pos = FillFOVModel(sky_center[0], sky_center[1], fov.value, e.size, prng=prng)
+    fov_model = FillFOVModel(sky_center[0], sky_center[1], fov.value)
+    ra, dec = fov_model.generate_coords(e.size, prng=prng)
 
     parameters = {"sky_center": YTArray(sky_center, "degree"),
                   "exp_time": exp_time,
                   "area": area}
 
     events = {}
-    events["xsky"] = YTArray(pos.ra, "degree")
-    events["ysky"] = YTArray(pos.dec, "degree")
+    events["xsky"] = YTArray(ra.value, "degree")
+    events["ysky"] = YTArray(dec.value, "degree")
     events["eobs"] = YTArray(e.value, "keV")
 
     return EventList(events, parameters)
