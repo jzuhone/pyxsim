@@ -724,14 +724,14 @@ class PhotonList(object):
             else:
 
                 if self.parameters["data_type"] == "cells":
-                    r = prng.uniform(low=-0.5, high=0.5, size=(3,num_det))
+                    r = prng.uniform(low=-0.5, high=0.5, size=(3, num_det))
                 elif self.parameters["data_type"] == "particles":
-                    r = prng.normal(loc=0.0, scale=1.0, size=(3,num_det))
+                    r = prng.normal(loc=0.0, scale=1.0, size=(3, num_det))
 
                 np.multiply(r, deld, r)
-                r[:,0] += self.photons["x"].d[ocells]
-                r[:,1] += self.photons["y"].d[ocells]
-                r[:,2] += self.photons["z"].d[ocells]
+                r[0,:] += self.photons["x"].d[ocells]
+                r[1,:] += self.photons["y"].d[ocells]
+                r[2,:] += self.photons["z"].d[ocells]
 
                 xsky, ysky = np.dot([x_hat, y_hat], r)
 
