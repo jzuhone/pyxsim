@@ -4,7 +4,7 @@ env:
     global:
         # Set defaults to avoid repeating in most cases
         - NUMPY_VERSION=1.11
-        - ANSWER_VER=pyxsim14
+        - ANSWER_VER=pyxsim15
         - TEST_OPTS="--nologcapture -sv --with-answer-testing --local --local-dir ."
 matrix:
     include:
@@ -29,8 +29,8 @@ before_install:
     - tar -zxvf ${ANSWER_VER}_2.tar.gz		
     - wget http://hea-www.cfa.harvard.edu/~jzuhone/${ANSWER_VER}_3.tar.gz
     - tar -zxvf ${ANSWER_VER}_3.tar.gz		
-    - mkdir ~/.yt
-    - printf "[yt]\ntest_data_dir = $PWD" >> $HOME/.yt/config
+    - mkdir -p ~/.config/yt
+    - printf "[yt]\ntest_data_dir = $PWD" >> $HOME/.config/yt/ytrc
     # Use utf8 encoding. Should be default, but this is insurance against
     # future changes
     - export PYTHONIOENCODING=UTF8
