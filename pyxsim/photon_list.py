@@ -18,7 +18,6 @@ from pyxsim.utils import parse_value, force_unicode, validate_parameters, \
     key_warning, ParameterDict
 from pyxsim.event_list import EventList
 from soxs.utils import parse_prng
-import astropy.wcs as pywcs
 
 comm = communication_system.communicators[-1]
 
@@ -624,12 +623,12 @@ class PhotonList(object):
 
         zobs0 = self.parameters["fid_redshift"]
         D_A0 = self.parameters["fid_d_a"]
+
         scale_factor = 1.0
 
         if (exp_time_new is None and area_new is None and
             redshift_new is None and dist_new is None):
             my_n_obs = n_ph_tot
-            zobs = zobs0
             D_A = D_A0
         else:
             if exp_time_new is None:
@@ -644,22 +643,20 @@ class PhotonList(object):
                 Aratio = area_new/self.parameters["fid_area"]
             if redshift_new is None and dist_new is None:
                 Dratio = 1.
-                zobs = zobs0
                 D_A = D_A0
             else:
                 if dist_new is not None:
                     if redshift_new is not None and redshift_new > 0.0:
                         mylog.warning("Redshift must be zero for nearby sources. "
-                                      "Resetting redshift to 0.0.")
-                        zobs = 0.0
+                                      "Assuming redshift of 0.0.")
                     D_A = parse_value(dist_new, "Mpc")
                 else:
                     zobs = redshift_new
-                    D_A = self.cosmo.angular_diameter_distance(0.0,zobs).in_units("Mpc")
+                    D_A = self.cosmo.angular_diameter_distance(0.0, zobs).in_units("Mpc")
                 Dratio = D_A0*D_A0*(1.+zobs0)**3 / \
                          (D_A*D_A*(1.+zobs)**3)
+                scale_factor = (1.+zobs0)/(1.+zobs)
             fak = Aratio*Tratio*Dratio
-            scale_factor = (1. + zobs0) / (1. + zobs)
             if fak > 1:
                 raise ValueError("This combination of requested parameters results in "
                                  "%g%% more photons collected than are " % (100.*(fak-1.)) +
