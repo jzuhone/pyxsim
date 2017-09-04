@@ -15,7 +15,7 @@ def test_apec():
     amod = TableApecModel(0.1, 10.0, 10000, thermal_broad=True)
     amod.prepare_spectrum(0.2)
 
-    acspec, amspec = amod.get_spectrum(6.0)
+    acspec, amspec, _ = amod.get_spectrum(6.0)
     spec = acspec+0.3*amspec
 
     spec2 = amod.return_spectrum(6.0, 0.3, 0.2, 1.0e-14)
