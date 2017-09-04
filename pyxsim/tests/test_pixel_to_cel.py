@@ -1,0 +1,52 @@
+import numpy as np
+import astropy.wcs as pywcs
+from yt import YTQuantity, YTArray
+from numpy.random import RandomState
+from pyxsim.utils import pixel_to_cel
+from numpy.testing import assert_allclose
+
+def test_pixel_to_cel():
+
+    prng = RandomState(24)
+
+    n_evt = 100000
+
+    sky_center = YTArray([30.0, 45.0], "deg")
+
+    rr = YTQuantity(100.0, "kpc")*prng.uniform(size=n_evt)
+    theta = 2.0*np.pi*prng.uniform(size=n_evt)
+    xx = rr*np.cos(theta)
+    yy = rr*np.sin(theta)
+
+    D_A = YTQuantity(100.0, "Mpc")
+
+    d_a = D_A.to("kpc").v
+
+    xx = xx.v / d_a
+    yy = yy.v / d_a
+
+    xsky1, ysky1 = pixel_to_cel(xx, yy, sky_center)
+
+    xx = np.rad2deg(xx) * 3600.0  # to arcsec
+    yy = np.rad2deg(yy) * 3600.0  # to arcsec
+
+    # We set a dummy pixel size of 1 arcsec just to compute a WCS
+    dtheta = 1.0 / 3600.0
+
+    wcs = pywcs.WCS(naxis=2)
+    wcs.wcs.crpix = [0.0, 0.0]
+    wcs.wcs.crval = list(sky_center)
+    wcs.wcs.cdelt = [-dtheta, dtheta]
+    wcs.wcs.ctype = ["RA---TAN", "DEC--TAN"]
+    wcs.wcs.cunit = ["deg"]*2
+
+    xsky2, ysky2 = wcs.wcs_pix2world(xx, yy, 1)
+
+    print(xsky1, xsky2)
+    print(ysky1, ysky2)
+
+    assert_allclose(xsky1, xsky2)
+    assert_allclose(ysky1, ysky2)
+    
+if __name__ == "__main__":
+    test_pixel_to_cel()
