@@ -217,6 +217,6 @@ def test_vapec_beta_model():
     shutil.rmtree(tmpdir)
 
 if __name__ == "__main__":
-    #test_beta_model()
-    #test_particle_beta_model()
+    test_beta_model()
+    test_particle_beta_model()
     test_vapec_beta_model()

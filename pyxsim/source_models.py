@@ -111,14 +111,14 @@ class ThermalSourceModel(SourceModel):
         self.Zmet = Zmet
         if var_elem is None:
             var_elem = {}
-            var_elem_keys = None
+            self.var_elem_keys = None
             self.num_var_elem = 0
         else:
-            var_elem_keys = list(var_elem.keys())
+            self.var_elem_keys = list(var_elem.keys())
             self.num_var_elem = len(var_elem_keys)
         self.var_elem = var_elem
         self.spectral_model = spectral_model(emin, emax, nchan, 
-                                             var_elem=var_elem_keys,
+                                             var_elem=self.var_elem_keys,
                                              thermal_broad=thermal_broad,
                                              model_root=model_root,
                                              model_vers=model_vers)
@@ -252,7 +252,7 @@ class ThermalSourceModel(SourceModel):
         elemZ = None
         if self.num_var_elem > 0:
             elemZ = np.zeros((self.num_var_elem, num_cells))
-            for j, key in enumerate(self.var_elem.keys()):
+            for j, key in enumerate(self.var_elem_keys):
                 value = self.var_elem[key]
                 if isinstance(value, float):
                     elemZ[j, :] = value
