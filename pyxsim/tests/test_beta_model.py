@@ -192,15 +192,15 @@ def test_vapec_beta_model():
 
     load_user_model(mymodel_var, "tbapec")
     add_user_pars("tbapec", ["nH", "kT", "abund", "redshift", "norm", "O", "Ca"],
-                  [nH_sim, 4.0, 0.2, redshift, norm_sim*0.8, 0.3, 0.5],
+                  [nH_sim, 4.0, Z_sim, redshift, norm_sim*0.8, 0.3, 0.5],
                   parmins=[0.0, 0.1, 0.0, -20.0, 0.0, 0.0, 0.0],
                   parmaxs=[10.0, 20.0, 10.0, 20.0, 1.0e9, 10.0, 10.0],
-                  parfrozen=[True, False, False, True, False, False, False])
+                  parfrozen=[True, False, True, True, False, False, False])
 
     load_pha("var_abund_beta_model_evt.pi")
     set_stat("cstat")
     set_method("levmar")
-    ignore(":0.6, 8.0:")
+    ignore(":0.4, 8.0:")
     set_model("tbapec")
     fit()
     set_covar_opt("sigma", 1.645)
