@@ -33,8 +33,8 @@ mucal_spec = get_instrument_from_registry("mucal")
 rmf = RedistributionMatrixFile(mucal_spec["rmf"])
 arf = AuxiliaryResponseFile(mucal_spec['arf'])
 fit_model = TableApecModel(rmf.elo[0], rmf.ehi[-1], rmf.n_de)
-agen_var = ApecGenerator(rmf.elo[0], rmf.ehi[-1], rmf.n_de,
-                         var_elem=["O", "Ca"], broadening=True)
+agen_var = TableApecModel(rmf.elo[0], rmf.ehi[-1], rmf.n_de,
+                          var_elem=["O", "Ca"], thermal_broad=True)
 
 def mymodel(pars, x, xhi=None):
     dx = x[1]-x[0]
@@ -47,11 +47,11 @@ def mymodel(pars, x, xhi=None):
 def mymodel_var(pars, x, xhi=None):
     dx = x[1]-x[0]
     tm = TBabsModel(pars[0])
-    tbabs = tm.get_absorb(x+0.5*dx, pars[0])
-    apec = agen_var.get_spectrum(pars[1], pars[2], pars[3], pars[4],
-                                 elem_abund={"O": pars[5], "Ca": pars[6]})
+    tbabs = tm.get_absorb(x+0.5*dx)
+    bapec = agen_var.return_spectrum(pars[1], pars[2], pars[3], pars[4],
+                                     elem_abund={"O": pars[5], "Ca": pars[6]})
     eidxs = np.logical_and(rmf.elo >= x[0]-0.5*dx, rmf.elo <= x[-1]+0.5*dx)
-    return dx*tbabs*apec.flux.value[eidxs]
+    return tbabs*bapec[eidxs]
 
 @requires_module("sherpa")
 def test_beta_model():
@@ -147,6 +147,8 @@ def test_vapec_beta_model():
     curdir = os.getcwd()
     os.chdir(tmpdir)
 
+    prng = 33
+
     ds = bms.ds
 
     A = 30000.
@@ -167,7 +169,7 @@ def test_vapec_beta_model():
     thermal_model = ThermalSourceModel("apec", 0.1, 11.5, 20000,
                                        var_elem=var_elem,
                                        Zmet=("gas","metallicity"), 
-                                       prng=bms.prng)
+                                       prng=prng)
 
     photons = PhotonList.from_data_source(sphere, redshift, A, exp_time,
                                           thermal_model)
@@ -179,9 +181,9 @@ def test_vapec_beta_model():
     norm_sim = float(norm_sim.in_cgs())
 
     events = photons.project_photons("z", [30.0, 45.0], absorb_model="tbabs",
-                                     nH=nH_sim, prng=bms.prng, no_shifting=True)
+                                     nH=nH_sim, prng=prng, no_shifting=True)
 
-    new_events = Lynx_Calorimeter(events, prng=bms.prng)
+    new_events = Lynx_Calorimeter(events, prng=prng)
 
     os.system("cp %s %s ." % (arf.filename, rmf.filename))
     convert_rmf(rmf.filename)
