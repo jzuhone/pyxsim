@@ -11,7 +11,6 @@ from pyxsim.spectral_models import thermal_models
 from pyxsim.utils import parse_value
 from yt.utilities.exceptions import YTUnitConversionError
 from soxs.utils import parse_prng
-from soxs.constants import elem_names
 
 sqrt_two = np.sqrt(2.)
 
@@ -102,16 +101,24 @@ class ThermalSourceModel(SourceModel):
                  temperature_field=None, emission_measure_field=None,
                  kT_min=0.008, kT_max=64.0, n_kT=10000,
                  kT_scale="linear", Zmet=0.3, var_elem=None,
-                 method="invert_cdf",
-                 thermal_broad=True, model_root=None, model_vers=None,
-                 prng=None):
+                 method="invert_cdf", thermal_broad=True, 
+                 model_root=None, model_vers=None, prng=None):
         if isinstance(spectral_model, string_types):
             if spectral_model not in thermal_models:
                 raise KeyError("%s is not a known thermal spectral model!" % spectral_model)
             spectral_model = thermal_models[spectral_model]
         self.temperature_field = temperature_field
         self.Zmet = Zmet
+        if var_elem is None:
+            var_elem = {}
+            var_elem_keys = None
+            self.num_var_elem = 0
+        else:
+            var_elem_keys = list(var_elem.keys())
+            self.num_var_elem = len(var_elem_keys)
+        self.var_elem = var_elem
         self.spectral_model = spectral_model(emin, emax, nchan, 
+                                             var_elem=var_elem_keys,
                                              thermal_broad=thermal_broad,
                                              model_root=model_root,
                                              model_vers=model_vers)
@@ -128,10 +135,6 @@ class ThermalSourceModel(SourceModel):
         self.dkT = None
         self.emission_measure_field = emission_measure_field
         self.Zconvert = 1.0
-        if var_elem is None:
-            var_elem = {}
-        self.var_elem = var_elem
-        self.num_var_elem = len(self.var_elem.keys())
 
     def setup_model(self, data_source, redshift, spectral_norm):
         self.redshift = redshift
@@ -249,8 +252,8 @@ class ThermalSourceModel(SourceModel):
         elemZ = None
         if self.num_var_elem > 0:
             elemZ = np.zeros((self.num_var_elem, num_cells))
-            for elem, value in self.var_elem.items():
-                j = elem_names.index(elem)
+            for j, key in enumerate(self.var_elem.keys()):
+                value = self.var_elem[key]
                 if isinstance(value, float):
                     elemZ[j, :] = value
                 else:

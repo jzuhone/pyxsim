@@ -44,6 +44,15 @@ def mymodel(pars, x, xhi=None):
     eidxs = np.logical_and(rmf.elo >= x[0]-0.5*dx, rmf.elo <= x[-1]+0.5*dx)
     return tbabs*bapec[eidxs]
 
+def mymodel_var(pars, x, xhi=None):
+    dx = x[1]-x[0]
+    tm = TBabsModel(pars[0])
+    tbabs = tm.get_absorb(x+0.5*dx, pars[0])
+    apec = agen_var.get_spectrum(pars[1], pars[2], pars[3], pars[4],
+                                 elem_abund={"O": pars[5], "Ca": pars[6]})
+    eidxs = np.logical_and(rmf.elo >= x[0]-0.5*dx, rmf.elo <= x[-1]+0.5*dx)
+    return dx*tbabs*apec.flux.value[eidxs]
+
 @requires_module("sherpa")
 def test_beta_model():
     bms = BetaModelSource()
@@ -132,7 +141,7 @@ def do_beta_model(source, v_field, em_field, prng=None):
 
 def test_vapec_beta_model():
 
-    bms = ParticleBetaModelSource()
+    bms = BetaModelSource()
 
     tmpdir = tempfile.mkdtemp()
     curdir = os.getcwd()
@@ -149,8 +158,14 @@ def test_vapec_beta_model():
 
     kT_sim = bms.kT
     Z_sim = bms.Z
+    O_sim = bms.O
+    Ca_sim = bms.Ca
+
+    var_elem = {"O": ("stream", "oxygen"),
+                "Ca": ("stream", "calcium")}
 
     thermal_model = ThermalSourceModel("apec", 0.1, 11.5, 20000,
+                                       var_elem=var_elem,
                                        Zmet=("gas","metallicity"), 
                                        prng=bms.prng)
 
@@ -171,16 +186,16 @@ def test_vapec_beta_model():
     os.system("cp %s %s ." % (arf.filename, rmf.filename))
     convert_rmf(rmf.filename)
 
-    new_events.write_channel_spectrum("beta_model_evt.pi", overwrite=True)
+    new_events.write_channel_spectrum("var_abund_beta_model_evt.pi", overwrite=True)
 
-    load_user_model(mymodel, "tbapec")
-    add_user_pars("tbapec", ["nH", "kT", "metallicity", "redshift", "norm", "velocity"],
-                  [0.01, 4.0, 0.2, 0.04, norm_sim*0.8, 300.0],
-                  parmins=[0.0, 0.1, 0.0, -200.0, 0.0, 0.0],
-                  parmaxs=[10.0, 20.0, 10.0, 200.0, 1.0e9, 20000.0],
-                  parfrozen=[False, False, False, False, False, False])
+    load_user_model(mymodel_var, "tbapec")
+    add_user_pars("tbapec", ["nH", "kT", "abund", "redshift", "norm", "O", "Ca"],
+                  [nH_sim, 4.0, 0.2, redshift, norm_sim*0.8, 0.3, 0.5],
+                  parmins=[0.0, 0.1, 0.0, -20.0, 0.0, 0.0, 0.0],
+                  parmaxs=[10.0, 20.0, 10.0, 20.0, 1.0e9, 10.0, 10.0],
+                  parfrozen=[True, False, False, True, False, False, False])
 
-    load_pha("beta_model_evt.pi")
+    load_pha("var_abund_beta_model_evt.pi")
     set_stat("cstat")
     set_method("levmar")
     ignore(":0.6, 8.0:")
@@ -190,15 +205,16 @@ def test_vapec_beta_model():
     covar()
     res = get_covar_results()
 
-    assert np.abs(res.parvals[0]-nH_sim) < res.parmaxes[0]
-    assert np.abs(res.parvals[1]-kT_sim) < res.parmaxes[1]
-    assert np.abs(res.parvals[2]-Z_sim) < res.parmaxes[2]
-    assert np.abs(res.parvals[3]-norm_sim) < res.parmaxes[3]
+    assert np.abs(res.parvals[0]-kT_sim) < res.parmaxes[0]
+    assert np.abs(res.parvals[1]-Z_sim) < res.parmaxes[1]
+    assert np.abs(res.parvals[2]-norm_sim) < res.parmaxes[2]
+    assert np.abs(res.parvals[3]-O_sim) < res.parmaxes[3]
+    assert np.abs(res.parvals[4]-Ca_sim) < res.parmaxes[4]
 
     os.chdir(curdir)
     shutil.rmtree(tmpdir)
 
 if __name__ == "__main__":
     #test_beta_model()
-    test_particle_beta_model()
+    #test_particle_beta_model()
     test_vapec_beta_model()

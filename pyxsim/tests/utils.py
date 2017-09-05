@@ -14,6 +14,8 @@ kT = 6.0 # keV
 v_shift = 4.0e7 # cm/s
 v_width = 4.0e7 # cm/s
 Z = 0.3
+O = 0.5
+Ca = 0.4
 
 # Dark matter parameters
 r_s = 0.350 # Mpc
@@ -25,6 +27,8 @@ class BetaModelSource(object):
         self.prng = RandomState(32)
         self.kT = kT
         self.Z = Z
+        self.O = O
+        self.Ca = Ca
 
         nx = 128
         ddims = (nx,nx,nx)
@@ -55,8 +59,8 @@ class BetaModelSource(object):
         data["velocity_x"] = (np.zeros(ddims), "cm/s")
         data["velocity_y"] = (np.zeros(ddims), "cm/s")
         data["velocity_z"] = (velz, "cm/s")
-        data["oxygen"] = (0.5*np.ones(ddims), "Zsun")
-        data["calcium"] = (0.4*np.ones(ddims), "Zsun")
+        data["oxygen"] = (self.O*np.ones(ddims), "Zsun")
+        data["calcium"] = (self.Ca*np.ones(ddims), "Zsun")
         data["metallicity"] = (self.Z*np.ones(ddims), "Zsun")
         self.ds = load_uniform_grid(data, ddims, length_unit=(2*R, "Mpc"),
                                     nprocs=64, bbox=bbox)

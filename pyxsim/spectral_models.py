@@ -89,8 +89,8 @@ class TableApecModel(ApecGenerator):
         metal_spec = mspec_l*(1.-dT)+mspec_r*dT
         var_spec = None
         if self.var_spec is not None:
-            vspec_l = self.var_spec[tindex, :]
-            vspec_r = self.var_spec[tindex+1, :]
+            vspec_l = self.var_spec[:, tindex, :]
+            vspec_r = self.var_spec[:, tindex+1, :]
             var_spec = vspec_l*(1.-dT) + vspec_r*dT
         return cosmic_spec, metal_spec, var_spec
 
