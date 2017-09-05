@@ -14,8 +14,8 @@ kT = 6.0 # keV
 v_shift = 4.0e7 # cm/s
 v_width = 4.0e7 # cm/s
 Z = 0.3
-O = 0.5
-Ca = 0.4
+O = 0.2
+Ca = 0.7
 
 # Dark matter parameters
 r_s = 0.350 # Mpc
