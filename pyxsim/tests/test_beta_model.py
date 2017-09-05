@@ -200,7 +200,7 @@ def test_vapec_beta_model():
     load_pha("var_abund_beta_model_evt.pi")
     set_stat("cstat")
     set_method("levmar")
-    ignore(":0.4, 8.0:")
+    ignore(":0.6, 8.0:")
     set_model("tbapec")
     fit()
     set_covar_opt("sigma", 1.645)
