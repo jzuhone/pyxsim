@@ -102,7 +102,8 @@ class ThermalSourceModel(SourceModel):
                  kT_min=0.008, kT_max=64.0, n_kT=10000,
                  kT_scale="linear", Zmet=0.3, var_elem=None,
                  method="invert_cdf", thermal_broad=True, 
-                 model_root=None, model_vers=None, prng=None):
+                 model_root=None, model_vers=None, 
+                 nolines=False, abund_table="angr", prng=None):
         if isinstance(spectral_model, string_types):
             if spectral_model not in thermal_models:
                 raise KeyError("%s is not a known thermal spectral model!" % spectral_model)
@@ -115,13 +116,15 @@ class ThermalSourceModel(SourceModel):
             self.num_var_elem = 0
         else:
             self.var_elem_keys = list(var_elem.keys())
-            self.num_var_elem = len(var_elem_keys)
+            self.num_var_elem = len(self.var_elem_keys)
         self.var_elem = var_elem
         self.spectral_model = spectral_model(emin, emax, nchan, 
                                              var_elem=self.var_elem_keys,
                                              thermal_broad=thermal_broad,
                                              model_root=model_root,
-                                             model_vers=model_vers)
+                                             model_vers=model_vers,
+                                             nolines=nolines,
+                                             abund_table=abund_table)
         self.method = method
         self.prng = parse_prng(prng)
         self.kT_min = kT_min
