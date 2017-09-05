@@ -16,14 +16,13 @@ for dependencies.
   :class:`~pyxsim.event_list.EventList` objects, as events at different redshifts/distances
   should be able to be combined together.
 * If two :class:`~pyxsim.event_list.EventList` objects are added and their ``"sky_center"``
-  parameters differ, the two :class:`~pyxsim.event_list.EventList`s are added together and 
+  parameters differ, the two :class:`~pyxsim.event_list.EventList` objects are added together and 
   the ``"sky_center"`` parameter of the first one is used. Previously, two different
   ``"sky_center"`` parameters would have thrown an error. 
 * With the introduction of instrument models for ACIS-S in SOXS v2.0, it is no longer
   necessary to retain the ACIS-S response file with pyXSIM and in general response files
   will no longer be included with pyXSIM for instrument simulation. 
-* The ``ACIS_I`` and ``ACIS_S`` :class:`~pyxsim.instruments.InstrumentSimulator` objects 
-  have been updated from Cycle 18 to Cycle 19.
+* The ``ACIS_I`` and ``ACIS_S`` instrument models have been updated from Cycle 18 to Cycle 19.
 * The ability to use separate abundances of individual elements in the computation of 
   a thermal spectrum has been added to the :class:`~pyxsim.source_models.ThermalSourceModel`.
   See :ref:`thermal-sources` and :ref:`var-abund` for more information.
