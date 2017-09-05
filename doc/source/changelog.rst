@@ -32,6 +32,8 @@ for dependencies.
   and :ref:`thermal-sources` and :ref:`solar-abund-tables` for details.
 * It is now possible to simulate a :class:`~pyxsim.source_models.ThermalSourceModel` without
   emission lines. See :ref:`thermal-sources` for details.
+* :meth:`~pyxsim.photon_list.PhotonList.project_photons` has been refactored under the hood
+  to improve memory usage and speed. 
 
 Version 2.0.0
 -------------
