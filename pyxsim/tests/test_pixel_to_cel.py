@@ -42,9 +42,6 @@ def test_pixel_to_cel():
 
     xsky2, ysky2 = wcs.wcs_pix2world(xx, yy, 1)
 
-    print(xsky1, xsky2)
-    print(ysky1, ysky2)
-
     assert_allclose(xsky1, xsky2)
     assert_allclose(ysky1, ysky2)
     
