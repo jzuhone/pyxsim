@@ -20,7 +20,6 @@ from sherpa.astro.ui import load_user_model, add_user_pars, \
 from soxs.utils import convert_rmf
 from soxs.instrument import RedistributionMatrixFile, AuxiliaryResponseFile
 from soxs.instrument_registry import get_instrument_from_registry
-from soxs.spectra import ApecGenerator
 
 ckms = clight.in_units("km/s").v
 
@@ -188,7 +187,7 @@ def test_vapec_beta_model():
     os.system("cp %s %s ." % (arf.filename, rmf.filename))
     convert_rmf(rmf.filename)
 
-    new_events.write_channel_spectrum("var_abund_beta_model_evt.pi", overwrite=True)
+    new_events.write_channel_spectrum("var_abund_beta_model_evt.pha", overwrite=True)
 
     load_user_model(mymodel_var, "tbapec")
     add_user_pars("tbapec", ["nH", "kT", "abund", "redshift", "norm", "O", "Ca"],
@@ -197,7 +196,7 @@ def test_vapec_beta_model():
                   parmaxs=[10.0, 20.0, 10.0, 20.0, 1.0e9, 10.0, 10.0],
                   parfrozen=[True, False, True, True, False, False, False])
 
-    load_pha("var_abund_beta_model_evt.pi")
+    load_pha("var_abund_beta_model_evt.pha")
     set_stat("cstat")
     set_method("levmar")
     ignore(":0.6, 8.0:")
@@ -208,15 +207,14 @@ def test_vapec_beta_model():
     res = get_covar_results()
 
     assert np.abs(res.parvals[0]-kT_sim) < res.parmaxes[0]
-    assert np.abs(res.parvals[1]-Z_sim) < res.parmaxes[1]
-    assert np.abs(res.parvals[2]-norm_sim) < res.parmaxes[2]
-    assert np.abs(res.parvals[3]-O_sim) < res.parmaxes[3]
-    assert np.abs(res.parvals[4]-Ca_sim) < res.parmaxes[4]
+    assert np.abs(res.parvals[1]-norm_sim) < res.parmaxes[1]
+    assert np.abs(res.parvals[2]-O_sim) < res.parmaxes[2]
+    assert np.abs(res.parvals[3]-Ca_sim) < res.parmaxes[3]
 
     os.chdir(curdir)
     shutil.rmtree(tmpdir)
 
 if __name__ == "__main__":
-    test_beta_model()
-    test_particle_beta_model()
+    #test_beta_model()
+    #test_particle_beta_model()
     test_vapec_beta_model()
