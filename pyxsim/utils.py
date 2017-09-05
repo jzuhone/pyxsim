@@ -61,8 +61,8 @@ def validate_parameters(first, second, skip=[]):
         raise RuntimeError("The two inputs do not have the same parameters!")
     for k1, k2 in zip(keys1, keys2):
         if k1 not in skip:
-            v1 = first[k1].value
-            v2 = second[k2].value
+            v1 = getattr(first[k1], "value", first[k1])
+            v2 = getattr(second[k2], "value", second[k2])
             if isinstance(v1, string_types) or isinstance(v2, string_types):
                 check_equal = v1 == v2
             else:
