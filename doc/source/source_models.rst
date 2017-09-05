@@ -76,6 +76,9 @@ parameters which can be set:
   location known to pyXSIM is used.
 * ``model_vers``: The version identifier string for the model files, e.g. "2.0.2". The default 
   depends on the model used.
+* ``var_elem``: Used to specify the abundances of specific elements, whether via floating-point 
+  numbers of yt fields. A dictionary of elements and values should be specified. See :ref:`var-abund`
+  below for more details.
 * ``nolines``: If set to ``True``, the photons for this source will be generated assuming no emission
   lines. Default: ``False``
 * ``abund_table``: The solar abundance table assumed for the different elements. See the discussion

@@ -71,9 +71,16 @@ class ThermalSourceModel(SourceModel):
     kT_scale : string, optional
         The scaling of the bins to use when computing emission, "linear" or "log". 
         Default: "linear"
-    Zmet : float or string, optional
-        The metallicity. If a float, assumes a constant metallicity throughout.
-        If a string, is taken to be the name of the metallicity field.
+    Zmet : float, string, or tuple of strings, optional
+        The metallicity. If a float, assumes a constant metallicity throughout in
+        solar units. If a string or tuple of strings, is taken to be the name of 
+        the metallicity field.
+    var_elem : dictionary, optional
+        Elements that should be allowed to vary freely from the single abundance
+        parameter. Each dictionary value, specified by the abundance symbol, 
+        corresponds to the abundance of that symbol. If a float, it is understood
+        to be constant and in solar units. If a string or tuple of strings, it is
+        assumed to be a spatially varying field. Default: None
     method : string, optional
         The method used to generate the photon energies from the spectrum:
         "invert_cdf": Invert the cumulative distribution function of the spectrum.
@@ -88,6 +95,22 @@ class ThermalSourceModel(SourceModel):
     model_vers : string, optional
         The version identifier string for the model files, e.g.
         "2.0.2". Default depends on the model used.
+    nolines : boolean, optional
+        Turn off lines entirely for generating emission.
+        Default: False
+    abund_table : string or array_like, optional
+        The abundance table to be used for solar abundances. 
+        Either a string corresponding to a built-in table or an array
+        of 30 floats corresponding to the abundances of each element
+        relative to the abundance of H. Default is "angr".
+        Built-in options are:
+        "angr" : from Anders E. & Grevesse N. (1989, Geochimica et 
+        Cosmochimica Acta 53, 197)
+        "aspl" : from Asplund M., Grevesse N., Sauval A.J. & Scott 
+        P. (2009, ARAA, 47, 481)
+        "wilm" : from Wilms, Allen & McCray (2000, ApJ 542, 914 
+        except for elements not listed which are given zero abundance)
+        "lodd" : from Lodders, K (2003, ApJ 591, 1220)
     prng : integer or :class:`~numpy.random.RandomState` object 
         A pseudo-random number generator. Typically will only be specified
         if you have a reason to generate the same set of random numbers, such as for a
