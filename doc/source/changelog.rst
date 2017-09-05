@@ -3,6 +3,28 @@
 ChangeLog
 =========
 
+Version 2.1.0
+-------------
+
+This version contains bugfixes and feature enhancements, as well new version requirements
+for dependencies.
+
+* This version of pyXSIM requires AstroPy version 2.0 or higher, yt version 3.4 or higher,
+  and SOXS version 2.0 or higher. 
+* A number of bugs in the :func:`~pyxsim.utils.merge_files` function were fixed.
+* The ``"redshift"`` and ``"d_a"`` parameters have been removed from 
+  :class:`~pyxsim.event_list.EventList` objects, as events at different redshifts/distances
+  should be able to be combined together.
+* If two :class:`~pyxsim.event_list.EventList` objects are added and their ``"sky_center"``
+  parameters differ, the two :class:`~pyxsim.event_list.EventList`s are added together and 
+  the ``"sky_center"`` parameter of the first one is used. Previously, two different
+  ``"sky_center"`` parameters would have thrown an error. 
+* With the introduction of instrument models for ACIS-S in SOXS v2.0, it is no longer
+  necessary to retain the ACIS-S response file with pyXSIM and in general response files
+  will no longer be included with pyXSIM for instrument simulation. 
+* The ``ACIS_I`` and ``ACIS_S`` :class:`~pyxsim.instruments.InstrumentSimulator` objects 
+  have been updated from Cycle 18 to Cycle 19.
+
 Version 2.0.0
 -------------
 
