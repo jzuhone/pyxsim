@@ -34,6 +34,10 @@ class TableApecModel(ApecGenerator):
         is thermally broadening lines, it is recommended that 
         this value result in an energy resolution per channel
         of roughly 1 eV.
+    var_elem : list of strings, optional
+        The names of elements to allow to vary freely
+        from the single abundance parameter. Default:
+        None
     model_root : string, optional
         The directory root where the model files are stored. If 
         not provided, the default SOXS-provided files are used.
@@ -43,6 +47,22 @@ class TableApecModel(ApecGenerator):
     thermal_broad : boolean, optional
         Whether or not the spectral lines should be thermally
         broadened. Default: True
+    nolines : boolean, optional
+        Turn off lines entirely for generating spectra.
+        Default: False
+    abund_table : string or array_like, optional
+        The abundance table to be used for solar abundances. 
+        Either a string corresponding to a built-in table or an array
+        of 30 floats corresponding to the abundances of each element
+        relative to the abundance of H. Default is "angr".
+        Built-in options are:
+        "angr" : from Anders E. & Grevesse N. (1989, Geochimica et 
+        Cosmochimica Acta 53, 197)
+        "aspl" : from Asplund M., Grevesse N., Sauval A.J. & Scott 
+        P. (2009, ARAA, 47, 481)
+        "wilm" : from Wilms, Allen & McCray (2000, ApJ 542, 914 
+        except for elements not listed which are given zero abundance)
+        "lodd" : from Lodders, K (2003, ApJ 591, 1220)
 
     Examples
     --------
@@ -51,13 +71,14 @@ class TableApecModel(ApecGenerator):
     """
     def __init__(self, emin, emax, nchan, var_elem=None,
                  model_root=None, model_vers=None, 
-                 thermal_broad=True):
+                 thermal_broad=True, nolines=False,
+                 abund_table="angr"):
         if model_vers is None:
             model_vers = "3.0.8"
         super(TableApecModel, self).__init__(emin, emax, nchan, var_elem=var_elem,
-                                             apec_root=model_root,
-                                             apec_vers=model_vers, 
-                                             broadening=thermal_broad)
+                                             apec_root=model_root, apec_vers=model_vers, 
+                                             broadening=thermal_broad, nolines=nolines,
+                                             abund_table=abund_table)
         self.nchan = self.nbins
 
     def prepare_spectrum(self, zobs):
@@ -94,7 +115,8 @@ class TableApecModel(ApecGenerator):
             var_spec = vspec_l*(1.-dT) + vspec_r*dT
         return cosmic_spec, metal_spec, var_spec
 
-    def return_spectrum(self, temperature, metallicity, redshift, norm, velocity=0.0):
+    def return_spectrum(self, temperature, metallicity, redshift, norm, 
+                        velocity=0.0, elem_abund=None):
         """
         Given the properties of a thermal plasma, return a spectrum.
 
@@ -111,9 +133,13 @@ class TableApecModel(ApecGenerator):
             1.0e-14*EM/(4*pi*(1+z)**2*D_A**2).
         velocity : float, optional
             Velocity broadening parameter in km/s. Default: 0.0
+        elem_abund : dict of element name, float pairs
+            A dictionary of elemental abundances to vary
+            freely of the abund parameter. Default: None
         """
         spec = super(TableApecModel, self).get_spectrum(temperature, metallicity, 
-                                                        redshift, norm, velocity=velocity)
+                                                        redshift, norm, velocity=velocity,
+                                                        elem_abund=elem_abund)
         return YTArray(spec.flux*spec.de, "photons/s/cm**2")
 
 thermal_models = {"apec": TableApecModel}
