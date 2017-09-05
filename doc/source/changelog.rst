@@ -24,6 +24,14 @@ for dependencies.
   will no longer be included with pyXSIM for instrument simulation. 
 * The ``ACIS_I`` and ``ACIS_S`` :class:`~pyxsim.instruments.InstrumentSimulator` objects 
   have been updated from Cycle 18 to Cycle 19.
+* The ability to use separate abundances of individual elements in the computation of 
+  a thermal spectrum has been added to the :class:`~pyxsim.source_models.ThermalSourceModel`.
+  See :ref:`thermal-sources` and :ref:`var-abund` for more information.
+* In the creation of a :class:`~pyxsim.source_models.ThermalSourceModel`, it is now possible 
+  to use Solar abundance tables other than the implicitly assumed Anders & Grevesse 1989. See
+  and :ref:`thermal-sources` and :ref:`solar-abund-tables` for details.
+* It is now possible to simulate a :class:`~pyxsim.source_models.ThermalSourceModel` without
+  emission lines. See :ref:`thermal-sources` for details.
 
 Version 2.0.0
 -------------
