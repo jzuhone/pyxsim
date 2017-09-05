@@ -172,7 +172,7 @@ class AbsorptionModel(object):
             test. Default is the :mod:`numpy.random` module.
         """
         prng = parse_prng(prng)
-        mylog.info("Absorbing.")
+        mylog.info("Applying foreground galactic absorption.")
         absorb = self.get_absorb(eobs)
         randvec = prng.uniform(size=eobs.shape)
         detected = randvec < absorb
