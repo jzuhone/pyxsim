@@ -64,6 +64,11 @@ class TableApecModel(ApecGenerator):
         "wilm" : from Wilms, Allen & McCray (2000, ApJ 542, 914 
         except for elements not listed which are given zero abundance)
         "lodd" : from Lodders, K (2003, ApJ 591, 1220)
+    nei : boolean, optional
+        If True, use the non-equilibrium ionization tables. These are
+        not supplied with pyXSIM/SOXS but must be downloaded separately, in
+        which case the *apec_root* parameter must also be set to their
+        location. Default: False
 
     Examples
     --------
@@ -73,13 +78,13 @@ class TableApecModel(ApecGenerator):
     def __init__(self, emin, emax, nchan, var_elem=None,
                  model_root=None, model_vers=None, 
                  thermal_broad=True, nolines=False,
-                 abund_table="angr"):
+                 abund_table="angr", nei=False):
         if model_vers is None:
-            model_vers = "3.0.8"
+            model_vers = "3.0.9"
         super(TableApecModel, self).__init__(emin, emax, nchan, var_elem=var_elem,
                                              apec_root=model_root, apec_vers=model_vers, 
                                              broadening=thermal_broad, nolines=nolines,
-                                             abund_table=abund_table)
+                                             abund_table=abund_table, nei=nei)
         self.nchan = self.nbins
 
     def prepare_spectrum(self, zobs):
@@ -116,7 +121,7 @@ class TableApecModel(ApecGenerator):
             var_spec = vspec_l*(1.-dT) + vspec_r*dT
         return cosmic_spec, metal_spec, var_spec
 
-    def return_spectrum(self, temperature, metallicity, redshift, norm, 
+    def return_spectrum(self, temperature, metallicity, redshift, norm,
                         velocity=0.0, elem_abund=None):
         """
         Given the properties of a thermal plasma, return a spectrum.

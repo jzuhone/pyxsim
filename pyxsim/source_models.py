@@ -104,6 +104,11 @@ class ThermalSourceModel(SourceModel):
     model_vers : string, optional
         The version identifier string for the model files, e.g.
         "2.0.2". Default depends on the model used.
+    nei : boolean, optional
+        If True, use the non-equilibrium ionization tables. These are
+        not supplied with pyXSIM/SOXS but must be downloaded separately, in
+        which case the *apec_root* parameter must also be set to their
+        location. Default: False
     nolines : boolean, optional
         Turn off lines entirely for generating emission.
         Default: False
@@ -134,7 +139,7 @@ class ThermalSourceModel(SourceModel):
                  kT_min=0.008, kT_max=64.0, n_kT=10000,
                  kT_scale="linear", Zmet=0.3, var_elem=None,
                  method="invert_cdf", thermal_broad=True, 
-                 model_root=None, model_vers=None, 
+                 model_root=None, model_vers=None, nei=False,
                  nolines=False, abund_table="angr", prng=None):
         if isinstance(spectral_model, string_types):
             if spectral_model not in thermal_models:
@@ -142,6 +147,7 @@ class ThermalSourceModel(SourceModel):
             spectral_model = thermal_models[spectral_model]
         self.temperature_field = temperature_field
         self.Zmet = Zmet
+        self.nei = nei
         if var_elem is None:
             var_elem = {}
             var_elem_keys = None
@@ -155,7 +161,7 @@ class ThermalSourceModel(SourceModel):
                                              thermal_broad=thermal_broad,
                                              model_root=model_root,
                                              model_vers=model_vers,
-                                             nolines=nolines,
+                                             nolines=nolines, nei=nei,
                                              abund_table=abund_table)
         self.var_elem_keys = self.spectral_model.var_elem_names
         self.method = method
@@ -178,7 +184,7 @@ class ThermalSourceModel(SourceModel):
     def setup_model(self, data_source, redshift, spectral_norm):
         self.redshift = redshift
         ptype = None
-        if not isinstance(self.Zmet, float):
+        if not self.nei and not isinstance(self.Zmet, float):
             Z_units = str(data_source.ds._get_field_info(self.Zmet).units)
             if Z_units in ["dimensionless", "", "code_metallicity"]:
                 self.Zconvert = 1.0/metal_abund[self.abund_table]
@@ -298,7 +304,9 @@ class ThermalSourceModel(SourceModel):
 
         cell_em = EM[idxs]*self.spectral_norm
 
-        if isinstance(self.Zmet, float):
+        if self.nei:
+            metalZ = np.zeros(num_cells)
+        elif isinstance(self.Zmet, float):
             metalZ = self.Zmet*np.ones(num_cells)
         else:
             metalZ = chunk[self.Zmet].v[idxs]*self.Zconvert
@@ -348,12 +356,11 @@ class ThermalSourceModel(SourceModel):
             end_e += int(cell_n.sum())
 
             if self.method == "invert_cdf":
-                cumspec_c = np.cumsum(cspec.d)
-                cumspec_m = np.cumsum(mspec.d)
-                cumspec_c = np.insert(cumspec_c, 0, 0.0)
-                cumspec_m = np.insert(cumspec_m, 0, 0.0)
-                cumspec_v = None
-                if vspec is not None:
+                cumspec_c = np.insert(np.cumsum(cspec.d), 0, 0.0)
+                cumspec_m = np.insert(np.cumsum(mspec.d), 0, 0.0)
+                if vspec is None:
+                    cumspec_v = None
+                else:
                     cumspec_v = np.zeros((self.num_var_elem, nchan+1))
                     for j in range(self.num_var_elem):
                         cumspec_v[j, 1:] = np.cumsum(vspec.d[j, :])
