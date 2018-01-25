@@ -164,6 +164,7 @@ class ThermalSourceModel(SourceModel):
                                              nolines=nolines, nei=nei,
                                              abund_table=abund_table)
         self.var_elem_keys = self.spectral_model.var_elem_names
+        self.var_ion_keys = self.spectral_model.var_ion_names
         self.method = method
         self.prng = parse_prng(prng)
         self.kT_min = kT_min
@@ -306,15 +307,18 @@ class ThermalSourceModel(SourceModel):
 
         if self.nei:
             metalZ = np.zeros(num_cells)
-        elif isinstance(self.Zmet, float):
-            metalZ = self.Zmet*np.ones(num_cells)
+            elem_keys = self.var_ion_keys
         else:
-            metalZ = chunk[self.Zmet].v[idxs]*self.Zconvert
+            elem_keys = self.var_elem_keys
+            if isinstance(self.Zmet, float):
+                metalZ = self.Zmet*np.ones(num_cells)
+            else:
+                metalZ = chunk[self.Zmet].v[idxs]*self.Zconvert
 
         elemZ = None
         if self.num_var_elem > 0:
             elemZ = np.zeros((self.num_var_elem, num_cells))
-            for j, key in enumerate(self.var_elem_keys):
+            for j, key in enumerate(elem_keys):
                 value = self.var_elem[key]
                 if isinstance(value, float):
                     elemZ[j, :] = value
