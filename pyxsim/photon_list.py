@@ -331,8 +331,6 @@ class PhotonList(object):
                 cosmo = Cosmology()
         else:
             cosmo = cosmology
-        mylog.info("Cosmology: h = %g, omega_matter = %g, omega_lambda = %g" %
-                   (cosmo.hubble_constant, cosmo.omega_matter, cosmo.omega_lambda))
         if dist is None:
             if redshift <= 0.0:
                 msg = "If redshift <= 0.0, you must specify a distance to the " \
@@ -341,7 +339,7 @@ class PhotonList(object):
                 raise ValueError(msg)
             D_A = cosmo.angular_diameter_distance(0.0, redshift).in_units("Mpc")
         else:
-            D_A = parse_value(dist, "Mpc")
+            D_A = parse_value(dist, "kpc")
             if redshift > 0.0:
                 mylog.warning("Redshift must be zero for nearby sources. "
                               "Resetting redshift to 0.0.")
@@ -377,6 +375,12 @@ class PhotonList(object):
         parameters["hubble"] = cosmo.hubble_constant
         parameters["omega_matter"] = cosmo.omega_matter
         parameters["omega_lambda"] = cosmo.omega_lambda
+
+        if redshift > 0.0:
+            mylog.info("Cosmology: h = %g, omega_matter = %g, omega_lambda = %g" %
+                       (cosmo.hubble_constant, cosmo.omega_matter, cosmo.omega_lambda))
+        else:
+            mylog.info("Observing local source at distance %s." % D_A)
 
         D_A = parameters["fid_d_a"].in_cgs()
         dist_fac = 1.0/(4.*np.pi*D_A.value*D_A.value*(1.+redshift)**2)
