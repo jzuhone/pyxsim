@@ -38,6 +38,11 @@ particle_temp_fields = [("io", "temperature"),
                         ("PartType0", "Temperature"),
                         ("Gas", "Temperature")]
 
+metal_abund = {"angr": 0.0189,
+               "aspl": 0.0134,
+               "wilm": 0.0134,
+               "lodd": 0.0133}
+
 class ThermalSourceModel(SourceModel):
     r"""
     Initialize a source model from a thermal spectrum.
@@ -162,6 +167,7 @@ class ThermalSourceModel(SourceModel):
         self.dkT = None
         self.emission_measure_field = emission_measure_field
         self.Zconvert = 1.0
+        self.abund_table = abund_table
 
     def setup_model(self, data_source, redshift, spectral_norm):
         self.redshift = redshift
@@ -169,7 +175,7 @@ class ThermalSourceModel(SourceModel):
         if not isinstance(self.Zmet, float):
             Z_units = str(data_source.ds._get_field_info(self.Zmet).units)
             if Z_units in ["dimensionless", "", "code_metallicity"]:
-                self.Zconvert = 1.0/0.019
+                self.Zconvert = 1.0/metal_abund[self.abund_table]
             elif Z_units == "Zsun":
                 self.Zconvert = 1.0
             else:
