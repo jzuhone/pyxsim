@@ -25,7 +25,7 @@ acis_spec = get_instrument_from_registry("acisi_cy19")
 rmf = RedistributionMatrixFile(acis_spec["rmf"])
 arf = AuxiliaryResponseFile(acis_spec['arf'])
 
-fit_model = TableApecModel(rmf.elo[0], rmf.ehi[-1], rmf.n_de, thermal_broad=False)
+fit_model = TableApecModel(rmf.elo[0], rmf.ehi[-1], rmf.n_e, thermal_broad=False)
 
 def mymodel(pars, x, xhi=None):
     tm = WabsModel(pars[0])
