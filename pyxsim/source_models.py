@@ -187,14 +187,14 @@ class ThermalSourceModel(SourceModel):
             else:
                 raise RuntimeError("I don't understand metallicity units of %s!" % Z_units)
         if self.num_var_elem > 0:
-            for key, value in self.var_elem:
+            for key, value in self.var_elem.items():
                 if not isinstance(value, float):
                     if "^" in key:
                         elem = key.split("^")[0]
                     else:
                         elem = key
                     n_elem = elem_names.index(elem)
-                    m_units = str(data_source.ds._get_field_info(key).units)
+                    m_units = str(data_source.ds._get_field_info(value).units)
                     if m_units in ["dimensionless", "", "code_metallicity"]:
                         self.mconvert[key] = 1.0/(self.atable[n_elem]*atomic_weights[n_elem]*solar_H_abund)
                     elif m_units == "Zsun":
