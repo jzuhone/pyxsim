@@ -11,6 +11,10 @@ from pyxsim.spectral_models import thermal_models
 from pyxsim.utils import parse_value
 from yt.utilities.exceptions import YTUnitConversionError
 from soxs.utils import parse_prng
+from soxs.constants import elem_names, atomic_weights
+
+solar_H_abund = 0.74
+primordial_H_abund = 0.76
 
 sqrt_two = np.sqrt(2.)
 
@@ -168,6 +172,8 @@ class ThermalSourceModel(SourceModel):
         self.emission_measure_field = emission_measure_field
         self.Zconvert = 1.0
         self.abund_table = abund_table
+        self.atable = self.spectral_model.atable
+        self.mconvert = {}
 
     def setup_model(self, data_source, redshift, spectral_norm):
         self.redshift = redshift
@@ -180,6 +186,21 @@ class ThermalSourceModel(SourceModel):
                 self.Zconvert = 1.0
             else:
                 raise RuntimeError("I don't understand metallicity units of %s!" % Z_units)
+        if self.num_var_elem > 0:
+            for key, value in self.var_elem:
+                if not isinstance(value, float):
+                    if "^" in key:
+                        elem = key.split("^")[0]
+                    else:
+                        elem = key
+                    n_elem = elem_names.index(elem)
+                    m_units = str(data_source.ds._get_field_info(key).units)
+                    if m_units in ["dimensionless", "", "code_metallicity"]:
+                        self.mconvert[key] = 1.0/(self.atable[n_elem]*atomic_weights[n_elem]*solar_H_abund)
+                    elif m_units == "Zsun":
+                        self.mconvert[key] = 1.0
+                    else:
+                        raise RuntimeError("I don't understand units of %s for element %s!" % (m_units, key))
         if self.emission_measure_field is None:
             found_dfield = [fd for fd in particle_dens_fields if fd in data_source.ds.field_list]
             if len(found_dfield) > 0:
@@ -191,7 +212,7 @@ class ThermalSourceModel(SourceModel):
                     if data.has_field_parameter("X_H"):
                         X_H = data.get_field_parameter("X_H")
                     else:
-                        X_H = 0.76
+                        X_H = primordial_H_abund
                     if (ptype, 'ElectronAbundance') in data_source.ds.field_list:
                         nenh *= X_H * data[ptype, 'ElectronAbundance']
                         nenh *= X_H * (1.-data[ptype, 'NeutralHydrogenAbundance'])
@@ -290,7 +311,7 @@ class ThermalSourceModel(SourceModel):
                 if isinstance(value, float):
                     elemZ[j, :] = value
                 else:
-                    elemZ[j, :] = chunk[value].v[idxs]*self.Zconvert
+                    elemZ[j, :] = chunk[value].v[idxs]*self.mconvert[key]
 
         number_of_photons = np.zeros(num_cells, dtype="int64")
         energies = np.zeros(num_photons_max)
