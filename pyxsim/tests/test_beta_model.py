@@ -31,8 +31,8 @@ mucal_spec = get_instrument_from_registry("mucal")
 
 rmf = RedistributionMatrixFile(mucal_spec["rmf"])
 arf = AuxiliaryResponseFile(mucal_spec['arf'])
-fit_model = TableApecModel(rmf.elo[0], rmf.ehi[-1], rmf.n_e)
-agen_var = TableApecModel(rmf.elo[0], rmf.ehi[-1], rmf.n_e,
+fit_model = TableApecModel(rmf.elo[0], rmf.ehi[-1], rmf.n_de)
+agen_var = TableApecModel(rmf.elo[0], rmf.ehi[-1], rmf.n_de,
                           var_elem=["O", "Ca"], thermal_broad=True)
 
 def mymodel(pars, x, xhi=None):
