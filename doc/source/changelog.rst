@@ -3,6 +3,14 @@
 ChangeLog
 =========
 
+Version 2.1.1
+-------------
+
+This version contains a single bugfix. The conversion factors between mass fractions and 
+solar units for individual elements in the :class:`~pyxsim.source_models.ThermalSourceModel` 
+were not being calculated correctly and has now been fixed. Simulations which used a single
+metallicity field only were not affected by this bug.
+
 Version 2.1.0
 -------------
 
