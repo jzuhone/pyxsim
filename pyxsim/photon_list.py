@@ -48,12 +48,17 @@ def determine_fields(ds, source_type):
         position_fields = [(source_type, "particle_position_%s" % ax) for ax in "xyz"]
         velocity_fields = [(source_type, "particle_velocity_%s" % ax) for ax in "xyz"]
         width_field = (source_type, "smoothing_length")
+        if width_field not in ds.field_info:
+            def _smoothing_length(field, data):
+                hsml = data[source_type, "particle_mass"]/data[source_type, "density"]
+                hsml *= 3.0/(4.0*np.pi)
+                hsml **= 1./3.
+                return 2.5*hsml
+            ds.add_field(width_field, _smoothing_length, units='code_length')
     else:
         position_fields = [("index", ax) for ax in "xyz"]
         velocity_fields = [(source_type, "velocity_%s" % ax) for ax in "xyz"]
         width_field = ("index", "dx")
-    if width_field not in ds.field_info:
-        width_field = None
     return position_fields, velocity_fields, width_field
 
 def concatenate_photons(photons):
@@ -373,10 +378,7 @@ class PhotonList(object):
                 photons["vx"].append(chunk[v_fields[0]][idxs].in_units("km/s"))
                 photons["vy"].append(chunk[v_fields[1]][idxs].in_units("km/s"))
                 photons["vz"].append(chunk[v_fields[2]][idxs].in_units("km/s"))
-                if w_field is None:
-                    photons["dx"].append(ds.arr(np.zeros(idxs.shape), "kpc"))
-                else:
-                    photons["dx"].append(chunk[w_field][idxs].in_units("kpc"))
+                photons["dx"].append(chunk[w_field][idxs].in_units("kpc"))
 
         source_model.cleanup_model()
 

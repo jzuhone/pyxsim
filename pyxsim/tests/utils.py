@@ -104,6 +104,5 @@ class ParticleBetaModelSource(object):
         data["io", "particle_velocity_y"] = (np.zeros(num_particles), "cm/s")
         data["io", "particle_velocity_z"] = (velz, "cm/s")
         data["io", "particle_mass"] = (pmass, "g")
-        data["io", "smoothing_length"] = (0.02/(2.*R)*np.ones(num_particles), "code_length")
 
         self.ds = load_particles(data, length_unit=(2*R, "Mpc"), bbox=bbox)
