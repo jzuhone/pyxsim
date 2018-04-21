@@ -54,7 +54,8 @@ def determine_fields(ds, source_type):
                 hsml *= 3.0/(4.0*np.pi)
                 hsml **= 1./3.
                 return 2.5*hsml
-            ds.add_field(width_field, _smoothing_length, units='code_length')
+            ds.add_field(width_field, _smoothing_length, particle_type=True,
+                         units='code_length')
     else:
         position_fields = [("index", ax) for ax in "xyz"]
         velocity_fields = [(source_type, "velocity_%s" % ax) for ax in "xyz"]
