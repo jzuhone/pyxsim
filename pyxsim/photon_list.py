@@ -286,7 +286,7 @@ class PhotonList(object):
         ds = data_source.ds
 
         if parameters is None:
-             parameters = {}
+            parameters = {}
         if cosmology is None:
             if hasattr(ds, 'cosmology'):
                 cosmo = ds.cosmology

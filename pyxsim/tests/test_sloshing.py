@@ -121,7 +121,6 @@ def test_sloshing():
 
     for i in range(4):
         events = photons1.project_photons([1.0,-0.5,0.2], [30., 45.],
-                                          exp_time_new=0.25*exp_time,
                                           absorb_model="tbabs", nH=0.1,
                                           prng=prng)
         events.write_h5_file("split_events_%d.h5" % i)
@@ -133,7 +132,7 @@ def test_sloshing():
 
     merged_events = EventList.from_h5_file("merged_events.h5")
     assert len(merged_events["xsky"]) == nevents
-    assert merged_events.parameters["exp_time"] == exp_time
+    assert merged_events.parameters["exp_time"] == 4.0*exp_time
 
     os.chdir(curdir)
     shutil.rmtree(tmpdir)
