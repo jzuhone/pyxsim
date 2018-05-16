@@ -374,7 +374,7 @@ class PhotonList(object):
                 photons["vy"].append(chunk[v_fields[1]][idxs].in_units("km/s"))
                 photons["vz"].append(chunk[v_fields[2]][idxs].in_units("km/s"))
                 if w_field is None:
-                    photons["dx"].append(ds.arr(np.zeros(len(idxs)), "kpc"))
+                    photons["dx"].append(ds.arr(np.zeros(idxs.shape), "kpc"))
                 else:
                     photons["dx"].append(chunk[w_field][idxs].in_units("kpc"))
 
