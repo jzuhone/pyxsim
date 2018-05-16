@@ -515,10 +515,8 @@ class PhotonList(object):
 
         comm.barrier()
 
-    def project_photons(self, normal, sky_center, area_new=None, 
-                        exp_time_new=None, redshift_new=None, 
-                        dist_new=None, absorb_model=None, nH=None,
-                        no_shifting=False, north_vector=None,
+    def project_photons(self, normal, sky_center, absorb_model=None,
+                        nH=None, no_shifting=False, north_vector=None,
                         smooth_positions=None, prng=None):
         r"""
         Projects photons onto an image plane given a line of sight.
@@ -532,21 +530,6 @@ class PhotonList(object):
             should be an off-axis normal vector, e.g [1.0, 2.0, -3.0]
         sky_center : array-like
             Center RA, Dec of the events in degrees.
-        area_new : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
-            A value for the (constant) collecting area of the detector. If
-            units are not specified, is assumed to be in cm**2.
-        exp_time_new : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
-            A new value for the exposure time. If units are not specified
-            it is assumed to be in seconds.
-        redshift_new : float, optional
-            A new value for the cosmological redshift. Cannot be specified
-            if you applied foreground galactic absorption already in the 
-            :class:`~pyxsim.photon_list.PhotonList` instance.
-        dist_new : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
-            The new value for the angular diameter distance, used for nearby sources.
-            This may be optionally supplied instead of it being determined from the
-            cosmology. If units are not specified, it is assumed to be in Mpc. To 
-            use this, the redshift must be zero. 
         absorb_model : string or :class:`~pyxsim.spectral_models.AbsorptionModel` 
             A model for foreground galactic absorption, to simulate the absorption
             of events before being detected. This cannot be applied here if you 
@@ -579,21 +562,13 @@ class PhotonList(object):
         Examples
         --------
         >>> L = np.array([0.1,-0.2,0.3])
-        >>> events = my_photons.project_photons(L, [30., 45.], area_new=10000.,
-        ...                                     redshift_new=0.05)
+        >>> events = my_photons.project_photons(L, [30., 45.])
         """
         prng = parse_prng(prng)
 
         if smooth_positions is not None and self.parameters["data_type"] == "particles":
             raise RuntimeError("The 'smooth_positions' argument should not be used with "
                                "particle-based datasets!")
-
-        change_redshift = redshift_new is not None
-        change_dist = dist_new is not None
-
-        if change_redshift and change_dist:
-            raise RuntimeError("You may specify a new redshift or distance, "
-                               "but not both!")
 
         if isinstance(absorb_model, string_types):
             if absorb_model not in absorb_models:
@@ -616,79 +591,24 @@ class PhotonList(object):
             y_hat = orient.unit_vectors[1]
             z_hat = orient.unit_vectors[2]
 
-        n_ph = self.photons["num_photons"]
-        n_ph_tot = n_ph.sum()
-
         parameters = {}
 
-        zobs0 = self.parameters["fid_redshift"]
-        D_A0 = self.parameters["fid_d_a"]
-
-        scale_factor = 1.0
-
-        if (exp_time_new is None and area_new is None and
-            redshift_new is None and dist_new is None):
-            my_n_obs = n_ph_tot
-            D_A = D_A0
-        else:
-            if exp_time_new is None:
-                Tratio = 1.
-            else:
-                exp_time_new = parse_value(exp_time_new, "s")
-                Tratio = exp_time_new/self.parameters["fid_exp_time"]
-            if area_new is None:
-                Aratio = 1.
-            else:
-                area_new = parse_value(area_new, "cm**2")
-                Aratio = area_new/self.parameters["fid_area"]
-            if redshift_new is None and dist_new is None:
-                Dratio = 1.
-                D_A = D_A0
-            else:
-                if dist_new is not None:
-                    if redshift_new is not None and redshift_new > 0.0:
-                        mylog.warning("Redshift must be zero for nearby sources. "
-                                      "Assuming redshift of 0.0.")
-                    D_A = parse_value(dist_new, "Mpc")
-                else:
-                    zobs = redshift_new
-                    D_A = self.cosmo.angular_diameter_distance(0.0, zobs).in_units("Mpc")
-                Dratio = D_A0*D_A0*(1.+zobs0)**3 / \
-                         (D_A*D_A*(1.+zobs)**3)
-                scale_factor = (1.+zobs0)/(1.+zobs)
-            fak = Aratio*Tratio*Dratio
-            if fak > 1:
-                raise ValueError("This combination of requested parameters results in "
-                                 "%g%% more photons collected than are " % (100.*(fak-1.)) +
-                                 "available in the sample. Please reduce the collecting "
-                                 "area, exposure time, or increase the distance/redshift "
-                                 "of the object. Alternatively, generate a larger sample "
-                                 "of photons.")
-            my_n_obs = np.int64(n_ph_tot*fak)
-
-        if my_n_obs == n_ph_tot:
-            idxs = np.arange(my_n_obs, dtype='int64')
-        else:
-            idxs = prng.permutation(n_ph_tot)[:my_n_obs].astype("int64")
-        obs_cells = np.searchsorted(self.p_bins, idxs, side='right')-1
-        delta = dx[obs_cells]
+        D_A = self.parameters["fid_d_a"]
 
         events = {}
 
-        eobs = self.photons["energy"][idxs]
+        eobs = self.photons["energy"].copy()
 
         if not no_shifting:
             if isinstance(normal, string_types):
-                shift = -self.photons["v%s" % normal][obs_cells].in_cgs()
+                shift = -self.photons["v%s" % normal].in_cgs()
             else:
                 shift = -(self.photons["vx"]*z_hat[0] +
                           self.photons["vy"]*z_hat[1] +
-                          self.photons["vz"]*z_hat[2])[obs_cells].in_cgs()
+                          self.photons["vz"]*z_hat[2]).in_cgs()
             shift /= clight
             np.sqrt((1.-shift)/(1.+shift), shift)
             np.multiply(eobs, shift, eobs)
-
-        eobs *= scale_factor
 
         if absorb_model is None:
             detected = np.ones(eobs.shape, dtype='bool')
@@ -701,8 +621,7 @@ class PhotonList(object):
 
         if num_det > 0:
 
-            deld = delta[detected]
-            ocells = obs_cells[detected]
+            deld = dx[detected]
 
             if isinstance(normal, string_types):
 
@@ -715,8 +634,8 @@ class PhotonList(object):
 
                 np.multiply(xsky, deld, xsky)
                 np.multiply(ysky, deld, ysky)
-                np.add(xsky, self.photons[axes_lookup[normal][0]].d[ocells], xsky)
-                np.add(ysky, self.photons[axes_lookup[normal][1]].d[ocells], ysky)
+                np.add(xsky, self.photons[axes_lookup[normal][0]].d[detected], xsky)
+                np.add(ysky, self.photons[axes_lookup[normal][1]].d[detected], ysky)
 
             else:
 
@@ -726,9 +645,9 @@ class PhotonList(object):
                     r = prng.normal(loc=0.0, scale=1.0, size=(3, num_det))
 
                 np.multiply(r, deld, r)
-                r[0,:] += self.photons["x"].d[ocells]
-                r[1,:] += self.photons["y"].d[ocells]
-                r[2,:] += self.photons["z"].d[ocells]
+                r[0,:] += self.photons["x"].d[detected]
+                r[1,:] += self.photons["y"].d[detected]
+                r[2,:] += self.photons["z"].d[detected]
 
                 xsky, ysky = np.dot([x_hat, y_hat], r)
 
@@ -756,14 +675,8 @@ class PhotonList(object):
         if comm.rank == 0:
             mylog.info("Total number of observed photons: %d" % num_events)
 
-        if exp_time_new is None:
-            parameters["exp_time"] = self.parameters["fid_exp_time"]
-        else:
-            parameters["exp_time"] = exp_time_new
-        if area_new is None:
-            parameters["area"] = self.parameters["fid_area"]
-        else:
-            parameters["area"] = area_new
+        parameters["exp_time"] = self.parameters["fid_exp_time"]
+        parameters["area"] = self.parameters["fid_area"]
         parameters["sky_center"] = sky_center
 
         return EventList(events, parameters)
