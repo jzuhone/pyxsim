@@ -588,7 +588,13 @@ class PhotonList(object):
 
         sky_center = YTArray(sky_center, "degree")
 
+        n_ph = self.photons["num_photons"]
+        n_ph_tot = n_ph.sum()
+        idxs = np.arange(n_ph_tot, dtype='int64')
+        obs_cells = np.searchsorted(self.p_bins, idxs, side='right')-1
+
         dx = self.photons["dx"].d
+        delta = dx[obs_cells]
 
         if not isinstance(normal, string_types):
             L = np.array(normal)
@@ -614,7 +620,7 @@ class PhotonList(object):
                           self.photons["vz"]*z_hat[2]).in_cgs()
             shift /= clight
             np.sqrt((1.-shift)/(1.+shift), shift)
-            np.multiply(eobs, shift, eobs)
+            np.multiply(eobs, shift[obs_cells], eobs)
 
         if absorb_model is None:
             detected = np.ones(eobs.shape, dtype='bool')
@@ -627,7 +633,8 @@ class PhotonList(object):
 
         if num_det > 0:
 
-            deld = dx[detected]
+            deld = delta[detected]
+            ocells = obs_cells[detected]
 
             if isinstance(normal, string_types):
 
@@ -640,8 +647,8 @@ class PhotonList(object):
 
                 np.multiply(xsky, deld, xsky)
                 np.multiply(ysky, deld, ysky)
-                np.add(xsky, self.photons[axes_lookup[normal][0]].d[detected], xsky)
-                np.add(ysky, self.photons[axes_lookup[normal][1]].d[detected], ysky)
+                np.add(xsky, self.photons[axes_lookup[normal][0]].d[ocells], xsky)
+                np.add(ysky, self.photons[axes_lookup[normal][1]].d[ocells], ysky)
 
             else:
 
@@ -651,9 +658,9 @@ class PhotonList(object):
                     r = prng.normal(loc=0.0, scale=1.0, size=(3, num_det))
 
                 np.multiply(r, deld, r)
-                r[0,:] += self.photons["x"].d[detected]
-                r[1,:] += self.photons["y"].d[detected]
-                r[2,:] += self.photons["z"].d[detected]
+                r[0,:] += self.photons["x"].d[ocells]
+                r[1,:] += self.photons["y"].d[ocells]
+                r[2,:] += self.photons["z"].d[ocells]
 
                 xsky, ysky = np.dot([x_hat, y_hat], r)
 
