@@ -566,6 +566,8 @@ class PhotonList(object):
         """
         prng = parse_prng(prng)
 
+        scale_shift = -1.0/clight.to("km/s")
+
         if "redshift_new" in kwargs or "area_new" in kwargs or \
             "exp_time_new" in kwargs or "dist_new" in kwargs:
             issue_deprecation_warning("Changing the redshift, distance, area, or "
@@ -589,12 +591,6 @@ class PhotonList(object):
         sky_center = YTArray(sky_center, "degree")
 
         n_ph = self.photons["num_photons"]
-        n_ph_tot = n_ph.sum()
-        idxs = np.arange(n_ph_tot, dtype='int64')
-        obs_cells = np.searchsorted(self.p_bins, idxs, side='right')-1
-
-        dx = self.photons["dx"].d
-        delta = dx[obs_cells]
 
         if not isinstance(normal, string_types):
             L = np.array(normal)
@@ -609,34 +605,35 @@ class PhotonList(object):
 
         events = {}
 
-        eobs = self.photons["energy"].copy()
+        eobs = self.photons["energy"].v
 
         if not no_shifting:
             if isinstance(normal, string_types):
-                shift = -self.photons["v%s" % normal].in_cgs()
+                shift = self.photons["v%s" % normal]
             else:
-                shift = -(self.photons["vx"]*z_hat[0] +
-                          self.photons["vy"]*z_hat[1] +
-                          self.photons["vz"]*z_hat[2]).in_cgs()
-            shift /= clight
+                shift = self.photons["vx"]*z_hat[0] + \
+                        self.photons["vy"]*z_hat[1] + \
+                        self.photons["vz"]*z_hat[2]
+            np.multiply(shift, scale_shift, shift)
             np.sqrt((1.-shift)/(1.+shift), shift)
-            np.multiply(eobs, shift[obs_cells], eobs)
+            np.multiply(eobs, np.repeat(shift, n_ph), eobs)
 
         if absorb_model is None:
-            detected = np.ones(eobs.shape, dtype='bool')
+            det = np.ones(eobs.shape, dtype='bool')
         else:
-            detected = absorb_model.absorb_photons(eobs, prng=prng)
+            det = absorb_model.absorb_photons(eobs, prng=prng)
 
-        num_det = detected.sum()
+        num_det = det.sum()
 
-        events["eobs"] = eobs[detected]
+        events["eobs"] = YTArray(eobs[det], "keV")
 
         if num_det > 0:
 
-            deld = delta[detected]
-            ocells = obs_cells[detected]
+            deld = np.repeat(self.photons["dx"].d, n_ph)[det]
 
             if isinstance(normal, string_types):
+
+                nax = axes_lookup[normal]
 
                 if self.parameters["data_type"] == "cells":
                     xsky = prng.uniform(low=-0.5, high=0.5, size=num_det)
@@ -647,8 +644,8 @@ class PhotonList(object):
 
                 np.multiply(xsky, deld, xsky)
                 np.multiply(ysky, deld, ysky)
-                np.add(xsky, self.photons[axes_lookup[normal][0]].d[ocells], xsky)
-                np.add(ysky, self.photons[axes_lookup[normal][1]].d[ocells], ysky)
+                np.add(xsky, np.repeat(self.photons[nax[0]].d, n_ph)[det], xsky)
+                np.add(ysky, np.repeat(self.photons[nax[1]].d, n_ph)[det], ysky)
 
             else:
 
@@ -658,9 +655,9 @@ class PhotonList(object):
                     r = prng.normal(loc=0.0, scale=1.0, size=(3, num_det))
 
                 np.multiply(r, deld, r)
-                r[0,:] += self.photons["x"].d[ocells]
-                r[1,:] += self.photons["y"].d[ocells]
-                r[2,:] += self.photons["z"].d[ocells]
+                r[0,:] += np.repeat(self.photons["x"].d, n_ph)[det]
+                r[1,:] += np.repeat(self.photons["y"].d, n_ph)[det]
+                r[2,:] += np.repeat(self.photons["z"].d, n_ph)[det]
 
                 xsky, ysky = np.dot([x_hat, y_hat], r)
 
