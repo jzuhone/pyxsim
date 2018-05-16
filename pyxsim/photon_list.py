@@ -4,7 +4,7 @@ Classes for generating lists of photons
 from six import string_types
 from collections import defaultdict
 import numpy as np
-from yt.funcs import iterable
+from yt.funcs import iterable, issue_deprecation_warning
 from pyxsim.utils import mylog, pixel_to_cel
 from yt.utilities.physical_constants import clight
 from yt.utilities.cosmology import Cosmology
@@ -517,7 +517,7 @@ class PhotonList(object):
 
     def project_photons(self, normal, sky_center, absorb_model=None,
                         nH=None, no_shifting=False, north_vector=None,
-                        smooth_positions=None, prng=None):
+                        smooth_positions=None, prng=None, **kwargs):
         r"""
         Projects photons onto an image plane given a line of sight.
         Returns a new :class:`~pyxsim.event_list.EventList`.
@@ -565,6 +565,12 @@ class PhotonList(object):
         >>> events = my_photons.project_photons(L, [30., 45.])
         """
         prng = parse_prng(prng)
+
+        if "redshift_new" in kwargs or "area_new" in kwargs or \
+            "exp_time_new" in kwargs or "dist_new" in kwargs:
+            issue_deprecation_warning("Changing the redshift, distance, area, or "
+                                      "exposure time has been deprecated in "
+                                      "project_photons!")
 
         if smooth_positions is not None and self.parameters["data_type"] == "particles":
             raise RuntimeError("The 'smooth_positions' argument should not be used with "
