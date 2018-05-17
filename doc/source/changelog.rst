@@ -3,6 +3,22 @@
 ChangeLog
 =========
 
+Version 2.2.0
+-------------
+
+This version contains feature enhancements (with some backwards-incompatible 
+changes) and optimizations. 
+
+* The ability to change the redshift, collecting area, exposure time, or 
+  distance of the source when creating a :class:`~pyxsim.event_list.EventList` 
+  from :meth:`~pyxsim.photon_list.PhotonList.project_photons` has been removed.
+  This was a little-used feature that was potentially confusing to users, and 
+  is mostly unnecessary given that the photon number will be reduced when 
+  convolving with any instrument simulators. This change also made the code
+  simpler and resulted in optimizations. The related keyword arguments to 
+  :meth:`~pyxsim.photon_list.PhotonList.project_photons` will still be accepted,
+  but will be ignored.
+
 Version 2.1.1
 -------------
 
