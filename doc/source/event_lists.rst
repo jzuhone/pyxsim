@@ -21,19 +21,6 @@ arguments to customize the resulting projection. The arguments are:
 * ``normal``: The line of sight direction to project along. Accepts either a coordinate axis (``"x"``,
   ``"y"``, or ``"z"``), or a three-vector for an off-axis projection, e.g. ``[1.0, -0.3, 0.24]``. 
 * ``sky_center``: Central RA, Dec of the events in degrees.
-* ``area_new`` (optional): The (constant) collecting area to assume for the observation. Used to reduce
-  the number of events from the initially large sample of photons. The default value is the value used 
-  when the :class:`~pyxsim.photon_list.PhotonList` was created. Units are in :math:`cm^2`.
-* ``exp_time_new`` (optional): The exposure time to assume for the observation. Used to reduce the number
-  of events from the initially large sample of photons. The default value is the value used when the 
-  :class:`~pyxsim.photon_list.PhotonList` was created. Units are in seconds.
-* ``redshift_new`` (optional): The value of the redshift to assume for the observation. Used to reduce the
-  of events from the initially large sample of photons. The default value is the value used when the 
-  :class:`~pyxsim.photon_list.PhotonList` was created.
-* ``dist_new`` (optional): The value of the angular diameter to assume for the observation. Use for nearby
-  sources instead of the redshift. If units are not specified, it is assumed to be in Mpc. Used to reduce the
-  of events from the initially large sample of photons. The default value is the value used when the 
-  :class:`~pyxsim.photon_list.PhotonList` was created. To use this, the redshift must be set to zero. 
 * ``absorb_model`` (optional): A string or :class:`~pyxsim.spectral_models.AbsorptionModel` class 
   representing a model for foreground galactic absorption. This parameter can take a string or the 
   class itself. See :ref:`absorb-models` for more details on how to use them. Known options for 
@@ -65,12 +52,11 @@ A simple projection along an axis:
 
     events = photons.project_photons("z", (30.0, 45.0))
         
-An off-axis projection with altered exposure time and redshift:
+An off-axis projection :
 
 .. code-block:: python
 
-    events = photons.project_photons([0.1, -0.3, 0.5], (30.0, 45.0), 
-                                     area_new=(200., "cm**2"), redshift_new=1.0)
+    events = photons.project_photons([0.1, -0.3, 0.5], (30.0, 45.0))
 
 An on-axis projection with absorption:
 

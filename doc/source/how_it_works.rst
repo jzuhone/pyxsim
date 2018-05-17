@@ -27,8 +27,8 @@ parameters are chosen such that they generate a large number of photons, much la
 observed, since the goal is to create an initial distribution that will be a statistically robust sample
 from which to draw events when creating synthetic observations. The photons are generated with three-dimensional
 positions in the rest frame of the source (except that their energies are potentially cosmologically redshifted
-with the given redshift), since the positions on the sky and the Doppler shifting of the photons are 
-taken into account in the next step when a line of sight is provided. 
+with the given redshift, if the source is cosmologically distant), since the positions on the sky and the 
+Doppler shifting of the photons are taken into account in the next step when a line of sight is provided. 
 
 Figure 1 shows a schematic example of a three-dimensional source and how the photons are generated from it. 
 The details of how photons are created can be found in :ref:`photon-lists`.
@@ -52,10 +52,8 @@ Step 2: Project Photons to Create Events
 Once we have generated our large sample of photons in the previous step, we can create a set of simulated 
 events by projecting them along a particular line of sight. The line of sight is used to determine both
 the position of each event on the sky as well as the Doppler shift of the photon from the velocity of the
-material it was emitted from. The photons are subsequently cosmologically redshifted as well, if the source
-is cosmologically distant. In this step, more realistic values of the exposure time and the collecting area
-may be chosen, to reduce the number of photons from the initally large Monte-Carlo set. Additionally, this is
-the step where foreground Galactic absorption is optionally applied. The final product is a set of events.
+material it was emitted from. Additionally, this is the step where foreground Galactic absorption is 
+optionally applied. The final product is a set of events.
 
 Figure 1 also shows how the photons are projected from the three-dimensional source along the sight-line
 toward the observer. The details of how events are created can be found in :ref:`event-lists`.
