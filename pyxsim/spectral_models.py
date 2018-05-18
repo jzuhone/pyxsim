@@ -145,6 +145,7 @@ class TableApecModel(ApecGenerator):
 thermal_models = {"apec": TableApecModel}
 
 class AbsorptionModel(object):
+    _name = ""
     def __init__(self, nH, energy, cross_section):
         self.nH = YTQuantity(nH*1.0e22, "cm**-2")
         self.emid = YTArray(energy, "keV")
@@ -172,7 +173,8 @@ class AbsorptionModel(object):
             test. Default is the :mod:`numpy.random` module.
         """
         prng = parse_prng(prng)
-        mylog.info("Applying foreground galactic absorption.")
+        mylog.info("Applying foreground galactic absorption "
+                   "using the %s model and nH = %g." % (self._name, self.nH))
         absorb = self.get_absorb(eobs)
         randvec = prng.uniform(size=eobs.shape)
         detected = randvec < absorb
@@ -192,6 +194,7 @@ class TBabsModel(AbsorptionModel):
     --------
     >>> tbabs_model = TBabsModel(0.1)
     """
+    _name = "tbabs"
     def __init__(self, nH):
         self.nH = YTQuantity(nH, "1.0e22*cm**-2")
 
@@ -213,6 +216,7 @@ class WabsModel(AbsorptionModel):
     --------
     >>> wabs_model = WabsModel(0.1)
     """
+    _name = "wabs"
     def __init__(self, nH):
         self.nH = YTQuantity(nH, "1.0e22*cm**-2")
 

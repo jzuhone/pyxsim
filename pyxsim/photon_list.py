@@ -627,7 +627,15 @@ class PhotonList(object):
 
         events["eobs"] = YTArray(eobs[det], "keV")
 
+        num_events = comm.mpi_allreduce(num_det)
+
+        if comm.rank == 0:
+            mylog.info("%d events have been detected." % num_events)
+
         if num_det > 0:
+
+            if comm.rank == 0:
+                mylog.info("Assigning positions to events.")
 
             deld = np.repeat(self.photons["dx"].d, n_ph)[det]
 
@@ -679,11 +687,6 @@ class PhotonList(object):
 
         events["xsky"] = YTArray(xsky, "degree")
         events["ysky"] = YTArray(ysky, "degree")
-
-        num_events = comm.mpi_allreduce(num_det)
-
-        if comm.rank == 0:
-            mylog.info("Total number of observed photons: %d" % num_events)
 
         parameters["exp_time"] = self.parameters["fid_exp_time"]
         parameters["area"] = self.parameters["fid_area"]
