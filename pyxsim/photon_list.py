@@ -619,7 +619,7 @@ class PhotonList(object):
             np.multiply(eobs, np.repeat(shift, n_ph), eobs)
 
         if absorb_model is None:
-            det = np.ones(eobs.shape, dtype='bool')
+            det = slice(None, None, None)
         else:
             det = absorb_model.absorb_photons(eobs, prng=prng)
 
