@@ -50,16 +50,18 @@ def make_hsml(source_type):
         return 2.5 * hsml
     return _smoothing_length
 
-def determine_fields(ds, source_type):
+def determine_fields(ds, source_type, point_sources):
     ds_type = ds.index.__class__.__name__
     if "ParticleIndex" in ds_type:
         position_fields = [(source_type, "particle_position_%s" % ax) for ax in "xyz"]
         velocity_fields = [(source_type, "particle_velocity_%s" % ax) for ax in "xyz"]
         width_field = (source_type, "smoothing_length")
-        if width_field not in ds.field_info:
+        if width_field not in ds.field_info and not point_sources:
             _smoothing_length = make_hsml(source_type)
             ds.add_field(width_field, _smoothing_length, particle_type=True,
                          units='code_length')
+        else:
+            width_field = None
     else:
         position_fields = [("index", ax) for ax in "xyz"]
         velocity_fields = [(source_type, "velocity_%s" % ax) for ax in "xyz"]
@@ -241,9 +243,9 @@ class PhotonList(object):
 
     @classmethod
     def from_data_source(cls, data_source, redshift, area,
-                         exp_time, source_model, parameters=None,
-                         center=None, dist=None, cosmology=None,
-                         velocity_fields=None):
+                         exp_time, source_model, point_sources=False,
+                         parameters=None, center=None, dist=None, 
+                         cosmology=None, velocity_fields=None):
         r"""
         Initialize a :class:`~pyxsim.photon_list.PhotonList` from a yt data source.
         The redshift, collecting area, exposure time, and cosmology are stored in the
@@ -263,6 +265,10 @@ class PhotonList(object):
             not specified, it is assumed to be in seconds.
         source_model : :class:`~pyxsim.source_models.SourceModel`
             A source model used to generate the photons.
+        point_sources : boolean, optional
+            If True, the photons will be assumed to be generated from the exact
+            positions of the cells or particles and not smeared around within
+            a volume. Default: False
         parameters : dict, optional
             A dictionary of parameters to be passed for the source model to use, if necessary.
         center : string or array_like, optional
@@ -355,7 +361,8 @@ class PhotonList(object):
 
         source_model.setup_model(data_source, redshift, spectral_norm)
 
-        p_fields, v_fields, w_field = determine_fields(ds, source_model.source_type)
+        p_fields, v_fields, w_field = determine_fields(ds, source_model.source_type,
+                                                       point_sources)
 
         if velocity_fields is not None:
             v_fields = velocity_fields
@@ -383,7 +390,10 @@ class PhotonList(object):
                 photons["vx"].append(chunk[v_fields[0]][idxs].in_units("km/s"))
                 photons["vy"].append(chunk[v_fields[1]][idxs].in_units("km/s"))
                 photons["vz"].append(chunk[v_fields[2]][idxs].in_units("km/s"))
-                photons["dx"].append(chunk[w_field][idxs].in_units("kpc"))
+                if w_field is None:
+                    photons["dx"].append(ds.arr(np.zeros(idxs.shape), "kpc"))
+                else:
+                    photons["dx"].append(chunk[w_field][idxs].in_units("kpc"))
 
         source_model.cleanup_model()
 

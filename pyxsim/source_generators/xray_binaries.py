@@ -376,5 +376,6 @@ def make_xrb_photons(ds, redshift, area, exp_time, emin, emax,
                                     "particle_spectral_index", prng=prng)
     photons = PhotonList.from_data_source(dd, redshift, area, exp_time,
                                           xrb_model, center=center,
+                                          point_sources=True,
                                           cosmology=cosmology)
     return photons
