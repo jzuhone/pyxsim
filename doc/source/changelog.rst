@@ -18,6 +18,10 @@ changes) and optimizations.
   simpler and resulted in optimizations. The related keyword arguments to 
   :meth:`~pyxsim.photon_list.PhotonList.project_photons` will still be accepted,
   but will be ignored.
+* Arepo data is now fully supported.
+* A new option to treat each cell or particle which emits photons as a point
+  source has been added to the :meth:`~pyxsim.photon_list.PhotonList.from_data_source`
+  method of :class:`~pyxsim.photon_list.PhotonList`. 
 
 Version 2.1.1
 -------------

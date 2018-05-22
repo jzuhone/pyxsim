@@ -45,6 +45,9 @@ method to create a new :class:`~pyxsim.photon_list.PhotonList`. The arguments ta
   photons. see :ref:`source-models` for options.
 * ``parameters`` (optional): A dictionary of parameters to be passed to the source model if 
   necessary.
+* ``point_sources`` (optional): If True, the photons will be assumed to be generated 
+  from the exact positions of the cells or particles and not smeared around within
+  a volume. Default: False
 * ``center`` (optional): string or array-like object. The origin of the photon spatial 
   coordinates. Accepts "c", "max", or a coordinate. If not specified, pyXSIM attempts to use 
   the "center" field parameter of the data_source. 
@@ -87,6 +90,17 @@ and specify a distance using the ``dist`` keyword argument:
     photons = pyxsim.PhotonList.from_data_source(sp, 0.0, area, exp_time,
                                                  source_model, center=center, 
                                                  dist=(4., "kpc"))
+
+By default, the photons generated from the cells or particles in the simulation 
+will be smeared throughout the volume of those elements. To treat all of the 
+cells or particles in the dataset as if they are point sources, set 
+``point_sources=True``:
+
+.. code-block:: python
+
+    photons = pyxsim.PhotonList.from_data_source(sp, redshift, area, exp_time,
+                                                 source_model, center=center, 
+                                                 point_sources=True)
 
 By default, for computing the Doppler shifts of the photons, pyXSIM uses the default velocity 
 fields of the dataset, which are ``"velocity_x"``, ``"velocity_y"``, and ``"velocity_z"`` 
