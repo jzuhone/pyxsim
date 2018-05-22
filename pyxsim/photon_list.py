@@ -42,6 +42,14 @@ old_parameter_keys = {"FiducialExposureTime": "fid_exp_time",
                       "OmegaMatter": "omega_matter",
                       "DataType": "data_type"}
 
+def make_hsml(source_type):
+    def _smoothing_length(field, data):
+        hsml = data[source_type, "particle_mass"] / data[source_type, "density"]
+        hsml *= 3.0 / (4.0 * np.pi)
+        hsml **= 1. / 3.
+        return 2.5 * hsml
+    return _smoothing_length
+
 def determine_fields(ds, source_type):
     ds_type = ds.index.__class__.__name__
     if "ParticleIndex" in ds_type:
@@ -49,11 +57,7 @@ def determine_fields(ds, source_type):
         velocity_fields = [(source_type, "particle_velocity_%s" % ax) for ax in "xyz"]
         width_field = (source_type, "smoothing_length")
         if width_field not in ds.field_info:
-            def _smoothing_length(field, data):
-                hsml = data[source_type, "particle_mass"]/data[source_type, "density"]
-                hsml *= 3.0/(4.0*np.pi)
-                hsml **= 1./3.
-                return 2.5*hsml
+            _smoothing_length = make_hsml(source_type)
             ds.add_field(width_field, _smoothing_length, particle_type=True,
                          units='code_length')
     else:
