@@ -42,6 +42,7 @@ old_parameter_keys = {"FiducialExposureTime": "fid_exp_time",
                       "OmegaMatter": "omega_matter",
                       "DataType": "data_type"}
 
+
 def make_hsml(source_type):
     def _smoothing_length(field, data):
         hsml = data[source_type, "particle_mass"] / data[source_type, "density"]
@@ -49,6 +50,7 @@ def make_hsml(source_type):
         hsml **= 1. / 3.
         return 2.5 * hsml
     return _smoothing_length
+
 
 def determine_fields(ds, source_type, point_sources):
     ds_type = ds.index.__class__.__name__
@@ -70,6 +72,7 @@ def determine_fields(ds, source_type, point_sources):
         width_field = ("index", "dx")
     return position_fields, velocity_fields, width_field
 
+
 def concatenate_photons(photons):
     for key in photons:
         if len(photons[key]) > 0:
@@ -79,10 +82,12 @@ def concatenate_photons(photons):
         else:
             photons[key] = YTArray([], photon_units[key])
 
+
 def find_object_bounds(data_source):
-    # This logic is required to determine the bounds of 
-    # the object, which is solely for fixing coordinates 
-    # at periodic boundaries
+    """
+    This logic is required to determine the bounds of the object, which is 
+    solely for fixing coordinates at periodic boundaries
+    """
 
     if hasattr(data_source, "base_object"):
         # This a cut region so we'll figure out
@@ -112,6 +117,7 @@ def find_object_bounds(data_source):
         re = data_source.ds.domain_right_edge
 
     return le.to("kpc"), re.to("kpc")
+
 
 class PhotonList(object):
 
@@ -189,7 +195,8 @@ class PhotonList(object):
     @classmethod
     def from_file(cls, filename):
         r"""
-        Initialize a :class:`~pyxsim.photon_list.PhotonList` from the HDF5 file *filename*.
+        Initialize a :class:`~pyxsim.photon_list.PhotonList` from 
+        the HDF5 file *filename*.
         """
 
         photons = {}
@@ -249,9 +256,10 @@ class PhotonList(object):
                          parameters=None, center=None, dist=None, 
                          cosmology=None, velocity_fields=None):
         r"""
-        Initialize a :class:`~pyxsim.photon_list.PhotonList` from a yt data source.
-        The redshift, collecting area, exposure time, and cosmology are stored in the
-        *parameters* dictionary which is passed to the *source_model* function.
+        Initialize a :class:`~pyxsim.photon_list.PhotonList` from a yt data
+        source. The redshift, collecting area, exposure time, and cosmology
+        are stored in the *parameters* dictionary which is passed to the
+        *source_model* function.
 
         Parameters
         ----------
@@ -272,22 +280,24 @@ class PhotonList(object):
             positions of the cells or particles and not smeared around within
             a volume. Default: False
         parameters : dict, optional
-            A dictionary of parameters to be passed for the source model to use, if necessary.
+            A dictionary of parameters to be passed for the source model to use,
+            if necessary.
         center : string or array_like, optional
-            The origin of the photon spatial coordinates. Accepts "c", "max", or a coordinate. 
-            If not specified, pyxsim attempts to use the "center" field parameter of the data_source. 
+            The origin of the photon spatial coordinates. Accepts "c", "max", or
+            a coordinate. If not specified, pyxsim attempts to use the "center"
+            field parameter of the data_source.
         dist : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
             The angular diameter distance, used for nearby sources. This may be
-            optionally supplied instead of it being determined from the *redshift*
-            and given *cosmology*. If units are not specified, it is assumed to be
-            in Mpc. To use this, the redshift must be set to zero. 
+            optionally supplied instead of it being determined from the
+            *redshift* and given *cosmology*. If units are not specified, it is
+            assumed to be in Mpc. To use this, the redshift must be set to zero.
         cosmology : :class:`~yt.utilities.cosmology.Cosmology`, optional
-            Cosmological information. If not supplied, we try to get
-            the cosmology from the dataset. Otherwise, LCDM with
-            the default yt parameters is assumed.
+            Cosmological information. If not supplied, we try to get the
+            cosmology from the dataset. Otherwise, LCDM with the default yt 
+            parameters is assumed.
         velocity_fields : list of fields
-            The yt fields to use for the velocity. If not specified, the following will
-            be assumed:
+            The yt fields to use for the velocity. If not specified, the 
+            following will be assumed:
             ['velocity_x', 'velocity_y', 'velocity_z'] for grid datasets
             ['particle_velocity_x', 'particle_velocity_y', 'particle_velocity_z'] for particle datasets
 
@@ -316,14 +326,16 @@ class PhotonList(object):
                    (cosmo.hubble_constant, cosmo.omega_matter, cosmo.omega_lambda))
         if dist is None:
             if redshift <= 0.0:
-                msg = "If redshift <= 0.0, you must specify a distance to the source using the 'dist' argument!"
+                msg = "If redshift <= 0.0, you must specify a distance to the " \
+                      "source using the 'dist' argument!"
                 mylog.error(msg)
                 raise ValueError(msg)
             D_A = cosmo.angular_diameter_distance(0.0, redshift).in_units("Mpc")
         else:
             D_A = parse_value(dist, "Mpc")
             if redshift > 0.0:
-                mylog.warning("Redshift must be zero for nearby sources. Resetting redshift to 0.0.")
+                mylog.warning("Redshift must be zero for nearby sources. "
+                              "Resetting redshift to 0.0.")
                 redshift = 0.0
 
         if isinstance(center, string_types):
@@ -363,7 +375,8 @@ class PhotonList(object):
 
         source_model.setup_model(data_source, redshift, spectral_norm)
 
-        p_fields, v_fields, w_field = determine_fields(ds, source_model.source_type,
+        p_fields, v_fields, w_field = determine_fields(ds,
+                                                       source_model.source_type,
                                                        point_sources)
 
         if velocity_fields is not None:
@@ -386,16 +399,16 @@ class PhotonList(object):
                 number_of_photons, idxs, energies = chunk_data
                 photons["num_photons"].append(number_of_photons)
                 photons["energy"].append(ds.arr(energies, "keV"))
-                photons["x"].append(chunk[p_fields[0]][idxs].in_units("kpc"))
-                photons["y"].append(chunk[p_fields[1]][idxs].in_units("kpc"))
-                photons["z"].append(chunk[p_fields[2]][idxs].in_units("kpc"))
-                photons["vx"].append(chunk[v_fields[0]][idxs].in_units("km/s"))
-                photons["vy"].append(chunk[v_fields[1]][idxs].in_units("km/s"))
-                photons["vz"].append(chunk[v_fields[2]][idxs].in_units("km/s"))
+                photons["x"].append(chunk[p_fields[0]][idxs].to("kpc"))
+                photons["y"].append(chunk[p_fields[1]][idxs].to("kpc"))
+                photons["z"].append(chunk[p_fields[2]][idxs].to("kpc"))
+                photons["vx"].append(chunk[v_fields[0]][idxs].to("km/s"))
+                photons["vy"].append(chunk[v_fields[1]][idxs].to("km/s"))
+                photons["vz"].append(chunk[v_fields[2]][idxs].to("km/s"))
                 if w_field is None:
                     photons["dx"].append(ds.arr(np.zeros(idxs.shape), "kpc"))
                 else:
-                    photons["dx"].append(chunk[w_field][idxs].in_units("kpc"))
+                    photons["dx"].append(chunk[w_field][idxs].to("kpc"))
 
         source_model.cleanup_model()
 
@@ -427,7 +440,8 @@ class PhotonList(object):
 
     def write_h5_file(self, photonfile):
         """
-        Write the :class:`~pyxsim.photon_list.PhotonList` to the HDF5 file *photonfile*.
+        Write the :class:`~pyxsim.photon_list.PhotonList` to the HDF5 
+        file *photonfile*.
         """
 
         if parallel_capable:
@@ -536,7 +550,7 @@ class PhotonList(object):
 
     def project_photons(self, normal, sky_center, absorb_model=None,
                         nH=None, no_shifting=False, north_vector=None,
-                        smooth_positions=None, prng=None, kernel='gaussian',
+                        smooth_positions=None, kernel="top_hat", prng=None,
                         **kwargs):
         r"""
         Projects photons onto an image plane given a line of sight.
@@ -550,34 +564,39 @@ class PhotonList(object):
             should be an off-axis normal vector, e.g [1.0, 2.0, -3.0]
         sky_center : array-like
             Center RA, Dec of the events in degrees.
-        absorb_model : string or :class:`~pyxsim.spectral_models.AbsorptionModel` 
-            A model for foreground galactic absorption, to simulate the absorption
-            of events before being detected. This cannot be applied here if you 
-            already did this step previously in the creation of the 
-            :class:`~pyxsim.photon_list.PhotonList` instance. Known options for 
+        absorb_model : string or :class:`~pyxsim.spectral_models.AbsorptionModel`
+            A model for foreground galactic absorption, to simulate the
+            absorption of events before being detected. This cannot be applied
+            here if you already did this step previously in the creation of the
+            :class:`~pyxsim.photon_list.PhotonList` instance. Known options for
             strings are "wabs" and "tbabs".
         nH : float, optional
-            The foreground column density in units of 10^22 cm^{-2}. Only used if
-            absorption is applied.
+            The foreground column density in units of 10^22 cm^{-2}. Only used
+            if absorption is applied.
         no_shifting : boolean, optional
             If set, the photon energies will not be Doppler shifted.
         north_vector : a sequence of floats
-            A vector defining the "up" direction. This option sets the orientation of
-            the plane of projection. If not set, an arbitrary grid-aligned north_vector
-            is chosen. Ignored in the case where a particular axis (e.g., "x", "y", or
-            "z") is explicitly specified.
+            A vector defining the "up" direction. This option sets the
+            orientation of the plane of projection. If not set, an arbitrary
+            grid-aligned north_vector is chosen. Ignored in the case where a
+            particular axis (e.g., "x", "y", or "z") is explicitly specified.
         smooth_positions : float, optional
-            Apply a gaussian smoothing operation to the sky positions of the events. 
-            This may be useful when the binned events appear blocky due to their uniform
-            distribution within simulation cells. However, this will move the events away
-            from their originating position on the sky, and so may distort surface brightness
-            profiles and/or spectra. Should probably only be used for visualization purposes.
-            Supply a float here to smooth with a standard deviation with this fraction 
+            Apply a gaussian smoothing operation to the sky positions of the
+            events. This may be useful when the binned events appear blocky due
+            to their uniform distribution within simulation cells. However, this
+            will move the events away from their originating position on the
+            sky, and so may distort surface brightness profiles and/or spectra.
+            Should probably only be used for visualization purposes. Supply a
+            float here to smooth with a standard deviation with this fraction
             of the cell or particle size. Default: None
+        kernel : string, optional
+            The kernel used when smoothing positions of X-rays originating from
+            SPH particles, "gaussian" or "top_hat". Default: "top_hat".
         prng : integer or :class:`~numpy.random.RandomState` object 
             A pseudo-random number generator. Typically will only be specified
-            if you have a reason to generate the same set of random numbers, such as for a
-            test. Default is to use the :mod:`numpy.random` module.
+            if you have a reason to generate the same set of random numbers,
+            such as for a test. Default is to use the :mod:`numpy.random`
+            module.
 
         Examples
         --------
@@ -618,7 +637,7 @@ class PhotonList(object):
             x_hat = orient.unit_vectors[0]
             y_hat = orient.unit_vectors[1]
             z_hat = orient.unit_vectors[2]
-            
+
         parameters = {}
 
         D_A = self.parameters["fid_d_a"]
