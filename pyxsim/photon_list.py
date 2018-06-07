@@ -534,7 +534,8 @@ class PhotonList(object):
 
     def project_photons(self, normal, sky_center, absorb_model=None,
                         nH=None, no_shifting=False, north_vector=None,
-                        smooth_positions=None, prng=None, **kwargs):
+                        smooth_positions=None, prng=None, kernel='gaussian',
+                        **kwargs):
         r"""
         Projects photons onto an image plane given a line of sight.
         Returns a new :class:`~pyxsim.event_list.EventList`.
@@ -615,7 +616,7 @@ class PhotonList(object):
             x_hat = orient.unit_vectors[0]
             y_hat = orient.unit_vectors[1]
             z_hat = orient.unit_vectors[2]
-
+            
         parameters = {}
 
         D_A = self.parameters["fid_d_a"]
@@ -664,8 +665,14 @@ class PhotonList(object):
                     xsky = prng.uniform(low=-0.5, high=0.5, size=num_det)
                     ysky = prng.uniform(low=-0.5, high=0.5, size=num_det)
                 elif self.parameters["data_type"] == "particles":
-                    xsky = prng.normal(loc=0.0, scale=1.0, size=num_det)
-                    ysky = prng.normal(loc=0.0, scale=1.0, size=num_det)
+                    if kernel == "gaussian":
+                        xsky = prng.normal(loc=0.0, scale=1.0, size=num_det)
+                        ysky = prng.normal(loc=0.0, scale=1.0, size=num_det)
+                    elif kernel == "top_hat":
+                        r = prng.uniform(low=0.0, high=1.0, size=num_det)
+                        theta = 2.0*np.pi*prng.uniform(low=0.0, high=1.0, size=num_det)
+                        xsky = r*np.cos(theta)
+                        ysky = r*np.sin(theta)
 
                 np.multiply(xsky, deld, xsky)
                 np.multiply(ysky, deld, ysky)
@@ -676,15 +683,26 @@ class PhotonList(object):
 
                 if self.parameters["data_type"] == "cells":
                     r = prng.uniform(low=-0.5, high=0.5, size=(3, num_det))
+                    np.multiply(r, deld, r)
+                    r[0, :] += np.repeat(self.photons["x"].d, n_ph)[det]
+                    r[1, :] += np.repeat(self.photons["y"].d, n_ph)[det]
+                    r[2, :] += np.repeat(self.photons["z"].d, n_ph)[det]
+                    xsky, ysky = np.dot([x_hat, y_hat], r)
                 elif self.parameters["data_type"] == "particles":
-                    r = prng.normal(loc=0.0, scale=1.0, size=(3, num_det))
-
-                np.multiply(r, deld, r)
-                r[0,:] += np.repeat(self.photons["x"].d, n_ph)[det]
-                r[1,:] += np.repeat(self.photons["y"].d, n_ph)[det]
-                r[2,:] += np.repeat(self.photons["z"].d, n_ph)[det]
-
-                xsky, ysky = np.dot([x_hat, y_hat], r)
+                    if kernel == "gaussian":
+                        xsky = prng.normal(loc=0.0, scale=1.0, size=num_det)*deld
+                        ysky = prng.normal(loc=0.0, scale=1.0, size=num_det)*deld
+                    elif kernel == "top_hat":
+                        r = prng.uniform(low=0.0, high=1.0, size=num_det)
+                        theta = 2.0*np.pi*prng.uniform(low=0.0, high=1.0, size=num_det)
+                        xsky = r*np.cos(theta)*deld
+                        ysky = r*np.sin(theta)*deld
+                    xsky += (self.photons["x"].d*x_hat[0] +
+                             self.photons["y"].d*x_hat[1] +
+                             self.photons["z"].d*x_hat[2])
+                    ysky += (self.photons["x"].d*y_hat[0] +
+                             self.photons["y"].d*y_hat[1] +
+                             self.photons["z"].d*z_hat[2])
 
             if smooth_positions is not None:
                 sigma = smooth_positions*deld
