@@ -683,28 +683,25 @@ class PhotonList(object):
                 nax = axes_lookup[normal]
 
                 if self.parameters["data_type"] == "cells":
-                    xsky = prng.uniform(low=-0.5, high=0.5, size=num_det)
-                    ysky = prng.uniform(low=-0.5, high=0.5, size=num_det)
+                    xsky = prng.uniform(low=-0.5, high=0.5, size=num_det)*deld
+                    ysky = prng.uniform(low=-0.5, high=0.5, size=num_det)*deld
                 elif self.parameters["data_type"] == "particles":
                     if kernel == "gaussian":
-                        xsky = prng.normal(loc=0.0, scale=1.0, size=num_det)
-                        ysky = prng.normal(loc=0.0, scale=1.0, size=num_det)
+                        xsky = prng.normal(loc=0.0, scale=1.0, size=num_det)*deld
+                        ysky = prng.normal(loc=0.0, scale=1.0, size=num_det)*deld
                     elif kernel == "top_hat":
-                        r = prng.uniform(low=0.0, high=1.0, size=num_det)
+                        r = prng.uniform(low=0.0, high=1.0, size=num_det)*deld
                         theta = 2.0*np.pi*prng.uniform(low=0.0, high=1.0, size=num_det)
                         xsky = r*np.cos(theta)
                         ysky = r*np.sin(theta)
 
-                np.multiply(xsky, deld, xsky)
-                np.multiply(ysky, deld, ysky)
                 np.add(xsky, np.repeat(self.photons[nax[0]].d, n_ph)[det], xsky)
                 np.add(ysky, np.repeat(self.photons[nax[1]].d, n_ph)[det], ysky)
 
             else:
 
                 if self.parameters["data_type"] == "cells":
-                    r = prng.uniform(low=-0.5, high=0.5, size=(3, num_det))
-                    np.multiply(r, deld, r)
+                    r = prng.uniform(low=-0.5, high=0.5, size=(3, num_det))*deld
                     r[0, :] += np.repeat(self.photons["x"].d, n_ph)[det]
                     r[1, :] += np.repeat(self.photons["y"].d, n_ph)[det]
                     r[2, :] += np.repeat(self.photons["z"].d, n_ph)[det]
@@ -714,10 +711,10 @@ class PhotonList(object):
                         xsky = prng.normal(loc=0.0, scale=1.0, size=num_det)*deld
                         ysky = prng.normal(loc=0.0, scale=1.0, size=num_det)*deld
                     elif kernel == "top_hat":
-                        r = prng.uniform(low=0.0, high=1.0, size=num_det)
+                        r = prng.uniform(low=0.0, high=1.0, size=num_det)*deld
                         theta = 2.0*np.pi*prng.uniform(low=0.0, high=1.0, size=num_det)
-                        xsky = r*np.cos(theta)*deld
-                        ysky = r*np.sin(theta)*deld
+                        xsky = r*np.cos(theta)
+                        ysky = r*np.sin(theta)
                     xsky += (self.photons["x"].d*x_hat[0] +
                              self.photons["y"].d*x_hat[1] +
                              self.photons["z"].d*x_hat[2])
