@@ -58,6 +58,7 @@ def determine_fields(ds, source_type, point_sources):
         width_field = (source_type, "smoothing_length")
         if width_field not in ds.field_info and not point_sources:
             _smoothing_length = make_hsml(source_type)
+            width_field = (source_type, "pyxsim_smoothing_length")
             ds.add_field(width_field, _smoothing_length, particle_type=True,
                          units='code_length')
         else:
