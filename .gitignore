@@ -1,7 +1,9 @@
 syntax: glob
 *.pyc
+*.so
 pyxsim.egg-info
 doc/build
 doc/source/*.fits
 build
 dist
+scatter_events.c

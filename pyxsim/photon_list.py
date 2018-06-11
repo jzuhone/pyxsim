@@ -18,18 +18,14 @@ from pyxsim.utils import parse_value, force_unicode, validate_parameters, \
     key_warning, ParameterDict
 from pyxsim.event_list import EventList
 from soxs.utils import parse_prng
+from .lib import scatter_events
 
 comm = communication_system.communicators[-1]
 
-axes_lookup = {"x": ("y","z"),
-               "y": ("z","x"),
-               "z": ("x","y")}
-
 photon_units = {"energy": "keV",
-                "dx": "kpc"}
-for ax in "xyz":
-    photon_units[ax] = "kpc"
-    photon_units["v"+ax] = "km/s"
+                "dx": "kpc",
+                "pos": "kpc",
+                "vel": "km/s"}
 
 old_photon_keys = {"Energy": "energy",
                    "NumberOfPhotons": "num_photons"}
@@ -222,13 +218,15 @@ class PhotonList(object):
         start_c = comm.rank*num_cells//comm.size
         end_c = (comm.rank+1)*num_cells//comm.size
 
-        photons["x"] = YTArray(d["x"][start_c:end_c], "kpc")
-        photons["y"] = YTArray(d["y"][start_c:end_c], "kpc")
-        photons["z"] = YTArray(d["z"][start_c:end_c], "kpc")
+        photons["pos"] = YTArray(np.zeros(num_cells, 3), "kpc")
+        photons["vel"] = YTArray(np.zeros(num_cells, 3), "km/s")
+        photons["pos"][:, 0] = d["x"][start_c:end_c]
+        photons["pos"][:, 1] = d["y"][start_c:end_c]
+        photons["pos"][:, 2] = d["z"][start_c:end_c]
+        photons["vel"][:, 0] = d["vx"][start_c:end_c]
+        photons["vel"][:, 1] = d["vy"][start_c:end_c]
+        photons["vel"][:, 2] = d["vz"][start_c:end_c]
         photons["dx"] = YTArray(d["dx"][start_c:end_c], "kpc")
-        photons["vx"] = YTArray(d["vx"][start_c:end_c], "km/s")
-        photons["vy"] = YTArray(d["vy"][start_c:end_c], "km/s")
-        photons["vz"] = YTArray(d["vz"][start_c:end_c], "km/s")
 
         n_ph = d["num_photons"][:]
 
@@ -483,17 +481,17 @@ class PhotonList(object):
                 n_ph = np.empty([])
                 e = np.empty([])
 
-            comm.comm.Gatherv([self.photons["x"].d, local_num_cells, mpi_double],
+            comm.comm.Gatherv([self.photons["pos"][:,0].d, local_num_cells, mpi_double],
                               [x, (sizes_c, disps_c), mpi_double], root=0)
-            comm.comm.Gatherv([self.photons["y"].d, local_num_cells, mpi_double],
+            comm.comm.Gatherv([self.photons["pos"][:,1].d, local_num_cells, mpi_double],
                               [y, (sizes_c, disps_c), mpi_double], root=0)
-            comm.comm.Gatherv([self.photons["z"].d, local_num_cells, mpi_double],
+            comm.comm.Gatherv([self.photons["pos"][:,2].d, local_num_cells, mpi_double],
                               [z, (sizes_c, disps_c), mpi_double], root=0)
-            comm.comm.Gatherv([self.photons["vx"].d, local_num_cells, mpi_double],
+            comm.comm.Gatherv([self.photons["vel"][:,0].d, local_num_cells, mpi_double],
                               [vx, (sizes_c, disps_c), mpi_double], root=0)
-            comm.comm.Gatherv([self.photons["vy"].d, local_num_cells, mpi_double],
+            comm.comm.Gatherv([self.photons["vel"][:,1].d, local_num_cells, mpi_double],
                               [vy, (sizes_c, disps_c), mpi_double], root=0)
-            comm.comm.Gatherv([self.photons["vz"].d, local_num_cells, mpi_double],
+            comm.comm.Gatherv([self.photons["vel"][:,2].d, local_num_cells, mpi_double],
                               [vz, (sizes_c, disps_c), mpi_double], root=0)
             comm.comm.Gatherv([self.photons["dx"].d, local_num_cells, mpi_double],
                               [dx, (sizes_c, disps_c), mpi_double], root=0)
@@ -504,12 +502,12 @@ class PhotonList(object):
 
         else:
 
-            x = self.photons["x"].d
-            y = self.photons["y"].d
-            z = self.photons["z"].d
-            vx = self.photons["vx"].d
-            vy = self.photons["vy"].d
-            vz = self.photons["vz"].d
+            x = self.photons["pos"][:,0].d
+            y = self.photons["pos"][:,1].d
+            z = self.photons["pos"][:,2].d
+            vx = self.photons["vel"][:,0].d
+            vy = self.photons["vel"][:,1].d
+            vz = self.photons["vel"][:,2].d
             dx = self.photons["dx"].d
             n_ph = self.photons["num_photons"]
             e = self.photons["energy"].d
@@ -549,7 +547,7 @@ class PhotonList(object):
 
     def project_photons(self, normal, sky_center, absorb_model=None,
                         nH=None, no_shifting=False, north_vector=None,
-                        smooth_positions=None, kernel="top_hat", prng=None,
+                        sigma_pos=None, kernel="top_hat", prng=None,
                         **kwargs):
         r"""
         Projects photons onto an image plane given a line of sight.
@@ -579,7 +577,7 @@ class PhotonList(object):
             orientation of the plane of projection. If not set, an arbitrary
             grid-aligned north_vector is chosen. Ignored in the case where a
             particular axis (e.g., "x", "y", or "z") is explicitly specified.
-        smooth_positions : float, optional
+        sigma_pos : float, optional
             Apply a gaussian smoothing operation to the sky positions of the
             events. This may be useful when the binned events appear blocky due
             to their uniform distribution within simulation cells. However, this
@@ -587,7 +585,7 @@ class PhotonList(object):
             sky, and so may distort surface brightness profiles and/or spectra.
             Should probably only be used for visualization purposes. Supply a
             float here to smooth with a standard deviation with this fraction
-            of the cell or particle size. Default: None
+            of the cell size. Default: None
         kernel : string, optional
             The kernel used when smoothing positions of X-rays originating from
             SPH particles, "gaussian" or "top_hat". Default: "top_hat".
@@ -606,13 +604,18 @@ class PhotonList(object):
 
         scale_shift = -1.0/clight.to("km/s")
 
+        if "smooth_positions" in kwargs:
+            issue_deprecation_warning("'smooth_positions' has been renamed to "
+                                      "'sigma_pos' and the former is deprecated!")
+            sigma_pos = kwargs["smooth_positions"]
+
         if "redshift_new" in kwargs or "area_new" in kwargs or \
             "exp_time_new" in kwargs or "dist_new" in kwargs:
             issue_deprecation_warning("Changing the redshift, distance, area, or "
                                       "exposure time has been deprecated in "
                                       "project_photons!")
 
-        if smooth_positions is not None and self.parameters["data_type"] == "particles":
+        if sigma_pos is not None and self.parameters["data_type"] == "particles":
             raise RuntimeError("The 'smooth_positions' argument should not be used with "
                                "particle-based datasets!")
 
@@ -636,6 +639,10 @@ class PhotonList(object):
             x_hat = orient.unit_vectors[0]
             y_hat = orient.unit_vectors[1]
             z_hat = orient.unit_vectors[2]
+        else:
+            x_hat = np.zeros(3)
+            y_hat = np.zeros(3)
+            z_hat = np.zeros(3)
 
         parameters = {}
 
@@ -675,56 +682,20 @@ class PhotonList(object):
             if comm.rank == 0:
                 mylog.info("Assigning positions to events.")
 
-            deld = np.repeat(self.photons["dx"].d, n_ph)[det]
-
             if isinstance(normal, string_types):
-
-                nax = axes_lookup[normal]
-
-                if self.parameters["data_type"] == "cells":
-                    xsky = prng.uniform(low=-0.5, high=0.5, size=num_det)*deld
-                    ysky = prng.uniform(low=-0.5, high=0.5, size=num_det)*deld
-                elif self.parameters["data_type"] == "particles":
-                    if kernel == "gaussian":
-                        xsky = prng.normal(loc=0.0, scale=1.0, size=num_det)*deld
-                        ysky = prng.normal(loc=0.0, scale=1.0, size=num_det)*deld
-                    elif kernel == "top_hat":
-                        r = prng.uniform(low=0.0, high=1.0, size=num_det)*deld
-                        theta = 2.0*np.pi*prng.uniform(low=0.0, high=1.0, size=num_det)
-                        xsky = r*np.cos(theta)
-                        ysky = r*np.sin(theta)
-
-                np.add(xsky, np.repeat(self.photons[nax[0]].d, n_ph)[det], xsky)
-                np.add(ysky, np.repeat(self.photons[nax[1]].d, n_ph)[det], ysky)
-
+                norm = "xyz".index(normal)
             else:
+                norm = normal
 
-                if self.parameters["data_type"] == "cells":
-                    r = prng.uniform(low=-0.5, high=0.5, size=(3, num_det))*deld
-                    r[0, :] += np.repeat(self.photons["x"].d, n_ph)[det]
-                    r[1, :] += np.repeat(self.photons["y"].d, n_ph)[det]
-                    r[2, :] += np.repeat(self.photons["z"].d, n_ph)[det]
-                    xsky, ysky = np.dot([x_hat, y_hat], r)
-                elif self.parameters["data_type"] == "particles":
-                    if kernel == "gaussian":
-                        xsky = prng.normal(loc=0.0, scale=1.0, size=num_det)*deld
-                        ysky = prng.normal(loc=0.0, scale=1.0, size=num_det)*deld
-                    elif kernel == "top_hat":
-                        r = prng.uniform(low=0.0, high=1.0, size=num_det)*deld
-                        theta = 2.0*np.pi*prng.uniform(low=0.0, high=1.0, size=num_det)
-                        xsky = r*np.cos(theta)
-                        ysky = r*np.sin(theta)
-                    xsky += (self.photons["x"].d*x_hat[0] +
-                             self.photons["y"].d*x_hat[1] +
-                             self.photons["z"].d*x_hat[2])
-                    ysky += (self.photons["x"].d*y_hat[0] +
-                             self.photons["y"].d*y_hat[1] +
-                             self.photons["z"].d*z_hat[2])
+            xsky, ysky = scatter_events(norm, prng, kernel,
+                                        self.parameters["data_type"],
+                                        num_det, self.photons["pos"].d,
+                                        self.photons["dx"].d, x_hat, y_hat)
 
-            if smooth_positions is not None:
-                sigma = smooth_positions*deld
-                xsky += sigma*prng.normal(loc=0.0, scale=1.0, size=num_det)
-                ysky += sigma*prng.normal(loc=0.0, scale=1.0, size=num_det)
+            if self.parameters["data_type"] == "cells" and sigma_pos is not None:
+                sigma = sigma_pos*np.repeat(self.photons["dx"].d, n_ph)[det]
+                xsky += sigma * prng.normal(loc=0.0, scale=1.0, size=num_det)
+                ysky += sigma * prng.normal(loc=0.0, scale=1.0, size=num_det)
 
             d_a = D_A.to("kpc").v
             xsky /= d_a

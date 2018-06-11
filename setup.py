@@ -1,5 +1,14 @@
 #!/usr/bin/env python
 from setuptools import setup, find_packages
+from setuptools.extension import Extension
+import numpy as np
+
+cython_extensions = [
+    Extension("pyxsim.lib.scatter_events",
+              ["pyxsim/lib/scatter_events.pyx"],
+              language="c", libraries=["m"],
+              include_dirs=[np.get_include()])
+]
 
 setup(name='pyxsim',
       packages=find_packages(),
@@ -11,6 +20,7 @@ setup(name='pyxsim',
       setup_requires=["numpy"],
       install_requires=["six","numpy","astropy>=2.0","h5py","scipy","yt>=3.4","soxs>=2.0"],
       include_package_data=True,
+      ext_modules=cython_extensions,
       classifiers=[
           'Intended Audience :: Science/Research',
           'Operating System :: OS Independent',
