@@ -1,27 +1,31 @@
 import numpy as np
 cimport numpy as np
 cimport cython
+from yt.funcs import get_pbar
 
 @cython.cdivision(True)
 @cython.boundscheck(False)
 @cython.wraparound(False)
 def scatter_events(normal, prng, kernel, data_type,
                    int num_det,
-                   np.ndarray[np.int64_t, ndim=1] idxs,
+		   np.ndarray[np.uint8_t, cast=True] det,
                    np.ndarray[np.int64_t, ndim=1] n_ph,
                    np.ndarray[np.float64_t, ndim=2] pos,
                    np.ndarray[np.float64_t, ndim=1] dx,
                    np.ndarray[np.float64_t, ndim=1] x_hat,
                    np.ndarray[np.float64_t, ndim=1] y_hat):
 
-    cdef int num_cells = idxs.shape[0]
+    cdef np.int64_t num_cells = dx.shape[0]
     cdef np.ndarray[np.float64_t, ndim=1] xsky, ysky, zsky
-    cdef int i, j, k, xax, yax, idx
+    cdef np.int64_t i, j, k, xax, yax, n
 
     k = 0
+    n = 0
+
+    pbar = get_pbar("Generating event positions", num_det)
 
     if isinstance(normal, int):
-        
+
         if normal == 0:
             xax = 1
             yax = 2
@@ -45,12 +49,15 @@ def scatter_events(normal, prng, kernel, data_type,
                 xsky = r*np.cos(theta)
                 ysky = r*np.sin(theta)
     
-        for i in range(num_det):
-            idx = idxs[i]
-            for j in range(n_ph[idx]):
-                xsky[k] = xsky[k]*dx[idx] + pos[idx, xax]
-                ysky[k] = ysky[k]*dx[idx] + pos[idx, yax]
-                k += 1
+        for i in range(num_cells):
+            for j in range(n_ph[i]):
+                if det[n]:
+                    xsky[k] = xsky[k]*dx[i] + pos[i, xax]
+                    ysky[k] = ysky[k]*dx[i] + pos[i, yax]
+                    k += 1
+                    pbar.update()
+                n += 1
+
 
     else:
     
@@ -58,18 +65,21 @@ def scatter_events(normal, prng, kernel, data_type,
             xsky, ysky, zsky = prng.uniform(low=-0.5, high=0.5, 
                                             size=(3, num_det))
             for i in range(num_det):
-                idx = idxs[i]
-                for j in range(n_ph[idx]):
-                    xsky[k] = xsky[k]*dx[idx] + pos[idx, 0]
-                    ysky[k] = ysky[k]*dx[idx] + pos[idx, 1]
-                    zsky[k] = zsky[k]*dx[idx] + pos[idx, 2]
-                    xsky[k] = (xsky[k]*x_hat[0]+
-                               ysky[k]*x_hat[1]+
-                               zsky[k]*x_hat[2])
-                    ysky[k] = (xsky[k]*y_hat[0]+
-                               ysky[k]*y_hat[1]+
-                               zsky[k]*y_hat[2])
-                    k += 1
+                for j in range(n_ph[i]):
+                    if det[n]:
+                        xsky[k] = xsky[k]*dx[i] + pos[i, 0]
+                        ysky[k] = ysky[k]*dx[i] + pos[i, 1]
+                        zsky[k] = zsky[k]*dx[i] + pos[i, 2]
+                        xsky[k] = (xsky[k]*x_hat[0]+
+                                   ysky[k]*x_hat[1]+
+                                   zsky[k]*x_hat[2])
+                        ysky[k] = (xsky[k]*y_hat[0]+
+                                   ysky[k]*y_hat[1]+
+                                   zsky[k]*y_hat[2])
+                        k += 1
+                        pbar.update()
+                    n += 1
+
         elif data_type  == "particles":
             if kernel == "gaussian":
                 xsky = prng.normal(loc=0.0, scale=1.0, size=num_det)
@@ -80,12 +90,16 @@ def scatter_events(normal, prng, kernel, data_type,
                 xsky = r*np.cos(theta)
                 ysky = r*np.sin(theta)
             for i in range(num_det):
-                idx = idxs[i]
-                for j in range(n_ph[idx]):
-                    xsky[k] = xsky[k]*dx[idx] + pos[idx, 0]*x_hat[0] + \
-                        pos[idx, 1]*x_hat[1] + pos[idx, 2]*x_hat[2]
-                    ysky[k] = ysky[k]*dx[idx] + pos[idx, 0]*y_hat[0] + \
-                        pos[idx, 1]*y_hat[1] + pos[idx, 2]*y_hat[2]
-                    k += 1
+                for j in range(n_ph[i]):
+                    if det[n]:
+                        xsky[k] = xsky[k]*dx[i] + pos[i, 0]*x_hat[0] + \
+                            pos[i, 1]*x_hat[1] + pos[i, 2]*x_hat[2]
+                        ysky[k] = ysky[k]*dx[i] + pos[i, 0]*y_hat[0] + \
+                            pos[i, 1]*y_hat[1] + pos[i, 2]*y_hat[2]
+                        k += 1
+                        pbar.update()
+                    n += 1
+
+    pbar.finish()
     
     return xsky, ysky

@@ -18,7 +18,7 @@ from pyxsim.utils import parse_value, force_unicode, validate_parameters, \
     key_warning, ParameterDict
 from pyxsim.event_list import EventList
 from soxs.utils import parse_prng
-from .lib import scatter_events
+from pyxsim.lib.scatter_events import scatter_events
 
 comm = communication_system.communicators[-1]
 
@@ -120,7 +120,7 @@ class PhotonList(object):
         self.photons = photons
         self.parameters = ParameterDict(parameters, "PhotonList", old_parameter_keys)
         self.cosmo = cosmo
-        self.num_cells = len(photons["x"])
+        self.num_cells = len(photons["dx"])
 
         p_bins = np.cumsum(photons["num_photons"])
         self.p_bins = np.insert(p_bins, 0, [np.int64(0)])
@@ -194,6 +194,8 @@ class PhotonList(object):
         the HDF5 file *filename*.
         """
 
+        mylog.info("Reading photons from %s." % filename)
+
         photons = {}
         parameters = {}
 
@@ -218,8 +220,8 @@ class PhotonList(object):
         start_c = comm.rank*num_cells//comm.size
         end_c = (comm.rank+1)*num_cells//comm.size
 
-        photons["pos"] = YTArray(np.zeros(num_cells, 3), "kpc")
-        photons["vel"] = YTArray(np.zeros(num_cells, 3), "km/s")
+        photons["pos"] = YTArray(np.zeros((num_cells, 3)), "kpc")
+        photons["vel"] = YTArray(np.zeros((num_cells, 3)), "km/s")
         photons["pos"][:, 0] = d["x"][start_c:end_c]
         photons["pos"][:, 1] = d["y"][start_c:end_c]
         photons["pos"][:, 2] = d["z"][start_c:end_c]
@@ -244,6 +246,9 @@ class PhotonList(object):
         cosmo = Cosmology(hubble_constant=parameters["hubble"],
                           omega_matter=parameters["omega_matter"],
                           omega_lambda=parameters["omega_lambda"])
+
+        mylog.info("Read %d photons from %d %s." % (n_ph.sum(), num_cells, 
+                                                    parameters["data_type"]))
 
         return cls(photons, parameters, cosmo)
 
@@ -653,22 +658,23 @@ class PhotonList(object):
         eobs = self.photons["energy"].v
 
         if not no_shifting:
+            mylog.info("Doppler-shifting photon energies.")
             if isinstance(normal, string_types):
-                shift = self.photons["v%s" % normal]
+                shift = self.photons["vel"][:,"xyz".index(normal)]
             else:
-                shift = self.photons["vx"]*z_hat[0] + \
-                        self.photons["vy"]*z_hat[1] + \
-                        self.photons["vz"]*z_hat[2]
+                shift = np.dot(self.photons["vel"], z_hat)
             np.multiply(shift, scale_shift, shift)
             np.sqrt((1.-shift)/(1.+shift), shift)
             np.multiply(eobs, np.repeat(shift, n_ph), eobs)
 
         if absorb_model is None:
             det = slice(None, None, None)
+            num_det = eobs.size
+            pidxs = np.arange(num_det, dtype='int64')
         else:
             det = absorb_model.absorb_photons(eobs, prng=prng)
-
-        num_det = det.sum()
+            num_det = det.sum()
+            pidxs = np.where(det)[0]
 
         events["eobs"] = YTArray(eobs[det], "keV")
 
@@ -689,8 +695,9 @@ class PhotonList(object):
 
             xsky, ysky = scatter_events(norm, prng, kernel,
                                         self.parameters["data_type"],
-                                        num_det, self.photons["pos"].d,
-                                        self.photons["dx"].d, x_hat, y_hat)
+                                        num_det, det, self.photons["num_photons"], 
+                                        self.photons["pos"].d, self.photons["dx"].d, 
+                                        x_hat, y_hat)
 
             if self.parameters["data_type"] == "cells" and sigma_pos is not None:
                 sigma = sigma_pos*np.repeat(self.photons["dx"].d, n_ph)[det]
