@@ -130,7 +130,9 @@ def pixel_to_cel(np.ndarray[np.float64_t, ndim=1] xsky,
     cy = sky_center[1]*PI/180.0
     sin_cy = sin(cy)
     cos_cy = cos(cy)
-    
+
+    pbar = get_pbar("Converting pixel to celestial coordinates", n)
+
     for i in range(n):
         
         D = atan(sqrt(xsky[i]*xsky[i] + ysky[i]*ysky[i]))
@@ -144,3 +146,7 @@ def pixel_to_cel(np.ndarray[np.float64_t, ndim=1] xsky,
 
         xsky[i] *= 180.0/PI
         ysky[i] *= 180.0/PI
+        
+        pbar.update()
+        
+    pbar.finish()
