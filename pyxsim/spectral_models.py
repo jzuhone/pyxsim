@@ -8,6 +8,7 @@ from soxs.spectra import ApecGenerator, \
     get_wabs_absorb, get_tbabs_absorb
 from soxs.utils import parse_prng
 from pyxsim.utils import mylog
+from yt.funcs import get_pbar
 from yt.units.yt_array import YTArray, YTQuantity
 from yt.utilities.physical_constants import hcgs, clight
 
@@ -175,9 +176,19 @@ class AbsorptionModel(object):
         prng = parse_prng(prng)
         mylog.info("Applying foreground galactic absorption "
                    "using the %s model and nH = %g." % (self._name, self.nH))
-        absorb = self.get_absorb(eobs)
-        randvec = prng.uniform(size=eobs.shape)
-        detected = randvec < absorb
+        n_events = eobs.size
+        detected = np.zeros(n_events, dtype='bool')
+        nchunk = n_events // 100
+        k = 0
+        pbar = get_pbar("Absorbing photons", n_events)
+        while k < n_events:
+            absorb = self.get_absorb(eobs[k:k+nchunk])
+            nabs = absorb.size
+            randvec = prng.uniform(size=nabs)
+            detected[k:k+nabs] = randvec < absorb
+            k += nabs
+            pbar.update(k)
+        pbar.finish()
         return detected
 
 class TBabsModel(AbsorptionModel):
