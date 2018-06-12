@@ -5,7 +5,8 @@ from six import string_types
 from collections import defaultdict
 import numpy as np
 from yt.funcs import iterable, issue_deprecation_warning
-from pyxsim.utils import mylog, pixel_to_cel
+from pyxsim.lib.sky_functions import pixel_to_cel, \
+    scatter_events
 from yt.utilities.physical_constants import clight
 from yt.utilities.cosmology import Cosmology
 from yt.utilities.orientation import Orientation
@@ -15,10 +16,9 @@ from yt.units.yt_array import YTQuantity, YTArray, uconcatenate
 import h5py
 from pyxsim.spectral_models import absorb_models
 from pyxsim.utils import parse_value, force_unicode, validate_parameters, \
-    key_warning, ParameterDict
+    key_warning, ParameterDict, mylog
 from pyxsim.event_list import EventList
 from soxs.utils import parse_prng
-from pyxsim.lib.scatter_events import scatter_events
 
 comm = communication_system.communicators[-1]
 

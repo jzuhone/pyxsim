@@ -4,8 +4,8 @@ from setuptools.extension import Extension
 import numpy as np
 
 cython_extensions = [
-    Extension("pyxsim.lib.scatter_events",
-              ["pyxsim/lib/scatter_events.pyx"],
+    Extension("pyxsim.lib.sky_functions",
+              ["pyxsim/lib/sky_functions.pyx"],
               language="c", libraries=["m"],
               include_dirs=[np.get_include()])
 ]

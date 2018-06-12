@@ -3,6 +3,15 @@ cimport numpy as np
 cimport cython
 from yt.funcs import get_pbar
 
+cdef extern from "math.h":
+    double sqrt(double x) nogil
+    double sin(double x) nogil
+    double cos(double x) nogil
+    double atan(double x) nogil
+    double atan2(double y, double x) nogil
+    double asin(double x) nogil
+
+
 @cython.cdivision(True)
 @cython.boundscheck(False)
 @cython.wraparound(False)
@@ -103,3 +112,35 @@ def scatter_events(normal, prng, kernel, data_type,
     pbar.finish()
     
     return xsky, ysky
+
+
+@cython.cdivision(True)
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def pixel_to_cel(np.ndarray[np.float64_t, ndim=1] xsky,
+                 np.ndarray[np.float64_t, ndim=1] ysky,
+                 np.ndarray[np.float64_t, ndim=1] sky_center):
+
+    cdef int i
+    cdef int n = xsky.size
+    cdef np.float64_t B, D, cx, cy, sin_cy, cos_cy
+    cdef np.float64_t PI = np.pi
+
+    cx = sky_center[0]*PI/180.0
+    cy = sky_center[1]*PI/180.0
+    sin_cy = sin(cy)
+    cos_cy = cos(cy)
+    
+    for i in range(n):
+        
+        D = atan(sqrt(xsky[i]*xsky[i] + ysky[i]*ysky[i]))
+        B = atan2(-xsky[i], -ysky[i])
+
+        xsky[i] = sin_cy*sin(D)*cos(B) + cos_cy*cos(D)
+        ysky[i] = sin(D)*sin(B)
+
+        xsky[i] = cx + atan2(ysky[i], xsky[i])
+        ysky[i] = asin(sin_cy*cos(D) - cos_cy*sin(D)*cos(B))
+
+        xsky[i] *= 180.0/PI
+        ysky[i] *= 180.0/PI

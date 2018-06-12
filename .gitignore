@@ -6,4 +6,4 @@ doc/build
 doc/source/*.fits
 build
 dist
-scatter_events.c
+sky_functions.c

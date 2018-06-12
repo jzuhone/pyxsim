@@ -32,11 +32,13 @@ pyxsimLogger.propagate = False
 
 mylog = pyxsimLogger
 
+
 def force_unicode(value):
     if hasattr(value, 'decode'):
         return value.decode('utf8')
     else:
         return value
+
 
 def parse_value(value, default_units, ds=None):
     if isinstance(value, Quantity):
@@ -51,6 +53,7 @@ def parse_value(value, default_units, ds=None):
         return quan(value[0], value[1]).in_units(default_units)
     else:
         return quan(value, default_units)
+
 
 def validate_parameters(first, second, skip=[]):
     keys1 = list(first.keys())
@@ -71,21 +74,6 @@ def validate_parameters(first, second, skip=[]):
                 raise RuntimeError("The values for the parameter '%s' in the two inputs" % k1 +
                                    " are not identical (%s vs. %s)!" % (v1, v2))
 
-def pixel_to_cel(xsky, ysky, sky_center):
-
-    D = np.arctan(np.sqrt(xsky ** 2 + ysky ** 2))
-    B = np.arctan2(-xsky, -ysky)
-
-    skyc = np.deg2rad(sky_center.v)
-
-    xsky = np.sin(skyc[1]) * np.sin(D) * np.cos(B) + np.cos(skyc[1]) * np.cos(D)
-    ysky = np.sin(D) * np.sin(B)
-
-    xsky = np.rad2deg(skyc[0] + np.arctan2(ysky, xsky))
-    ysky = np.rad2deg(np.arcsin(np.sin(skyc[1]) * np.cos(D) -
-                                np.cos(skyc[1]) * np.sin(D) * np.cos(B)))
-
-    return xsky, ysky
 
 def merge_files(input_files, output_file, overwrite=False,
                 add_exposure_times=False):
@@ -163,6 +151,7 @@ def merge_files(input_files, output_file, overwrite=False,
 
 key_warning = "As of pyXSIM v2.0.0 this key to the %s has been deprecated, " + \
               "and will be removed in a future release. Use the '%s' key instead."
+
 
 class ParameterDict(object):
     def __init__(self, param_dict, list_type, old_keys):
