@@ -174,8 +174,6 @@ class AbsorptionModel(object):
             test. Default is the :mod:`numpy.random` module.
         """
         prng = parse_prng(prng)
-        mylog.info("Applying foreground galactic absorption "
-                   "using the %s model and nH = %g." % (self._name, self.nH))
         n_events = eobs.size
         detected = np.zeros(n_events, dtype='bool')
         nchunk = n_events // 100

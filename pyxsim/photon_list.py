@@ -658,7 +658,8 @@ class PhotonList(object):
         eobs = self.photons["energy"].v
 
         if not no_shifting:
-            mylog.info("Doppler-shifting photon energies.")
+            if comm.rank == 0:
+                mylog.info("Doppler-shifting photon energies.")
             if isinstance(normal, string_types):
                 shift = self.photons["vel"][:,"xyz".index(normal)]
             else:
@@ -670,11 +671,12 @@ class PhotonList(object):
         if absorb_model is None:
             det = slice(None, None, None)
             num_det = eobs.size
-            pidxs = np.arange(num_det, dtype='int64')
         else:
+            if comm.rank == 0:
+                mylog.info("Foreground galactic absorption: using "
+                           "the %s model and nH = %g." % (absorb_model._name, nH))
             det = absorb_model.absorb_photons(eobs, prng=prng)
             num_det = det.sum()
-            pidxs = np.where(det)[0]
 
         events["eobs"] = YTArray(eobs[det], "keV")
 
@@ -700,6 +702,8 @@ class PhotonList(object):
                                         x_hat, y_hat)
 
             if self.parameters["data_type"] == "cells" and sigma_pos is not None:
+                if comm.rank == 0:
+                    mylog.info("Optionally smoothing sky positions.")
                 sigma = sigma_pos*np.repeat(self.photons["dx"].d, n_ph)[det]
                 xsky += sigma * prng.normal(loc=0.0, scale=1.0, size=num_det)
                 ysky += sigma * prng.normal(loc=0.0, scale=1.0, size=num_det)
@@ -708,7 +712,10 @@ class PhotonList(object):
             xsky /= d_a
             ysky /= d_a
 
-            xsky, ysky = pixel_to_cel(xsky, ysky, sky_center)
+            if comm.rank == 0:
+                mylog.info("Converting pixel to sky coordinates.")
+
+            pixel_to_cel(xsky, ysky, sky_center)
 
         else:
 
