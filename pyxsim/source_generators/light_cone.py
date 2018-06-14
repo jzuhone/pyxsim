@@ -19,7 +19,7 @@ from soxs.utils import parse_prng
 
 from collections import defaultdict
 from yt.utilities.parallel_tools.parallel_analysis_interface import \
-    communication_system, parallel_capable
+    communication_system
 
 comm = communication_system.communicators[-1]
 
