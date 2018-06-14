@@ -2,7 +2,7 @@ import numpy as np
 import astropy.wcs as pywcs
 from yt import YTQuantity, YTArray
 from numpy.random import RandomState
-from pyxsim.utils import pixel_to_cel
+from pyxsim.lib.sky_functions import pixel_to_cel
 from numpy.testing import assert_allclose
 
 def test_pixel_to_cel():
@@ -25,7 +25,10 @@ def test_pixel_to_cel():
     xx = xx.v / d_a
     yy = yy.v / d_a
 
-    xsky1, ysky1 = pixel_to_cel(xx, yy, sky_center)
+    xsky1 = xx.copy()
+    ysky1 = yy.copy()
+
+    pixel_to_cel(xx, yy, sky_center.d)
 
     xx = np.rad2deg(xx) * 3600.0  # to arcsec
     yy = np.rad2deg(yy) * 3600.0  # to arcsec
@@ -44,6 +47,6 @@ def test_pixel_to_cel():
 
     assert_allclose(xsky1, xsky2)
     assert_allclose(ysky1, ysky2)
-    
+
 if __name__ == "__main__":
     test_pixel_to_cel()
