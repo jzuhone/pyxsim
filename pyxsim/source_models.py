@@ -203,7 +203,9 @@ class ThermalSourceModel(SourceModel):
                     n_elem = elem_names.index(elem)
                     m_units = str(data_source.ds._get_field_info(value).units)
                     if m_units in ["dimensionless", "", "code_metallicity"]:
-                        self.mconvert[key] = 1.0/(self.atable[n_elem]*atomic_weights[n_elem]*solar_H_abund)
+                        self.mconvert[key] = atomic_weights[1]/(self.atable[n_elem] *
+                                                                atomic_weights[n_elem] *
+                                                                solar_H_abund)
                     elif m_units == "Zsun":
                         self.mconvert[key] = 1.0
                     else:
