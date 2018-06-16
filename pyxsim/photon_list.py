@@ -22,10 +22,10 @@ from soxs.utils import parse_prng
 
 comm = communication_system.communicators[-1]
 
-photon_units = {"energy": "keV",
-                "dx": "kpc",
-                "pos": "kpc",
-                "vel": "km/s"}
+new_photon_units = {"energy": "keV",
+                    "dx": "kpc",
+                    "pos": "kpc",
+                    "vel": "km/s"}
 
 old_photon_keys = {"Energy": "energy",
                    "NumberOfPhotons": "num_photons"}
@@ -68,14 +68,21 @@ def determine_fields(ds, source_type, point_sources):
     return position_fields, velocity_fields, width_field
 
 
-def concatenate_photons(photons):
+def concatenate_photons(ds, photons, photon_units):
     for key in photons:
         if len(photons[key]) > 0:
-            photons[key] = uconcatenate(photons[key])
+            if key in ["pos", "vel"]:
+                photons[key] = np.swapaxes(np.concatenate(photons[key], 
+                                                          axis=1), 0, 1)
+            else:
+                photons[key] = np.concatenate(photons[key])
+            if key in photon_units:
+                photons[key] = ds.arr(photons[key], photon_units[key])
+                photons[key].convert_to_units(new_photon_units[key])
         elif key == "num_photons":
             photons[key] = np.array([])
         else:
-            photons[key] = YTArray([], photon_units[key])
+            photons[key] = YTArray([], new_photon_units[key])
 
 
 def find_object_bounds(data_source):
@@ -400,21 +407,29 @@ class PhotonList(object):
             if chunk_data is not None:
                 number_of_photons, idxs, energies = chunk_data
                 photons["num_photons"].append(number_of_photons)
-                photons["energy"].append(ds.arr(energies, "keV"))
-                photons["x"].append(chunk[p_fields[0]][idxs].to("kpc"))
-                photons["y"].append(chunk[p_fields[1]][idxs].to("kpc"))
-                photons["z"].append(chunk[p_fields[2]][idxs].to("kpc"))
-                photons["vx"].append(chunk[v_fields[0]][idxs].to("km/s"))
-                photons["vy"].append(chunk[v_fields[1]][idxs].to("km/s"))
-                photons["vz"].append(chunk[v_fields[2]][idxs].to("km/s"))
+                photons["energy"].append(energies)
+                photons["pos"].append(np.array([chunk[p_fields[0]].d[idxs],
+                                                chunk[p_fields[1]].d[idxs],
+                                                chunk[p_fields[2]].d[idxs]]))
+                photons["vel"].append(np.array([chunk[v_fields[0]].d[idxs],
+                                                chunk[v_fields[1]].d[idxs],
+                                                chunk[v_fields[2]].d[idxs]]))
                 if w_field is None:
-                    photons["dx"].append(ds.arr(np.zeros(idxs.shape), "kpc"))
+                    photons["dx"].append(np.zeros(idxs.shape))
                 else:
-                    photons["dx"].append(chunk[w_field][idxs].to("kpc"))
+                    photons["dx"].append(chunk[w_field].d[idxs])
 
         source_model.cleanup_model()
 
-        concatenate_photons(photons)
+        photon_units = {"pos": ds.field_info[p_fields[0]].units,
+                        "vel": ds.field_info[v_fields[0]].units,
+                        "energy": "keV"}
+        if w_field is None:
+            photon_units["dx"] = "kpc"
+        else:
+            photon_units["dx"] = ds.field_info[w_field].units
+
+        concatenate_photons(ds, photons, photon_units)
 
         c = parameters["center"].to("kpc")
 
@@ -422,21 +437,20 @@ class PhotonList(object):
             # Fix photon coordinates for regions crossing a periodic boundary
             dw = ds.domain_width.to("kpc")
             le, re = find_object_bounds(data_source)
-            for i, ax in enumerate("xyz"):
-                if ds.periodicity[i] and len(photons[ax]) > 0:
-                    tfl = photons[ax] < le[i]
-                    tfr = photons[ax] > re[i]
-                    photons[ax][tfl] += dw[i]
-                    photons[ax][tfr] -= dw[i]
+            for i in range(3):
+                if ds.periodicity[i] and photons["pos"].shape[0] > 0:
+                    tfl = photons["pos"][:,i] < le[i]
+                    tfr = photons["pos"][:,i] > re[i]
+                    photons["pos"][tfl,i] += dw[i]
+                    photons["pos"][tfr,i] -= dw[i]
 
         # Re-center all coordinates
-        for i, ax in enumerate("xyz"):
-            if len(photons[ax]) > 0:
-                photons[ax] -= c[i]
+        if photons["pos"].shape[0] > 0:
+            photons["pos"] -= c
 
         mylog.info("Finished generating photons.")
         mylog.info("Number of photons generated: %d" % int(np.sum(photons["num_photons"])))
-        mylog.info("Number of cells with photons: %d" % len(photons["x"]))
+        mylog.info("Number of cells with photons: %d" % photons["dx"].size)
 
         return cls(photons, parameters, cosmo)
 
