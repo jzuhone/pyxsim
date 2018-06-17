@@ -175,6 +175,8 @@ class AbsorptionModel(object):
         """
         prng = parse_prng(prng)
         n_events = eobs.size
+        if n_events == 0:
+            return np.array([], dtype='bool')
         detected = np.zeros(n_events, dtype='bool')
         nchunk = n_events // 100
         k = 0
