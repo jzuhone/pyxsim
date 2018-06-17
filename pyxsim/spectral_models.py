@@ -179,8 +179,8 @@ class AbsorptionModel(object):
             return np.array([], dtype='bool')
         detected = np.zeros(n_events, dtype='bool')
         nchunk = n_events // 100
-        if n_chunk == 0:
-            n_chunk = 1
+        if nchunk == 0:
+            nchunk = n_events
         k = 0
         pbar = get_pbar("Absorbing photons", n_events)
         while k < n_events:
