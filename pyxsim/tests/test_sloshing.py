@@ -69,7 +69,7 @@ def test_sloshing():
     assert len(merged_photons.photons["energy"]) == nphots
     assert merged_photons.parameters["fid_exp_time"] == exp_time
 
-    events1 = photons1.project_photons([1.0,-0.5,0.2], [30., 45.], area_new=1500.,
+    events1 = photons1.project_photons([1.0,-0.5,0.2], [30., 45.],
                                        absorb_model="tbabs", nH=0.1, prng=prng)
     events2 = ACIS_S(events1, prng=prng)
 
@@ -120,7 +120,7 @@ def test_sloshing():
     nevents = 0
 
     for i in range(4):
-        events = photons1.project_photons([1.0,-0.5,0.2], [30., 45.],
+        events = photons1.project_photons([1.0, -0.5, 0.2], [30., 45.],
                                           absorb_model="tbabs", nH=0.1,
                                           prng=prng)
         events.write_h5_file("split_events_%d.h5" % i)

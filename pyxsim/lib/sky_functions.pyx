@@ -73,7 +73,7 @@ def scatter_events(normal, prng, kernel, data_type,
         if data_type == "cells":
             xsky, ysky, zsky = prng.uniform(low=-0.5, high=0.5, 
                                             size=(3, num_det))
-            for i in range(num_det):
+            for i in range(num_cells):
                 for j in range(n_ph[i]):
                     if det[n]:
                         xsky[k] = xsky[k]*dx[i] + pos[i, 0]
@@ -88,7 +88,6 @@ def scatter_events(normal, prng, kernel, data_type,
                         k += 1
                         pbar.update()
                     n += 1
-
         elif data_type  == "particles":
             if kernel == "gaussian":
                 xsky = prng.normal(loc=0.0, scale=1.0, size=num_det)
@@ -98,7 +97,7 @@ def scatter_events(normal, prng, kernel, data_type,
                 theta = 2.0*np.pi*prng.uniform(low=0.0, high=1.0, size=num_det)
                 xsky = r*np.cos(theta)
                 ysky = r*np.sin(theta)
-            for i in range(num_det):
+            for i in range(num_cells):
                 for j in range(n_ph[i]):
                     if det[n]:
                         xsky[k] = xsky[k]*dx[i] + pos[i, 0]*x_hat[0] + \
