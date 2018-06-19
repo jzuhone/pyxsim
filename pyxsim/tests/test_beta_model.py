@@ -20,6 +20,7 @@ from sherpa.astro.ui import load_user_model, add_user_pars, \
 from soxs.utils import convert_rmf
 from soxs.instrument import RedistributionMatrixFile, AuxiliaryResponseFile
 from soxs.instrument_registry import get_instrument_from_registry
+from six import string_types
 
 ckms = clight.in_units("km/s").v
 
@@ -58,17 +59,24 @@ def test_beta_model():
     do_beta_model(bms, "velocity_z", "emission_measure")
 
 @requires_module("sherpa")
+def test_beta_model_offaxis():
+    bms = BetaModelSource()
+    do_beta_model(bms, "velocity_z", "emission_measure",
+                  axis=[1.0, -2.0, 5.0])
+
+@requires_module("sherpa")
 def test_particle_beta_model():
     bms = ParticleBetaModelSource()
-    do_beta_model(bms, "particle_velocity_z", 
+    do_beta_model(bms, "particle_velocity_z",
                   ("io", "emission_measure"), prng=29)
 
-def do_beta_model(source, v_field, em_field, prng=None):
+def do_beta_model(source, v_field, em_field, axis="z", 
+                  prng=None):
 
     tmpdir = tempfile.mkdtemp()
     curdir = os.getcwd()
     os.chdir(tmpdir)
-    
+
     if prng is None:
         prng = source.prng
 
@@ -96,10 +104,20 @@ def do_beta_model(source, v_field, em_field, prng=None):
     norm_sim = float(norm_sim.in_cgs())
 
     v1, v2 = sphere.quantities.weighted_variance(v_field, em_field)
-    sigma_sim = float(v1.in_units("km/s"))
-    mu_sim = -float(v2.in_units("km/s"))
 
-    events = photons.project_photons("z", [30.0, 45.0], absorb_model="tbabs",
+    if isinstance(axis, string_types):
+        if axis == "z":
+            fac = 1.0
+        else:
+            fac = 0.0
+    else:
+        fac = np.dot(axis, [0.0, 0.0, 1.0])
+        fac /= np.sqrt(np.dot(fac, fac))
+
+    sigma_sim = fac*float(v1.in_units("km/s"))
+    mu_sim = -fac*float(v2.in_units("km/s"))
+
+    events = photons.project_photons(axis, [30.0, 45.0], absorb_model="tbabs",
                                      nH=nH_sim, prng=prng)
 
     new_events = Lynx_Calorimeter(events, prng=prng)
