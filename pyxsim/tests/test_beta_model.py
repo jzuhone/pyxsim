@@ -44,6 +44,7 @@ def mymodel(pars, x, xhi=None):
     eidxs = np.logical_and(rmf.elo >= x[0]-0.5*dx, rmf.elo <= x[-1]+0.5*dx)
     return tbabs*bapec[eidxs]
 
+
 def mymodel_var(pars, x, xhi=None):
     dx = x[1]-x[0]
     tm = TBabsModel(pars[0])
@@ -53,10 +54,12 @@ def mymodel_var(pars, x, xhi=None):
     eidxs = np.logical_and(rmf.elo >= x[0]-0.5*dx, rmf.elo <= x[-1]+0.5*dx)
     return tbabs*bapec[eidxs]
 
+
 @requires_module("sherpa")
 def test_beta_model():
     bms = BetaModelSource()
     do_beta_model(bms, "velocity_z", "emission_measure")
+
 
 @requires_module("sherpa")
 def test_beta_model_nomove():
@@ -64,17 +67,36 @@ def test_beta_model_nomove():
     do_beta_model(bms, "velocity_z", "emission_measure",
                   axis="x")
 
+
 @requires_module("sherpa")
 def test_beta_model_offaxis():
     bms = BetaModelSource()
     do_beta_model(bms, "velocity_z", "emission_measure",
                   axis=[1.0, -2.0, 5.0])
 
+
 @requires_module("sherpa")
 def test_particle_beta_model():
     bms = ParticleBetaModelSource()
     do_beta_model(bms, "particle_velocity_z",
                   ("io", "emission_measure"), prng=29)
+
+
+@requires_module("sherpa")
+def test_particle_beta_model_nomove():
+    bms = ParticleBetaModelSource()
+    do_beta_model(bms, "particle_velocity_z",
+                  ("io", "emission_measure"), axis="x",
+                  prng=31)
+
+
+@requires_module("sherpa")
+def test_particle_beta_model_offaxis():
+    bms = ParticleBetaModelSource()
+    do_beta_model(bms, "particle_velocity_z",
+                  ("io", "emission_measure"), prng=29,
+                  axis=[1.0, -2.0, 5.0])
+
 
 def do_beta_model(source, v_field, em_field, axis="z", 
                   prng=None):
