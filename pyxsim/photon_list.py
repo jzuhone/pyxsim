@@ -69,8 +69,8 @@ def determine_fields(ds, source_type, point_sources):
 
 
 def concatenate_photons(ds, photons, photon_units):
-    for key in photons:
-        if len(photons[key]) > 0:
+    for key in ["pos", "vel", "dx", "energy", "num_photons"]:
+        if key in photons and len(photons[key]) > 0:
             if key in ["pos", "vel"]:
                 photons[key] = np.swapaxes(np.concatenate(photons[key], 
                                                           axis=1), 0, 1)
