@@ -111,8 +111,8 @@ def do_beta_model(source, v_field, em_field, axis="z",
         else:
             fac = 0.0
     else:
+        axis /= np.sqrt(np.dot(axis, axis))
         fac = np.dot(axis, [0.0, 0.0, 1.0])
-        fac /= np.sqrt(np.dot(fac, fac))
 
     sigma_sim = fac*float(v1.in_units("km/s"))
     mu_sim = -fac*float(v2.in_units("km/s"))
