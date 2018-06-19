@@ -22,13 +22,13 @@ def test_pixel_to_cel():
 
     d_a = D_A.to("kpc").v
 
-    xx = xx.v / d_a
-    yy = yy.v / d_a
+    xx = xx.d / d_a
+    yy = yy.d / d_a
 
     xsky1 = xx.copy()
     ysky1 = yy.copy()
 
-    pixel_to_cel(xx, yy, sky_center.d)
+    pixel_to_cel(xsky1, ysky1, sky_center.d)
 
     xx = np.rad2deg(xx) * 3600.0  # to arcsec
     yy = np.rad2deg(yy) * 3600.0  # to arcsec
