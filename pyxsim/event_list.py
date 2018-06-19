@@ -364,20 +364,26 @@ class EventList(object):
             The maximum energy of the photons to save in keV.
         """
         if isinstance(self, ConvolvedEventList):
-            mylog.error("Writing SIMPUT files is only supported if you didn't convolve with responses!")
-            raise NotImplementedError("Writing SIMPUT files is only supported if you didn't convolve with responses!")
+            raise NotImplementedError("Writing SIMPUT files is only supported if "
+                                      "you didn't convolve with responses!")
 
         events = communicate_events(self.events)
 
         if comm.rank == 0:
 
-            if emin is None:
-                emin = events["eobs"].min().value
-            if emax is None:
-                emax = events["eobs"].max().value
+            mylog.info("Writing SIMPUT catalog file %s_simput.fits " % prefix +
+                       "and SIMPUT photon list file %s_phlist.fits." % prefix)
 
-            idxs = np.logical_and(events["eobs"].d >= emin, events["eobs"].d <= emax)
-            flux = np.sum(events["eobs"][idxs].in_units("erg")) / \
+            if emin is None and emax is None:
+                idxs = slice(None, None, None)
+            else:
+                if emin is None:
+                    emin = events["eobs"].min().value
+                if emax is None:
+                    emax = events["eobs"].max().value
+                idxs = np.logical_and(events["eobs"].d >= emin, events["eobs"].d <= emax)
+            
+            flux = np.sum(events["eobs"][idxs]).to("erg") / \
                    self.parameters["exp_time"]/self.parameters["area"]
 
             write_photon_list(prefix, prefix, flux.v, events["xsky"][idxs].d,
