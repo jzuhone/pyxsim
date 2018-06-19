@@ -59,6 +59,12 @@ def test_beta_model():
     do_beta_model(bms, "velocity_z", "emission_measure")
 
 @requires_module("sherpa")
+def test_beta_model_nomove():
+    bms = BetaModelSource()
+    do_beta_model(bms, "velocity_z", "emission_measure",
+                  axis="x")
+
+@requires_module("sherpa")
 def test_beta_model_offaxis():
     bms = BetaModelSource()
     do_beta_model(bms, "velocity_z", "emission_measure",
