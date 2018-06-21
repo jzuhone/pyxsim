@@ -7,7 +7,8 @@ from pyxsim import \
     ThermalSourceModel, PhotonList, \
     Lynx_Calorimeter
 from pyxsim.tests.utils import \
-    BetaModelSource, ParticleBetaModelSource
+    BetaModelSource, ParticleBetaModelSource, \
+    tolerance_test
 from yt.testing import requires_module
 import numpy as np
 from yt.utilities.physical_constants import clight
@@ -35,6 +36,7 @@ arf = AuxiliaryResponseFile(mucal_spec['arf'])
 fit_model = TableApecModel(rmf.elo[0], rmf.ehi[-1], rmf.n_de)
 agen_var = TableApecModel(rmf.elo[0], rmf.ehi[-1], rmf.n_de,
                           var_elem=["O", "Ca"], thermal_broad=True)
+
 
 def mymodel(pars, x, xhi=None):
     dx = x[1]-x[0]
@@ -65,14 +67,14 @@ def test_beta_model():
 def test_beta_model_nomove():
     bms = BetaModelSource()
     do_beta_model(bms, "velocity_z", "emission_measure",
-                  axis="x")
+                  axis="x", prng=76)
 
 
 @requires_module("sherpa")
 def test_beta_model_offaxis():
     bms = BetaModelSource()
     do_beta_model(bms, "velocity_z", "emission_measure",
-                  axis=[1.0, -2.0, 5.0])
+                  axis=[1.0, -2.0, 5.0], prng=78)
 
 
 @requires_module("sherpa")
@@ -87,14 +89,14 @@ def test_particle_beta_model_nomove():
     bms = ParticleBetaModelSource()
     do_beta_model(bms, "particle_velocity_z",
                   ("io", "emission_measure"), axis="x",
-                  prng=31)
+                  prng=67)
 
 
 @requires_module("sherpa")
 def test_particle_beta_model_offaxis():
     bms = ParticleBetaModelSource()
     do_beta_model(bms, "particle_velocity_z",
-                  ("io", "emission_measure"), prng=29,
+                  ("io", "emission_measure"), prng=67,
                   axis=[1.0, -2.0, 5.0])
 
 
@@ -120,7 +122,7 @@ def do_beta_model(source, v_field, em_field, axis="z",
     kT_sim = source.kT
     Z_sim = source.Z
 
-    thermal_model = ThermalSourceModel("apec", 0.1, 11.5, 20000, 
+    thermal_model = ThermalSourceModel("apec", 0.1, 11.5, 20000,
                                        Zmet=Z_sim, prng=prng)
     photons = PhotonList.from_data_source(sphere, redshift, A, exp_time,
                                           thermal_model)
@@ -157,10 +159,10 @@ def do_beta_model(source, v_field, em_field, axis="z",
 
     load_user_model(mymodel, "tbapec")
     add_user_pars("tbapec", ["nH", "kT", "metallicity", "redshift", "norm", "velocity"],
-                  [0.01, 4.0, 0.2, 0.04, norm_sim*0.8, 300.0],
+                  [0.02, 4.0, 0.2, 0.04, norm_sim*0.8, 300.0],
                   parmins=[0.0, 0.1, 0.0, -200.0, 0.0, 0.0],
                   parmaxs=[10.0, 20.0, 10.0, 200.0, 1.0e9, 20000.0],
-                  parfrozen=[False, False, False, False, False, False])
+                  parfrozen=[True, False, False, False, False, False])
 
     load_pha("beta_model_evt.pi")
     set_stat("cstat")
@@ -168,18 +170,17 @@ def do_beta_model(source, v_field, em_field, axis="z",
     ignore(":0.6, 8.0:")
     set_model("tbapec")
     fit()
-    set_covar_opt("sigma", 1.645)
+    set_covar_opt("sigma", 2.0)
     covar()
     res = get_covar_results()
 
     redshift_sim = (1.0+mu_sim/ckms)*(1.0+redshift) - 1.0
 
-    assert np.abs(res.parvals[0]-nH_sim) < res.parmaxes[0]
-    assert np.abs(res.parvals[1]-kT_sim) < res.parmaxes[1]
-    assert np.abs(res.parvals[2]-Z_sim) < res.parmaxes[2]
-    assert np.abs(res.parvals[3]-redshift_sim) < res.parmaxes[3]
-    assert np.abs(res.parvals[4]-norm_sim) < res.parmaxes[4]
-    assert np.abs(res.parvals[5]-sigma_sim) < res.parmaxes[5]
+    assert np.abs(res.parvals[0]-kT_sim)/kT_sim < 0.02
+    assert np.abs(res.parvals[1]-Z_sim)/Z_sim < 0.02
+    assert np.abs(res.parvals[2]-redshift_sim)/redshift_sim < 0.02
+    assert np.abs(res.parvals[3]-norm_sim) < 0.02
+    assert np.abs(res.parvals[4]-sigma_sim) < 30.0
 
     os.chdir(curdir)
     shutil.rmtree(tmpdir)
@@ -261,6 +262,10 @@ def test_vapec_beta_model():
     shutil.rmtree(tmpdir)
 
 if __name__ == "__main__":
-    #test_beta_model()
-    #test_particle_beta_model()
+    test_beta_model_nomove()
+    test_beta_model_offaxis()
+    test_particle_beta_model_nomove()
+    test_particle_beta_model_offaxis()
+    test_beta_model()
+    test_particle_beta_model()
     test_vapec_beta_model()

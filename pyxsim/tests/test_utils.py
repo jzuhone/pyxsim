@@ -2,6 +2,7 @@ from pyxsim.utils import parse_value
 from astropy.units import Quantity
 from yt import YTQuantity
 
+
 def test_parse_value():
     t_yt = parse_value(YTQuantity(300.0, "ks"), "s")
     t_astropy = parse_value(Quantity(300.0, "ks"), "s")
