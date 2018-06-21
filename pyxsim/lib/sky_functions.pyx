@@ -27,6 +27,7 @@ def scatter_events(normal, prng, kernel, data_type,
     cdef np.int64_t num_cells = dx.shape[0]
     cdef np.ndarray[np.float64_t, ndim=1] xsky, ysky, zsky
     cdef np.int64_t i, j, k, xax, yax, n
+    cdef np.float64_t xx, yy
 
     k = 0
     n = 0
@@ -79,12 +80,12 @@ def scatter_events(normal, prng, kernel, data_type,
                         xsky[k] = xsky[k]*dx[i] + pos[i, 0]
                         ysky[k] = ysky[k]*dx[i] + pos[i, 1]
                         zsky[k] = zsky[k]*dx[i] + pos[i, 2]
-                        xsky[k] = (xsky[k]*x_hat[0]+
-                                   ysky[k]*x_hat[1]+
-                                   zsky[k]*x_hat[2])
-                        ysky[k] = (xsky[k]*y_hat[0]+
-                                   ysky[k]*y_hat[1]+
-                                   zsky[k]*y_hat[2])
+                        xx = (xsky[k]*x_hat[0]+ ysky[k]*x_hat[1]+
+                              zsky[k]*x_hat[2])
+                        yy = (xsky[k]*y_hat[0]+ ysky[k]*y_hat[1]+
+                              zsky[k]*y_hat[2])
+                        xsky[k] = xx
+                        ysky[k] = yy
                         k += 1
                         pbar.update()
                     n += 1
