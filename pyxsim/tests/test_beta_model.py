@@ -7,8 +7,7 @@ from pyxsim import \
     ThermalSourceModel, PhotonList, \
     Lynx_Calorimeter
 from pyxsim.tests.utils import \
-    BetaModelSource, ParticleBetaModelSource, \
-    tolerance_test
+    BetaModelSource, ParticleBetaModelSource
 from yt.testing import requires_module
 import numpy as np
 from yt.utilities.physical_constants import clight
