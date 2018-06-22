@@ -33,7 +33,7 @@ def test_light_cone():
 
     events = lc.generate_events(A, exp_time, fov, source_model, (30.0, 45.0),
                                 absorb_model="wabs", nH=0.02,
-                                smooth_positions=0.5, prng=prng)
+                                sigma_pos=0.5, prng=prng)
 
     return_events = return_data(events.events)
 
