@@ -42,7 +42,7 @@ class XrayLightCone(LightCone):
     def generate_events(self, area, exp_time, angular_width,
                         source_model, sky_center, parameters=None,
                         velocity_fields=None, absorb_model=None,
-                        nH=None, no_shifting=False, smooth_positions=None,
+                        nH=None, no_shifting=False, sigma_pos=None,
                         prng=None):
         """
         Generate projected events from a light cone simulation. 
@@ -81,15 +81,16 @@ class XrayLightCone(LightCone):
             absorption is applied.
         no_shifting : boolean, optional
             If set, the photon energies will not be Doppler shifted.
-        smooth_positions : float, optional
-            Apply a gaussian smoothing operation to the sky positions of the events. 
-            This may be useful when the binned events appear blocky due to their uniform
-            distribution within simulation cells. However, this will move the events away
-            from their originating position on the sky, and so may distort surface brightness
-            profiles and/or spectra. Should probably only be used for visualization purposes.
-            Supply a float here to smooth with a standard deviation with this fraction 
-            of the cell or particle size. Default: None
-        prng : integer or :class:`~numpy.random.RandomState` object 
+        sigma_pos : float, optional
+            Apply a gaussian smoothing operation to the sky positions of the
+            events. This may be useful when the binned events appear blocky due
+            to their uniform distribution within simulation cells. However, this
+            will move the events away from their originating position on the
+            sky, and so may distort surface brightness profiles and/or spectra.
+            Should probably only be used for visualization purposes. Supply a
+            float here to smooth with a standard deviation with this fraction
+            of the cell size. Default: None
+        prng : integer or :class:`~numpy.random.RandomState` object
             A pseudo-random number generator. Typically will only be specified
             if you have a reason to generate the same set of random numbers, such as for a
             test. Default is to use the :mod:`numpy.random` module.
@@ -126,7 +127,7 @@ class XrayLightCone(LightCone):
                 events = photons.project_photons("xyz"[ax], sky_center,
                                                  absorb_model=absorb_model, nH=nH,
                                                  no_shifting=no_shifting, 
-                                                 smooth_positions=smooth_positions, 
+                                                 sigma_pos=sigma_pos,
                                                  prng=prng)
                 if events.num_events > 0:
                     tot_events["xsky"].append(events["xsky"])
