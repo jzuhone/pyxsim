@@ -11,13 +11,35 @@ cdef extern from "math.h":
     double atan2(double y, double x) nogil
     double asin(double x) nogil
 
+    
+@cython.cdivision(True)
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def doppler_shift(np.ndarray[np.float64_t, ndim=1] shift,
+                  np.ndarray[np.int64_t, ndim=1] n_ph,
+                  np.ndarray[np.float64_t, ndim=1] eobs):
+
+    cdef np.int64_t num_cells = n_ph.shape[0]
+    cdef np.float64_t shft
+    cdef np.int64_t i, j, k
+
+    pbar = get_pbar("Doppler shifting photons", num_cells)
+
+    k = 0
+    for i in range(num_cells):
+        shft = sqrt((1.-shift[i])/(1.+shift[i]))
+        for j in range(n_ph[i]):
+            eobs[k] = eobs[k] * shft
+            k += 1
+        pbar.update()
+    pbar.finish()
 
 @cython.cdivision(True)
 @cython.boundscheck(False)
 @cython.wraparound(False)
 def scatter_events(normal, prng, kernel, data_type,
                    int num_det,
-		   np.ndarray[np.uint8_t, cast=True] det,
+                   np.ndarray[np.uint8_t, cast=True] det,
                    np.ndarray[np.int64_t, ndim=1] n_ph,
                    np.ndarray[np.float64_t, ndim=2] pos,
                    np.ndarray[np.float64_t, ndim=1] dx,

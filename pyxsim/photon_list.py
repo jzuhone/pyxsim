@@ -6,7 +6,7 @@ from collections import defaultdict
 import numpy as np
 from yt.funcs import iterable, issue_deprecation_warning
 from pyxsim.lib.sky_functions import pixel_to_cel, \
-    scatter_events
+    scatter_events, doppler_shift
 from yt.utilities.physical_constants import clight
 from yt.utilities.cosmology import Cosmology
 from yt.utilities.orientation import Orientation
@@ -675,12 +675,10 @@ class PhotonList(object):
             if comm.rank == 0:
                 mylog.info("Doppler-shifting photon energies.")
             if isinstance(normal, string_types):
-                shift = self.photons["vel"][:,"xyz".index(normal)]
+                shift = self.photons["vel"][:,"xyz".index(normal)]*scale_shift
             else:
-                shift = np.dot(self.photons["vel"], z_hat)
-            np.multiply(shift, scale_shift, shift)
-            np.sqrt((1.-shift)/(1.+shift), shift)
-            np.multiply(eobs, np.repeat(shift, n_ph), eobs)
+                shift = np.dot(self.photons["vel"], z_hat)*scale_shift
+            doppler_shift(shift.d, n_ph, eobs.d)
 
         if absorb_model is None:
             det = slice(None, None, None)
@@ -711,8 +709,8 @@ class PhotonList(object):
 
             xsky, ysky = scatter_events(norm, prng, kernel,
                                         self.parameters["data_type"],
-                                        num_det, det, self.photons["num_photons"], 
-                                        self.photons["pos"].d, self.photons["dx"].d, 
+                                        num_det, det, self.photons["num_photons"],
+                                        self.photons["pos"].d, self.photons["dx"].d,
                                         x_hat, y_hat)
 
             if self.parameters["data_type"] == "cells" and sigma_pos is not None:
