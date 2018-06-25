@@ -678,7 +678,7 @@ class PhotonList(object):
                 shift = self.photons["vel"][:,"xyz".index(normal)]*scale_shift
             else:
                 shift = np.dot(self.photons["vel"], z_hat)*scale_shift
-            doppler_shift(shift.d, n_ph, eobs.d)
+            doppler_shift(shift, n_ph, eobs)
 
         if absorb_model is None:
             det = slice(None, None, None)
