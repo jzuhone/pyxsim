@@ -54,7 +54,7 @@ def scatter_events(normal, prng, kernel, data_type,
     k = 0
     n = 0
 
-    pbar = get_pbar("Generating event positions", num_det)
+    pbar = get_pbar("Generating event positions", num_cells)
 
     if isinstance(normal, int):
 
@@ -87,9 +87,8 @@ def scatter_events(normal, prng, kernel, data_type,
                     xsky[k] = xsky[k]*dx[i] + pos[i, xax]
                     ysky[k] = ysky[k]*dx[i] + pos[i, yax]
                     k += 1
-                    pbar.update()
                 n += 1
-
+            pbar.update()
 
     else:
     
@@ -128,8 +127,8 @@ def scatter_events(normal, prng, kernel, data_type,
                         ysky[k] = ysky[k]*dx[i] + pos[i, 0]*y_hat[0] + \
                             pos[i, 1]*y_hat[1] + pos[i, 2]*y_hat[2]
                         k += 1
-                        pbar.update()
                     n += 1
+                pbar.update()
 
     pbar.finish()
     
