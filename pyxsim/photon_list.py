@@ -795,7 +795,7 @@ class MultiPhotonList(object):
 
     def project_photons(self, normal, sky_center, absorb_model=None,
                         nH=None, no_shifting=False, north_vector=None,
-                        smooth_positions=None, prng=None, **kwargs):
+                        sigma_pos=None, prng=None, **kwargs):
         event_lists = []
 
         for photons in self.photon_lists:
@@ -803,7 +803,7 @@ class MultiPhotonList(object):
                                              absorb_model=absorb_model,
                                              nH=nH, no_shifting=no_shifting,
                                              north_vector=north_vector,
-                                             smooth_positions=smooth_positions,
+                                             sigma_pos=sigma_pos,
                                              prng=prng, **kwargs)
             event_lists.append(events)
 
