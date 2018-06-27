@@ -299,7 +299,7 @@ class PhotonList(object):
             The angular diameter distance, used for nearby sources. This may be
             optionally supplied instead of it being determined from the
             *redshift* and given *cosmology*. If units are not specified, it is
-            assumed to be in Mpc. To use this, the redshift must be set to zero.
+            assumed to be in kpc. To use this, the redshift must be set to zero.
         cosmology : :class:`~yt.utilities.cosmology.Cosmology`, optional
             Cosmological information. If not supplied, we try to get the
             cosmology from the dataset. Otherwise, LCDM with the default yt 
