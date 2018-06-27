@@ -268,6 +268,10 @@ class EventList(object):
             tbhdu.header["DATE"] = t_begin.tt.isot
             tbhdu.header["DATE-OBS"] = t_begin.tt.isot
             tbhdu.header["DATE-END"] = t_end.tt.isot
+            if "emin" in self.parameters:
+                tbhdu.header["EMIN"] = self.parameters["emin"]
+            if "emax" in self.parameters:
+                tbhdu.header["EMAX"] = self.parameters["emax"]
 
             hdulist = [pyfits.PrimaryHDU(), tbhdu]
 
@@ -275,7 +279,8 @@ class EventList(object):
 
         comm.barrier()
 
-    def write_simput_file(self, prefix, overwrite=False, emin=None, emax=None):
+    def write_simput_file(self, prefix, overwrite=False, emin=None, emax=None,
+                          simput_prefix=None, append=False):
         r"""
         Write events to a SIMPUT file that may be read by the SIMX instrument
         simulator.
@@ -283,14 +288,25 @@ class EventList(object):
         Parameters
         ----------
         prefix : string
-            The filename prefix.
+            The filename prefix for the photon list file, and 
+            for the SIMPUT catalog file unless *simput_prefix*
+            is specified, see below.
         overwrite : boolean, optional
             Set to True to overwrite previous files.
         e_min : float, optional
             The minimum energy of the photons to save in keV.
         e_max : float, optional
             The maximum energy of the photons to save in keV.
+        simput_prefix : string, optional
+            The prefix of the SIMPUT catalog file to write or append 
+            to. If not set, it will be the same as *prefix*.
+        append : boolean, optional
+            If True, append a new source an existing SIMPUT 
+            catalog. Default: False
         """
+        if simput_prefix is None:
+            simput_prefix = prefix
+
         events = communicate_events(self.events)
 
         if comm.rank == 0:
@@ -310,9 +326,10 @@ class EventList(object):
             flux = np.sum(events["eobs"][idxs]).to("erg") / \
                    self.parameters["exp_time"]/self.parameters["area"]
 
-            write_photon_list(prefix, prefix, flux.v, events["xsky"][idxs].d,
-                              events["ysky"][idxs].d, events["eobs"][idxs].d,
-                              overwrite=overwrite)
+            write_photon_list(simput_prefix, prefix, flux.v, 
+                              events["xsky"][idxs].d, events["ysky"][idxs].d, 
+                              events["eobs"][idxs].d, overwrite=overwrite, 
+                              append=append)
 
         comm.barrier()
 
@@ -335,7 +352,6 @@ class EventList(object):
             d.create_dataset("xsky", data=events["xsky"].d)
             d.create_dataset("ysky", data=events["ysky"].d)
             d.create_dataset("eobs", data=events["eobs"].d)
-
             f.close()
 
         comm.barrier()
@@ -483,3 +499,36 @@ class EventList(object):
             hdulist.writeto(specfile, overwrite=overwrite)
 
         comm.barrier()
+
+
+class MultiEventList(object):
+
+    def __init__(self, event_lists):
+        self.event_lists = event_lists
+        self.num_lists = len(event_lists)
+
+    @classmethod
+    def from_h5_files(cls, basename):
+        import glob
+        event_lists = []
+        fns = glob.glob("{}.[0-9][0-9].h5".format(basename))
+        fns.sort()
+        for fn in fns:
+            events = EventList.from_file(fn)
+            event_lists.append(events)
+        return cls(event_lists)
+
+    def write_simput_catalog(self, prefix, emin=None, emax=None, overwrite=False):
+        for i, events in self.event_lists:
+            phlist_prefix = "%s.%02d" % (prefix, i)
+            if i == 0:
+                append = False
+            else:
+                append = True
+            events.write_simput_file(phlist_prefix, overwrite=overwrite,
+                                     emin=emin, emax=emax,
+                                     simput_prefix=prefix, append=append)
+
+    def write_h5_files(self, basename):
+        for i, events in enumerate(self.event_lists):
+            events.write_h5_file("%s.%02d.h5" % (basename, i))

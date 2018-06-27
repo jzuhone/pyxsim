@@ -336,9 +336,9 @@ class ThermalSourceModel(SourceModel):
             for j, key in enumerate(elem_keys):
                 value = self.var_elem[key]
                 if isinstance(value, float):
-                    elemZ[j, :] = value
+                    elemZ[j,:] = value
                 else:
-                    elemZ[j, :] = chunk[value].v[idxs]*self.mconvert[key]
+                    elemZ[j,:] = chunk[value].v[idxs]*self.mconvert[key]
 
         number_of_photons = np.zeros(num_cells, dtype="int64")
         energies = np.zeros(num_photons_max)

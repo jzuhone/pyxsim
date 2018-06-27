@@ -16,7 +16,7 @@ import h5py
 from pyxsim.spectral_models import absorb_models
 from pyxsim.utils import parse_value, force_unicode, validate_parameters, \
     key_warning, ParameterDict, mylog
-from pyxsim.event_list import EventList
+from pyxsim.event_list import EventList, MultiEventList
 from soxs.utils import parse_prng
 
 comm = communication_system.communicators[-1]
@@ -748,3 +748,63 @@ class PhotonList(object):
         parameters["sky_center"] = sky_center
 
         return EventList(events, parameters)
+
+
+class MultiPhotonList(object):
+
+    def __init__(self, photon_lists):
+        self.photon_lists = photon_lists
+        self.num_lists = len(photon_lists)
+
+    @classmethod
+    def from_files(cls, basename):
+        import glob
+        photon_lists = []
+        fns = glob.glob("{}.[0-9][0-9].h5".format(basename))
+        fns.sort()
+        for fn in fns:
+            photons = PhotonList.from_file(fn)
+            photon_lists.append(photons)
+        return cls(photon_lists)
+
+    @classmethod
+    def from_data_source(cls, num_lists, data_source, redshift, area,
+                         exp_time, source_model, point_sources=False,
+                         parameters=None, center=None, dist=None,
+                         cosmology=None, velocity_fields=None):
+
+        photon_lists = []
+
+        my_exp_time = exp_time/num_lists
+
+        for i in range(num_lists):
+            photons = PhotonList.from_data_source(data_source, redshift,
+                                                  area, my_exp_time, source_model,
+                                                  point_sources=point_sources,
+                                                  parameters=parameters,
+                                                  center=center, dist=dist,
+                                                  cosmology=cosmology,
+                                                  velocity_fields=velocity_fields)
+            photon_lists.append(photons)
+
+        return cls(photon_lists)
+
+    def write_h5_files(self, basename):
+        for i, photons in enumerate(self.photon_lists):
+            photons.write_h5_file("%s.%02d.h5" % (basename, i))
+
+    def project_photons(self, normal, sky_center, absorb_model=None,
+                        nH=None, no_shifting=False, north_vector=None,
+                        smooth_positions=None, prng=None, **kwargs):
+        event_lists = []
+
+        for photons in self.photon_lists:
+            events = photons.project_photons(normal, sky_center,
+                                             absorb_model=absorb_model,
+                                             nH=nH, no_shifting=no_shifting,
+                                             north_vector=north_vector,
+                                             smooth_positions=smooth_positions,
+                                             prng=prng, **kwargs)
+            event_lists.append(events)
+
+        return MultiEventList(event_lists)

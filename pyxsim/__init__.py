@@ -1,8 +1,10 @@
 from pyxsim.event_list import \
-    EventList
+    EventList, \
+    MultiEventList
 
 from pyxsim.photon_list import \
-    PhotonList
+    PhotonList, \
+    MultiPhotonList
 
 from pyxsim.source_generators import \
     make_xrb_particles, \
@@ -23,7 +25,8 @@ from pyxsim.spectral_models import \
     TBabsModel, WabsModel
 
 from pyxsim.utils import \
-    merge_files
+    merge_files, \
+    get_area_bins_from_arfs
 
 from ._version import get_versions
 __version__ = get_versions()['version']
