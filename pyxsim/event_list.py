@@ -60,6 +60,22 @@ def communicate_events(my_events, root=0):
         return my_events
 
 
+def _handle_simput(events, exp_time, area, emin, emax):
+
+    if emin is None and emax is None:
+        idxs = slice(None, None, None)
+    else:
+        if emin is None:
+            emin = events["eobs"].min().value
+        if emax is None:
+            emax = events["eobs"].max().value
+        idxs = np.logical_and(events["eobs"].d >= emin, events["eobs"].d <= emax)
+    
+    flux = np.sum(events["eobs"][idxs]).to("erg")/exp_time/area
+
+    return flux.v, events["xsky"].d[idxs], events["ysky"].d[idxs], events["eobs"].d[idxs]
+
+
 class EventList(object):
 
     def __init__(self, events, parameters):
@@ -311,25 +327,14 @@ class EventList(object):
 
         if comm.rank == 0:
 
-            mylog.info("Writing SIMPUT catalog file %s_simput.fits " % prefix +
+            mylog.info("Writing SIMPUT catalog file %s_simput.fits " % simput_prefix +
                        "and SIMPUT photon list file %s_phlist.fits." % prefix)
 
-            if emin is None and emax is None:
-                idxs = slice(None, None, None)
-            else:
-                if emin is None:
-                    emin = events["eobs"].min().value
-                if emax is None:
-                    emax = events["eobs"].max().value
-                idxs = np.logical_and(events["eobs"].d >= emin, events["eobs"].d <= emax)
+            flux, xsky, ysky, eobs = _handle_simput(events, self.parameters["exp_time"], 
+                                                    self.parameters["area"], emin, emax)
 
-            flux = np.sum(events["eobs"][idxs]).to("erg") / \
-                   self.parameters["exp_time"]/self.parameters["area"]
-
-            write_photon_list(simput_prefix, prefix, flux.v, 
-                              events["xsky"][idxs].d, events["ysky"][idxs].d, 
-                              events["eobs"][idxs].d, overwrite=overwrite, 
-                              append=append)
+            write_photon_list(simput_prefix, prefix, flux, xsky, ysky, eobs,
+                              overwrite=overwrite, append=append)
 
         comm.barrier()
 
@@ -519,15 +524,32 @@ class MultiEventList(object):
         return cls(event_lists)
 
     def write_simput_catalog(self, prefix, emin=None, emax=None, overwrite=False):
-        for i, events in self.event_lists:
-            phlist_prefix = "%s.%02d" % (prefix, i)
-            if i == 0:
-                append = False
-            else:
-                append = True
-            events.write_simput_file(phlist_prefix, overwrite=overwrite,
-                                     emin=emin, emax=emax,
-                                     simput_prefix=prefix, append=append)
+
+        if comm.rank == 0:
+
+            mylog.info("Writing SIMPUT catalog file %s_simput.fits." % prefix)
+
+            for i, events in enumerate(self.event_lists):
+
+                if i == 0:
+                    append = False
+                else:
+                    append = True
+
+                all_events = communicate_events(events.events)
+
+                phlist_prefix = "%s.%02d" % (prefix, i)
+
+                mylog.info("Writing SIMPUT photon list file %s_phlist.fits." % phlist_prefix)
+
+                flux, xsky, ysky, eobs = _handle_simput(all_events, 
+                                                        self.num_lists*events.parameters["exp_time"],
+                                                        events.parameters["area"], emin, emax)
+
+                write_photon_list(prefix, phlist_prefix, flux, xsky, ysky, eobs,
+                                  overwrite=overwrite, append=append)
+
+        comm.barrier()
 
     def write_h5_files(self, basename):
         for i, events in enumerate(self.event_lists):
