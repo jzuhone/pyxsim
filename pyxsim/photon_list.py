@@ -785,6 +785,7 @@ class MultiPhotonList(object):
                                                   center=center, dist=dist,
                                                   cosmology=cosmology,
                                                   velocity_fields=velocity_fields)
+            photons.parameters["exp_time"] = exp_time
             photon_lists.append(photons)
 
         return cls(photon_lists)

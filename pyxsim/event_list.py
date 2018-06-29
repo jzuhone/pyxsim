@@ -543,7 +543,7 @@ class MultiEventList(object):
                 mylog.info("Writing SIMPUT photon list file %s_phlist.fits." % phlist_prefix)
 
                 flux, xsky, ysky, eobs = _handle_simput(all_events, 
-                                                        self.num_lists*events.parameters["exp_time"],
+                                                        events.parameters["exp_time"],
                                                         events.parameters["area"], emin, emax)
 
                 write_photon_list(prefix, phlist_prefix, flux, xsky, ysky, eobs,
