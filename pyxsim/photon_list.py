@@ -681,7 +681,7 @@ class PhotonList(object):
             doppler_shift(shift, n_ph, eobs)
 
         if absorb_model is None:
-            det = slice(None, None, None)
+            det = np.ones(eobs.size, dtype='bool')
             num_det = eobs.size
         else:
             if comm.rank == 0:
