@@ -9,6 +9,10 @@ Version 2.2.0
 This version contains feature enhancements (with some backwards-incompatible 
 changes) and optimizations. 
 
+* The 2.2.x series of pyXSIM will be the last to support Python 2.7.
+* Support for non-equilibrium ionization plasma emission using AtomDB has been
+  added to pyXSIM. see :ref:`nei` for more details.
+* The default AtomDB/APEC version for pyXSIM is now v3.0.9.
 * The ability to change the redshift, collecting area, exposure time, or 
   distance of the source when creating a :class:`~pyxsim.event_list.EventList` 
   from :meth:`~pyxsim.photon_list.PhotonList.project_photons` has been removed.
