@@ -183,6 +183,52 @@ value is the single number or field name:
 Whatever elements are not specified here are assumed to be set as normal, whether
 they are H, He, trace elements, or metals covered by the ``Zmet`` parameter. 
 
+Non-Equilibrium Ionization
+++++++++++++++++++++++++++
+
+pyXSIM 2.2.0 and afterward has support for non-equilibrium ionization (NEI) 
+emitting plasmas in :class:`~pyxsim.source_models.ThermalSourceModel`. First, 
+one must create a dictionary mapping elements in their different ionization 
+states to the corresponding fields in your dataset as seen from yt:
+
+.. code-block:: python
+
+    # The dict mapping ionization states of different elements to different
+    # yt fields
+    var_elem = {"H^1": ("flash", "h   "),
+                "He^0": ("flash", "he  "),
+                "He^1": ("flash", "he1 "),
+                "He^2": ("flash", "he2 "),
+                "O^0": ("flash", "o   "),
+                "O^1": ("flash", "o1  "),
+                "O^2": ("flash", "o2  "),
+                "O^3": ("flash", "o3  "),
+                "O^4": ("flash", "o4  "),
+                "O^5": ("flash", "o5  "),
+                "O^6": ("flash", "o6  "),
+                "O^7": ("flash", "o7  "),
+                "O^8": ("flash", "o8  ")
+               }
+
+Note that no other elements will be modeled except those which are specified
+in ``var_elem``.
+
+The flag for NEI must be set ``nei=True`` when making the model object. 
+Note that since the NEI tables are not bundled with pyXSIM, they must be 
+downloaded from the `AtomDB website <http://www.atomdb.org>`_ and one must
+specify their location in ``model_root``. One may also have to change the 
+``model_vers`` string if the model version is not the default ``"v3.0.9"``.
+
+.. code-block:: python
+
+    # model files are located here
+    model_root = "/Users/jzuhone/atomdb_v3.0.9"
+
+    source_model = pyxsim.ThermalSourceModel("apec", 0.3, 1.7, 1000, nei=True, 
+                                             model_root=model_root,
+                                             var_elem=var_elem)
+
+
 Examples
 ++++++++
 
