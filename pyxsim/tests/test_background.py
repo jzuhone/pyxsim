@@ -1,6 +1,5 @@
 from pyxsim.source_generators.background import make_background
 from pyxsim.spectral_models import TableApecModel, WabsModel
-from pyxsim.instruments import ACIS_I
 from yt.testing import requires_module
 from soxs.spectra import ApecGenerator
 import os
@@ -11,8 +10,10 @@ from sherpa.astro.ui import load_user_model, add_user_pars, \
     load_pha, ignore, fit, set_model, set_stat, set_method, \
     covar, get_covar_results, set_covar_opt
 from soxs.instrument import RedistributionMatrixFile, \
-    AuxiliaryResponseFile
-from soxs.instrument_registry import get_instrument_from_registry
+    AuxiliaryResponseFile, instrument_simulator
+from soxs.events import write_spectrum
+from soxs.instrument_registry import get_instrument_from_registry, \
+    make_simple_instrument
 
 prng = 24
 
@@ -20,12 +21,14 @@ def setup():
     from yt.config import ytcfg
     ytcfg["yt", "__withintesting"] = "True"
 
-acis_spec = get_instrument_from_registry("acisi_cy19")
+make_simple_instrument("acisi_cy0", "sq_acisi_cy0", 0.0, 2400)
+
+acis_spec = get_instrument_from_registry("sq_acisi_cy0")
 
 rmf = RedistributionMatrixFile(acis_spec["rmf"])
 arf = AuxiliaryResponseFile(acis_spec['arf'])
 
-fit_model = TableApecModel(rmf.elo[0], rmf.ehi[-1], rmf.n_de, thermal_broad=False)
+fit_model = TableApecModel(rmf.elo[0], rmf.ehi[-1], rmf.n_e, thermal_broad=False)
 
 def mymodel(pars, x, xhi=None):
     tm = WabsModel(pars[0])
@@ -57,10 +60,14 @@ def test_background():
     spec.apply_foreground_absorption(norm_sim)
 
     events = make_background(area, exp_time, fov, (30.0, 45.0), spec, prng=prng)
+    events.write_simput_file("bkgnd", overwrite=True)
 
-    new_events = ACIS_I(events, prng=prng)
+    instrument_simulator("bkgnd_simput.fits", "bkgnd_evt.fits", 
+                         exp_time, "sq_acisi_cy0", [30.0, 45.0],
+                         overwrite=True, foreground=False, ptsrc_bkgnd=False,
+                         instr_bkgnd=False)
 
-    new_events.write_channel_spectrum("background_evt.pi", overwrite=True)
+    write_spectrum("bkgnd_evt.fits", "background_evt.pi", overwrite=True)
 
     os.system("cp %s %s ." % (arf.filename, rmf.filename))
 
