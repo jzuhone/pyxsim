@@ -79,8 +79,6 @@ class TableApecModel(ApecGenerator):
                  model_root=None, model_vers=None, 
                  thermal_broad=True, nolines=False,
                  abund_table="angr", nei=False):
-        if model_vers is None:
-            model_vers = "3.0.9"
         super(TableApecModel, self).__init__(emin, emax, nchan, var_elem=var_elem,
                                              apec_root=model_root, apec_vers=model_vers, 
                                              broadening=thermal_broad, nolines=nolines,
