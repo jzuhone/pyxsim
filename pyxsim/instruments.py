@@ -4,7 +4,8 @@ from soxs.instrument import \
     AuxiliaryResponseFile, \
     RedistributionMatrixFile
 from soxs.utils import parse_prng
-import os
+from yt.funcs import issue_deprecation_warning
+
 
 class InstrumentSimulator(object):
     def __init__(self, name, arf_file, rmf_file):
@@ -48,6 +49,9 @@ class InstrumentSimulator(object):
             if you have a reason to generate the same set of random numbers, such as for a
             test. Default is to use the :mod:`numpy.random` module.
         """
+        issue_deprecation_warning("The pyXSIM built-in instrument simulators "
+                                  "have been deprecated and will be removed "
+                                  "in a future release!")
         if "pi" in events or "pha" in events:
             raise RuntimeError("These events have already been convolved with a response!!")
         prng = parse_prng(prng)

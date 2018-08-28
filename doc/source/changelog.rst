@@ -26,6 +26,9 @@ changes) and optimizations.
 * A new option to treat each cell or particle which emits photons as a point
   source has been added to the :meth:`~pyxsim.photon_list.PhotonList.from_data_source`
   method of :class:`~pyxsim.photon_list.PhotonList`. 
+* The built-in instrument models are now deprecated. For convolution with 
+  instrument models, users are encouraged to use SOXS or another instrument
+  simulation package.
 
 Version 2.1.1
 -------------
