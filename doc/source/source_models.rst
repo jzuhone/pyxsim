@@ -183,6 +183,8 @@ value is the single number or field name:
 Whatever elements are not specified here are assumed to be set as normal, whether
 they are H, He, trace elements, or metals covered by the ``Zmet`` parameter. 
 
+.. _nei:
+
 Non-Equilibrium Ionization
 ++++++++++++++++++++++++++
 
