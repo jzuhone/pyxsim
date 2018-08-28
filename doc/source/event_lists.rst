@@ -52,7 +52,7 @@ A simple projection along an axis:
 
     events = photons.project_photons("z", (30.0, 45.0))
         
-An off-axis projection :
+An off-axis projection:
 
 .. code-block:: python
 
@@ -147,11 +147,6 @@ or not an existing file will be overwritten and the minimum and maximum energies
 events written to the file. Currently, SIMPUT files are used for export only; they
 cannot be used to read events back into pyXSIM. 
 
-.. note::
-
-    This method is not implemented for :class:`~pyxsim.event_list.ConvolvedEventList`
-    instances.
-
 Manipulating Event Lists
 ------------------------
 
@@ -208,26 +203,3 @@ To produce a spectrum binned on energy, call :meth:`~pyxsim.event_list.EventList
 This bins the unconvolved event energies using the ``emin``, ``emax``, and ``nchan`` 
 arguments into a histogram which will be written to the file as a spectrum. As usual, 
 the ``overwrite`` argument determines whether or not a file can be overwritten. 
-
-.. _convolved_events:
-
-``ConvolvedEventList`` Instances
---------------------------------
-
-:class:`~pyxsim.event_list.ConvolvedEventList` is a subclass of 
-:class:`~pyxsim.event_list.EventList` which contains data and parameters for convolved
-events, specifically PI or PHA channels and related data. These events have been convolved
-with an ARF and an RMF using an ``InstrumentSimulator``. Most of the 
-:class:`~pyxsim.event_list.EventList` methods are still available (with the exception
-that one is unable to write SIMPUT files from these objects). One additional method is 
-provided, :meth:`~pyxsim.event_list.ConvolvedEventList.write_channel_spectrum`, which 
-writes the spectrum binned according to PI or PHA channel to a file which can then by
-analyzed by standard X-ray spectral analysis tools:
-
-.. code-block:: python
-
-    specfile = "spec.pi" # filename to write to
-    events.write_channel_spectrum(specfile, overwrite=True)
-
-For more information on creating :class:`~pyxsim.event_list.ConvolvedEventList` objects,
-see :ref:`instruments`.

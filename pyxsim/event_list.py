@@ -2,6 +2,7 @@
 Classes for generating lists of detected events
 """
 import numpy as np
+from yt.funcs import issue_deprecation_warning
 from pyxsim.utils import mylog
 from yt.units.yt_array import YTQuantity, YTArray, uconcatenate
 import astropy.io.fits as pyfits
@@ -382,7 +383,7 @@ class EventList(object):
                 if emax is None:
                     emax = events["eobs"].max().value
                 idxs = np.logical_and(events["eobs"].d >= emin, events["eobs"].d <= emax)
-            
+
             flux = np.sum(events["eobs"][idxs]).to("erg") / \
                    self.parameters["exp_time"]/self.parameters["area"]
 
@@ -569,7 +570,14 @@ class EventList(object):
 
         comm.barrier()
 
+
 class ConvolvedEventList(EventList):
+
+    def __init__(self, events, parameters):
+        issue_deprecation_warning("ConvolvedEventList has been "
+                                  "deprecated and will be removed "
+                                  "in a future release!")
+        super(ConvolvedEventList, self).__init__(events, parameters)
 
     def write_channel_spectrum(self, specfile, overwrite=False):
         r"""
@@ -585,7 +593,7 @@ class ConvolvedEventList(EventList):
         spectype = self.parameters["channel_type"]
         rmf = RedistributionMatrixFile(self.parameters["rmf"])
         minlength = rmf.n_ch
-        if rmf.cmin == 1: 
+        if rmf.cmin == 1:
             minlength += 1
         spec = np.bincount(self[spectype], minlength=minlength)
         if rmf.cmin == 1: 
