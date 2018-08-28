@@ -21,9 +21,9 @@ def setup():
     from yt.config import ytcfg
     ytcfg["yt", "__withintesting"] = "True"
 
-make_simple_instrument("acisi_cy0", "sq_acisi_cy0", 0.0, 2400)
+make_simple_instrument("acisi_cy19", "sq_acisi_cy19", 20.0, 2400)
 
-acis_spec = get_instrument_from_registry("sq_acisi_cy0")
+acis_spec = get_instrument_from_registry("sq_acisi_cy19")
 
 rmf = RedistributionMatrixFile(acis_spec["rmf"])
 arf = AuxiliaryResponseFile(acis_spec['arf'])
@@ -51,7 +51,7 @@ def test_background():
 
     exp_time = (200., "ks")
     area = (1000., "cm**2")
-    fov = (20.0, "arcmin")
+    fov = (10.0, "arcmin")
 
     prng = 24
 
@@ -63,7 +63,7 @@ def test_background():
     events.write_simput_file("bkgnd", overwrite=True)
 
     instrument_simulator("bkgnd_simput.fits", "bkgnd_evt.fits", 
-                         exp_time, "sq_acisi_cy0", [30.0, 45.0],
+                         exp_time, "sq_acisi_cy19", [30.0, 45.0],
                          overwrite=True, foreground=False, ptsrc_bkgnd=False,
                          instr_bkgnd=False)
 

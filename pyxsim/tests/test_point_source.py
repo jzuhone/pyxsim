@@ -1,4 +1,3 @@
-from pyxsim.instruments import ACIS_S
 from pyxsim.spectral_models import TBabsModel
 from pyxsim.source_generators import make_point_sources
 from yt.testing import requires_module
@@ -10,12 +9,25 @@ from sherpa.astro.ui import load_user_model, add_user_pars, \
     load_pha, ignore, fit, set_model, set_stat, set_method, \
     covar, get_covar_results, set_covar_opt
 from soxs.spectra import Spectrum
+from soxs.events import write_spectrum
+from soxs.instrument_registry import get_instrument_from_registry, \
+    make_simple_instrument
+from soxs.instrument import RedistributionMatrixFile, \
+    AuxiliaryResponseFile, instrument_simulator
 
 prng = 25
+
+make_simple_instrument("aciss_cy19", "sq_aciss_cy19", 20.0, 2400)
+
+acis_spec = get_instrument_from_registry("sq_aciss_cy19")
+
+rmf = RedistributionMatrixFile(acis_spec["rmf"])
+arf = AuxiliaryResponseFile(acis_spec['arf'])
 
 def setup():
     from yt.config import ytcfg
     ytcfg["yt", "__withintesting"] = "True"
+
 
 def mymodel(pars, x, xhi=None):
     tm = TBabsModel(pars[0])
@@ -23,6 +35,7 @@ def mymodel(pars, x, xhi=None):
     dx = x[1]-x[0]
     plaw = pars[1]*dx*(x*(1.0+pars[2]))**(-pars[3])
     return tbabs*plaw
+
 
 @requires_module("sherpa")
 def test_point_source():
@@ -42,8 +55,6 @@ def test_point_source():
     spec = Spectrum.from_powerlaw(alpha_sim, redshift, norm_sim, 
                                   emin=0.1, emax=11.5, nbins=2000)
 
-    de = 11.4/2000
-
     spec.apply_foreground_absorption(nH_sim, model="tbabs")
 
     positions = [(30.01, 45.0)]
@@ -51,11 +62,16 @@ def test_point_source():
     events = make_point_sources(area, exp_time, positions, (30.0, 45.0),
                                 spec, prng=prng)
 
-    new_events = ACIS_S(events, prng=prng)
+    events.write_simput_file("ptsrc", overwrite=True)
 
-    new_events.write_channel_spectrum("point_source_evt.pi", overwrite=True)
+    instrument_simulator("ptsrc_simput.fits", "ptsrc_evt.fits",
+                         exp_time, "sq_aciss_cy19", [30.0, 45.0],
+                         overwrite=True, foreground=False, ptsrc_bkgnd=False,
+                         instr_bkgnd=False)
 
-    os.system("cp %s %s ." % (ACIS_S.arf.filename, ACIS_S.rmf.filename))
+    write_spectrum("ptsrc_evt.fits", "point_source_evt.pi", overwrite=True)
+
+    os.system("cp %s %s ." % (arf.filename, rmf.filename))
 
     load_user_model(mymodel, "tplaw")
     add_user_pars("tplaw", ["nH", "norm", "redshift", "alpha"],

@@ -1,6 +1,6 @@
 from pyxsim import \
     PowerLawSourceModel, PhotonList, \
-    WabsModel, ACIS_I
+    WabsModel
 from pyxsim.tests.utils import \
     BetaModelSource
 from yt.units.yt_array import YTQuantity
@@ -13,11 +13,22 @@ from yt.utilities.physical_constants import mp
 from sherpa.astro.ui import load_user_model, add_user_pars, \
     load_pha, ignore, fit, set_model, set_stat, set_method, \
     covar, get_covar_results, set_covar_opt
-from numpy.random import RandomState
+from soxs.instrument import RedistributionMatrixFile, \
+    AuxiliaryResponseFile, instrument_simulator
+from soxs.events import write_spectrum
+from soxs.instrument_registry import get_instrument_from_registry, \
+    make_simple_instrument
 
 def setup():
     from yt.config import ytcfg
     ytcfg["yt", "__withintesting"] = "True"
+
+make_simple_instrument("acisi_cy19", "sq_acisi_cy19", 20.0, 2400)
+
+acis_spec = get_instrument_from_registry("sq_acisi_cy19")
+
+rmf = RedistributionMatrixFile(acis_spec["rmf"])
+arf = AuxiliaryResponseFile(acis_spec['arf'])
 
 def mymodel(pars, x, xhi=None):
     dx = x[1]-x[0]
@@ -71,11 +82,16 @@ def plaw_fit(alpha_sim, prng=None):
     events = photons.project_photons("z", [30., 45.], absorb_model="wabs",
                                      nH=nH_sim, prng=bms.prng, no_shifting=True)
 
-    new_events = ACIS_I(events, prng=prng)
+    events.write_simput_file("plaw", overwrite=True)
 
-    os.system("cp %s %s ." % (ACIS_I.arf.filename, ACIS_I.rmf.filename))
+    instrument_simulator("plaw_simput.fits", "plaw_evt.fits",
+                         exp_time, "sq_acisi_cy19", [30.0, 45.0],
+                         overwrite=True, foreground=False, ptsrc_bkgnd=False,
+                         instr_bkgnd=False)
 
-    new_events.write_channel_spectrum("plaw_model_evt.pi", overwrite=True)
+    write_spectrum("plaw_evt.fits", "plaw_model_evt.pi", overwrite=True)
+
+    os.system("cp %s %s ." % (arf.filename, rmf.filename))
 
     load_user_model(mymodel, "wplaw")
     add_user_pars("wplaw", ["nH", "norm", "redshift", "alpha"],
