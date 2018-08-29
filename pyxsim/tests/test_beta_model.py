@@ -30,7 +30,10 @@ def setup():
     from yt.config import ytcfg
     ytcfg["yt", "__withintesting"] = "True"
 
-mucal_spec = get_instrument_from_registry("mucal")
+try:
+    mucal_spec = get_instrument_from_registry("mucal")
+except KeyError:
+    pass
 
 rmf = RedistributionMatrixFile(mucal_spec["rmf"])
 arf = AuxiliaryResponseFile(mucal_spec['arf'])

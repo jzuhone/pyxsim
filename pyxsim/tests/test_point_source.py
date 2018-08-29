@@ -17,7 +17,10 @@ from soxs.instrument import RedistributionMatrixFile, \
 
 prng = 25
 
-make_simple_instrument("aciss_cy19", "sq_aciss_cy19", 20.0, 2400)
+try:
+    make_simple_instrument("aciss_cy19", "sq_aciss_cy19", 20.0, 2400)
+except KeyError:
+    pass
 
 acis_spec = get_instrument_from_registry("sq_aciss_cy19")
 

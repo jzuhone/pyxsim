@@ -23,7 +23,10 @@ def setup():
     from yt.config import ytcfg
     ytcfg["yt", "__withintesting"] = "True"
 
-make_simple_instrument("acisi_cy19", "sq_acisi_cy19", 20.0, 2400)
+try:
+    make_simple_instrument("acisi_cy19", "sq_acisi_cy19", 20.0, 2400)
+except KeyError:
+    pass
 
 acis_spec = get_instrument_from_registry("sq_acisi_cy19")
 
