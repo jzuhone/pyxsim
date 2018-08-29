@@ -8,14 +8,14 @@ import shutil
 import numpy as np
 from sherpa.astro.ui import load_user_model, add_user_pars, \
     load_pha, ignore, fit, set_model, set_stat, set_method, \
-    covar, get_covar_results, set_covar_opt
+    get_fit_results
 from soxs.instrument import RedistributionMatrixFile, \
     AuxiliaryResponseFile, instrument_simulator
 from soxs.events import write_spectrum
 from soxs.instrument_registry import get_instrument_from_registry, \
     make_simple_instrument
 
-prng = 24
+prng = 37
 
 def setup():
     from yt.config import ytcfg
@@ -87,14 +87,12 @@ def test_background():
     ignore(":0.5, 8.0:")
     set_model("wapec")
     fit()
-    set_covar_opt("sigma", 1.6)
-    covar()
-    res = get_covar_results()
+    res = get_fit_results()
 
-    assert np.abs(res.parvals[0]-nH_sim) < res.parmaxes[0]
-    assert np.abs(res.parvals[1]-kT_sim) < res.parmaxes[1]
-    assert np.abs(res.parvals[2]-Z_sim) < res.parmaxes[2]
-    assert np.abs(res.parvals[3]-norm_sim) < res.parmaxes[3]
+    assert np.abs(res.parvals[0]-nH_sim)/nH_sim < 0.1
+    assert np.abs(res.parvals[1]-kT_sim)/kT_sim < 0.05
+    assert np.abs(res.parvals[2]-Z_sim) < 0.05
+    assert np.abs(res.parvals[3]-norm_sim)/norm_sim < 0.05
 
     os.chdir(curdir)
     shutil.rmtree(tmpdir)

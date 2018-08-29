@@ -16,13 +16,12 @@ import tempfile
 import shutil
 from sherpa.astro.ui import load_user_model, add_user_pars, \
     load_pha, ignore, fit, set_model, set_stat, set_method, \
-    covar, get_covar_results, set_covar_opt, thaw
+    get_fit_results
 from six import string_types
 from soxs.instrument import RedistributionMatrixFile, \
     AuxiliaryResponseFile, instrument_simulator
 from soxs.events import write_spectrum
-from soxs.instrument_registry import get_instrument_from_registry, \
-    make_simple_instrument
+from soxs.instrument_registry import get_instrument_from_registry
 
 ckms = clight.in_units("km/s").v
 
@@ -178,20 +177,19 @@ def do_beta_model(source, v_field, em_field, axis="z",
     ignore(":0.6, 8.0:")
     set_model("tbapec")
     fit()
-    set_covar_opt("sigma", 2.0)
-    covar()
-    res = get_covar_results()
+    res = get_fit_results()
 
     redshift_sim = (1.0+mu_sim/ckms)*(1.0+redshift) - 1.0
 
-    assert np.abs(res.parvals[0]-kT_sim)/kT_sim < 0.02
-    assert np.abs(res.parvals[1]-Z_sim)/Z_sim < 0.02
-    assert np.abs(res.parvals[2]-redshift_sim)/redshift_sim < 0.02
-    assert np.abs(res.parvals[3]-norm_sim) < 0.02
+    assert np.abs(res.parvals[0]-kT_sim)/kT_sim < 0.05
+    assert np.abs(res.parvals[1]-Z_sim)/Z_sim < 0.05
+    assert np.abs(res.parvals[2]-redshift_sim)/redshift_sim < 0.05
+    assert np.abs(res.parvals[3]-norm_sim) < 0.05
     assert np.abs(res.parvals[4]-sigma_sim) < 30.0
 
     os.chdir(curdir)
     shutil.rmtree(tmpdir)
+
 
 def test_vapec_beta_model():
 
@@ -256,14 +254,12 @@ def test_vapec_beta_model():
     ignore(":0.6, 8.0:")
     set_model("tbapec")
     fit()
-    set_covar_opt("sigma", 1.645)
-    covar()
-    res = get_covar_results()
+    res = get_fit_results()
 
-    assert np.abs(res.parvals[0]-kT_sim) < res.parmaxes[0]
-    assert np.abs(res.parvals[1]-norm_sim) < res.parmaxes[1]
-    assert np.abs(res.parvals[2]-O_sim) < res.parmaxes[2]
-    assert np.abs(res.parvals[3]-Ca_sim) < res.parmaxes[3]
+    assert np.abs(res.parvals[0]-kT_sim)/kT_sim < 0.05
+    assert np.abs(res.parvals[1]-norm_sim)/norm_sim < 0.05
+    assert np.abs(res.parvals[2]-O_sim)/O_sim < 0.05
+    assert np.abs(res.parvals[3]-Ca_sim)/Ca_sim < 0.05
 
     os.chdir(curdir)
     shutil.rmtree(tmpdir)

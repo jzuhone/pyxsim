@@ -7,7 +7,7 @@ import shutil
 import numpy as np
 from sherpa.astro.ui import load_user_model, add_user_pars, \
     load_pha, ignore, fit, set_model, set_stat, set_method, \
-    covar, get_covar_results, set_covar_opt
+    get_fit_results
 from soxs.spectra import Spectrum
 from soxs.events import write_spectrum
 from soxs.instrument_registry import get_instrument_from_registry, \
@@ -89,13 +89,11 @@ def test_point_source():
     ignore(":0.5, 9.0:")
     set_model("tplaw")
     fit()
-    set_covar_opt("sigma", 1.6)
-    covar()
-    res = get_covar_results()
+    res = get_fit_results()
 
-    assert np.abs(res.parvals[0]-nH_sim) < res.parmaxes[0]
-    assert np.abs(res.parvals[1]-norm_sim) < res.parmaxes[1]
-    assert np.abs(res.parvals[2]-alpha_sim) < res.parmaxes[2]
+    assert np.abs(res.parvals[0]-nH_sim)/nH_sim < 0.1
+    assert np.abs(res.parvals[1]-norm_sim)/norm_sim < 0.05
+    assert np.abs(res.parvals[2]-alpha_sim)/alpha_sim < 0.05
 
     os.chdir(curdir)
     shutil.rmtree(tmpdir)
