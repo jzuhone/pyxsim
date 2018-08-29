@@ -5,10 +5,12 @@ Producing Realistic Observations Using External Packages
 
 If you want to produce a realistic simulation of a particular instrumental 
 configuration, pyXSIM provides options for exporting its event lists to 
-external packages. For `MARX <http://space.mit.edu/ASC/MARX/>`_ and 
-`SIMX <http://hea-www.cfa.harvard.edu/simx/>`_, or for more fine-tuned 
-use of `SOXS <http://hea-www.cfa.harvard.edu/~jzuhone/soxs>`_, one can use 
-SIMPUT files. 
+external packages. The supported software packages are:
+
+* `MARX <http://space.mit.edu/ASC/MARX/>`_ 
+* `SIMX <http://hea-www.cfa.harvard.edu/simx/>`_
+* `SIXTE <http://https://www.sternwarte.uni-erlangen.de/research/sixte/>`_
+* `SOXS <http://hea-www.cfa.harvard.edu/~jzuhone/soxs>`_
 
 .. note::
 
@@ -42,7 +44,7 @@ needs to change the following lines in the ``marx.par`` file:
 SIMX
 ----
 
-Here is an example set of SIMX commands that uses a SIMPUT file made with
+Here is an example set of SIMX commands that uses a SIMPUT catalog made with
 pyXSIM:
 
 .. code-block:: bash
@@ -64,10 +66,54 @@ pyXSIM:
     pset simx OutputFileName=spiral_242959_noshift_xrs
     simx
 
+SIXTE
+-----
+
+Here is an example set of SIXTE commands that uses a SIMPUT catalog made with
+pyXSIM:
+
+.. code-block:: bash
+
+    #!/bin/bash
+
+    export HEADASNOQUERY=
+    export HEADASPROMPT=/dev/null
+    
+    . $HEADAS/headas-init.sh
+    
+    base=sloshing_simput
+    xmldir=$SIXTE/share/sixte/instruments/athena-wfi/wfi_wo_filter_15row
+    xml0=${xmldir}/ld_wfi_ff_chip0.xml
+    xml1=${xmldir}/ld_wfi_ff_chip1.xml
+    xml2=${xmldir}/ld_wfi_ff_chip2.xml
+    xml3=${xmldir}/ld_wfi_ff_chip3.xml
+    
+    $SIXTE/bin/athenawfisim \
+        XMLFile0=${xml0} XMLFile1=${xml1} XMLFile2=${xml2} XMLFile3=${xml3} \
+        RA=30.05 Dec=45.04 \
+        Prefix=sim_ \
+        Simput=${base}.fits \
+        EvtFile=evt.fits \
+        Exposure=6000.0 \
+        clobber=yes
+    
+    ftmerge \
+        sim_chip0_evt.fits,sim_chip1_evt.fits,sim_chip2_evt.fits,sim_chip3_evt.fits \
+        sim_combined_evt.fits clobber=yes
+    
+    $SIXTE/bin/imgev \
+        EvtFile=sim_combined_evt.fits \
+        Image=img_sloshing.fits \
+        CoordinateSystem=0 Projection=TAN \
+        NAXIS1=1078 NAXIS2=1078 CUNIT1=deg CUNIT2=deg \
+        CRVAL1=30.05 CRVAL2=45.04 CRPIX1=593.192308 CRPIX2=485.807692 \
+        CDELT1=-6.207043e-04 CDELT2=6.207043e-04 history=true \
+        clobber=yes
+
 SOXS
 ----
 
-Here is an example set of SOXS commands that uses a SIMPUT file made with
+Here is an example set of SOXS commands that uses a SIMPUT catalog made with
 pyXSIM:
 
 .. code-block:: python
