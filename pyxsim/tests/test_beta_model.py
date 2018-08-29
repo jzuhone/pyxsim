@@ -17,10 +17,12 @@ import shutil
 from sherpa.astro.ui import load_user_model, add_user_pars, \
     load_pha, ignore, fit, set_model, set_stat, set_method, \
     covar, get_covar_results, set_covar_opt, thaw
-from soxs.utils import convert_rmf
-from soxs.instrument import RedistributionMatrixFile, AuxiliaryResponseFile
-from soxs.instrument_registry import get_instrument_from_registry
 from six import string_types
+from soxs.instrument import RedistributionMatrixFile, \
+    AuxiliaryResponseFile, instrument_simulator
+from soxs.events import write_spectrum
+from soxs.instrument_registry import get_instrument_from_registry, \
+    make_simple_instrument
 
 ckms = clight.in_units("km/s").v
 
@@ -32,8 +34,8 @@ mucal_spec = get_instrument_from_registry("mucal")
 
 rmf = RedistributionMatrixFile(mucal_spec["rmf"])
 arf = AuxiliaryResponseFile(mucal_spec['arf'])
-fit_model = TableApecModel(rmf.elo[0], rmf.ehi[-1], rmf.n_de)
-agen_var = TableApecModel(rmf.elo[0], rmf.ehi[-1], rmf.n_de,
+fit_model = TableApecModel(rmf.elo[0], rmf.ehi[-1], rmf.n_e)
+agen_var = TableApecModel(rmf.elo[0], rmf.ehi[-1], rmf.n_e,
                           var_elem=["O", "Ca"], thermal_broad=True)
 
 
@@ -149,12 +151,16 @@ def do_beta_model(source, v_field, em_field, axis="z",
     events = photons.project_photons(axis, [30.0, 45.0], absorb_model="tbabs",
                                      nH=nH_sim, prng=prng)
 
-    new_events = Lynx_Calorimeter(events, prng=prng)
+    events.write_simput_file("beta_model", overwrite=True)
+
+    instrument_simulator("beta_model_simput.fits", "beta_model_evt.fits",
+                         exp_time, "mucal", [30.0, 45.0],
+                         overwrite=True, foreground=False, ptsrc_bkgnd=False,
+                         instr_bkgnd=False)
+
+    write_spectrum("beta_model_evt.fits", "beta_model_evt.pi", overwrite=True)
 
     os.system("cp %s %s ." % (arf.filename, rmf.filename))
-    convert_rmf(rmf.filename)
-
-    new_events.write_channel_spectrum("beta_model_evt.pi", overwrite=True)
 
     load_user_model(mymodel, "tbapec")
     add_user_pars("tbapec", ["nH", "kT", "metallicity", "redshift", "norm", "velocity"],
@@ -231,7 +237,6 @@ def test_vapec_beta_model():
     new_events = Lynx_Calorimeter(events, prng=prng)
 
     os.system("cp %s %s ." % (arf.filename, rmf.filename))
-    convert_rmf(rmf.filename)
 
     new_events.write_channel_spectrum("var_abund_beta_model_evt.pha", overwrite=True)
 
