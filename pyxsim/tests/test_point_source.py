@@ -15,7 +15,7 @@ from soxs.instrument_registry import get_instrument_from_registry, \
 from soxs.instrument import RedistributionMatrixFile, \
     AuxiliaryResponseFile, instrument_simulator
 
-prng = 25
+prng = 49
 
 try:
     make_simple_instrument("aciss_cy19", "sq_aciss_cy19", 20.0, 2400)
@@ -78,22 +78,21 @@ def test_point_source():
 
     load_user_model(mymodel, "tplaw")
     add_user_pars("tplaw", ["nH", "norm", "redshift", "alpha"],
-                  [0.01, norm_sim*0.8, redshift, 0.9],
+                  [0.02, norm_sim*0.8, redshift, 0.9],
                   parmins=[0.0, 0.0, 0.0, 0.1],
                   parmaxs=[10.0, 1.0e9, 10.0, 10.0],
-                  parfrozen=[False, False, True, False])
+                  parfrozen=[True, False, True, False])
 
     load_pha("point_source_evt.pi")
     set_stat("cstat")
     set_method("simplex")
-    ignore(":0.5, 9.0:")
+    ignore(":0.4, 9.0:")
     set_model("tplaw")
     fit()
     res = get_fit_results()
 
-    assert np.abs(res.parvals[0]-nH_sim)/nH_sim < 0.1
-    assert np.abs(res.parvals[1]-norm_sim)/norm_sim < 0.05
-    assert np.abs(res.parvals[2]-alpha_sim)/alpha_sim < 0.05
+    assert np.abs(res.parvals[0]-norm_sim)/norm_sim < 0.05
+    assert np.abs(res.parvals[1]-alpha_sim)/alpha_sim < 0.05
 
     os.chdir(curdir)
     shutil.rmtree(tmpdir)
