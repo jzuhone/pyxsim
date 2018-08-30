@@ -4,6 +4,7 @@ omit =
    pyxsim/__init__*
    pyxsim/*setup*
    pyxsim/*tests/*
+   pyxsim/instruments.py
 
 [report]
 # Regexes for lines to exclude from consideration
@@ -16,3 +17,5 @@ exclude_lines =
 
     # Don't complain about ImportError
     except ImportError
+
+    ConvolvedEventList
