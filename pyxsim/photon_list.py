@@ -53,12 +53,15 @@ def determine_fields(ds, source_type, point_sources):
     if "ParticleIndex" in ds_type:
         position_fields = [(source_type, "particle_position_%s" % ax) for ax in "xyz"]
         velocity_fields = [(source_type, "particle_velocity_%s" % ax) for ax in "xyz"]
-        width_field = (source_type, "smoothing_length")
-        if width_field not in ds.field_info and not point_sources:
-            _smoothing_length = make_hsml(source_type)
-            width_field = (source_type, "pyxsim_smoothing_length")
-            ds.add_field(width_field, _smoothing_length, particle_type=True,
-                         units='code_length')
+        if source_type in ["PartType0", "gas", "Gas"]:
+            width_field = (source_type, "smoothing_length")
+            if width_field not in ds.field_info and not point_sources:
+                _smoothing_length = make_hsml(source_type)
+                width_field = (source_type, "pyxsim_smoothing_length")
+                ds.add_field(width_field, _smoothing_length, particle_type=True,
+                            units='code_length')
+        else:
+            width_field = None
     else:
         position_fields = [("index", ax) for ax in "xyz"]
         velocity_fields = [(source_type, "velocity_%s" % ax) for ax in "xyz"]
