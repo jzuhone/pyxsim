@@ -1,4 +1,2 @@
-include pyxsim/response_files/*
-include pyxsim/spectral_files/*
 include versioneer.py
 include pyxsim/_version.py
