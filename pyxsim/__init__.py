@@ -1,15 +1,5 @@
-__version__ = "2.1.1"
-
 from pyxsim.event_list import \
-    EventList, \
-    ConvolvedEventList
-
-from pyxsim.instruments import \
-    InstrumentSimulator, \
-    ACIS_I, ACIS_S, \
-    Lynx_Imager, Lynx_Calorimeter, \
-    Hitomi_SXS, Athena_WFI, \
-    Athena_XIFU
+    EventList
 
 from pyxsim.photon_list import \
     PhotonList
