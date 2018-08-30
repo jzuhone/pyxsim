@@ -108,23 +108,3 @@ and :func:`~pyxsim.source_generators.point_sources.make_point_sources`, which cr
 new :class:`~pyxsim.event_list.EventList` instances. See the docs for :ref:`point-sources` 
 and :ref:`background` for more information.
 
-Instrument Simulators
----------------------
-
-The only operations now performed by ``InstrumentSimulator`` are convolution with the 
-effective area curve (using the ARF) and with the response matrix (using the RMF). No 
-spatial PSF convolutions or rebinning operations can be applied. For more detailed 
-instrument simulation, users are advised to write events to SIMPUT files
-and use SOXS directly. 
-
-``InstrumentSimulator`` instances now only take a single argument, the 
-:class:`~pyxsim.event_list.EventList`:
-
-.. code-block:: python
-
-    convolved_events = pyxsim.ACIS_I(events)
-    
-The object which is returned is a :class:`~pyxsim.event_list.ConvolvedEventList`
-which has methods specific to dealing with spectral channels. See :ref:`convolved_events` 
-for more information.
-

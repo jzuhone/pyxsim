@@ -63,11 +63,7 @@ Step 3: Convolve Events with Instrumental Responses
 
 Finally, the last step is to take the sky-projected event positions and energies and convolve them with
 instrumental responses to produce realistic images and spectra that can be processed with standard software
-tools for working with X-ray observations. pyXSIM provides a very simplified approach to convolving with
-instrumental responses, but also provides a way to export the simulated events for use with other packages
-which simulate X-ray observatories more accurately. Events convolved with responses 
-
-The details on how to convolve with instrumental responses can be found in :ref:`instruments`. 
+tools for working with X-ray observations. pyXSIM provides a way to export the simulated events for use with other packages which simulate X-ray observatories more accurately. The details on how to do this can be found in :ref:`instruments`. 
 
 Limitations
 -----------
