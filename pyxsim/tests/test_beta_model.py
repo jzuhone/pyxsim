@@ -4,7 +4,8 @@ A unit test for the pyxsim analysis module.
 
 from pyxsim import \
     TableApecModel, TBabsModel, \
-    ThermalSourceModel, PhotonList, \
+    ThermalSourceModel, PhotonList
+from pyxsim.instruments import \
     Lynx_Calorimeter
 from pyxsim.tests.utils import \
     BetaModelSource, ParticleBetaModelSource
