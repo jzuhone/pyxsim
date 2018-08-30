@@ -90,7 +90,8 @@ def plaw_fit(alpha_sim, prng=None):
     instrument_simulator("plaw_simput.fits", "plaw_evt.fits",
                          exp_time, "sq_acisi_cy19", [30.0, 45.0],
                          overwrite=True, foreground=False, ptsrc_bkgnd=False,
-                         instr_bkgnd=False)
+                         instr_bkgnd=False,
+                         prng=prng)
 
     write_spectrum("plaw_evt.fits", "plaw_model_evt.pi", overwrite=True)
 

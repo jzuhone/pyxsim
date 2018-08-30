@@ -158,7 +158,8 @@ def do_beta_model(source, v_field, em_field, axis="z",
     instrument_simulator("beta_model_simput.fits", "beta_model_evt.fits",
                          exp_time, "mucal", [30.0, 45.0],
                          overwrite=True, foreground=False, ptsrc_bkgnd=False,
-                         instr_bkgnd=False)
+                         instr_bkgnd=False, 
+                         prng=prng)
 
     write_spectrum("beta_model_evt.fits", "beta_model_evt.pi", overwrite=True)
 

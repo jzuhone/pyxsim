@@ -70,7 +70,8 @@ def test_point_source():
     instrument_simulator("ptsrc_simput.fits", "ptsrc_evt.fits",
                          exp_time, "sq_aciss_cy19", [30.0, 45.0],
                          overwrite=True, foreground=False, ptsrc_bkgnd=False,
-                         instr_bkgnd=False)
+                         instr_bkgnd=False,
+                         prng=prng)
 
     write_spectrum("ptsrc_evt.fits", "point_source_evt.pi", overwrite=True)
 

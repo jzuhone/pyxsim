@@ -68,7 +68,8 @@ def test_background():
     instrument_simulator("bkgnd_simput.fits", "bkgnd_evt.fits", 
                          exp_time, "sq_acisi_cy19", [30.0, 45.0],
                          overwrite=True, foreground=False, ptsrc_bkgnd=False,
-                         instr_bkgnd=False)
+                         instr_bkgnd=False,
+                         prng=prng)
 
     write_spectrum("bkgnd_evt.fits", "background_evt.pi", overwrite=True)
 
