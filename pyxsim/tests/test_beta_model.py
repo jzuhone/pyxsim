@@ -70,7 +70,7 @@ def test_beta_model():
 def test_beta_model_nomove():
     bms = BetaModelSource()
     do_beta_model(bms, "velocity_z", "emission_measure",
-                  axis="x", prng=76)
+                  axis="x", prng=89)
 
 
 @requires_module("sherpa")
@@ -92,7 +92,7 @@ def test_particle_beta_model_nomove():
     bms = ParticleBetaModelSource()
     do_beta_model(bms, "particle_velocity_z",
                   ("io", "emission_measure"), axis="x",
-                  prng=67)
+                  prng=72)
 
 
 @requires_module("sherpa")
