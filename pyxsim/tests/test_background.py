@@ -15,7 +15,7 @@ from soxs.events import write_spectrum
 from soxs.instrument_registry import get_instrument_from_registry, \
     make_simple_instrument
 
-prng = 37
+prng = 39
 
 def setup():
     from yt.config import ytcfg
