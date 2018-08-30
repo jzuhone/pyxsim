@@ -2,6 +2,7 @@
 from setuptools import setup, find_packages
 from setuptools.extension import Extension
 import numpy as np
+import versioneer
 
 cython_extensions = [
     Extension("pyxsim.lib.sky_functions",
@@ -12,7 +13,7 @@ cython_extensions = [
 
 setup(name='pyxsim',
       packages=find_packages(),
-      version='2.1.1',
+      version=versioneer.get_version(),
       description='Python package for simulating X-ray observations of astrophysical sources',
       author='John ZuHone',
       author_email='jzuhone@gmail.com',

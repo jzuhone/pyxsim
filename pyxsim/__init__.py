@@ -34,3 +34,7 @@ from pyxsim.spectral_models import \
 
 from pyxsim.utils import \
     merge_files
+
+from ._version import get_versions
+__version__ = get_versions()['version']
+del get_versions
