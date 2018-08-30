@@ -414,8 +414,9 @@ class ThermalSourceModel(SourceModel):
 
         active_cells = number_of_photons > 0
         idxs = idxs[active_cells]
+        ncells = idxs.size
 
-        return number_of_photons[active_cells], idxs, energies[:end_e].copy()
+        return ncells, number_of_photons[active_cells], idxs, energies[:end_e].copy()
 
 
 class PowerLawSourceModel(SourceModel):
@@ -502,8 +503,9 @@ class PowerLawSourceModel(SourceModel):
                 start_e = end_e
 
         active_cells = number_of_photons > 0
+        ncells = active_cells.sum()
 
-        return number_of_photons[active_cells], active_cells, energies[:end_e].copy()
+        return ncells, number_of_photons[active_cells], active_cells, energies[:end_e].copy()
 
 
 class LineSourceModel(SourceModel):
@@ -590,6 +592,7 @@ class LineSourceModel(SourceModel):
         energies = energies * self.scale_factor
 
         active_cells = number_of_photons > 0
+        ncells = active_cells.sum()
 
-        return number_of_photons[active_cells], active_cells, energies
+        return ncells, number_of_photons[active_cells], active_cells, energies
 

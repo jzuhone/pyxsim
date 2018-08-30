@@ -412,7 +412,7 @@ class PhotonList(object):
             chunk_data = source_model(chunk)
 
             if chunk_data is not None:
-                number_of_photons, idxs, energies = chunk_data
+                ncells, number_of_photons, idxs, energies = chunk_data
                 photons["num_photons"].append(number_of_photons)
                 photons["energy"].append(energies)
                 photons["pos"].append(np.array([chunk[p_fields[0]].d[idxs],
@@ -422,7 +422,7 @@ class PhotonList(object):
                                                 chunk[v_fields[1]].d[idxs],
                                                 chunk[v_fields[2]].d[idxs]]))
                 if w_field is None:
-                    photons["dx"].append(np.zeros(idxs.shape))
+                    photons["dx"].append(np.zeros(ncells))
                 else:
                     photons["dx"].append(chunk[w_field].d[idxs])
 

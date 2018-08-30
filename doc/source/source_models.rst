@@ -505,9 +505,11 @@ what is going on.
                 energies[start_e:end_e] = e / (1.+self.redshift)
                 start_e = end_e
 
-        # Finally, __call__ must report the number of photons in each cell
-        # which actually has photons, the actual indices of the cells themselves,
+        # Finally, __call__ must report the number of cells with photons, the 
+        # number of photons in each cell which actually has photons, the actual 
+        # indices of the cells themselves,
         # and the energies of the photons.
         active_cells = number_of_photons > 0
-
-        return number_of_photons[active_cells], active_cells, energies[:end_e].copy()
+        ncells = active_cells.sum()
+        
+        return ncells, number_of_photons[active_cells], active_cells, energies[:end_e].copy()
