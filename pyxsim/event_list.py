@@ -70,7 +70,7 @@ def _handle_simput(events, exp_time, area, emin, emax):
         if emax is None:
             emax = events["eobs"].max().value
         idxs = np.logical_and(events["eobs"].d >= emin, events["eobs"].d <= emax)
-    
+
     flux = np.sum(events["eobs"][idxs]).to("erg")/exp_time/area
 
     return flux.v, events["xsky"].d[idxs], events["ysky"].d[idxs], events["eobs"].d[idxs]

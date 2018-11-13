@@ -11,7 +11,8 @@ from pyxsim.source_generators import \
     make_xrb_photons, \
     XrayLightCone, \
     make_background, \
-    make_point_sources
+    make_point_sources, \
+    make_grid_source
 
 from pyxsim.source_models import \
    SourceModel, \

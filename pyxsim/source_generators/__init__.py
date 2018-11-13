@@ -10,3 +10,6 @@ from .background import \
 
 from .point_sources import \
     make_point_sources
+
+from .grid_source import \
+    make_grid_source
