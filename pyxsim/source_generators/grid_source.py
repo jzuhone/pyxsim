@@ -57,7 +57,7 @@ def make_grid_source(fn, axis, width, center, redshift, area,
 
     axisx, axisy = axis_wcs[axis]
 
-    outfile = "{}_grid.txt".format(simput_prefix)
+    outfile = "{}_photon_grid.txt".format(simput_prefix)
     f = open(outfile, "w")
     f.write("# {}_simput.fits\n".format(simput_prefix))
 
@@ -105,7 +105,7 @@ def make_grid_source(fn, axis, width, center, redshift, area,
             f.write("{:d}\t{:s}\t{:.2f}\t{:.2f}".format(k, phlist, ra, dec))
             k += 1
 
-            f.flush()
-            f.close()
+    f.flush()
+    f.close()
 
-            return outfile
+    return outfile
