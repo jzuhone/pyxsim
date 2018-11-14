@@ -1,9 +1,10 @@
-import pyxsim
 import yt
 from yt.utilities.cosmology import Cosmology
 import numpy as np
 from pyxsim.lib.sky_functions import pixel_to_cel
+from pyxsim.photon_list import PhotonList
 from pyxsim.utils import parse_value, mylog
+from astropy.table import Table
 
 axis_wcs = [[1,2],[0,2],[0,1]]
 
@@ -53,16 +54,15 @@ def make_grid_source(fn, axis, width, center, redshift, area,
     nx = int(np.ceil(xwidth / fov_width))
     ny = int(np.ceil(ywidth / fov_width))
 
-    mylog.info("Number of FOV to cover source is {:d} x {:d})".format(nx, ny))
+    mylog.info("Number of FOV to cover source is {:d} x {:d}.".format(nx, ny))
 
     axisx, axisy = axis_wcs[axis]
 
-    outfile = "{}_photon_grid.txt".format(simput_prefix)
-    f = open(outfile, "w")
-    f.write("# {}_simput.fits\n".format(simput_prefix))
+    first = True
 
-    k = 0
-
+    phlists = []
+    ra = []
+    dec = []
     for i in range(nx):
         for j in range(ny):
             box_center = center.copy()
@@ -73,18 +73,14 @@ def make_grid_source(fn, axis, width, center, redshift, area,
             le[axis] = box_center[axis] - 0.5*depth
             re[axis] = box_center[axis] + 0.5*depth
             box = ds.box(le, re)
-            photons = pyxsim.PhotonList.from_data_source(box, redshift,
-                                                         area, exp_time,
-                                                         source_model,
-                                                         center=box_center,
-                                                         dist=dist,
-                                                         cosmology=cosmo)
+            photons = PhotonList.from_data_source(box, redshift, area,
+                                                  exp_time, source_model,
+                                                  center=box_center,
+                                                  dist=dist, cosmology=cosmo)
             xsky = np.array([(box_center-center)[axisx]/D_A])
             ysky = np.array([(box_center-center)[axisy]/D_A])
             pixel_to_cel(xsky, ysky, sky_center)
-            ra = xsky[0]
-            dec = ysky[0]
-            events = photons.project_photons("xyz"[axis], (ra, dec),
+            events = photons.project_photons("xyz"[axis], (xsky[0], ysky[0]),
                                              absorb_model=absorb_model,
                                              nH=nH, no_shifting=no_shifting,
                                              sigma_pos=sigma_pos, kernel=kernel,
@@ -92,8 +88,9 @@ def make_grid_source(fn, axis, width, center, redshift, area,
             del photons
 
             phlist_prefix = "{:s}_{:d}_{:d}".format(simput_prefix, i, j)
-            if k == 0:
+            if first:
                 append = False
+                first = False
             else:
                 append = True
             events.write_simput_file(phlist_prefix, overwrite=overwrite,
@@ -101,11 +98,19 @@ def make_grid_source(fn, axis, width, center, redshift, area,
 
             del events
 
-            phlist = "{}_phlist.fits".format(phlist_prefix)
-            f.write("{:d}\t{:s}\t{:.2f}\t{:.2f}".format(k, phlist, ra, dec))
-            k += 1
+            phlists.append("{}_phlist.fits".format(phlist_prefix))
+            ra.append(xsky[0])
+            dec.append(ysky[0])
 
-    f.flush()
-    f.close()
+    t = Table([np.arange(nx*ny), phlists, ra, dec],
+              names=("src_no", "phlist", "ra", "dec"),
+              meta={"simput": "{}_simput.fits\n".format(simput_prefix),
+                    "fov": fov.v, "sky_center": sky_center, 
+                    "dims": (nx, ny)})
+    t['ra'].format = '.2f'
+    t['dec'].format = '.2f'
+
+    outfile = "{}_photon_grid.txt".format(simput_prefix)
+    t.write(outfile, overwrite=overwrite, format='ascii.commented_header')
 
     return outfile
