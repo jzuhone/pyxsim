@@ -1,10 +1,10 @@
-import yt
 from yt.utilities.cosmology import Cosmology
 import numpy as np
 from pyxsim.lib.sky_functions import pixel_to_cel
 from pyxsim.photon_list import PhotonList
 from pyxsim.utils import parse_value, mylog
 from astropy.table import Table
+from yt.convenience import load
 
 axis_wcs = [[1,2],[0,2],[0,1]]
 
@@ -15,11 +15,10 @@ def make_grid_source(fn, axis, width, center, redshift, area,
                      absorb_model=None, nH=None, no_shifting=False,
                      sigma_pos=None, kernel="top_hat", overwrite=False,
                      prng=None):
-    from pyxsim.lib.sky_functions import pixel_to_cel
 
     sky_center = np.array(sky_center)
 
-    ds = yt.load(fn)
+    ds = load(fn)
 
     if cosmology is None:
         if hasattr(ds, 'cosmology'):
@@ -102,15 +101,18 @@ def make_grid_source(fn, axis, width, center, redshift, area,
             ra.append(xsky[0])
             dec.append(ysky[0])
 
-    t = Table([np.arange(nx*ny), phlists, ra, dec],
-              names=("src_no", "phlist", "ra", "dec"),
-              meta={"simput": "{}_simput.fits\n".format(simput_prefix),
-                    "fov": fov.v, "sky_center": sky_center, 
-                    "dims": (nx, ny)})
+    t = Table([np.arange(nx*ny)+1, phlists, ra, dec],
+              names=("src_id", "phlist", "ra", "dec"))
+    t.meta["comments"] = ["simput: {}_simput.fits".format(simput_prefix),
+                          "fov: {:.2f} arcmin".format(fov.v),
+                          "sky_center: {:.2f},{:.2f}".format(sky_center[0], sky_center[1]),
+                          "dims: {:d},{:d}".format(nx, ny)]
     t['ra'].format = '.2f'
     t['dec'].format = '.2f'
 
     outfile = "{}_photon_grid.txt".format(simput_prefix)
-    t.write(outfile, overwrite=overwrite, format='ascii.commented_header')
+    mylog.info("Writing grid information to {}.".format(outfile))
+    t.write(outfile, overwrite=overwrite, 
+            delimiter="\t", format='ascii.commented_header')
 
     return outfile
