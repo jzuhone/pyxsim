@@ -2,16 +2,18 @@ import pyxsim
 import yt
 from yt.utilities.cosmology import Cosmology
 import numpy as np
+from pyxsim.lib.sky_functions import pixel_to_cel
+from pyxsim.utils import parse_value
 
 axis_wcs = [[1,2],[0,2],[0,1]]
 
+
 def make_grid_source(fn, axis, width, center, redshift, area,
                      exp_time, source_model, sky_center, fov,
-                     prefix, depth=None, cosmology=None, dist=None,
+                     simput_prefix, depth=None, cosmology=None, dist=None,
                      absorb_model=None, nH=None, no_shifting=False,
                      sigma_pos=None, kernel="top_hat", overwrite=False,
                      prng=None):
-    from soxs.utils import parse_value
     from pyxsim.lib.sky_functions import pixel_to_cel
 
     sky_center = np.array(sky_center)
@@ -49,6 +51,12 @@ def make_grid_source(fn, axis, width, center, redshift, area,
     ny = int(np.ceil(ywidth / fov_width))
     axisx, axisy = axis_wcs[axis]
 
+    outfile = "{}_grid.txt".format(simput_prefix)
+    f = open(outfile, "w")
+    f.write("# {}_simput.fits\n".format(simput_prefix))
+
+    k = 0
+
     for i in range(nx):
         for j in range(ny):
             box_center = center.copy()
@@ -68,15 +76,26 @@ def make_grid_source(fn, axis, width, center, redshift, area,
             xsky = np.array([(box_center-center)[axisx]/D_A])
             ysky = np.array([(box_center-center)[axisy]/D_A])
             pixel_to_cel(xsky, ysky, sky_center)
-            events = photons.project_photons(axis, (xsky[0], ysky[0]),
+            ra = xsky[0]
+            de = ysky[0]
+            events = photons.project_photons(axis, (ra, dec),
                                              absorb_model=absorb_model,
                                              nH=nH, no_shifting=no_shifting,
                                              sigma_pos=sigma_pos, kernel=kernel,
                                              prng=prng)
             del photons
 
-            events.write_simput_file("{}_{}_{}".format(prefix, i, j),
-                                     overwrite=overwrite,
-                                     simput_prefix=prefix, append=True)
+            phlist_prefix = "{:s}_{:d}_{:d}".format(simput_prefix, i, j)
+            events.write_simput_file(phlist_prefix, overwrite=overwrite, 
+                                     append=True, simput_prefix=simput_prefix)
 
             del events
+
+            phlist = "{}_phlist.fits".format(phlist_prefix)
+            f.write("{:d}\t{:s}\t{:.2f}\t{:.2f}".format(k, phlist, ra, dec))
+            k += 1
+
+            f.flush()
+            f.close()
+
+            return outfile
