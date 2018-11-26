@@ -297,17 +297,17 @@ class PhotonList(object):
             The origin of the photon spatial coordinates. Accepts "c", "max", or
             a coordinate. If not specified, pyxsim attempts to use the "center"
             field parameter of the data_source.
-        dist : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
+        dist : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`, optional
             The angular diameter distance, used for nearby sources. This may be
             optionally supplied instead of it being determined from the
             *redshift* and given *cosmology*. If units are not specified, it is
             assumed to be in kpc. To use this, the redshift must be set to zero.
         cosmology : :class:`~yt.utilities.cosmology.Cosmology`, optional
             Cosmological information. If not supplied, we try to get the
-            cosmology from the dataset. Otherwise, LCDM with the default yt 
+            cosmology from the dataset. Otherwise, LCDM with the default yt
             parameters is assumed.
-        velocity_fields : list of fields
-            The yt fields to use for the velocity. If not specified, the 
+        velocity_fields : list of fields, optional
+            The yt fields to use for the velocity. If not specified, the
             following will be assumed:
             ['velocity_x', 'velocity_y', 'velocity_z'] for grid datasets
             ['particle_velocity_x', 'particle_velocity_y', 'particle_velocity_z'] for particle datasets
