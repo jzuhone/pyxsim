@@ -12,6 +12,12 @@ from pyxsim.utils import parse_value
 from yt.utilities.exceptions import YTUnitConversionError
 from soxs.utils import parse_prng
 from soxs.constants import elem_names, atomic_weights
+from yt.utilities.parallel_tools.parallel_analysis_interface import \
+    parallel_objects, communication_system
+
+K_per_keV = YTQuantity(1.0, "keV").to_value("K","thermal")
+
+comm = communication_system.communicators[-1]
 
 solar_H_abund = 0.74
 primordial_H_abund = 0.76
@@ -35,6 +41,7 @@ class SourceModel(object):
     def cleanup_model(self):
         pass
 
+
 particle_dens_fields = [("io", "density"),
                         ("PartType0", "Density"),
                         ("Gas", "Density")]
@@ -46,6 +53,7 @@ metal_abund = {"angr": 0.0189,
                "aspl": 0.0134,
                "wilm": 0.0134,
                "lodd": 0.0133}
+
 
 class ThermalSourceModel(SourceModel):
     r"""
@@ -262,8 +270,14 @@ class ThermalSourceModel(SourceModel):
             self.kT_bins = np.logspace(np.log10(self.kT_min), np.log10(self.kT_max), 
                                        num=self.n_kT+1)
         self.dkT = np.diff(self.kT_bins)
-        kT = (kboltz*data_source[self.temperature_field]).in_units("keV").v
-        num_cells = np.logical_and(kT > self.kT_min, kT < self.kT_max).sum()
+        citer = data_source.chunks([], "io")
+        num_cells = 0
+        T_min = self.kT_min*K_per_keV
+        T_max = self.kT_max*K_per_keV
+        for chunk in parallel_objects(citer):
+            T = chunk[self.temperature_field].d
+            num_cells += np.count_nonzero((T > T_min) & (T < T_max))
+        num_cells = comm.mpi_allreduce(num_cells)
         self.source_type = data_source.ds._get_field_info(self.emission_measure_field).name[0]
         self.pbar = get_pbar("Processing cells/particles ", num_cells)
 
