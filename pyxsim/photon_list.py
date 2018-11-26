@@ -1,7 +1,6 @@
 """
 Classes for generating lists of photons
 """
-from six import string_types
 from collections import defaultdict
 import numpy as np
 from yt.funcs import iterable, issue_deprecation_warning
@@ -348,7 +347,7 @@ class PhotonList(object):
                               "Resetting redshift to 0.0.")
                 redshift = 0.0
 
-        if isinstance(center, string_types):
+        if isinstance(center, str):
             if center == "center" or center == "c":
                 parameters["center"] = ds.domain_center
             elif center == "max" or center == "m":
@@ -645,7 +644,7 @@ class PhotonList(object):
             raise RuntimeError("The 'smooth_positions' argument should not be used with "
                                "particle-based datasets!")
 
-        if isinstance(absorb_model, string_types):
+        if isinstance(absorb_model, str):
             if absorb_model not in absorb_models:
                 raise KeyError("%s is not a known absorption model!" % absorb_model)
             absorb_model = absorb_models[absorb_model]
@@ -659,7 +658,7 @@ class PhotonList(object):
 
         n_ph = self.photons["num_photons"]
 
-        if not isinstance(normal, string_types):
+        if not isinstance(normal, str):
             L = np.array(normal)
             orient = Orientation(L, north_vector=north_vector)
             x_hat = orient.unit_vectors[0]
@@ -681,7 +680,7 @@ class PhotonList(object):
         if not no_shifting:
             if comm.rank == 0:
                 mylog.info("Doppler-shifting photon energies.")
-            if isinstance(normal, string_types):
+            if isinstance(normal, str):
                 shift = self.photons["vel"][:,"xyz".index(normal)]*scale_shift
             else:
                 shift = np.dot(self.photons["vel"], z_hat)*scale_shift
@@ -709,7 +708,7 @@ class PhotonList(object):
             if comm.rank == 0:
                 mylog.info("Assigning positions to events.")
 
-            if isinstance(normal, string_types):
+            if isinstance(normal, str):
                 norm = "xyz".index(normal)
             else:
                 norm = normal

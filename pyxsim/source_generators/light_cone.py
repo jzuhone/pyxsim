@@ -25,6 +25,7 @@ comm = communication_system.communicators[-1]
 
 axes_lookup = [(1,2), (2,0), (0,1)]
 
+
 class XrayLightCone(LightCone):
     def __init__(self, parameter_filename, simulation_type,
                  near_redshift, far_redshift, seed=None,

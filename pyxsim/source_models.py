@@ -2,7 +2,6 @@
 Classes for specific source models
 """
 import numpy as np
-from six import string_types
 from yt.funcs import get_pbar, ensure_numpy_array
 from pyxsim.utils import mylog
 from yt.units.yt_array import YTQuantity
@@ -18,8 +17,8 @@ primordial_H_abund = 0.76
 
 sqrt_two = np.sqrt(2.)
 
-class SourceModel(object):
 
+class SourceModel(object):
     def __init__(self, prng=None):
         self.spectral_norm = None
         self.redshift = None
@@ -35,6 +34,7 @@ class SourceModel(object):
     def cleanup_model(self):
         pass
 
+
 particle_dens_fields = [("io", "density"),
                         ("PartType0", "Density"),
                         ("Gas", "Density")]
@@ -46,6 +46,7 @@ metal_abund = {"angr": 0.0189,
                "aspl": 0.0134,
                "wilm": 0.0134,
                "lodd": 0.0133}
+
 
 class ThermalSourceModel(SourceModel):
     r"""
@@ -141,7 +142,7 @@ class ThermalSourceModel(SourceModel):
                  method="invert_cdf", thermal_broad=True, 
                  model_root=None, model_vers=None, nei=False,
                  nolines=False, abund_table="angr", prng=None):
-        if isinstance(spectral_model, string_types):
+        if isinstance(spectral_model, str):
             if spectral_model not in thermal_models:
                 raise KeyError("%s is not a known thermal spectral model!" % spectral_model)
             spectral_model = thermal_models[spectral_model]

@@ -1,7 +1,6 @@
 import numpy as np
 from yt.funcs import iterable
 from yt.units.yt_array import YTQuantity
-from six import string_types
 from collections import defaultdict
 import h5py
 import os
@@ -66,7 +65,7 @@ def validate_parameters(first, second, skip=[]):
         if k1 not in skip:
             v1 = getattr(first[k1], "value", first[k1])
             v2 = getattr(second[k2], "value", second[k2])
-            if isinstance(v1, string_types) or isinstance(v2, string_types):
+            if isinstance(v1, str) or isinstance(v2, str):
                 check_equal = v1 == v2
             else:
                 check_equal = np.allclose(np.array(v1), np.array(v2), rtol=0.0, atol=1.0e-10)
