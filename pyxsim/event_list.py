@@ -2,17 +2,14 @@
 Classes for generating lists of detected events
 """
 import numpy as np
-from yt.funcs import issue_deprecation_warning
 from pyxsim.utils import mylog
 from yt.units.yt_array import YTQuantity, YTArray, uconcatenate
 import astropy.io.fits as pyfits
 import astropy.wcs as pywcs
 import h5py
-from pyxsim.utils import force_unicode, validate_parameters, parse_value, \
+from pyxsim.utils import validate_parameters, parse_value, \
     ParameterDict
 from soxs.simput import write_photon_list
-from soxs.instrument import RedistributionMatrixFile
-import os
 from yt.utilities.parallel_tools.parallel_analysis_interface import \
     communication_system, parallel_capable, get_mpi_type
 
@@ -29,6 +26,7 @@ old_parameter_keys = {"ExposureTime": "exp_time",
 
 comm = communication_system.communicators[-1]
 
+
 def communicate_events(my_events, root=0):
     if parallel_capable:
         new_events = {}
@@ -40,11 +38,7 @@ def communicate_events(my_events, root=0):
             num_events = sum(sizes)
             disps = [sum(sizes[:i]) for i in range(len(sizes))]
             for key in my_events:
-                if key in ["pi", "pha"]:
-                    dtype = "int32"
-                else:
-                    dtype = "float64"
-                new_events[key] = np.zeros(num_events, dtype=dtype)
+                new_events[key] = np.zeros(num_events)
         else:
             sizes = []
             disps = []
@@ -64,6 +58,7 @@ def communicate_events(my_events, root=0):
         return new_events
     else:
         return my_events
+
 
 class EventList(object):
 
@@ -129,22 +124,10 @@ class EventList(object):
         events["xsky"] = YTArray(d["xsky"][start_e:end_e], "deg")
         events["ysky"] = YTArray(d["ysky"][start_e:end_e], "deg")
         events["eobs"] = YTArray(d["eobs"][start_e:end_e], "keV")
-        if "rmf" in p:
-            parameters["rmf"] = force_unicode(p["rmf"].value)
-            parameters["arf"] = force_unicode(p["arf"].value)
-            parameters["channel_type"] = force_unicode(p["channel_type"].value)
-            parameters["mission"] = force_unicode(p["mission"].value)
-            parameters["telescope"] = force_unicode(p["telescope"].value)
-            parameters["instrument"] = force_unicode(p["instrument"].value)
-            chantype = parameters["channel_type"]
-            events[chantype] = d[chantype][start_e:end_e]
 
         f.close()
 
-        if "rmf" in p:
-            return ConvolvedEventList(events, parameters)
-        else:
-            return EventList(events, parameters)
+        return EventList(events, parameters)
 
     @classmethod
     def from_fits_file(cls, fitsfile):
@@ -183,21 +166,9 @@ class EventList(object):
         events["ysky"] = YTArray(yy, "degree")
         events["eobs"] = YTArray(tblhdu.data["ENERGY"][start_e:end_e]/1000., "keV")
 
-        if "RESPFILE" in tblhdu.header:
-            parameters["rmf"] = tblhdu.header["RESPFILE"]
-            parameters["arf"] = tblhdu.header["ANCRFILE"]
-            parameters["channel_type"] = tblhdu.header["CHANTYPE"].lower()
-            parameters["mission"] = tblhdu.header["MISSION"]
-            parameters["telescope"] = tblhdu.header["TELESCOP"]
-            parameters["instrument"] = tblhdu.header["INSTRUME"]
-            events[parameters["channel_type"]] = tblhdu.data[parameters["channel_type"]][start_e:end_e]
-
         hdulist.close()
 
-        if "rmf" in tblhdu.header:
-            return ConvolvedEventList(events, parameters)
-        else:
-            return EventList(events, parameters)
+        return EventList(events, parameters)
 
     def write_fits_file(self, fitsfile, fov, nx, overwrite=False):
         """
@@ -260,22 +231,6 @@ class EventList(object):
 
             cols = [col_e, col_x, col_y]
 
-            if "channel_type" in self.parameters:
-                chantype = self.parameters["channel_type"]
-                if chantype == "pha":
-                    cunit = "adu"
-                elif chantype == "pi":
-                    cunit = "Chan"
-                col_ch = pyfits.Column(name=chantype.upper(), format='1J',
-                                       unit=cunit, array=events[chantype][keep])
-                cols.append(col_ch)
-
-                time = np.random.uniform(size=n_events, low=0.0,
-                                         high=float(self.parameters["exp_time"]))
-                col_t = pyfits.Column(name="TIME", format='1D', unit='s',
-                                      array=time)
-                cols.append(col_t)
-
             coldefs = pyfits.ColDefs(cols)
             tbhdu = pyfits.BinTableHDU.from_columns(coldefs)
             tbhdu.name = "EVENTS"
@@ -296,17 +251,6 @@ class EventList(object):
             tbhdu.header["TLMIN3"] = 0.5
             tbhdu.header["TLMAX2"] = float(nx)+0.5
             tbhdu.header["TLMAX3"] = float(nx)+0.5
-            if "channel_type" in self.parameters:
-                rmf = RedistributionMatrixFile(self.parameters["rmf"])
-                tbhdu.header["TLMIN4"] = rmf.cmin
-                tbhdu.header["TLMAX4"] = rmf.cmax
-                tbhdu.header["RESPFILE"] = os.path.split(self.parameters["rmf"])[-1]
-                tbhdu.header["PHA_BINS"] = rmf.n_ch
-                tbhdu.header["ANCRFILE"] = os.path.split(self.parameters["arf"])[-1]
-                tbhdu.header["CHANTYPE"] = self.parameters["channel_type"]
-                tbhdu.header["MISSION"] = self.parameters["mission"]
-                tbhdu.header["TELESCOP"] = self.parameters["telescope"]
-                tbhdu.header["INSTRUME"] = self.parameters["instrument"]
             tbhdu.header["EXPOSURE"] = exp_time
             tbhdu.header["TSTART"] = 0.0
             tbhdu.header["TSTOP"] = exp_time
@@ -322,27 +266,6 @@ class EventList(object):
             tbhdu.header["DATE-END"] = t_end.tt.isot
 
             hdulist = [pyfits.PrimaryHDU(), tbhdu]
-
-            if "channel_type" in self.parameters:
-                start = pyfits.Column(name='START', format='1D', unit='s',
-                                      array=np.array([0.0]))
-                stop = pyfits.Column(name='STOP', format='1D', unit='s',
-                                     array=np.array([exp_time]))
-
-                tbhdu_gti = pyfits.BinTableHDU.from_columns([start,stop])
-                tbhdu_gti.name = "STDGTI"
-                tbhdu_gti.header["TSTART"] = 0.0
-                tbhdu_gti.header["TSTOP"] = exp_time
-                tbhdu_gti.header["HDUCLASS"] = "OGIP"
-                tbhdu_gti.header["HDUCLAS1"] = "GTI"
-                tbhdu_gti.header["HDUCLAS2"] = "STANDARD"
-                tbhdu_gti.header["RADECSYS"] = "FK5"
-                tbhdu_gti.header["EQUINOX"] = 2000.0
-                tbhdu_gti.header["DATE"] = t_begin.tt.isot
-                tbhdu_gti.header["DATE-OBS"] = t_begin.tt.isot
-                tbhdu_gti.header["DATE-END"] = t_end.tt.isot
-
-                hdulist.append(tbhdu_gti)
 
             pyfits.HDUList(hdulist).writeto(fitsfile, overwrite=overwrite)
 
@@ -364,10 +287,6 @@ class EventList(object):
         e_max : float, optional
             The maximum energy of the photons to save in keV.
         """
-        if isinstance(self, ConvolvedEventList):
-            raise NotImplementedError("Writing SIMPUT files is only supported if "
-                                      "you didn't convolve with responses!")
-
         events = communicate_events(self.events)
 
         if comm.rank == 0:
@@ -412,15 +331,6 @@ class EventList(object):
             d.create_dataset("xsky", data=events["xsky"].d)
             d.create_dataset("ysky", data=events["ysky"].d)
             d.create_dataset("eobs", data=events["eobs"].d)
-            if "rmf" in self.parameters:
-                p.create_dataset("arf", data=self.parameters["arf"])
-                p.create_dataset("rmf", data=self.parameters["rmf"])
-                p.create_dataset("channel_type", data=self.parameters["channel_type"])
-                p.create_dataset("mission", data=self.parameters["mission"])
-                p.create_dataset("telescope", data=self.parameters["telescope"])
-                p.create_dataset("instrument", data=self.parameters["instrument"])
-                chantype = self.parameters["channel_type"]
-                d.create_dataset(chantype, data=events[chantype])
 
             f.close()
 
@@ -560,82 +470,6 @@ class EventList(object):
             tbhdu.header["MISSION"] = "none"
             tbhdu.header["TELESCOP"] = "none"
             tbhdu.header["INSTRUME"] = "none"
-            tbhdu.header["AREASCAL"] = 1.0
-            tbhdu.header["CORRSCAL"] = 0.0
-            tbhdu.header["BACKSCAL"] = 1.0
-
-            hdulist = pyfits.HDUList([pyfits.PrimaryHDU(), tbhdu])
-
-            hdulist.writeto(specfile, overwrite=overwrite)
-
-        comm.barrier()
-
-
-class ConvolvedEventList(EventList):
-
-    def __init__(self, events, parameters):
-        issue_deprecation_warning("ConvolvedEventList has been "
-                                  "deprecated and will be removed "
-                                  "in a future release!")
-        super(ConvolvedEventList, self).__init__(events, parameters)
-
-    def write_channel_spectrum(self, specfile, overwrite=False):
-        r"""
-        Bin event channels into a spectrum and write it to a FITS binary table. 
-
-        Parameters
-        ----------
-        specfile : string
-            The name of the FITS file to be written.
-        overwrite : boolean, optional
-            Set to True to overwrite a previous file.
-        """
-        spectype = self.parameters["channel_type"]
-        rmf = RedistributionMatrixFile(self.parameters["rmf"])
-        minlength = rmf.n_ch
-        if rmf.cmin == 1:
-            minlength += 1
-        spec = np.bincount(self[spectype], minlength=minlength)
-        if rmf.cmin == 1: 
-            spec = spec[1:]
-        bins = (np.arange(rmf.n_ch)+rmf.cmin).astype("int32")
-
-        if parallel_capable:
-            spec = comm.comm.reduce(spec, root=0)
-
-        if comm.rank == 0:
-
-            col1 = pyfits.Column(name='CHANNEL', format='1J', array=bins)
-            col2 = pyfits.Column(name=spectype.upper(), format='1D', array=bins.astype("float64"))
-            col3 = pyfits.Column(name='COUNTS', format='1J', array=spec.astype("int32"))
-            col4 = pyfits.Column(name='COUNT_RATE', format='1D', array=spec/float(self.parameters["exp_time"]))
-
-            coldefs = pyfits.ColDefs([col1, col2, col3, col4])
-
-            tbhdu = pyfits.BinTableHDU.from_columns(coldefs)
-            tbhdu.name = "SPECTRUM"
-
-            tbhdu.header["DETCHANS"] = spec.shape[0]
-            tbhdu.header["TOTCTS"] = spec.sum()
-            tbhdu.header["EXPOSURE"] = float(self.parameters["exp_time"])
-            tbhdu.header["LIVETIME"] = float(self.parameters["exp_time"])
-            tbhdu.header["CONTENT"] = spectype
-            tbhdu.header["HDUCLASS"] = "OGIP"
-            tbhdu.header["HDUCLAS1"] = "SPECTRUM"
-            tbhdu.header["HDUCLAS2"] = "TOTAL"
-            tbhdu.header["HDUCLAS3"] = "TYPE:I"
-            tbhdu.header["HDUCLAS4"] = "COUNT"
-            tbhdu.header["HDUVERS"] = "1.1.0"
-            tbhdu.header["HDUVERS1"] = "1.1.0"
-            tbhdu.header["CHANTYPE"] = spectype
-            tbhdu.header["BACKFILE"] = "none"
-            tbhdu.header["CORRFILE"] = "none"
-            tbhdu.header["POISSERR"] = True
-            tbhdu.header["RESPFILE"] = os.path.split(self.parameters["rmf"])[-1]
-            tbhdu.header["ANCRFILE"] = os.path.split(self.parameters["arf"])[-1]
-            tbhdu.header["MISSION"] = self.parameters["mission"]
-            tbhdu.header["TELESCOP"] = self.parameters["telescope"]
-            tbhdu.header["INSTRUME"] = self.parameters["instrument"]
             tbhdu.header["AREASCAL"] = 1.0
             tbhdu.header["CORRSCAL"] = 0.0
             tbhdu.header["BACKSCAL"] = 1.0
