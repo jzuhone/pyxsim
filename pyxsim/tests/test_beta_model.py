@@ -266,6 +266,7 @@ def test_vapec_beta_model():
     os.chdir(curdir)
     shutil.rmtree(tmpdir)
 
+
 if __name__ == "__main__":
     test_beta_model_nomove()
     test_beta_model_offaxis()
