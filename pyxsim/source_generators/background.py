@@ -8,6 +8,7 @@ from yt.utilities.parallel_tools.parallel_analysis_interface import \
 
 comm = communication_system.communicators[-1]
 
+
 def make_background(area, exp_time, fov, sky_center, spectrum, prng=None):
     r"""
     Create a new :class:`~pyxsim.event_list.EventList` which is filled

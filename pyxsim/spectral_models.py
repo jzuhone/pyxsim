@@ -2,12 +2,10 @@
 Photon emission and absoprtion models.
 """
 import numpy as np
-import h5py
 
 from soxs.spectra import ApecGenerator, \
     get_wabs_absorb, get_tbabs_absorb
 from soxs.utils import parse_prng
-from pyxsim.utils import mylog
 from yt.funcs import get_pbar
 from yt.units.yt_array import YTArray, YTQuantity
 from yt.utilities.physical_constants import hcgs, clight

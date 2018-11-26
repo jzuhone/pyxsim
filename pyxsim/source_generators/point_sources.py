@@ -8,6 +8,7 @@ from pyxsim.event_list import EventList
 
 comm = communication_system.communicators[-1]
 
+
 def make_point_sources(area, exp_time, positions, sky_center,
                        spectra, prng=None):
     r"""

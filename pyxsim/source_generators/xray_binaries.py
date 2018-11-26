@@ -1,10 +1,9 @@
 import numpy as np
 from yt.frontends.stream.api import load_particles
 from yt.units.yt_array import uconcatenate, YTArray, \
-    YTQuantity, savetxt
+    YTQuantity
 from yt.utilities.physical_ratios import keV_per_erg
 from scipy.interpolate import InterpolatedUnivariateSpline
-from six import string_types
 from pyxsim.photon_list import PhotonList
 from pyxsim.source_models import PowerLawSourceModel
 from pyxsim.utils import mylog, parse_value
@@ -184,9 +183,9 @@ def make_xrb_particles(data_source, age_field, scale_length,
 
     scale_field = None
     if isinstance(scale_length, tuple):
-        if isinstance(scale_length[0], string_types):
+        if isinstance(scale_length[0], str):
             scale_field = scale_length
-    elif isinstance(scale_length, string_types):
+    elif isinstance(scale_length, str):
         scale_field = (ptype, scale_length)
 
     if scale_field is None:
