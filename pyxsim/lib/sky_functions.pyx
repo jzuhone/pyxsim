@@ -108,8 +108,8 @@ def scatter_events(normal, prng, kernel, data_type,
                         xsky[k] = xx
                         ysky[k] = yy
                         k += 1
-                        pbar.update()
                     n += 1
+                pbar.update()
         elif data_type  == "particles":
             if kernel == "gaussian":
                 xsky = prng.normal(loc=0.0, scale=1.0, size=num_det)
