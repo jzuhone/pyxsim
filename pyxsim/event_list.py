@@ -170,6 +170,10 @@ class EventList(object):
 
         return EventList(events, parameters)
 
+    @classmethod
+    def from_data_source(cls):
+        pass
+
     def write_fits_file(self, fitsfile, fov, nx, overwrite=False):
         """
         Write events to a FITS binary table file. The result is a
