@@ -26,8 +26,7 @@ from pyxsim.spectral_models import \
     TBabsModel, WabsModel
 
 from pyxsim.utils import \
-    merge_files, \
-    get_area_bins_from_arfs
+    merge_files
 
 from ._version import get_versions
 __version__ = get_versions()['version']
