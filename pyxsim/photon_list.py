@@ -127,7 +127,8 @@ class PhotonList(object):
 
     def __init__(self, photons, parameters, cosmo):
         self.photons = photons
-        self.parameters = ParameterDict(parameters, "PhotonList", old_parameter_keys)
+        self.parameters = ParameterDict(parameters, "PhotonList", 
+                                        old_parameter_keys)
         self.cosmo = cosmo
         self.num_cells = len(photons["dx"])
 
@@ -202,7 +203,6 @@ class PhotonList(object):
         Initialize a :class:`~pyxsim.photon_list.PhotonList` from 
         the HDF5 file *filename*.
         """
-
         mylog.info("Reading photons from %s." % filename)
 
         photons = {}
@@ -465,7 +465,6 @@ class PhotonList(object):
         Write the :class:`~pyxsim.photon_list.PhotonList` to the HDF5 
         file *photonfile*.
         """
-
         if parallel_capable:
 
             mpi_long = get_mpi_type("int64")
@@ -758,6 +757,10 @@ class MultiPhotonList(object):
 
     @classmethod
     def from_files(cls, basename):
+        r"""
+        Initialize a :class:`~pyxsim.photon_list.MultiPhotonList`
+        from a set of HDF5 files with the prefix *basename*.
+        """
         import glob
         photon_lists = []
         fns = glob.glob("{}.[0-9][0-9].h5".format(basename))
@@ -772,12 +775,61 @@ class MultiPhotonList(object):
                          exp_time, source_model, point_sources=False,
                          parameters=None, center=None, dist=None,
                          cosmology=None, velocity_fields=None):
+        r"""
+        Initialize a :class:`~pyxsim.photon_list.MultiPhotonList` from 
+        a yt data source. The redshift, collecting area, exposure time, 
+        and cosmology are stored in the *parameters* dictionary which 
+        is passed to the *source_model* function.
 
+        Parameters
+        ----------
+        num_lists : integer
+            The number of :class:`~pyxsim.photon_list.PhotonList` instances
+            to generate.
+        data_source : :class:`~yt.data_objects.data_containers.YTSelectionContainer`
+            The data source from which the photons will be generated.
+        redshift : float
+            The cosmological redshift for the photons.
+        area : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
+            The collecting area to determine the number of photons. If units are
+            not specified, it is assumed to be in cm^2.
+        exp_time : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
+            The exposure time to determine the number of photons. If units are
+            not specified, it is assumed to be in seconds.
+        source_model : :class:`~pyxsim.source_models.SourceModel`
+            A source model used to generate the photons.
+        point_sources : boolean, optional
+            If True, the photons will be assumed to be generated from the exact
+            positions of the cells or particles and not smeared around within
+            a volume. Default: False
+        parameters : dict, optional
+            A dictionary of parameters to be passed for the source model to use,
+            if necessary.
+        center : string or array_like, optional
+            The origin of the photon spatial coordinates. Accepts "c", "max", or
+            a coordinate. If not specified, pyxsim attempts to use the "center"
+            field parameter of the data_source.
+        dist : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`, optional
+            The angular diameter distance, used for nearby sources. This may be
+            optionally supplied instead of it being determined from the
+            *redshift* and given *cosmology*. If units are not specified, it is
+            assumed to be in kpc. To use this, the redshift must be set to zero.
+        cosmology : :class:`~yt.utilities.cosmology.Cosmology`, optional
+            Cosmological information. If not supplied, we try to get the
+            cosmology from the dataset. Otherwise, LCDM with the default yt
+            parameters is assumed.
+        velocity_fields : list of fields, optional
+            The yt fields to use for the velocity. If not specified, the
+            following will be assumed:
+            ['velocity_x', 'velocity_y', 'velocity_z'] for grid datasets
+            ['particle_velocity_x', 'particle_velocity_y', 'particle_velocity_z'] for particle datasets
+        """
         photon_lists = []
 
         my_exp_time = exp_time/num_lists
 
         for i in range(num_lists):
+            mylog.info("Generating photons for PhotonList %d." % i)
             photons = PhotonList.from_data_source(data_source, redshift,
                                                   area, my_exp_time, source_model,
                                                   point_sources=point_sources,
@@ -791,21 +843,77 @@ class MultiPhotonList(object):
         return cls(photon_lists)
 
     def write_h5_files(self, basename):
+        """
+        Write the :class:`~pyxsim.photon_list.MultiPhotonList`
+        to a set of HDF5 files with prefix *basename*.
+        """
         for i, photons in enumerate(self.photon_lists):
             photons.write_h5_file("%s.%02d.h5" % (basename, i))
 
     def project_photons(self, normal, sky_center, absorb_model=None,
                         nH=None, no_shifting=False, north_vector=None,
-                        sigma_pos=None, prng=None, **kwargs):
+                        sigma_pos=None, kernel="top_hat", prng=None, **kwargs):
+        r"""
+        Projects photons onto an image plane given a line of sight.
+        Returns a new :class:`~pyxsim.event_list.EventList`.
+
+        Parameters
+        ----------
+        normal : character or array-like
+            Normal vector to the plane of projection. If "x", "y", or "z", will
+            assume to be along that axis (and will probably be faster). Otherwise,
+            should be an off-axis normal vector, e.g [1.0, 2.0, -3.0]
+        sky_center : array-like
+            Center RA, Dec of the events in degrees.
+        absorb_model : string or :class:`~pyxsim.spectral_models.AbsorptionModel`
+            A model for foreground galactic absorption, to simulate the
+            absorption of events before being detected. This cannot be applied
+            here if you already did this step previously in the creation of the
+            :class:`~pyxsim.photon_list.PhotonList` instance. Known options for
+            strings are "wabs" and "tbabs".
+        nH : float, optional
+            The foreground column density in units of 10^22 cm^{-2}. Only used
+            if absorption is applied.
+        no_shifting : boolean, optional
+            If set, the photon energies will not be Doppler shifted.
+        north_vector : a sequence of floats
+            A vector defining the "up" direction. This option sets the
+            orientation of the plane of projection. If not set, an arbitrary
+            grid-aligned north_vector is chosen. Ignored in the case where a
+            particular axis (e.g., "x", "y", or "z") is explicitly specified.
+        sigma_pos : float, optional
+            Apply a gaussian smoothing operation to the sky positions of the
+            events. This may be useful when the binned events appear blocky due
+            to their uniform distribution within simulation cells. However, this
+            will move the events away from their originating position on the
+            sky, and so may distort surface brightness profiles and/or spectra.
+            Should probably only be used for visualization purposes. Supply a
+            float here to smooth with a standard deviation with this fraction
+            of the cell size. Default: None
+        kernel : string, optional
+            The kernel used when smoothing positions of X-rays originating from
+            SPH particles, "gaussian" or "top_hat". Default: "top_hat".
+        prng : integer or :class:`~numpy.random.RandomState` object 
+            A pseudo-random number generator. Typically will only be specified
+            if you have a reason to generate the same set of random numbers,
+            such as for a test. Default is to use the :mod:`numpy.random`
+            module.
+
+        Examples
+        --------
+        >>> L = np.array([0.1,-0.2,0.3])
+        >>> events = my_photons.project_photons(L, [30., 45.])
+        """
         event_lists = []
 
-        for photons in self.photon_lists:
+        for i, photons in enumerate(self.photon_lists):
+            mylog.info("Projecting photons from PhotonList %d." % i)
             events = photons.project_photons(normal, sky_center,
                                              absorb_model=absorb_model,
                                              nH=nH, no_shifting=no_shifting,
                                              north_vector=north_vector,
                                              sigma_pos=sigma_pos,
-                                             prng=prng, **kwargs)
+                                             kernel=kernel, prng=prng, **kwargs)
             event_lists.append(events)
 
         return MultiEventList(event_lists)

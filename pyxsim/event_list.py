@@ -295,11 +295,12 @@ class EventList(object):
 
         comm.barrier()
 
-    def write_simput_file(self, prefix, overwrite=False, emin=None, emax=None,
-                          simput_prefix=None, append=False):
+    def write_simput_file(self, prefix, emin=None, emax=None, 
+                          simput_prefix=None, append=False, 
+                          overwrite=False):
         r"""
-        Write events to a SIMPUT file that may be read by the SIMX instrument
-        simulator.
+        Write events to a SIMPUT catalog that may be read by various 
+        instrument simulation software packages.
 
         Parameters
         ----------
@@ -307,8 +308,6 @@ class EventList(object):
             The filename prefix for the photon list file, and 
             for the SIMPUT catalog file unless *simput_prefix*
             is specified, see below.
-        overwrite : boolean, optional
-            Set to True to overwrite previous files.
         e_min : float, optional
             The minimum energy of the photons to save in keV.
         e_max : float, optional
@@ -319,6 +318,8 @@ class EventList(object):
         append : boolean, optional
             If True, append a new source an existing SIMPUT 
             catalog. Default: False
+        overwrite : boolean, optional
+            Set to True to overwrite previous files.
         """
         if simput_prefix is None:
             simput_prefix = prefix
@@ -514,17 +515,37 @@ class MultiEventList(object):
 
     @classmethod
     def from_h5_files(cls, basename):
+        """
+        Initialize an :class:`~pyxsim.event_list.MultiEventList` 
+        from a set of HDF5 files with prefix *basename*.
+        """
         import glob
         event_lists = []
         fns = glob.glob("{}.[0-9][0-9].h5".format(basename))
         fns.sort()
         for fn in fns:
-            events = EventList.from_file(fn)
+            events = EventList.from_h5_file(fn)
             event_lists.append(events)
         return cls(event_lists)
 
     def write_simput_catalog(self, prefix, emin=None, emax=None, overwrite=False):
+        r"""
+        Write events to a SIMPUT catalog that may be read by various instrument
+        simulation software packages. In this case, the simulated events are 
+        spread across various SIMPUT photon list files.
 
+        Parameters
+        ----------
+        prefix : string
+            The filename prefix for the SIMPUT catalog and 
+            photon list files.
+        e_min : float, optional
+            The minimum energy of the photons to save in keV.
+        e_max : float, optional
+            The maximum energy of the photons to save in keV.
+        overwrite : boolean, optional
+            Set to True to overwrite previous files.
+        """
         if comm.rank == 0:
 
             mylog.info("Writing SIMPUT catalog file %s_simput.fits." % prefix)
@@ -552,5 +573,9 @@ class MultiEventList(object):
         comm.barrier()
 
     def write_h5_files(self, basename):
+        """
+        Write a :class:`~pyxsim.event_list.MultiEventList`
+        to a set of HDF5 files with prefix *basename*.
+        """
         for i, events in enumerate(self.event_lists):
             events.write_h5_file("%s.%02d.h5" % (basename, i))
