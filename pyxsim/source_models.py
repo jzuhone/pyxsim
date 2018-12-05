@@ -144,10 +144,11 @@ class ThermalSourceModel(SourceModel):
     def __init__(self, spectral_model, emin, emax, nchan,
                  temperature_field=None, emission_measure_field=None,
                  kT_min=0.008, kT_max=64.0, n_kT=10000,
-                 kT_scale="linear", Zmet=0.3, var_elem=None,
-                 method="invert_cdf", thermal_broad=True, 
+                 kT_scale="linear", Zmet=0.3, max_density=None,
+                 var_elem=None, method="invert_cdf", thermal_broad=True,
                  model_root=None, model_vers=None, nei=False,
-                 nolines=False, abund_table="angr", prng=None):
+                 nolines=False, abund_table="angr",
+                 prng=None):
         if isinstance(spectral_model, str):
             if spectral_model not in thermal_models:
                 raise KeyError("%s is not a known thermal spectral model!" % spectral_model)
@@ -188,6 +189,15 @@ class ThermalSourceModel(SourceModel):
         self.abund_table = abund_table
         self.atable = self.spectral_model.atable
         self.mconvert = {}
+        if max_density is not None:
+            if not isinstance(max_density, YTQuantity):
+                if isinstance(max_density, tuple):
+                    max_density = YTQuantity(max_density[0], max_density[1])
+                else:
+                    max_density = YTQuantity(max_density, "g/cm**3")
+        self.max_density = max_density
+        self.density_field = None  # Will be determined later
+        self.num_cells = 0  # Will be determined later
 
     def setup_model(self, data_source, redshift, spectral_norm):
         self.redshift = redshift
@@ -220,6 +230,7 @@ class ThermalSourceModel(SourceModel):
         if self.emission_measure_field is None:
             found_dfield = [fd for fd in particle_dens_fields if fd in data_source.ds.field_list]
             if len(found_dfield) > 0:
+                self.density_field = found_dfield
                 ptype = found_dfield[0][0]
                 def _emission_measure(field, data):
                     nenh = data[found_dfield[0]]*data['particle_mass']
@@ -241,6 +252,7 @@ class ThermalSourceModel(SourceModel):
                                          units="cm**-3")
                 self.emission_measure_field = (ptype, 'emission_measure')
             else:
+                self.density_field = ("gas", "density")
                 self.emission_measure_field = ('gas', 'emission_measure')
         mylog.info("Using emission measure field '(%s, %s)'." % self.emission_measure_field)
         if self.temperature_field is None:
@@ -291,10 +303,14 @@ class ThermalSourceModel(SourceModel):
         ebins = self.spectral_model.ebins
         nchan = len(emid)
 
-        kT = (kboltz*chunk[self.temperature_field]).in_units("keV").v
+        if self.max_density is None:
+            dens_cut = slice(None, None, None)
+        else:
+            dens_cut = chunk[self.density_field] < self.max_density
+        kT = chunk[self.temperature_field][dens_cut].to_value("keV", "thermal")
         if len(kT) == 0:
             return
-        EM = chunk[self.emission_measure_field].v
+        EM = chunk[self.emission_measure_field].d[dens_cut]
 
         idxs = np.argsort(kT)
 
@@ -328,7 +344,7 @@ class ThermalSourceModel(SourceModel):
             if isinstance(self.Zmet, float):
                 metalZ = self.Zmet*np.ones(num_cells)
             else:
-                metalZ = chunk[self.Zmet].v[idxs]*self.Zconvert
+                metalZ = chunk[self.Zmet].d[dens_cut][idxs]*self.Zconvert
 
         elemZ = None
         if self.num_var_elem > 0:
@@ -338,7 +354,7 @@ class ThermalSourceModel(SourceModel):
                 if isinstance(value, float):
                     elemZ[j,:] = value
                 else:
-                    elemZ[j,:] = chunk[value].v[idxs]*self.mconvert[key]
+                    elemZ[j,:] = chunk[value].d[dens_cut][idxs]*self.mconvert[key]
 
         number_of_photons = np.zeros(num_cells, dtype="int64")
         energies = np.zeros(num_photons_max)
