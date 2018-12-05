@@ -4,11 +4,12 @@ from pyxsim.lib.sky_functions import pixel_to_cel
 from pyxsim.utils import parse_value, mylog
 from astropy.table import Table
 from yt.convenience import load
+from yt.data_objects.api import Dataset
 
 axis_wcs = [[1,2], [0,2], [0,1]]
 
 
-def make_grid_source(fn, axis, width, center, redshift, area,
+def make_grid_source(ds, axis, width, center, redshift, area,
                      exp_time, source_model, sky_center, fov,
                      simput_prefix, depth=None, cosmology=None, dist=None,
                      absorb_model=None, nH=None, no_shifting=False,
@@ -22,8 +23,9 @@ def make_grid_source(fn, axis, width, center, redshift, area,
 
     Parameters
     ----------
-    fn : string
-        The name of the dataset to generate the photons from.
+    ds : string or :class:`~yt.static_output.Dataset`
+        The name of the dataset to generate the photons from, or
+        an already loaded yt dataset.
     axis : string or integer
         The axis along which to project. "x", "y", or "z", or
         0, 1, or 2.
@@ -115,7 +117,8 @@ def make_grid_source(fn, axis, width, center, redshift, area,
     """
     sky_center = np.array(sky_center)
 
-    ds = load(fn)
+    if not isinstance(ds, Dataset):
+        ds = load(ds)
 
     if cosmology is None:
         if hasattr(ds, 'cosmology'):
