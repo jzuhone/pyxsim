@@ -91,6 +91,10 @@ class ThermalSourceModel(SourceModel):
         The metallicity. If a float, assumes a constant metallicity throughout in
         solar units. If a string or tuple of strings, is taken to be the name of 
         the metallicity field.
+    max_density : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
+        The maximum density of the cells or particles to use when generating photons.
+        If a float, the units are assumed to be g/cm**3. Default: None, which means
+        there will be no limit on the density.
     var_elem : dictionary, optional
         Elements that should be allowed to vary freely from the single abundance
         parameter. Each dictionary value, specified by the abundance symbol, 
