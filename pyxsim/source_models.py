@@ -14,8 +14,6 @@ from soxs.constants import elem_names, atomic_weights
 from yt.utilities.parallel_tools.parallel_analysis_interface import \
     parallel_objects, communication_system
 
-K_per_keV = YTQuantity(1.0, "keV").to_value("K","thermal")
-
 comm = communication_system.communicators[-1]
 
 solar_H_abund = 0.74
@@ -201,7 +199,7 @@ class ThermalSourceModel(SourceModel):
                     max_density = YTQuantity(max_density, "g/cm**3")
         self.max_density = max_density
         self.density_field = None  # Will be determined later
-        self.num_cells = 0  # Will be determined later
+        self.tot_num_cells = 0  # Will be determined later
 
     def setup_model(self, data_source, redshift, spectral_norm):
         self.redshift = redshift
@@ -287,14 +285,11 @@ class ThermalSourceModel(SourceModel):
         self.dkT = np.diff(self.kT_bins)
         citer = data_source.chunks([], "io")
         num_cells = 0
-        T_min = self.kT_min*K_per_keV
-        T_max = self.kT_max*K_per_keV
         for chunk in parallel_objects(citer):
-            T = chunk[self.temperature_field].d
-            num_cells += np.count_nonzero((T > T_min) & (T < T_max))
-        num_cells = comm.mpi_allreduce(num_cells)
+            num_cells += chunk[self.temperature_field].size
+        self.tot_num_cells = comm.mpi_allreduce(num_cells)
         self.source_type = data_source.ds._get_field_info(self.emission_measure_field).name[0]
-        self.pbar = get_pbar("Processing cells/particles ", num_cells)
+        self.pbar = get_pbar("Processing cells/particles ", self.tot_num_cells)
 
     def cleanup_model(self):
         self.emission_measure_field = None
@@ -311,8 +306,10 @@ class ThermalSourceModel(SourceModel):
             dens_cut = slice(None, None, None)
         else:
             dens_cut = chunk[self.density_field] < self.max_density
+        all_cells = chunk[self.temperature_field].size
         kT = chunk[self.temperature_field][dens_cut].to_value("keV", "thermal")
         if len(kT) == 0:
+            self.pbar.update(all_cells)
             return
         EM = chunk[self.emission_measure_field].d[dens_cut]
 
@@ -324,6 +321,7 @@ class ThermalSourceModel(SourceModel):
         idxs = idxs[idx_min:idx_max]
         num_cells = len(idxs)
         if num_cells == 0:
+            self.pbar.update(all_cells)
             return
 
         kT_idxs = np.digitize(kT[idxs], self.kT_bins)-1
@@ -448,6 +446,8 @@ class ThermalSourceModel(SourceModel):
         active_cells = number_of_photons > 0
         idxs = idxs[active_cells]
         ncells = idxs.size
+
+        self.pbar.update(all_cells-num_cells)
 
         return ncells, number_of_photons[active_cells], idxs, energies[:end_e].copy()
 
