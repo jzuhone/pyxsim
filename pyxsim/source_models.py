@@ -5,7 +5,7 @@ import numpy as np
 from yt.funcs import get_pbar, ensure_numpy_array
 from pyxsim.utils import mylog
 from yt.units.yt_array import YTQuantity
-from yt.utilities.physical_constants import mp, clight, kboltz
+from yt.utilities.physical_constants import mp, clight
 from pyxsim.spectral_models import thermal_models
 from pyxsim.utils import parse_value
 from yt.utilities.exceptions import YTUnitConversionError
