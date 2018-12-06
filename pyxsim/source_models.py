@@ -232,7 +232,7 @@ class ThermalSourceModel(SourceModel):
         if self.emission_measure_field is None:
             found_dfield = [fd for fd in particle_dens_fields if fd in data_source.ds.field_list]
             if len(found_dfield) > 0:
-                self.density_field = found_dfield
+                self.density_field = found_dfield[0]
                 ptype = found_dfield[0][0]
                 def _emission_measure(field, data):
                     nenh = data[found_dfield[0]]*data['particle_mass']
