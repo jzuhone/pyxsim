@@ -302,16 +302,16 @@ class ThermalSourceModel(SourceModel):
         ebins = self.spectral_model.ebins
         nchan = len(emid)
 
+        orig_ncells = chunk[self.temperature_field].size
         if self.max_density is None:
-            dens_cut = slice(None, None, None)
+            dens_cut = np.ones(orig_ncells, dtype="bool")
         else:
             dens_cut = chunk[self.density_field] < self.max_density
-        all_cells = chunk[self.temperature_field].size
-        kT = chunk[self.temperature_field][dens_cut].to_value("keV", "thermal")
+        kT = chunk[self.temperature_field].to_value("keV", "thermal")
         if len(kT) == 0:
-            self.pbar.update(all_cells)
+            self.pbar.update(orig_ncells)
             return
-        EM = chunk[self.emission_measure_field].d[dens_cut]
+        EM = chunk[self.emission_measure_field].d*dens_cut
 
         idxs = np.argsort(kT)
 
@@ -320,9 +320,12 @@ class ThermalSourceModel(SourceModel):
         idx_max = np.searchsorted(kT_sorted, self.kT_max)
         idxs = idxs[idx_min:idx_max]
         num_cells = len(idxs)
+
         if num_cells == 0:
-            self.pbar.update(all_cells)
+            self.pbar.update(orig_ncells)
             return
+        else:
+            self.pbar.update(orig_ncells-num_cells)
 
         kT_idxs = np.digitize(kT[idxs], self.kT_bins)-1
         bcounts = np.bincount(kT_idxs).astype("int")
@@ -346,7 +349,7 @@ class ThermalSourceModel(SourceModel):
             if isinstance(self.Zmet, float):
                 metalZ = self.Zmet*np.ones(num_cells)
             else:
-                metalZ = chunk[self.Zmet].d[dens_cut][idxs]*self.Zconvert
+                metalZ = chunk[self.Zmet].d[idxs]*self.Zconvert
 
         elemZ = None
         if self.num_var_elem > 0:
@@ -356,7 +359,7 @@ class ThermalSourceModel(SourceModel):
                 if isinstance(value, float):
                     elemZ[j, :] = value
                 else:
-                    elemZ[j, :] = chunk[value].d[dens_cut][idxs]*self.mconvert[key]
+                    elemZ[j, :] = chunk[value].d[idxs]*self.mconvert[key]
 
         number_of_photons = np.zeros(num_cells, dtype="int64")
         energies = np.zeros(num_photons_max)
@@ -446,8 +449,6 @@ class ThermalSourceModel(SourceModel):
         active_cells = number_of_photons > 0
         idxs = idxs[active_cells]
         ncells = idxs.size
-
-        self.pbar.update(all_cells-num_cells)
 
         return ncells, number_of_photons[active_cells], idxs, energies[:end_e].copy()
 
