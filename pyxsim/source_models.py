@@ -12,7 +12,7 @@ from pyxsim.utils import parse_value, isunitful
 from soxs.utils import parse_prng
 from soxs.constants import elem_names, atomic_weights
 from yt.utilities.parallel_tools.parallel_analysis_interface import \
-    parallel_objects, communication_system
+    parallel_objects, communication_system, parallel_capable
 from numbers import Number
 
 comm = communication_system.communicators[-1]
@@ -21,6 +21,18 @@ solar_H_abund = 0.74
 primordial_H_abund = 0.76
 
 sqrt_two = np.sqrt(2.)
+
+
+class ParallelProgressBar(object):
+    def __init__(self, title):
+        self.title = title
+        mylog.info("Starting '%s'", title)
+
+    def update(self, *args, **kwargs):
+        return
+
+    def close(self):
+        mylog.info("Finishing '%s'", self.title)
 
 
 class SourceModel(object):
@@ -290,8 +302,11 @@ class ThermalSourceModel(SourceModel):
             num_cells += chunk[self.temperature_field].size
         self.tot_num_cells = comm.mpi_allreduce(num_cells)
         self.source_type = data_source.ds._get_field_info(self.emission_measure_field).name[0]
-        self.pbar = tqdm(leave=True, total=self.tot_num_cells,
-                         desc="Processing cells/particles ")
+        if parallel_capable:
+            self.pbar = ParallelProgressBar("Processing cells/particles ")
+        else:
+            self.pbar = tqdm(leave=True, total=self.tot_num_cells,
+                             desc="Processing cells/particles ")
 
     def cleanup_model(self):
         self.emission_measure_field = None
