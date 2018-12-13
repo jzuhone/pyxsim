@@ -2,7 +2,8 @@
 Classes for specific source models
 """
 import numpy as np
-from yt.funcs import get_pbar, ensure_numpy_array
+from yt.funcs import ensure_numpy_array
+from tqdm import tqdm
 from pyxsim.utils import mylog
 from yt.units.yt_array import YTQuantity
 from yt.utilities.physical_constants import mp, clight
@@ -289,11 +290,13 @@ class ThermalSourceModel(SourceModel):
             num_cells += chunk[self.temperature_field].size
         self.tot_num_cells = comm.mpi_allreduce(num_cells)
         self.source_type = data_source.ds._get_field_info(self.emission_measure_field).name[0]
-        self.pbar = get_pbar("Processing cells/particles ", self.tot_num_cells)
+        self.pbar = tqdm(leave=True, total=self.tot_num_cells,
+                         desc="Processing cells/particles ")
 
     def cleanup_model(self):
         self.emission_measure_field = None
         self.temperature_field = None
+        self.pbar.close()
 
     def __call__(self, chunk):
 
@@ -308,9 +311,6 @@ class ThermalSourceModel(SourceModel):
         else:
             dens_cut = chunk[self.density_field] < self.max_density
         kT = chunk[self.temperature_field].to_value("keV", "thermal")
-        if len(kT) == 0:
-            self.pbar.update(orig_ncells)
-            return
         EM = chunk[self.emission_measure_field].d*dens_cut
 
         idxs = np.argsort(kT)
@@ -367,7 +367,9 @@ class ThermalSourceModel(SourceModel):
         start_e = 0
         end_e = 0
 
-        for ibegin, iend, ikT in zip(bcell, ecell, kT_idxs):
+        for ibegin, iend, bcount, ikT in zip(bcell, ecell, bcounts, kT_idxs):
+
+            self.pbar.update(bcount)
 
             kT = self.kT_bins[ikT] + 0.5*self.dkT[ikT]
 
@@ -407,7 +409,6 @@ class ThermalSourceModel(SourceModel):
 
             ei = start_e
             for icell in range(ibegin, iend):
-                self.pbar.update()
                 cn = number_of_photons[icell]
                 if cn == 0:
                     continue
