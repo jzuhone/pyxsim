@@ -437,6 +437,11 @@ class PhotonList(object):
 
         concatenate_photons(ds, photons, photon_units)
 
+        nphotons = photons["num_photons"].sum()
+        all_nphotons = comm.mpi_allreduce(nphotons)
+        if all_nphotons == 0:
+            raise RuntimeError("No photons were generated!!")
+
         c = parameters["center"].to("kpc")
 
         if sum(ds.periodicity) > 0:
