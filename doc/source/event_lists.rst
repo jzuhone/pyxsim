@@ -32,7 +32,7 @@ arguments to customize the resulting projection. The arguments are:
   This option sets the orientation of the plane of projection. If not set, an arbitrary grid-aligned 
   ``north_vector`` is chosen. Ignored in the case where a particular axis (e.g., "x", "y", or "z") is 
   explicitly specified.
-* ``smooth_positions`` (optional): Apply a gaussian smoothing operation to the sky positions 
+* ``sigma_pos`` (optional): Apply a gaussian smoothing operation to the sky positions 
   of the events. This may be useful when the binned events appear blocky due to their uniform
   distribution within simulation cells. However, this will move the events away from their 
   originating position on the sky, and so may distort surface brightness profiles and/or 
