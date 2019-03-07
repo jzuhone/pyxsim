@@ -831,6 +831,8 @@ class MultiPhotonList(object):
         """
         photon_lists = []
 
+        exp_time = parse_value(exp_time, "s")
+        
         my_exp_time = exp_time/num_lists
 
         for i in range(num_lists):
