@@ -127,29 +127,13 @@ class PhotonList(object):
         return self.photons.keys()
 
     def items(self):
-        ret = []
-        for k, v in self.photons.items():
-            if k == "energy":
-                ret.append((k, self[k]))
-            else:
-                ret.append((k,v))
-        return ret
+        return self.photons.items()
 
     def values(self):
-        ret = []
-        for k, v in self.photons.items():
-            if k == "energy":
-                ret.append(self[k])
-            else:
-                ret.append(v)
-        return ret
+        return self.photons.values()
 
     def __getitem__(self, key):
-        if key == "energy":
-            return [self.photons["energy"][self.p_bins[i]:self.p_bins[i+1]]
-                    for i in range(self.num_cells)]
-        else:
-            return self.photons[key]
+        return self.photons[key]
 
     def __contains__(self, key):
         return key in self.photons
