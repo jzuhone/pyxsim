@@ -139,7 +139,8 @@ class PhotonList(object):
         return key in self.photons
 
     def __iter__(self):
-        return iter(self.photons)
+        for k in self.photons:
+            yield k
 
     def __repr__(self):
         return self.photons.__repr__()

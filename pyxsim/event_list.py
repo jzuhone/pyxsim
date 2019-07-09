@@ -86,7 +86,8 @@ class EventList(object):
         return type(self)(events, dict(self.parameters))
 
     def __iter__(self):
-        return iter(self.events)
+        for k in self.events:
+            yield k
 
     @classmethod
     def from_h5_file(cls, h5file):
