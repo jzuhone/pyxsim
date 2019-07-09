@@ -542,8 +542,7 @@ class PhotonList(object):
 
     def project_photons(self, normal, sky_center, absorb_model=None,
                         nH=None, no_shifting=False, north_vector=None,
-                        sigma_pos=None, kernel="top_hat", prng=None,
-                        **kwargs):
+                        sigma_pos=None, kernel="top_hat", prng=None):
         r"""
         Projects photons onto an image plane given a line of sight.
         Returns a new :class:`~pyxsim.event_list.EventList`.
@@ -598,17 +597,6 @@ class PhotonList(object):
         prng = parse_prng(prng)
 
         scale_shift = -1.0/clight.to("km/s")
-
-        if "smooth_positions" in kwargs:
-            issue_deprecation_warning("'smooth_positions' has been renamed to "
-                                      "'sigma_pos' and the former is deprecated!")
-            sigma_pos = kwargs["smooth_positions"]
-
-        if "redshift_new" in kwargs or "area_new" in kwargs or \
-            "exp_time_new" in kwargs or "dist_new" in kwargs:
-            issue_deprecation_warning("Changing the redshift, distance, area, or "
-                                      "exposure time has been deprecated in "
-                                      "project_photons!")
 
         if sigma_pos is not None and self.parameters["data_type"] == "particles":
             raise RuntimeError("The 'smooth_positions' argument should not be used with "
