@@ -57,11 +57,15 @@ def parse_value(value, default_units, ds=None):
 
 
 def isunitful(a):
-    ret = isinstance(a, (YTArray, Quantity, unyt_array))
-    ret |= (isinstance(a, tuple)
-            and isinstance(a[0], Number)
-            and isinstance(a[1], str))
-    return ret
+    if isinstance(a, (YTArray, Quantity, unyt_array)):
+        return True
+    elif isinstance(a, tuple):
+        try:
+            unyt_array(a[0], a[1])
+            return True
+        except:
+            pass
+    return False
 
 
 def validate_parameters(first, second, skip=[]):
