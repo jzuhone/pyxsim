@@ -7,12 +7,12 @@ from pyxsim.utils import mylog
 from yt.units.yt_array import YTQuantity
 from yt.utilities.physical_constants import mp, clight, kboltz
 from pyxsim.spectral_models import thermal_models
-from pyxsim.utils import parse_value
-from yt.utilities.exceptions import YTUnitConversionError
+from pyxsim.utils import parse_value, isunitful
 from soxs.utils import parse_prng
 from soxs.constants import elem_names, atomic_weights
 from yt.utilities.parallel_tools.parallel_analysis_interface import \
     parallel_objects, communication_system
+from numbers import Number
 
 K_per_keV = YTQuantity(1.0, "keV").to_value("K","thermal")
 
@@ -553,19 +553,18 @@ class LineSourceModel(SourceModel):
     >>> line_model = LineEmissionSourceModel(location, "dark_matter_density_squared", sigma=sigma)
     """
     def __init__(self, e0, emission_field, sigma=None, prng=None):
+        from unyt.exceptions import UnitConversionError
         self.e0 = parse_value(e0, "keV")
-        if isinstance(sigma, (float, YTQuantity)) or (isinstance(sigma, tuple) and isinstance(sigma[0], float)):
+        if isinstance(sigma, Number):
+            self.sigma = parse_value(sigma, "keV")
+        elif isunitful(sigma):
             # The broadening is constant
             try:
+                self.sigma = parse_value(sigma, "km/s")
+                self.sigma *= self.e0/clight
+                self.sigma.convert_to_units("keV")
+            except UnitConversionError:
                 self.sigma = parse_value(sigma, "keV")
-            except YTUnitConversionError:
-                try:
-                    self.sigma = parse_value(sigma, "km/s")
-                    self.sigma *= self.e0/clight
-                    self.sigma.convert_to_units("keV")
-                except YTUnitConversionError:
-                    raise RuntimeError("Units for sigma must either be in dimensions of "
-                                       "energy or velocity! sigma = %s" % sigma)
         else:
             # Either no broadening or a field name
             self.sigma = sigma
