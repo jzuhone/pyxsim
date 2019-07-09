@@ -7,22 +7,10 @@ from yt.units.yt_array import YTQuantity, YTArray, uconcatenate
 import astropy.io.fits as pyfits
 import astropy.wcs as pywcs
 import h5py
-from pyxsim.utils import validate_parameters, parse_value, \
-    ParameterDict
+from pyxsim.utils import validate_parameters, parse_value
 from soxs.simput import write_photon_list
 from yt.utilities.parallel_tools.parallel_analysis_interface import \
     communication_system, parallel_capable, get_mpi_type
-
-old_parameter_keys = {"ExposureTime": "exp_time",
-                      "Area": "area",
-                      "Redshift": "redshift",
-                      "AngularDiameterDistance": "d_a",
-                      "RMF": "rmf",
-                      "ARF": "arf",
-                      "Telescope": "telescope",
-                      "Instrument": "instrument",
-                      "Mission": "mission",
-                      "ChannelType": "channel_type"}
 
 comm = communication_system.communicators[-1]
 
@@ -64,7 +52,7 @@ class EventList(object):
 
     def __init__(self, events, parameters):
         self.events = events
-        self.parameters = ParameterDict(parameters, "EventList", old_parameter_keys)
+        self.parameters = parameters
         self.num_events = comm.mpi_allreduce(events["xsky"].shape[0])
 
     def keys(self):

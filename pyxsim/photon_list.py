@@ -26,17 +26,6 @@ new_photon_units = {"energy": "keV",
                     "pos": "kpc",
                     "vel": "km/s"}
 
-old_photon_keys = {"Energy": "energy",
-                   "NumberOfPhotons": "num_photons"}
-old_parameter_keys = {"FiducialExposureTime": "fid_exp_time",
-                      "FiducialArea": "fid_area",
-                      "FiducialRedshift": "fid_redshift",
-                      "FiducialAngularDiameterDistance": "fid_d_a",
-                      "HubbleConstant": "hubble",
-                      "OmegaLambda": "omega_lambda",
-                      "OmegaMatter": "omega_matter",
-                      "DataType": "data_type"}
-
 
 def make_hsml(source_type):
     def _smoothing_length(field, data):
@@ -127,7 +116,7 @@ class PhotonList(object):
 
     def __init__(self, photons, parameters, cosmo):
         self.photons = photons
-        self.parameters = ParameterDict(parameters, "PhotonList", old_parameter_keys)
+        self.parameters = parameters
         self.cosmo = cosmo
         self.num_cells = len(photons["dx"])
 
@@ -156,21 +145,13 @@ class PhotonList(object):
         return ret
 
     def __getitem__(self, key):
-        if key in old_photon_keys:
-            k = old_photon_keys[key]
-            mylog.warning(key_warning % ("PhotonList", k))
-        else:
-            k = key
-        if k == "energy":
+        if key == "energy":
             return [self.photons["energy"][self.p_bins[i]:self.p_bins[i+1]]
                     for i in range(self.num_cells)]
         else:
-            return self.photons[k]
+            return self.photons[key]
 
     def __contains__(self, key):
-        if key in old_photon_keys:
-            mylog.warning(key_warning % ("PhotonList", old_photon_keys[key]))
-            return True
         return key in self.photons
 
     def __iter__(self):
