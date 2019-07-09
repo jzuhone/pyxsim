@@ -1,6 +1,7 @@
 import numpy as np
 from yt.funcs import iterable
-from yt.units.yt_array import YTQuantity
+from yt.units.yt_array import YTQuantity, YTArray
+from unyt import unyt_array
 from collections import defaultdict
 import h5py
 import os
@@ -8,6 +9,7 @@ import sys
 from yt.config import ytcfg
 from astropy.units import Quantity
 import logging
+from numbers import Number
 
 pyxsimLogger = logging.getLogger("pyxsim")
 
@@ -52,6 +54,14 @@ def parse_value(value, default_units, ds=None):
         return quan(value[0], value[1]).in_units(default_units)
     else:
         return quan(value, default_units)
+
+
+def isunitful(a):
+    ret = isinstance(a, (YTArray, Quantity, unyt_array))
+    ret |= (isinstance(a, tuple)
+            and isinstance(a[0], Number)
+            and isinstance(a[1], str))
+    return ret
 
 
 def validate_parameters(first, second, skip=[]):
