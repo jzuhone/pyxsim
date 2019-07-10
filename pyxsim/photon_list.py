@@ -15,7 +15,7 @@ from yt.units.yt_array import YTQuantity, YTArray, uconcatenate
 import h5py
 from pyxsim.spectral_models import absorb_models
 from pyxsim.utils import parse_value, force_unicode, validate_parameters, \
-    key_warning, ParameterDict, mylog
+    mylog
 from pyxsim.event_list import EventList
 from soxs.utils import parse_prng
 
