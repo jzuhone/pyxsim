@@ -10,7 +10,7 @@ except ImportError:
     try:
         from yt.analysis_modules.cosmological_observation.api import LightCone
     except ImportError:
-        raise ImportError("Cannot import LightCone from yt or yt_astro_analysis!")
+        pass
 
 from yt.convenience import load
 from yt.units.yt_array import uconcatenate, YTArray
