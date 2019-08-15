@@ -22,7 +22,7 @@ def setup():
     ytcfg["yt", "__withintesting"] = "True"
 
 try:
-    make_simple_instrument("acisi_cy19", "sq_acisi_cy19", 20.0, 2400)
+    make_simple_instrument("chandra_acisi_cy19", "sq_acisi_cy19", 20.0, 2400)
 except KeyError:
     pass
 
