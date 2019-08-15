@@ -31,7 +31,7 @@ def setup():
     ytcfg["yt", "__withintesting"] = "True"
 
 try:
-    mucal_spec = get_instrument_from_registry("mucal")
+    mucal_spec = get_instrument_from_registry("lynx_lxm")
 except KeyError:
     pass
 
