@@ -5,8 +5,6 @@ A unit test for the pyxsim analysis module.
 from pyxsim import \
     TableApecModel, TBabsModel, \
     ThermalSourceModel, PhotonList
-from pyxsim.instruments import \
-    Lynx_Calorimeter
 from pyxsim.tests.utils import \
     BetaModelSource, ParticleBetaModelSource
 from yt.testing import requires_module
@@ -237,11 +235,17 @@ def test_vapec_beta_model():
     events = photons.project_photons("z", [30.0, 45.0], absorb_model="tbabs",
                                      nH=nH_sim, prng=prng, no_shifting=True)
 
-    new_events = Lynx_Calorimeter(events, prng=prng)
+    events.write_simput_file("vbeta_model", overwrite=True)
+
+    instrument_simulator("vbeta_model_simput.fits", "vbeta_model_evt.fits",
+                         exp_time, "lynx_lxm", [30.0, 45.0],
+                         overwrite=True, foreground=False, ptsrc_bkgnd=False,
+                         instr_bkgnd=False,
+                         prng=prng)
+
+    write_spectrum("vbeta_model_evt.fits", "vbeta_model_evt.pha", overwrite=True)
 
     os.system("cp %s %s ." % (arf.filename, rmf.filename))
-
-    new_events.write_channel_spectrum("var_abund_beta_model_evt.pha", overwrite=True)
 
     load_user_model(mymodel_var, "tbapec")
     add_user_pars("tbapec", ["nH", "kT", "abund", "redshift", "norm", "O", "Ca"],
@@ -250,7 +254,7 @@ def test_vapec_beta_model():
                   parmaxs=[10.0, 20.0, 10.0, 20.0, 1.0e9, 10.0, 10.0],
                   parfrozen=[True, False, True, True, False, False, False])
 
-    load_pha("var_abund_beta_model_evt.pha")
+    load_pha("vbeta_model_evt.pha")
     set_stat("cstat")
     set_method("levmar")
     ignore(":0.6, 8.0:")
