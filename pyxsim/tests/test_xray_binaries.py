@@ -4,7 +4,6 @@ from pyxsim.source_generators.xray_binaries import \
     make_xrb_photons, make_xrb_particles, \
     bc_lmxb, bc_hmxb, convert_bands, alpha_lmxb, \
     emin_lmxb, emax_lmxb, emin_hmxb, emax_hmxb
-from yt.units.yt_array import uconcatenate, loadtxt
 import numpy as np
 import tempfile
 import os
@@ -61,7 +60,7 @@ def test_xray_binaries():
     kappa = convert_bands(alpha_lmxb, emin_hmxb, emax_hmxb,
                           emin_lmxb, emax_lmxb)
 
-    E = uconcatenate(photons_xrb["energy"])
+    E = photons_xrb["energy"]
 
     lmxb_idxs = dd["particle_spectral_index"] < 2.0
     hmxb_idxs = np.logical_not(lmxb_idxs)

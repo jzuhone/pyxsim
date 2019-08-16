@@ -17,8 +17,9 @@ def test_line_emission():
     ds = bms.ds
 
     def _dm_emission(field, data):
-        return cross_section*(data["dark_matter_density"]/m_chi)**2*data["cell_volume"]
-    ds.add_field(("gas","dm_emission"), function=_dm_emission, units="s**-1")
+        return (data["dark_matter_density"]/m_chi)**2*data["cell_volume"]*cross_section
+    ds.add_field(("gas","dm_emission"), function=_dm_emission, units="s**-1",
+                 sampling_type="cell")
 
     location = YTQuantity(3.5, "keV")
     sigma = YTQuantity(1000., "km/s")
@@ -40,7 +41,7 @@ def test_line_emission():
     dist_fac = 1.0/(4.*np.pi*D_A*D_A*(1.+redshift)**3)
     dm_E = (sphere["dm_emission"]).sum()
 
-    E = uconcatenate(photons["energy"])
+    E = photons["energy"]
     n_E = len(E)
 
     n_E_pred = (exp_time*A*dm_E*dist_fac).in_units("dimensionless")
@@ -51,6 +52,7 @@ def test_line_emission():
     assert np.abs(loc-E.mean()) < 1.645*sig/np.sqrt(n_E)
     assert np.abs(E.std()**2-sig*sig) < 1.645*np.sqrt(2*(n_E-1))*sig**2/n_E
     assert np.abs(n_E-n_E_pred) < 1.645*np.sqrt(n_E)
+
 
 if __name__ == "__main__":
     test_line_emission()

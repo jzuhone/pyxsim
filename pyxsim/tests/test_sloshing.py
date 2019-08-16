@@ -10,7 +10,6 @@ from yt.utilities.answer_testing.framework import requires_ds, \
 from numpy.testing import assert_array_equal, \
     assert_allclose
 from numpy.random import RandomState
-from yt.units.yt_array import uconcatenate
 import os
 import tempfile
 import shutil
@@ -103,12 +102,8 @@ def test_sloshing():
     events3 = EventList.from_fits_file("test_events.fits")
 
     for k in photons1.keys():
-        if k == "energy":
-            arr1 = uconcatenate(photons1[k])
-            arr2 = uconcatenate(photons2[k])
-        else:
-            arr1 = photons1[k]
-            arr2 = photons2[k]
+        arr1 = photons1[k]
+        arr2 = photons2[k]
         assert_array_equal(arr1, arr2)
     for k in events2.keys():
         assert_array_equal(events1[k], events2[k])
