@@ -58,7 +58,7 @@ install:
     # CORE DEPENDENCIES
     - conda config --add channels https://conda.anaconda.org/sherpa
     - conda config --add channels conda-forge
-    - conda install --yes numpy=$NUMPY_VERSION nose pip h5py astropy sherpa cython scipy pyembree==0.1.3
+    - conda install --yes numpy=$NUMPY_VERSION nose pip h5py astropy sherpa cython scipy
     - conda install --yes -c jzuhone soxs
     - git clone --branch=yt-4.0 https://github.com/yt-project/yt $YT_DIR
     - pushd $YT_DIR
