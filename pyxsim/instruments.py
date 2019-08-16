@@ -94,4 +94,4 @@ Athena_XIFU = InstrumentSimulator("athena_xifu",
                                   "athena_xifu_1469_onaxis_pitch249um_v20160401.arf",
                                   "athena_xifu_rmf_v20160401.rmf")
 Lynx_Imager = InstrumentSimulator("lynx_hdxi", "xrs_hdxi_3x10.arf", "xrs_hdxi.rmf")
-Lynx_Calorimeter = InstrumentSimulator("lynx_mucal", "xrs_mucal_3x10.arf", "xrs_mucal.rmf")
+Lynx_Calorimeter = InstrumentSimulator("lynx_lxm", "xrs_mucal_3x10_3.0eV.arf", "xrs_mucal.rmf")
