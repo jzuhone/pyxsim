@@ -6,6 +6,7 @@ env:
         - NUMPY_VERSION=1.13
         - ANSWER_VER=pyxsim18
         - TEST_OPTS="--nologcapture -sv --with-answer-testing --local --local-dir ."
+
 matrix:
     include:
 
@@ -43,6 +44,7 @@ before_install:
     - ./miniconda.sh -b
     - export PATH=/home/travis/miniconda2/bin:$PATH
     - conda update --yes conda
+    - export YT_DIR=$HOME/yt-git
 
     # UPDATE APT-GET LISTINGS
     - sudo apt-get update
@@ -56,8 +58,12 @@ install:
     # CORE DEPENDENCIES
     - conda config --add channels https://conda.anaconda.org/sherpa
     - conda config --add channels conda-forge
-    - conda install --yes numpy=$NUMPY_VERSION nose pip yt==3.5.1 astropy sherpa cython scipy pyembree==0.1.3
+    - conda install --yes numpy=$NUMPY_VERSION nose pip h5py astropy sherpa cython scipy pyembree==0.1.3
     - conda install --yes -c jzuhone soxs
+    - git clone --branch=yt-4.0 https://github.com/yt-project/yt $YT_DIR
+    - pushd $YT_DIR
+    - pip install -e .
+    - popd
 
     # COVERAGE DEPENDENCIES
     - pip install coverage coveralls
