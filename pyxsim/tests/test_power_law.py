@@ -24,11 +24,11 @@ def setup():
     ytcfg["yt", "__withintesting"] = "True"
 
 try:
-    make_simple_instrument("acisi_cy19", "sq_acisi_cy19", 20.0, 2400)
+    make_simple_instrument("chandra_acisi_cy20", "sq_acisi_cy20", 20.0, 2400)
 except KeyError:
     pass
 
-acis_spec = get_instrument_from_registry("sq_acisi_cy19")
+acis_spec = get_instrument_from_registry("sq_acisi_cy20")
 
 rmf = RedistributionMatrixFile(acis_spec["rmf"])
 arf = AuxiliaryResponseFile(acis_spec['arf'])
@@ -88,7 +88,7 @@ def plaw_fit(alpha_sim, prng=None):
     events.write_simput_file("plaw", overwrite=True)
 
     instrument_simulator("plaw_simput.fits", "plaw_evt.fits",
-                         exp_time, "sq_acisi_cy19", [30.0, 45.0],
+                         exp_time, "sq_acisi_cy20", [30.0, 45.0],
                          overwrite=True, foreground=False, ptsrc_bkgnd=False,
                          instr_bkgnd=False,
                          prng=prng)
