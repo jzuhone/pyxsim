@@ -27,15 +27,6 @@ new_photon_units = {"energy": "keV",
                     "vel": "km/s"}
 
 
-def make_hsml(source_type):
-    def _smoothing_length(field, data):
-        hsml = data[source_type, "particle_mass"] / data[source_type, "density"]
-        hsml *= 3.0 / (4.0 * np.pi)
-        hsml **= 1. / 3.
-        return 2.5 * hsml
-    return _smoothing_length
-
-
 def determine_fields(ds, source_type, point_sources):
     ds_type = ds.index.__class__.__name__
     if "ParticleIndex" in ds_type:
@@ -43,11 +34,6 @@ def determine_fields(ds, source_type, point_sources):
         velocity_fields = [(source_type, "particle_velocity_%s" % ax) for ax in "xyz"]
         if source_type in ["PartType0", "gas", "Gas"]:
             width_field = (source_type, "smoothing_length")
-            if width_field not in ds.field_info and not point_sources:
-                _smoothing_length = make_hsml(source_type)
-                width_field = (source_type, "pyxsim_smoothing_length")
-                ds.add_field(width_field, _smoothing_length, particle_type=True,
-                            units='code_length')
         else:
             width_field = None
     else:
@@ -357,7 +343,7 @@ class PhotonList(object):
         source_model.setup_model(data_source, redshift, spectral_norm)
 
         p_fields, v_fields, w_field = determine_fields(ds,
-                                                       source_model.source_type,
+                                                       source_model.ftype,
                                                        point_sources)
 
         if velocity_fields is not None:

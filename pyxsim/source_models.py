@@ -52,13 +52,6 @@ class SourceModel(object):
         pass
 
 
-particle_dens_fields = [("io", "density"),
-                        ("PartType0", "Density"),
-                        ("Gas", "Density")]
-particle_temp_fields = [("io", "temperature"),
-                        ("PartType0", "Temperature"),
-                        ("Gas", "Temperature")]
-
 metal_abund = {"angr": 0.0189,
                "aspl": 0.0134,
                "wilm": 0.0134,
@@ -171,6 +164,7 @@ class ThermalSourceModel(SourceModel):
         self.temperature_field = temperature_field
         self.Zmet = Zmet
         self.nei = nei
+        self.ftype = ftype
         if var_elem is None:
             var_elem = {}
             var_elem_keys = None
@@ -213,10 +207,14 @@ class ThermalSourceModel(SourceModel):
         self.max_density = max_density
         self.density_field = None  # Will be determined later
         self.tot_num_cells = 0  # Will be determined later
+        self.ftype = "gas"
 
     def setup_model(self, data_source, redshift, spectral_norm):
+        if self.emission_measure_field is None:
+            self.emission_measure_field = (self.ftype, 'emission_measure')
+        ftype = data_source.ds._get_field_info(self.emission_measure_field).name[0]
+        self.ftype = ftype
         self.redshift = redshift
-        ptype = None
         if not self.nei and not isinstance(self.Zmet, float):
             Z_units = str(data_source.ds._get_field_info(self.Zmet).units)
             if Z_units in ["dimensionless", "", "code_metallicity"]:
@@ -242,51 +240,10 @@ class ThermalSourceModel(SourceModel):
                         self.mconvert[key] = 1.0
                     else:
                         raise RuntimeError("I don't understand units of %s for element %s!" % (m_units, key))
-        if self.emission_measure_field is None:
-            found_dfield = [fd for fd in particle_dens_fields if fd in data_source.ds.field_list]
-            if len(found_dfield) > 0:
-                self.density_field = found_dfield[0]
-                ptype = found_dfield[0][0]
-                def _emission_measure(field, data):
-                    nenh = data[found_dfield[0]]*data['particle_mass']
-                    nenh /= mp*mp
-                    nenh.convert_to_units("cm**-3")
-                    if data.has_field_parameter("X_H"):
-                        X_H = data.get_field_parameter("X_H")
-                    else:
-                        X_H = primordial_H_abund
-                    if (ptype, 'ElectronAbundance') in data_source.ds.field_list:
-                        nenh *= X_H * data[ptype, 'ElectronAbundance']
-                        nenh *= X_H * (1.-data[ptype, 'NeutralHydrogenAbundance'])
-                    else:
-                        nenh *= 0.5*(1.+X_H)*X_H
-                    return nenh
-                data_source.ds.add_field((ptype, 'emission_measure'),
-                                         function=_emission_measure,
-                                         particle_type=True,
-                                         units="cm**-3")
-                self.emission_measure_field = (ptype, 'emission_measure')
-            else:
-                self.density_field = ("gas", "density")
-                self.emission_measure_field = ('gas', 'emission_measure')
+        self.density_field = (ftype, "density")
         mylog.info("Using emission measure field '(%s, %s)'." % self.emission_measure_field)
         if self.temperature_field is None:
-            found_tfield = [fd for fd in particle_temp_fields if fd in data_source.ds.derived_field_list]
-            if len(found_tfield) > 0:
-                self.temperature_field = found_tfield[0]
-                # What we have to do here is make sure that the temperature is set correctly
-                # for SPH datasets that don't have the temperature field defined. What this
-                # means is that we must set the mean molecular weight to the value for a
-                # fully ionized gas if the ionization fraction is not available in the dataset.
-                if self.temperature_field not in data_source.ds.field_list and ptype is not None:
-                    if (ptype, 'ElectronAbundance') not in data_source.ds.field_list:
-                        if data_source.has_field_parameter("X_H"):
-                            X_H = data_source.get_field_parameter("X_H")
-                        else:
-                            X_H = 0.76
-                        data_source.set_field_parameter("mean_molecular_weight", 4.0/(5*X_H+3))
-            else:
-                self.temperature_field = ('gas', 'temperature')
+            self.temperature_field = (ftype, 'temperature')
         mylog.info("Using temperature field '(%s, %s)'." % self.temperature_field)
         self.spectral_model.prepare_spectrum(redshift)
         self.spectral_norm = spectral_norm
@@ -301,7 +258,6 @@ class ThermalSourceModel(SourceModel):
         for chunk in parallel_objects(citer):
             num_cells += chunk[self.temperature_field].size
         self.tot_num_cells = comm.mpi_allreduce(num_cells)
-        self.source_type = data_source.ds._get_field_info(self.emission_measure_field).name[0]
         if parallel_capable:
             self.pbar = ParallelProgressBar("Processing cells/particles ")
         else:
@@ -512,12 +468,13 @@ class PowerLawSourceModel(SourceModel):
         self.prng = parse_prng(prng)
         self.spectral_norm = None
         self.redshift = None
+        self.ftype = None
 
     def setup_model(self, data_source, redshift, spectral_norm):
         self.spectral_norm = spectral_norm
         self.redshift = redshift
-        self.source_type = data_source.ds._get_field_info(self.emission_field).name[0]
         self.scale_factor = 1.0 / (1.0 + self.redshift)
+        self.ftype = data_source.ds._get_field_info(self.emission_field).name[0]
 
     def __call__(self, chunk):
 
@@ -609,12 +566,13 @@ class LineSourceModel(SourceModel):
         self.prng = parse_prng(prng)
         self.spectral_norm = None
         self.redshift = None
+        self.ftype = None
 
     def setup_model(self, data_source, redshift, spectral_norm):
         self.spectral_norm = spectral_norm
         self.redshift = redshift
-        self.source_type = data_source.ds._get_field_info(self.emission_field).name[0]
         self.scale_factor = 1.0 / (1.0 + self.redshift)
+        self.ftype = data_source.ds._get_field_info(self.emission_field).name[0]
 
     def __call__(self, chunk):
         num_cells = len(chunk[self.emission_field])
