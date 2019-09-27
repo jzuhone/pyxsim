@@ -164,7 +164,7 @@ class ThermalSourceModel(SourceModel):
         self.temperature_field = temperature_field
         self.Zmet = Zmet
         self.nei = nei
-        self.ftype = ftype
+        self.ftype = None
         if var_elem is None:
             var_elem = {}
             var_elem_keys = None
