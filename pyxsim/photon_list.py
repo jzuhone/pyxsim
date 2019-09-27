@@ -30,6 +30,8 @@ new_photon_units = {"energy": "keV",
 def determine_fields(ds, source_type, point_sources):
     ds_type = ds.index.__class__.__name__
     if "ParticleIndex" in ds_type:
+        if source_type == "gas":
+            source_type = ds._sph_ptypes[0]
         position_fields = [(source_type, "particle_position_%s" % ax) for ax in "xyz"]
         velocity_fields = [(source_type, "particle_velocity_%s" % ax) for ax in "xyz"]
         if source_type in ["PartType0", "gas", "Gas"]:
