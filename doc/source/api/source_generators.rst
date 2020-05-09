@@ -5,9 +5,6 @@ Source Generators API
     :members:
     :undoc-members: 
 
-.. automodule:: pyxsim.source_generators.xray_binaries
-    :members: make_xrb_particles, make_xrb_photons
-
 .. automodule:: pyxsim.source_generators.background
     :members:
     :undoc-members: 
