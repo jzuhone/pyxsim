@@ -4,13 +4,6 @@ from pyxsim.event_list import \
 from pyxsim.photon_list import \
     PhotonList
 
-from pyxsim.source_generators import \
-    make_xrb_particles, \
-    make_xrb_photons, \
-    XrayLightCone, \
-    make_background, \
-    make_point_sources
-
 from pyxsim.source_models import \
    SourceModel, \
    ThermalSourceModel, \
