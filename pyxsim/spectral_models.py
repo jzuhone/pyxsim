@@ -17,6 +17,7 @@ hc = (hcgs*clight).in_units("keV*angstrom").v
 # placement of spectral lines due to the above
 cl = clight.v
 
+
 class TableApecModel(ApecGenerator):
     r"""
     Initialize a thermal gas emission model from the AtomDB APEC tables
@@ -103,20 +104,24 @@ class TableApecModel(ApecGenerator):
         Get the thermal emission spectrum given a temperature *kT* in keV. 
         """
         tindex = np.searchsorted(self.Tvals, kT)-1
-        if tindex >= self.Tvals.shape[0]-1 or tindex < 0:
-            return (YTArray(np.zeros(self.nchan), "cm**3/s"),)*2
-        dT = (kT-self.Tvals[tindex])/self.dTvals[tindex]
-        cspec_l = self.cosmic_spec[tindex, :]
-        mspec_l = self.metal_spec[tindex, :]
-        cspec_r = self.cosmic_spec[tindex+1, :]
-        mspec_r = self.metal_spec[tindex+1, :]
-        cosmic_spec = cspec_l*(1.-dT)+cspec_r*dT
-        metal_spec = mspec_l*(1.-dT)+mspec_r*dT
         var_spec = None
-        if self.var_spec is not None:
-            vspec_l = self.var_spec[:, tindex, :]
-            vspec_r = self.var_spec[:, tindex+1, :]
-            var_spec = vspec_l*(1.-dT) + vspec_r*dT
+        if tindex >= self.Tvals.shape[0]-1 or tindex < 0:
+            cosmic_spec = YTArray(np.zeros(self.nchan), "cm**3/s")
+            metal_spec = cosmic_spec
+            if self.var_spec is not None:
+                var_spec = YTArray(np.zeros((self.num_var_elem, self.nchan)), "cm**3/s")
+        else:
+            dT = (kT-self.Tvals[tindex])/self.dTvals[tindex]
+            cspec_l = self.cosmic_spec[tindex, :]
+            mspec_l = self.metal_spec[tindex, :]
+            cspec_r = self.cosmic_spec[tindex+1, :]
+            mspec_r = self.metal_spec[tindex+1, :]
+            cosmic_spec = cspec_l*(1.-dT)+cspec_r*dT
+            metal_spec = mspec_l*(1.-dT)+mspec_r*dT
+            if self.var_spec is not None:
+                vspec_l = self.var_spec[:, tindex, :]
+                vspec_r = self.var_spec[:, tindex+1, :]
+                var_spec = vspec_l*(1.-dT) + vspec_r*dT
         return cosmic_spec, metal_spec, var_spec
 
     def return_spectrum(self, temperature, metallicity, redshift, norm,
@@ -146,7 +151,9 @@ class TableApecModel(ApecGenerator):
                                                         elem_abund=elem_abund)
         return YTArray(spec.flux*spec.de, "photons/s/cm**2")
 
+
 thermal_models = {"apec": TableApecModel}
+
 
 class AbsorptionModel(object):
     _name = ""
