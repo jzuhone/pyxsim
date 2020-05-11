@@ -77,8 +77,8 @@ def validate_parameters(first, second, skip=[]):
         raise RuntimeError("The two inputs do not have the same parameters!")
     for k1, k2 in zip(keys1, keys2):
         if k1 not in skip:
-            v1 = getattr(first[k1], "value", first[k1])
-            v2 = getattr(second[k2], "value", second[k2])
+            v1 = first[k1]
+            v2 = second[k2]
             if isinstance(v1, str) or isinstance(v2, str):
                 check_equal = v1 == v2
             else:
@@ -136,7 +136,9 @@ def merge_files(input_files, output_file, overwrite=False,
     skip = [exp_time_key] if add_exposure_times else []
     for fn in input_files[1:]:
         f = h5py.File(fn, "r")
-        validate_parameters(f_in["parameters"], f["parameters"], skip=skip)
+        p_in = {k: v[()] for k, v in f_in["parameters"].items()}
+        p = {k: v[()] for k, v in f["parameters"].items()}
+        validate_parameters(p_in, p, skip=skip)
         f.close()
 
     f_in.close()

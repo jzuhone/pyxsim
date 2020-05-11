@@ -62,7 +62,7 @@ def plaw_fit(alpha_sim, prng=None):
     def _hard_emission(field, data):
         return data.ds.quan(1.0e-18, "s**-1*keV**-1")*data["density"]*data["cell_volume"]/mp
     ds.add_field(("gas", "hard_emission"), function=_hard_emission, 
-                 units="keV**-1*s**-1")
+                 units="keV**-1*s**-1", sampling_type="local")
 
     nH_sim = 0.02
 
