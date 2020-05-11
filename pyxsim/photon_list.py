@@ -170,15 +170,15 @@ class PhotonList(object):
         f = h5py.File(filename, "r")
 
         p = f["/parameters"]
-        parameters["fid_exp_time"] = YTQuantity(p["fid_exp_time"].value, "s")
-        parameters["fid_area"] = YTQuantity(p["fid_area"].value, "cm**2")
-        parameters["fid_redshift"] = p["fid_redshift"].value
-        parameters["fid_d_a"] = YTQuantity(p["fid_d_a"].value, "Mpc")
-        parameters["hubble"] = p["hubble"].value
-        parameters["omega_matter"] = p["omega_matter"].value
-        parameters["omega_lambda"] = p["omega_lambda"].value
+        parameters["fid_exp_time"] = YTQuantity(p["fid_exp_time"][()], "s")
+        parameters["fid_area"] = YTQuantity(p["fid_area"][()], "cm**2")
+        parameters["fid_redshift"] = p["fid_redshift"][()]
+        parameters["fid_d_a"] = YTQuantity(p["fid_d_a"][()], "Mpc")
+        parameters["hubble"] = p["hubble"][()]
+        parameters["omega_matter"] = p["omega_matter"][()]
+        parameters["omega_lambda"] = p["omega_lambda"][()]
         if "data_type" in p:
-            parameters["data_type"] = force_unicode(p["data_type"].value)
+            parameters["data_type"] = force_unicode(p["data_type"][()])
         else:
             parameters["data_type"] = "cells"
 
@@ -678,7 +678,7 @@ class PhotonList(object):
                 xsky += sigma * prng.normal(loc=0.0, scale=1.0, size=num_det)
                 ysky += sigma * prng.normal(loc=0.0, scale=1.0, size=num_det)
 
-            d_a = D_A.to("kpc").v
+            d_a = D_A.to_value("kpc")
             xsky /= d_a
             ysky /= d_a
 

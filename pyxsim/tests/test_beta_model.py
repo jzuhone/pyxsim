@@ -62,48 +62,40 @@ def mymodel_var(pars, x, xhi=None):
 @requires_module("sherpa")
 def test_beta_model():
     bms = BetaModelSource()
-    do_beta_model(bms, "velocity_z", "emission_measure")
+    do_beta_model(bms)
 
 
 @requires_module("sherpa")
 def test_beta_model_nomove():
     bms = BetaModelSource()
-    do_beta_model(bms, "velocity_z", "emission_measure",
-                  axis="x", prng=89)
+    do_beta_model(bms, axis="x", prng=89)
 
 
 @requires_module("sherpa")
 def test_beta_model_offaxis():
     bms = BetaModelSource()
-    do_beta_model(bms, "velocity_z", "emission_measure",
-                  axis=[1.0, -2.0, 5.0], prng=78)
+    do_beta_model(bms, axis=[1.0, -2.0, 5.0], prng=78)
 
 
 @requires_module("sherpa")
 def test_particle_beta_model():
     bms = ParticleBetaModelSource()
-    do_beta_model(bms, "particle_velocity_z",
-                  ("io", "emission_measure"), prng=29)
+    do_beta_model(bms, prng=29)
 
 
 @requires_module("sherpa")
 def test_particle_beta_model_nomove():
     bms = ParticleBetaModelSource()
-    do_beta_model(bms, "particle_velocity_z",
-                  ("io", "emission_measure"), axis="x",
-                  prng=72)
+    do_beta_model(bms, axis="x", prng=72)
 
 
 @requires_module("sherpa")
 def test_particle_beta_model_offaxis():
     bms = ParticleBetaModelSource()
-    do_beta_model(bms, "particle_velocity_z",
-                  ("io", "emission_measure"), prng=67,
-                  axis=[1.0, -2.0, 5.0])
+    do_beta_model(bms, prng=67, axis=[1.0, -2.0, 5.0])
 
 
-def do_beta_model(source, v_field, em_field, axis="z", 
-                  prng=None):
+def do_beta_model(source, axis="z", prng=None):
 
     tmpdir = tempfile.mkdtemp()
     curdir = os.getcwd()
@@ -131,11 +123,12 @@ def do_beta_model(source, v_field, em_field, axis="z",
 
     D_A = photons.parameters["fid_d_a"]
 
-    norm_sim = sphere.quantities.total_quantity(em_field)
+    norm_sim = sphere.quantities.total_quantity(("gas","emission_measure"))
     norm_sim *= 1.0e-14/(4*np.pi*D_A*D_A*(1.+redshift)*(1.+redshift))
     norm_sim = float(norm_sim.in_cgs())
 
-    v1, v2 = sphere.quantities.weighted_variance(v_field, em_field)
+    v1, v2 = sphere.quantities.weighted_variance(("gas","velocity_z"),
+                                                 ("gas","emission_measure"))
 
     if isinstance(axis, string_types):
         if axis == "z":
