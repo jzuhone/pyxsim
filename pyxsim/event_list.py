@@ -100,8 +100,8 @@ class EventList(object):
         f = h5py.File(h5file, "r")
 
         p = f["/parameters"]
-        parameters["exp_time"] = YTQuantity(p["exp_time"].value, "s")
-        parameters["area"] = YTQuantity(p["area"].value, "cm**2")
+        parameters["exp_time"] = YTQuantity(p["exp_time"][()], "s")
+        parameters["area"] = YTQuantity(p["area"][()], "cm**2")
         parameters["sky_center"] = YTArray(p["sky_center"][:], "deg")
 
         d = f["/data"]
