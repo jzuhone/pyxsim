@@ -76,7 +76,7 @@ def find_object_bounds(data_source):
     """
 
     if hasattr(data_source, "base_object"):
-        # This a cut region so we'll figure out
+        # This is a cut region so we'll figure out
         # its bounds from its parent object
         data_src = data_source.base_object
     else:

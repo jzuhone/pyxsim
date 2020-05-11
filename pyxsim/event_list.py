@@ -58,9 +58,6 @@ class EventList(object):
     def keys(self):
         return self.events.keys()
 
-    def has_key(self, key):
-        return key in self.keys()
-
     def items(self):
         return self.events.items()
 

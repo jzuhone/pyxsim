@@ -11,11 +11,11 @@ matrix:
     include:
 
         # Try all python versions with the latest numpy
-        - python: 3.5
-          env: CMD="nosetests ${TEST_OPTS} --answer-name=${ANSWER_VER}_3 pyxsim/tests"; PYTHON='python3'
         - python: 3.6
           env: CMD="nosetests ${TEST_OPTS} --answer-name=${ANSWER_VER}_3 pyxsim/tests"; PYTHON='python3'
         - python: 3.7
+          env: CMD="nosetests ${TEST_OPTS} --answer-name=${ANSWER_VER}_3 pyxsim/tests"; PYTHON='python3'
+        - python: 3.8
           env: CMD="nosetests ${TEST_OPTS} --answer-name=${ANSWER_VER}_3 pyxsim/tests --with-coverage --cover-package=pyxsim"; PYTHON='python3'
 
 before_install:
@@ -45,6 +45,7 @@ before_install:
     - export PATH=/home/travis/miniconda2/bin:$PATH
     - conda update --yes conda
     - export YT_DIR=$HOME/yt-git
+    - export YAA_DIR=$HOME/yaa-git
 
     # UPDATE APT-GET LISTINGS
     - sudo apt-get update
@@ -62,6 +63,10 @@ install:
     - conda install --yes -c jzuhone soxs
     - git clone --branch=yt-4.0 https://github.com/yt-project/yt $YT_DIR
     - pushd $YT_DIR
+    - pip install -e .
+    - popd
+    - git clone --branch=yt-4.0 https://github.com/yt-project/yt_astro_analysis $YAA_DIR
+    - pushd $YAA_DIR
     - pip install -e .
     - popd
 

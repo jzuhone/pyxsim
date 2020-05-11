@@ -4,10 +4,7 @@ from pyxsim.photon_list import PhotonList
 from pyxsim.event_list import EventList
 from pyxsim.utils import parse_value
 
-try:
-    from yt_astro_analysis.cosmological_observation.api import LightCone
-except:
-    LightCone = object
+from yt_astro_analysis.cosmological_observation.api import LightCone
 
 from yt.convenience import load
 from yt.units.yt_array import uconcatenate, YTArray
