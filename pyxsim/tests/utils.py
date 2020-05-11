@@ -65,6 +65,7 @@ class BetaModelSource(object):
         self.ds = load_uniform_grid(data, ddims, length_unit=(2*R, "Mpc"),
                                     nprocs=64, bbox=bbox)
 
+
 class ParticleBetaModelSource(object):
     def __init__(self):
 
@@ -104,5 +105,5 @@ class ParticleBetaModelSource(object):
         data["io", "particle_velocity_y"] = (np.zeros(num_particles), "cm/s")
         data["io", "particle_velocity_z"] = (velz, "cm/s")
         data["io", "particle_mass"] = (pmass, "g")
-
+        data["io", "smoothing_length"] = (0.01*np.ones(num_particles)/(2.0*R), "code_length")
         self.ds = load_particles(data, length_unit=(2*R, "Mpc"), bbox=bbox)
