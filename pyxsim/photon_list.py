@@ -252,7 +252,7 @@ def make_photons(photon_file, data_source, redshift, area,
     c_size = init_chunk
     p_size = init_chunk
 
-    cell_fields = ["x", "y", "z", "vx", "vy", "vz", "num_photons"]
+    cell_fields = ["x", "y", "z", "vx", "vy", "vz", "num_photons", "dx"]
 
     d = f.create_group("data")
     for field in cell_fields + ["energy"]:
@@ -282,12 +282,12 @@ def make_photons(photon_file, data_source, redshift, area,
                 while chunk_nc + n_cells > c_size:
                     c_size *= 2
                 for field in cell_fields:
-                    d[field].resize(c_size)
+                    d[field].resize((c_size,))
 
             if p_size < n_photons + chunk_nph:
                 while chunk_nph + n_photons > p_size:
                     p_size *= 2
-                d["energy"].resize(p_size)
+                d["energy"].resize((p_size,))
 
             for i, ax in enumerate("xyz"):
                 pos = chunk[p_fields[i]].d[idxs]
@@ -320,10 +320,10 @@ def make_photons(photon_file, data_source, redshift, area,
 
     if c_size > n_cells:
         for field in cell_fields:
-            d[field].resize(n_cells)
+            d[field].resize((n_cells,))
 
     if p_size > n_photons:
-        d["energy"].resize(n_photons)
+        d["energy"].resize((n_photons,))
 
     source_model.cleanup_model()
 
