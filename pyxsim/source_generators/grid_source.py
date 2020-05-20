@@ -159,7 +159,6 @@ def make_grid_source(ds, axis, width, center, redshift, area,
 
     first = True
 
-    phlists = []
     ra = []
     dec = []
     for i in range(nx):
@@ -197,21 +196,16 @@ def make_grid_source(ds, axis, width, center, redshift, area,
 
             del events
 
-            phlists.append("{}_phlist.fits".format(phlist_prefix))
             ra.append(xsky[0])
             dec.append(ysky[0])
 
-    t = Table([np.arange(nx*ny)+1, phlists, ra, dec],
-              names=("src_id", "phlist", "ra", "dec"))
-    t.meta["comments"] = ["simput: {}_simput.fits".format(simput_prefix),
-                          "fov: {:.2f} arcmin".format(fov.v),
-                          "sky_center: {:.2f},{:.2f}".format(sky_center[0], sky_center[1]),
-                          "dims: {:d},{:d}".format(nx, ny)]
+    t = Table([ra, dec], names=("ra", "dec"))
+    t.meta["comments"] = ["simput: {}_simput.fits".format(simput_prefix)]
     t['ra'].format = '.2f'
     t['dec'].format = '.2f'
 
-    outfile = "{}_photon_grid.txt".format(simput_prefix)
-    mylog.info("Writing grid information to {}.".format(outfile))
+    outfile = f"{simput_prefix}_photon_grid.txt"
+    mylog.info(f"Writing grid information to {outfile}.")
     t.write(outfile, overwrite=overwrite, 
             delimiter="\t", format='ascii.commented_header')
 
