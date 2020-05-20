@@ -153,7 +153,7 @@ def make_grid_source(ds, axis, width, center, redshift, area,
     nx = int(np.ceil(xwidth / fov_width))
     ny = int(np.ceil(ywidth / fov_width))
 
-    mylog.info("Number of FOV to cover source is {:d} x {:d}.".format(nx, ny))
+    mylog.info(f"Number of FOV to cover source is {nx:d} x {ny:d}.")
 
     axisx, axisy = axis_wcs[axis]
 
