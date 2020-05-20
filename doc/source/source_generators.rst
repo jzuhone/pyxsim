@@ -12,4 +12,5 @@ types of sources, which are documented in the following sections:
     point_sources
     background
     light_cone
+    grid_source
 

@@ -3,6 +3,18 @@
 ChangeLog
 =========
 
+Version 3.0
+-----------
+
+* A new source-generating function, 
+  :func:`~pyxsim.source_generators.grid_source.make_grid_source`, has been
+  added. This function allows one to create a grid of square-shaped source
+  regions which can be used to map a large region. See :ref:`grid-source` for
+  more details.
+* Support for Python 2.7 has been dropped in this version. 
+* The minimum supported yt version is now 4.0.
+* The X-ray binaries source generator has been dropped from pyXSIM.
+
 Version 2.2.0
 -------------
 
