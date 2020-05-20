@@ -3,7 +3,7 @@ Classes for generating lists of photons
 """
 from collections import defaultdict
 import numpy as np
-from yt.funcs import iterable, issue_deprecation_warning
+from yt.funcs import iterable
 from pyxsim.lib.sky_functions import pixel_to_cel, \
     scatter_events, doppler_shift
 from yt.utilities.physical_constants import clight
@@ -20,11 +20,6 @@ from pyxsim.event_list import EventList
 from soxs.utils import parse_prng
 
 comm = communication_system.communicators[-1]
-
-new_photon_units = {"energy": "keV",
-                    "dx": "kpc",
-                    "pos": "kpc",
-                    "vel": "km/s"}
 
 
 def determine_fields(ds, source_type, point_sources):
@@ -50,23 +45,6 @@ def determine_fields(ds, source_type, point_sources):
     if point_sources:
         width_field = None
     return position_fields, velocity_fields, width_field
-
-
-def concatenate_photons(ds, photons, photon_units):
-    for key in ["pos", "vel", "dx", "energy", "num_photons"]:
-        if key in photons and len(photons[key]) > 0:
-            if key in ["pos", "vel"]:
-                photons[key] = np.swapaxes(np.concatenate(photons[key], 
-                                                          axis=1), 0, 1)
-            else:
-                photons[key] = np.concatenate(photons[key])
-            if key in photon_units:
-                photons[key] = ds.arr(photons[key], photon_units[key])
-                photons[key].convert_to_units(new_photon_units[key])
-        elif key == "num_photons":
-            photons[key] = np.array([])
-        else:
-            photons[key] = YTArray([], new_photon_units[key])
 
 
 def find_object_bounds(data_source):
@@ -102,7 +80,262 @@ def find_object_bounds(data_source):
         le = data_source.ds.domain_left_edge
         re = data_source.ds.domain_right_edge
 
-    return le.to("kpc"), re.to("kpc")
+    return le.to_value("kpc"), re.to_value("kpc")
+
+
+def make_photons(photon_file, data_source, redshift, area,
+                 exp_time, source_model, point_sources=False,
+                 parameters=None, center=None, dist=None,
+                 cosmology=None, velocity_fields=None):
+    r"""
+    Initialize a :class:`~pyxsim.photon_list.PhotonList` from a yt data
+    source. The redshift, collecting area, exposure time, and cosmology
+    are stored in the *parameters* dictionary which is passed to the
+    *source_model* function.
+
+    Parameters
+    ----------
+    data_source : :class:`~yt.data_objects.data_containers.YTSelectionContainer`
+        The data source from which the photons will be generated.
+    redshift : float
+        The cosmological redshift for the photons.
+    area : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
+        The collecting area to determine the number of photons. If units are
+        not specified, it is assumed to be in cm^2.
+    exp_time : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
+        The exposure time to determine the number of photons. If units are
+        not specified, it is assumed to be in seconds.
+    source_model : :class:`~pyxsim.source_models.SourceModel`
+        A source model used to generate the photons.
+    point_sources : boolean, optional
+        If True, the photons will be assumed to be generated from the exact
+        positions of the cells or particles and not smeared around within
+        a volume. Default: False
+    parameters : dict, optional
+        A dictionary of parameters to be passed for the source model to use,
+        if necessary.
+    center : string or array_like, optional
+        The origin of the photon spatial coordinates. Accepts "c", "max", or
+        a coordinate. If not specified, pyxsim attempts to use the "center"
+        field parameter of the data_source.
+    dist : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
+        The angular diameter distance, used for nearby sources. This may be
+        optionally supplied instead of it being determined from the
+        *redshift* and given *cosmology*. If units are not specified, it is
+        assumed to be in kpc. To use this, the redshift must be set to zero.
+    cosmology : :class:`~yt.utilities.cosmology.Cosmology`, optional
+        Cosmological information. If not supplied, we try to get the
+        cosmology from the dataset. Otherwise, LCDM with the default yt 
+        parameters is assumed.
+    velocity_fields : list of fields
+        The yt fields to use for the velocity. If not specified, the 
+        following will be assumed:
+        ['velocity_x', 'velocity_y', 'velocity_z'] for grid datasets
+        ['particle_velocity_x', 'particle_velocity_y', 'particle_velocity_z'] for particle datasets
+
+    Examples
+    --------
+    >>> thermal_model = ThermalSourceModel(apec_model, Zmet=0.3)
+    >>> redshift = 0.05
+    >>> area = 6000.0 # assumed here in cm**2
+    >>> time = 2.0e5 # assumed here in seconds
+    >>> sp = ds.sphere("c", (500., "kpc"))
+    >>> my_photons = PhotonList.from_data_source(sp, redshift, area,
+    ...                                          time, thermal_model)
+    """
+    ds = data_source.ds
+
+    if parameters is None:
+        parameters = {}
+    if cosmology is None:
+        if hasattr(ds, 'cosmology'):
+            cosmo = ds.cosmology
+        else:
+            cosmo = Cosmology()
+    else:
+        cosmo = cosmology
+    if dist is None:
+        if redshift <= 0.0:
+            msg = "If redshift <= 0.0, you must specify a distance to the " \
+                  "source using the 'dist' argument!"
+            mylog.error(msg)
+            raise ValueError(msg)
+        D_A = cosmo.angular_diameter_distance(0.0, redshift).in_units("Mpc")
+    else:
+        D_A = parse_value(dist, "kpc")
+        if redshift > 0.0:
+            mylog.warning("Redshift must be zero for nearby sources. "
+                          "Resetting redshift to 0.0.")
+            redshift = 0.0
+
+    if isinstance(center, str):
+        if center == "center" or center == "c":
+            parameters["center"] = ds.domain_center
+        elif center == "max" or center == "m":
+            parameters["center"] = ds.find_max("density")[-1]
+    elif iterable(center):
+        if isinstance(center, YTArray):
+            parameters["center"] = center.in_units("code_length")
+        elif isinstance(center, tuple):
+            if center[0] == "min":
+                parameters["center"] = ds.find_min(center[1])[-1]
+            elif center[0] == "max":
+                parameters["center"] = ds.find_max(center[1])[-1]
+            else:
+                raise RuntimeError
+        else:
+            parameters["center"] = ds.arr(center, "code_length")
+    elif center is None:
+        if hasattr(data_source, "left_edge"):
+            parameters["center"] = 0.5*(data_source.left_edge+data_source.right_edge)
+        else:
+            parameters["center"] = data_source.get_field_parameter("center")
+
+    parameters["fid_exp_time"] = parse_value(exp_time, "s")
+    parameters["fid_area"] = parse_value(area, "cm**2")
+    parameters["fid_redshift"] = redshift
+    parameters["fid_d_a"] = D_A
+    parameters["hubble"] = cosmo.hubble_constant
+    parameters["omega_matter"] = cosmo.omega_matter
+    parameters["omega_lambda"] = cosmo.omega_lambda
+    parameters["center"].convert_to_units("kpc")
+
+    if redshift > 0.0:
+        mylog.info("Cosmology: h = %g, omega_matter = %g, omega_lambda = %g" %
+                   (cosmo.hubble_constant, cosmo.omega_matter, cosmo.omega_lambda))
+    else:
+        mylog.info("Observing local source at distance %s." % D_A)
+
+    D_A = parameters["fid_d_a"].in_cgs()
+    dist_fac = 1.0/(4.*np.pi*D_A.value*D_A.value*(1.+redshift)**2)
+    spectral_norm = parameters["fid_area"].v*parameters["fid_exp_time"].v*dist_fac
+
+    source_model.setup_model(data_source, redshift, spectral_norm)
+
+    p_fields, v_fields, w_field = determine_fields(ds,
+                                                   source_model.ftype,
+                                                   point_sources)
+
+    if velocity_fields is not None:
+        v_fields = velocity_fields
+
+    if p_fields[0] == ("index", "x"):
+        parameters["data_type"] = "cells"
+    else:
+        parameters["data_type"] = "particles"
+
+    citer = data_source.chunks([], "io")
+
+    dw = ds.domain_width.to_value("kpc")
+    le, re = find_object_bounds(data_source)
+    c = parameters["center"].to_value("kpc")
+
+    f = h5py.File(photon_file, "w")
+
+    # Parameters
+
+    p = f.create_group("parameters")
+    p.create_dataset("fid_area", data=float(parameters["fid_area"]))
+    p.create_dataset("fid_exp_time", data=float(parameters["fid_exp_time"]))
+    p.create_dataset("fid_redshift", data=parameters["fid_redshift"])
+    p.create_dataset("hubble", data=parameters["hubble"])
+    p.create_dataset("omega_matter", data=parameters["omega_matter"])
+    p.create_dataset("omega_lambda", data=parameters["omega_lambda"])
+    p.create_dataset("fid_d_a", data=float(parameters["fid_d_a"]))
+    p.create_dataset("data_type", data=parameters["data_type"])
+
+    n_cells = 0
+    n_photons = 0
+    c_offset = 0
+    p_offset = 0
+    init_chunk = 100000
+    c_size = init_chunk
+    p_size = init_chunk
+
+    cell_fields = ["x", "y", "z", "vx", "vy", "vz", "num_photons"]
+
+    d = f.create_group("data")
+    for field in cell_fields + ["energy"]:
+        if field == "num_photons":
+            dtype = "uint64"
+        else:
+            dtype = "float64"
+        d.create_dataset(field, data=np.zeros(init_chunk, dtype=dtype),
+                         maxshape=(None,), dtype=dtype, chunks=True)
+
+    f.flush()
+
+    for chunk in parallel_objects(citer):
+
+        chunk_data = source_model(chunk)
+
+        if chunk_data is not None:
+
+            chunk_nc, number_of_photons, idxs, energies = chunk_data
+
+            chunk_nph = np.sum(number_of_photons)
+
+            if chunk_nph == 0:
+                continue
+
+            if c_size < n_cells + chunk_nc:
+                while chunk_nc + n_cells > c_size:
+                    c_size *= 2
+                for field in cell_fields:
+                    d[field].resize(c_size)
+
+            if p_size < n_photons + chunk_nph:
+                while chunk_nph + n_photons > p_size:
+                    p_size *= 2
+                d["energy"].resize(p_size)
+
+            for i, ax in enumerate("xyz"):
+                pos = chunk[p_fields[i]].d[idxs]
+                # Fix photon coordinates for regions crossing a periodic boundary
+                if ds.periodicity[i]:
+                    tfl = pos < le[i]
+                    tfr = pos > re[i]
+                    pos[tfl] += dw[i]
+                    pos[tfr] -= dw[i]
+
+                vel = chunk[v_fields[i]].d[idxs]
+                # Coordinates are centered
+                d[ax][c_offset:c_offset+chunk_nc] = pos-c[i]
+                d[f"v{ax}"][c_offset:c_offset+chunk_nc] = vel
+
+            d["num_photons"][c_offset:c_offset+chunk_nc] = number_of_photons
+            d["energy"][p_offset:p_offset+chunk_nph] = energies
+
+            if w_field is None:
+                d["dx"][c_offset:c_offset+chunk_nc] = 0.0
+            else:
+                d["dx"][c_offset:c_offset+chunk_nc] = chunk[w_field].d[idxs]
+
+            n_cells += chunk_nc
+            n_photons += chunk_nph
+            c_offset = n_cells
+            p_offset = n_photons
+
+        f.flush()
+
+    if c_size > n_cells:
+        for field in cell_fields:
+            d[field].resize(n_cells)
+
+    if p_size > n_photons:
+        d["energy"].resize(n_photons)
+
+    source_model.cleanup_model()
+
+    all_nphotons = comm.mpi_allreduce(n_photons)
+    if all_nphotons == 0:
+        raise RuntimeError("No photons were generated!!")
+
+    mylog.info("Finished generating photons.")
+    mylog.info(f"Number of photons generated: {n_photons}")
+    mylog.info(f"Number of cells with photons: {n_cells}")
+
+    f.close()
 
 
 class PhotonList(object):
@@ -217,210 +450,6 @@ class PhotonList(object):
 
         mylog.info("Read %d photons from %d %s." % (n_ph.sum(), num_cells, 
                                                     parameters["data_type"]))
-
-        return cls(photons, parameters, cosmo)
-
-    @classmethod
-    def from_data_source(cls, data_source, redshift, area,
-                         exp_time, source_model, point_sources=False,
-                         parameters=None, center=None, dist=None, 
-                         cosmology=None, velocity_fields=None):
-        r"""
-        Initialize a :class:`~pyxsim.photon_list.PhotonList` from a yt data
-        source. The redshift, collecting area, exposure time, and cosmology
-        are stored in the *parameters* dictionary which is passed to the
-        *source_model* function.
-
-        Parameters
-        ----------
-        data_source : :class:`~yt.data_objects.data_containers.YTSelectionContainer`
-            The data source from which the photons will be generated.
-        redshift : float
-            The cosmological redshift for the photons.
-        area : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
-            The collecting area to determine the number of photons. If units are
-            not specified, it is assumed to be in cm^2.
-        exp_time : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
-            The exposure time to determine the number of photons. If units are
-            not specified, it is assumed to be in seconds.
-        source_model : :class:`~pyxsim.source_models.SourceModel`
-            A source model used to generate the photons.
-        point_sources : boolean, optional
-            If True, the photons will be assumed to be generated from the exact
-            positions of the cells or particles and not smeared around within
-            a volume. Default: False
-        parameters : dict, optional
-            A dictionary of parameters to be passed for the source model to use,
-            if necessary.
-        center : string or array_like, optional
-            The origin of the photon spatial coordinates. Accepts "c", "max", or
-            a coordinate. If not specified, pyxsim attempts to use the "center"
-            field parameter of the data_source.
-        dist : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
-            The angular diameter distance, used for nearby sources. This may be
-            optionally supplied instead of it being determined from the
-            *redshift* and given *cosmology*. If units are not specified, it is
-            assumed to be in kpc. To use this, the redshift must be set to zero.
-        cosmology : :class:`~yt.utilities.cosmology.Cosmology`, optional
-            Cosmological information. If not supplied, we try to get the
-            cosmology from the dataset. Otherwise, LCDM with the default yt 
-            parameters is assumed.
-        velocity_fields : list of fields
-            The yt fields to use for the velocity. If not specified, the 
-            following will be assumed:
-            ['velocity_x', 'velocity_y', 'velocity_z'] for grid datasets
-            ['particle_velocity_x', 'particle_velocity_y', 'particle_velocity_z'] for particle datasets
-
-        Examples
-        --------
-        >>> thermal_model = ThermalSourceModel(apec_model, Zmet=0.3)
-        >>> redshift = 0.05
-        >>> area = 6000.0 # assumed here in cm**2
-        >>> time = 2.0e5 # assumed here in seconds
-        >>> sp = ds.sphere("c", (500., "kpc"))
-        >>> my_photons = PhotonList.from_data_source(sp, redshift, area,
-        ...                                          time, thermal_model)
-        """
-        ds = data_source.ds
-
-        if parameters is None:
-            parameters = {}
-        if cosmology is None:
-            if hasattr(ds, 'cosmology'):
-                cosmo = ds.cosmology
-            else:
-                cosmo = Cosmology()
-        else:
-            cosmo = cosmology
-        if dist is None:
-            if redshift <= 0.0:
-                msg = "If redshift <= 0.0, you must specify a distance to the " \
-                      "source using the 'dist' argument!"
-                mylog.error(msg)
-                raise ValueError(msg)
-            D_A = cosmo.angular_diameter_distance(0.0, redshift).in_units("Mpc")
-        else:
-            D_A = parse_value(dist, "kpc")
-            if redshift > 0.0:
-                mylog.warning("Redshift must be zero for nearby sources. "
-                              "Resetting redshift to 0.0.")
-                redshift = 0.0
-
-        if isinstance(center, str):
-            if center == "center" or center == "c":
-                parameters["center"] = ds.domain_center
-            elif center == "max" or center == "m":
-                parameters["center"] = ds.find_max("density")[-1]
-        elif iterable(center):
-            if isinstance(center, YTArray):
-                parameters["center"] = center.in_units("code_length")
-            elif isinstance(center, tuple):
-                if center[0] == "min":
-                    parameters["center"] = ds.find_min(center[1])[-1]
-                elif center[0] == "max":
-                    parameters["center"] = ds.find_max(center[1])[-1]
-                else:
-                    raise RuntimeError
-            else:
-                parameters["center"] = ds.arr(center, "code_length")
-        elif center is None:
-            if hasattr(data_source, "left_edge"):
-                parameters["center"] = 0.5*(data_source.left_edge+data_source.right_edge)
-            else:
-                parameters["center"] = data_source.get_field_parameter("center")
-
-        parameters["fid_exp_time"] = parse_value(exp_time, "s")
-        parameters["fid_area"] = parse_value(area, "cm**2")
-        parameters["fid_redshift"] = redshift
-        parameters["fid_d_a"] = D_A
-        parameters["hubble"] = cosmo.hubble_constant
-        parameters["omega_matter"] = cosmo.omega_matter
-        parameters["omega_lambda"] = cosmo.omega_lambda
-
-        if redshift > 0.0:
-            mylog.info("Cosmology: h = %g, omega_matter = %g, omega_lambda = %g" %
-                       (cosmo.hubble_constant, cosmo.omega_matter, cosmo.omega_lambda))
-        else:
-            mylog.info("Observing local source at distance %s." % D_A)
-
-        D_A = parameters["fid_d_a"].in_cgs()
-        dist_fac = 1.0/(4.*np.pi*D_A.value*D_A.value*(1.+redshift)**2)
-        spectral_norm = parameters["fid_area"].v*parameters["fid_exp_time"].v*dist_fac
-
-        source_model.setup_model(data_source, redshift, spectral_norm)
-
-        p_fields, v_fields, w_field = determine_fields(ds,
-                                                       source_model.ftype,
-                                                       point_sources)
-
-        if velocity_fields is not None:
-            v_fields = velocity_fields
-
-        if p_fields[0] == ("index", "x"):
-            parameters["data_type"] = "cells"
-        else:
-            parameters["data_type"] = "particles"
-
-        citer = data_source.chunks([], "io")
-
-        photons = defaultdict(list)
-
-        for chunk in parallel_objects(citer):
-
-            chunk_data = source_model(chunk)
-
-            if chunk_data is not None:
-                ncells, number_of_photons, idxs, energies = chunk_data
-                photons["num_photons"].append(number_of_photons)
-                photons["energy"].append(energies)
-                photons["pos"].append(np.array([chunk[p_fields[0]].d[idxs],
-                                                chunk[p_fields[1]].d[idxs],
-                                                chunk[p_fields[2]].d[idxs]]))
-                photons["vel"].append(np.array([chunk[v_fields[0]].d[idxs],
-                                                chunk[v_fields[1]].d[idxs],
-                                                chunk[v_fields[2]].d[idxs]]))
-                if w_field is None:
-                    photons["dx"].append(np.zeros(ncells))
-                else:
-                    photons["dx"].append(chunk[w_field].d[idxs])
-
-        source_model.cleanup_model()
-
-        photon_units = {"pos": ds.field_info[p_fields[0]].units,
-                        "vel": ds.field_info[v_fields[0]].units,
-                        "energy": "keV"}
-        if w_field is None:
-            photon_units["dx"] = "kpc"
-        else:
-            photon_units["dx"] = ds.field_info[w_field].units
-
-        concatenate_photons(ds, photons, photon_units)
-
-        nphotons = photons["num_photons"].sum()
-        all_nphotons = comm.mpi_allreduce(nphotons)
-        if all_nphotons == 0:
-            raise RuntimeError("No photons were generated!!")
-
-        c = parameters["center"].to("kpc")
-
-        if sum(ds.periodicity) > 0:
-            # Fix photon coordinates for regions crossing a periodic boundary
-            dw = ds.domain_width.to("kpc")
-            le, re = find_object_bounds(data_source)
-            for i in range(3):
-                if ds.periodicity[i] and photons["pos"].shape[0] > 0:
-                    tfl = photons["pos"][:,i] < le[i]
-                    tfr = photons["pos"][:,i] > re[i]
-                    photons["pos"][tfl,i] += dw[i]
-                    photons["pos"][tfr,i] -= dw[i]
-
-        # Re-center all coordinates
-        if photons["pos"].shape[0] > 0:
-            photons["pos"] -= c
-
-        mylog.info("Finished generating photons.")
-        mylog.info("Number of photons generated: %d" % int(np.sum(photons["num_photons"])))
-        mylog.info("Number of cells with photons: %d" % photons["dx"].size)
 
         return cls(photons, parameters, cosmo)
 
