@@ -1,7 +1,7 @@
 from numpy.random import RandomState
 from yt.utilities.answer_testing.framework import requires_ds, \
     GenericArrayTest, data_dir_load
-from pyxsim.source_generators import XrayLightCone
+from pyxsim.light_cone import XrayLightCone
 from pyxsim import ThermalSourceModel
 
 def setup():
