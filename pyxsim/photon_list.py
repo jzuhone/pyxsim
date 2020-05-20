@@ -338,6 +338,182 @@ def make_photons(photon_file, data_source, redshift, area,
     f.close()
 
 
+def project_photons(photon_file, events_file, normal, sky_center, 
+                    absorb_model=None, nH=None, no_shifting=False, 
+                    north_vector=None, sigma_pos=None, 
+                    kernel="top_hat", prng=None):
+    r"""
+    Projects photons onto an image plane given a line of sight.
+    Returns a new :class:`~pyxsim.event_list.EventList`.
+
+    Parameters
+    ----------
+    normal : character or array-like
+        Normal vector to the plane of projection. If "x", "y", or "z", will
+        assume to be along that axis (and will probably be faster). Otherwise,
+        should be an off-axis normal vector, e.g [1.0, 2.0, -3.0]
+    sky_center : array-like
+        Center RA, Dec of the events in degrees.
+    absorb_model : string or :class:`~pyxsim.spectral_models.AbsorptionModel`
+        A model for foreground galactic absorption, to simulate the
+        absorption of events before being detected. This cannot be applied
+        here if you already did this step previously in the creation of the
+        :class:`~pyxsim.photon_list.PhotonList` instance. Known options for
+        strings are "wabs" and "tbabs".
+    nH : float, optional
+        The foreground column density in units of 10^22 cm^{-2}. Only used
+        if absorption is applied.
+    no_shifting : boolean, optional
+        If set, the photon energies will not be Doppler shifted.
+    north_vector : a sequence of floats
+        A vector defining the "up" direction. This option sets the
+        orientation of the plane of projection. If not set, an arbitrary
+        grid-aligned north_vector is chosen. Ignored in the case where a
+        particular axis (e.g., "x", "y", or "z") is explicitly specified.
+    sigma_pos : float, optional
+        Apply a gaussian smoothing operation to the sky positions of the
+        events. This may be useful when the binned events appear blocky due
+        to their uniform distribution within simulation cells. However, this
+        will move the events away from their originating position on the
+        sky, and so may distort surface brightness profiles and/or spectra.
+        Should probably only be used for visualization purposes. Supply a
+        float here to smooth with a standard deviation with this fraction
+        of the cell size. Default: None
+    kernel : string, optional
+        The kernel used when smoothing positions of X-rays originating from
+        SPH particles, "gaussian" or "top_hat". Default: "top_hat".
+    prng : integer or :class:`~numpy.random.RandomState` object 
+        A pseudo-random number generator. Typically will only be specified
+        if you have a reason to generate the same set of random numbers,
+        such as for a test. Default is to use the :mod:`numpy.random`
+        module.
+
+    Examples
+    --------
+    >>> L = np.array([0.1,-0.2,0.3])
+    >>> events = my_photons.project_photons(L, [30., 45.])
+    """
+    prng = parse_prng(prng)
+
+    scale_shift = -1.0/clight.to("km/s")
+
+    f = h5py.File(photon_file, "r")
+
+    parameters = f["parameters"]
+    data = f["data"]
+
+    if sigma_pos is not None and parameters["data_type"][()] == "particles":
+        raise RuntimeError("The 'smooth_positions' argument should not be used with "
+                           "particle-based datasets!")
+
+    if isinstance(absorb_model, str):
+        if absorb_model not in absorb_models:
+            raise KeyError("%s is not a known absorption model!" % absorb_model)
+        absorb_model = absorb_models[absorb_model]
+    if absorb_model is not None:
+        if nH is None:
+            raise RuntimeError("You specified an absorption model, but didn't "
+                               "specify a value for nH!")
+        absorb_model = absorb_model(nH)
+
+    sky_center = YTArray(sky_center, "degree")
+
+    n_ph = data["num_photons"]
+
+    if not isinstance(normal, str):
+        L = np.array(normal)
+        orient = Orientation(L, north_vector=north_vector)
+        x_hat = orient.unit_vectors[0]
+        y_hat = orient.unit_vectors[1]
+        z_hat = orient.unit_vectors[2]
+    else:
+        x_hat = np.zeros(3)
+        y_hat = np.zeros(3)
+        z_hat = np.zeros(3)
+
+    parameters = {}
+
+    D_A = parameters["fid_d_a"][()]
+
+    events = {}
+
+    eobs = data["energy"][()]
+
+    if not no_shifting:
+        if comm.rank == 0:
+            mylog.info("Doppler-shifting photon energies.")
+        if isinstance(normal, str):
+            shift = self.photons["vel"][:,"xyz".index(normal)]*scale_shift
+        else:
+            shift = np.dot(self.photons["vel"], z_hat)*scale_shift
+        doppler_shift(shift, n_ph, eobs)
+
+    if absorb_model is None:
+        det = np.ones(eobs.size, dtype='bool')
+        num_det = eobs.size
+    else:
+        if comm.rank == 0:
+            mylog.info("Foreground galactic absorption: using "
+                       "the %s model and nH = %g." % (absorb_model._name, nH))
+        det = absorb_model.absorb_photons(eobs, prng=prng)
+        num_det = det.sum()
+
+    events["eobs"] = YTArray(eobs[det], "keV")
+
+    num_events = comm.mpi_allreduce(num_det)
+
+    if comm.rank == 0:
+        mylog.info("%d events have been detected." % num_events)
+
+    if num_det > 0:
+
+        if comm.rank == 0:
+            mylog.info("Assigning positions to events.")
+
+        if isinstance(normal, str):
+            norm = "xyz".index(normal)
+        else:
+            norm = normal
+
+        xsky, ysky = scatter_events(norm, prng, kernel,
+                                    parameters["data_type"][()],
+                                    num_det, det, self.photons["num_photons"],
+                                    self.photons["pos"].d, self.photons["dx"].d,
+                                    x_hat, y_hat)
+
+        if parameters["data_type"][()] == "cells" and sigma_pos is not None:
+            if comm.rank == 0:
+                mylog.info("Optionally smoothing sky positions.")
+            sigma = sigma_pos*np.repeat(self.photons["dx"].d, n_ph)[det]
+            xsky += sigma * prng.normal(loc=0.0, scale=1.0, size=num_det)
+            ysky += sigma * prng.normal(loc=0.0, scale=1.0, size=num_det)
+
+        d_a = D_A.to_value("kpc")
+        xsky /= d_a
+        ysky /= d_a
+
+        if comm.rank == 0:
+            mylog.info("Converting pixel to sky coordinates.")
+
+        pixel_to_cel(xsky, ysky, sky_center)
+
+    else:
+
+        xsky = []
+        ysky = []
+
+    events["xsky"] = YTArray(xsky, "degree")
+    events["ysky"] = YTArray(ysky, "degree")
+
+    parameters["exp_time"] = parameters["fid_exp_time"][()]
+    parameters["area"] = parameters["fid_area"][()]
+    parameters["sky_center"] = sky_center
+
+    f.close()
+
+    #return EventList(events, parameters)
+
+
 class PhotonList(object):
 
     def __init__(self, photons, parameters, cosmo):
@@ -563,169 +739,3 @@ class PhotonList(object):
 
         comm.barrier()
 
-    def project_photons(self, normal, sky_center, absorb_model=None,
-                        nH=None, no_shifting=False, north_vector=None,
-                        sigma_pos=None, kernel="top_hat", prng=None):
-        r"""
-        Projects photons onto an image plane given a line of sight.
-        Returns a new :class:`~pyxsim.event_list.EventList`.
-
-        Parameters
-        ----------
-        normal : character or array-like
-            Normal vector to the plane of projection. If "x", "y", or "z", will
-            assume to be along that axis (and will probably be faster). Otherwise,
-            should be an off-axis normal vector, e.g [1.0, 2.0, -3.0]
-        sky_center : array-like
-            Center RA, Dec of the events in degrees.
-        absorb_model : string or :class:`~pyxsim.spectral_models.AbsorptionModel`
-            A model for foreground galactic absorption, to simulate the
-            absorption of events before being detected. This cannot be applied
-            here if you already did this step previously in the creation of the
-            :class:`~pyxsim.photon_list.PhotonList` instance. Known options for
-            strings are "wabs" and "tbabs".
-        nH : float, optional
-            The foreground column density in units of 10^22 cm^{-2}. Only used
-            if absorption is applied.
-        no_shifting : boolean, optional
-            If set, the photon energies will not be Doppler shifted.
-        north_vector : a sequence of floats
-            A vector defining the "up" direction. This option sets the
-            orientation of the plane of projection. If not set, an arbitrary
-            grid-aligned north_vector is chosen. Ignored in the case where a
-            particular axis (e.g., "x", "y", or "z") is explicitly specified.
-        sigma_pos : float, optional
-            Apply a gaussian smoothing operation to the sky positions of the
-            events. This may be useful when the binned events appear blocky due
-            to their uniform distribution within simulation cells. However, this
-            will move the events away from their originating position on the
-            sky, and so may distort surface brightness profiles and/or spectra.
-            Should probably only be used for visualization purposes. Supply a
-            float here to smooth with a standard deviation with this fraction
-            of the cell size. Default: None
-        kernel : string, optional
-            The kernel used when smoothing positions of X-rays originating from
-            SPH particles, "gaussian" or "top_hat". Default: "top_hat".
-        prng : integer or :class:`~numpy.random.RandomState` object 
-            A pseudo-random number generator. Typically will only be specified
-            if you have a reason to generate the same set of random numbers,
-            such as for a test. Default is to use the :mod:`numpy.random`
-            module.
-
-        Examples
-        --------
-        >>> L = np.array([0.1,-0.2,0.3])
-        >>> events = my_photons.project_photons(L, [30., 45.])
-        """
-        prng = parse_prng(prng)
-
-        scale_shift = -1.0/clight.to("km/s")
-
-        if sigma_pos is not None and self.parameters["data_type"] == "particles":
-            raise RuntimeError("The 'smooth_positions' argument should not be used with "
-                               "particle-based datasets!")
-
-        if isinstance(absorb_model, str):
-            if absorb_model not in absorb_models:
-                raise KeyError("%s is not a known absorption model!" % absorb_model)
-            absorb_model = absorb_models[absorb_model]
-        if absorb_model is not None:
-            if nH is None:
-                raise RuntimeError("You specified an absorption model, but didn't "
-                                   "specify a value for nH!")
-            absorb_model = absorb_model(nH)
-
-        sky_center = YTArray(sky_center, "degree")
-
-        n_ph = self.photons["num_photons"]
-
-        if not isinstance(normal, str):
-            L = np.array(normal)
-            orient = Orientation(L, north_vector=north_vector)
-            x_hat = orient.unit_vectors[0]
-            y_hat = orient.unit_vectors[1]
-            z_hat = orient.unit_vectors[2]
-        else:
-            x_hat = np.zeros(3)
-            y_hat = np.zeros(3)
-            z_hat = np.zeros(3)
-
-        parameters = {}
-
-        D_A = self.parameters["fid_d_a"]
-
-        events = {}
-
-        eobs = self.photons["energy"].v
-
-        if not no_shifting:
-            if comm.rank == 0:
-                mylog.info("Doppler-shifting photon energies.")
-            if isinstance(normal, str):
-                shift = self.photons["vel"][:,"xyz".index(normal)]*scale_shift
-            else:
-                shift = np.dot(self.photons["vel"], z_hat)*scale_shift
-            doppler_shift(shift, n_ph, eobs)
-
-        if absorb_model is None:
-            det = np.ones(eobs.size, dtype='bool')
-            num_det = eobs.size
-        else:
-            if comm.rank == 0:
-                mylog.info("Foreground galactic absorption: using "
-                           "the %s model and nH = %g." % (absorb_model._name, nH))
-            det = absorb_model.absorb_photons(eobs, prng=prng)
-            num_det = det.sum()
-
-        events["eobs"] = YTArray(eobs[det], "keV")
-
-        num_events = comm.mpi_allreduce(num_det)
-
-        if comm.rank == 0:
-            mylog.info("%d events have been detected." % num_events)
-
-        if num_det > 0:
-
-            if comm.rank == 0:
-                mylog.info("Assigning positions to events.")
-
-            if isinstance(normal, str):
-                norm = "xyz".index(normal)
-            else:
-                norm = normal
-
-            xsky, ysky = scatter_events(norm, prng, kernel,
-                                        self.parameters["data_type"],
-                                        num_det, det, self.photons["num_photons"],
-                                        self.photons["pos"].d, self.photons["dx"].d,
-                                        x_hat, y_hat)
-
-            if self.parameters["data_type"] == "cells" and sigma_pos is not None:
-                if comm.rank == 0:
-                    mylog.info("Optionally smoothing sky positions.")
-                sigma = sigma_pos*np.repeat(self.photons["dx"].d, n_ph)[det]
-                xsky += sigma * prng.normal(loc=0.0, scale=1.0, size=num_det)
-                ysky += sigma * prng.normal(loc=0.0, scale=1.0, size=num_det)
-
-            d_a = D_A.to_value("kpc")
-            xsky /= d_a
-            ysky /= d_a
-
-            if comm.rank == 0:
-                mylog.info("Converting pixel to sky coordinates.")
-
-            pixel_to_cel(xsky, ysky, sky_center)
-
-        else:
-
-            xsky = []
-            ysky = []
-
-        events["xsky"] = YTArray(xsky, "degree")
-        events["ysky"] = YTArray(ysky, "degree")
-
-        parameters["exp_time"] = self.parameters["fid_exp_time"]
-        parameters["area"] = self.parameters["fid_area"]
-        parameters["sky_center"] = sky_center
-
-        return EventList(events, parameters)
