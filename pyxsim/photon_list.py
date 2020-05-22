@@ -82,7 +82,7 @@ def find_object_bounds(data_source):
     return le.to_value("kpc"), re.to_value("kpc")
 
 
-def make_photons(photon_file, data_source, redshift, area,
+def make_photons(photon_prefix, data_source, redshift, area,
                  exp_time, source_model, point_sources=False,
                  parameters=None, center=None, dist=None,
                  cosmology=None, velocity_fields=None):
@@ -143,6 +143,11 @@ def make_photons(photon_file, data_source, redshift, area,
     ...                                          time, thermal_model)
     """
     ds = data_source.ds
+
+    if comm.size > 1:
+        photon_file = f"{photon_prefix}.{comm.rank}.h5"
+    else:
+        photon_file = f"{photon_prefix}.h5"
 
     if parameters is None:
         parameters = {}
@@ -321,6 +326,8 @@ def make_photons(photon_file, data_source, redshift, area,
     if p_size > n_photons:
         d["energy"].resize((n_photons,))
 
+    f.close()
+
     source_model.cleanup_model()
 
     all_nphotons = comm.mpi_allreduce(n_photons)
@@ -331,10 +338,8 @@ def make_photons(photon_file, data_source, redshift, area,
     mylog.info(f"Number of photons generated: {n_photons}")
     mylog.info(f"Number of cells with photons: {n_cells}")
 
-    f.close()
 
-
-def project_photons(photon_file, event_file, normal, sky_center, 
+def project_photons(photon_prefix, event_prefix, normal, sky_center, 
                     absorb_model=None, nH=None, no_shifting=False, 
                     north_vector=None, sigma_pos=None, 
                     kernel="top_hat", prng=None):
@@ -390,6 +395,13 @@ def project_photons(photon_file, event_file, normal, sky_center,
     >>> project_photons("my_photons.h5", "my_events.h5", L, [30., 45.])
     """
     prng = parse_prng(prng)
+
+    if comm.size > 1:
+        photon_file = f"{photon_prefix}.{comm.rank}.h5"
+        event_file = f"{event_prefix}.{comm.rank}.h5"
+    else:
+        photon_file = f"{photon_prefix}.h5"
+        event_file = f"{event_prefix}.h5"
 
     sky_center = ensure_numpy_array(sky_center)
 
