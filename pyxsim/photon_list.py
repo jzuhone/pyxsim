@@ -9,7 +9,7 @@ from yt.utilities.physical_constants import clight
 from yt.utilities.cosmology import Cosmology
 from yt.utilities.orientation import Orientation
 from yt.utilities.parallel_tools.parallel_analysis_interface import \
-    communication_system, get_mpi_type, parallel_capable
+    communication_system
 from yt.units.yt_array import YTQuantity, YTArray, uconcatenate
 import h5py
 from pyxsim.spectral_models import absorb_models
@@ -115,7 +115,8 @@ def make_photons(photon_prefix, data_source, redshift, area,
         if necessary.
     center : string or array_like, optional
         The origin of the photon spatial coordinates. Accepts "c", "max", or
-        a coordinate. If not specified, pyxsim attempts to use the "center"
+        a coordinate. If array-like and without units, it is assumed to be in 
+        units of kpc. If not specified, pyxsim attempts to use the "center"
         field parameter of the data_source.
     dist : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
         The angular diameter distance, used for nearby sources. This may be
