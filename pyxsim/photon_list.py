@@ -1,25 +1,25 @@
 """
 Classes for generating lists of photons
 """
-from collections import defaultdict
 import numpy as np
-from yt.funcs import iterable
+from yt.funcs import iterable, get_pbar, ensure_numpy_array
 from pyxsim.lib.sky_functions import pixel_to_cel, \
     scatter_events, doppler_shift
 from yt.utilities.physical_constants import clight
 from yt.utilities.cosmology import Cosmology
 from yt.utilities.orientation import Orientation
 from yt.utilities.parallel_tools.parallel_analysis_interface import \
-    communication_system, get_mpi_type, parallel_capable, parallel_objects
+    communication_system, get_mpi_type, parallel_capable
 from yt.units.yt_array import YTQuantity, YTArray, uconcatenate
 import h5py
 from pyxsim.spectral_models import absorb_models
 from pyxsim.utils import parse_value, force_unicode, validate_parameters, \
     mylog
-from pyxsim.event_list import EventList
 from soxs.utils import parse_prng
 
 comm = communication_system.communicators[-1]
+
+init_chunk = 100000
 
 
 def determine_fields(ds, source_type, point_sources):
@@ -224,8 +224,6 @@ def make_photons(photon_file, data_source, redshift, area,
     else:
         parameters["data_type"] = "particles"
 
-    citer = data_source.chunks([], "io")
-
     dw = ds.domain_width.to_value("kpc")
     le, re = find_object_bounds(data_source)
     c = parameters["center"].to_value("kpc")
@@ -248,7 +246,6 @@ def make_photons(photon_file, data_source, redshift, area,
     n_photons = 0
     c_offset = 0
     p_offset = 0
-    init_chunk = 100000
     c_size = init_chunk
     p_size = init_chunk
 
@@ -257,7 +254,7 @@ def make_photons(photon_file, data_source, redshift, area,
     d = f.create_group("data")
     for field in cell_fields + ["energy"]:
         if field == "num_photons":
-            dtype = "uint64"
+            dtype = "int64"
         else:
             dtype = "float64"
         d.create_dataset(field, data=np.zeros(init_chunk, dtype=dtype),
@@ -265,7 +262,7 @@ def make_photons(photon_file, data_source, redshift, area,
 
     f.flush()
 
-    for chunk in parallel_objects(citer):
+    for chunk in data_source.chunks([], "io"):
 
         chunk_data = source_model(chunk)
 
@@ -338,7 +335,7 @@ def make_photons(photon_file, data_source, redshift, area,
     f.close()
 
 
-def project_photons(photon_file, events_file, normal, sky_center, 
+def project_photons(photon_file, event_file, normal, sky_center, 
                     absorb_model=None, nH=None, no_shifting=False, 
                     north_vector=None, sigma_pos=None, 
                     kernel="top_hat", prng=None):
@@ -391,20 +388,13 @@ def project_photons(photon_file, events_file, normal, sky_center,
     Examples
     --------
     >>> L = np.array([0.1,-0.2,0.3])
-    >>> events = my_photons.project_photons(L, [30., 45.])
+    >>> project_photons("my_photons.h5", "my_events.h5", L, [30., 45.])
     """
     prng = parse_prng(prng)
 
+    sky_center = ensure_numpy_array(sky_center)
+
     scale_shift = -1.0/clight.to("km/s")
-
-    f = h5py.File(photon_file, "r")
-
-    parameters = f["parameters"]
-    data = f["data"]
-
-    if sigma_pos is not None and parameters["data_type"][()] == "particles":
-        raise RuntimeError("The 'smooth_positions' argument should not be used with "
-                           "particle-based datasets!")
 
     if isinstance(absorb_model, str):
         if absorb_model not in absorb_models:
@@ -415,10 +405,23 @@ def project_photons(photon_file, events_file, normal, sky_center,
             raise RuntimeError("You specified an absorption model, but didn't "
                                "specify a value for nH!")
         absorb_model = absorb_model(nH)
+        if comm.rank == 0:
+            mylog.info("Foreground galactic absorption: using "
+                       "the %s model and nH = %g." % (absorb_model._name, nH))
 
-    sky_center = YTArray(sky_center, "degree")
+    f = h5py.File(photon_file, "r")
 
-    n_ph = data["num_photons"]
+    p = f["parameters"]
+
+    data_type = p["data_type"][()]
+
+    if sigma_pos is not None and data_type == "particles":
+        raise RuntimeError("The 'smooth_positions' argument should "
+                           "not be used with particle-based datasets!")
+
+    d = f["data"]
+
+    D_A = p["fid_d_a"][()]*1.0e-3
 
     if not isinstance(normal, str):
         L = np.array(normal)
@@ -431,87 +434,122 @@ def project_photons(photon_file, events_file, normal, sky_center,
         y_hat = np.zeros(3)
         z_hat = np.zeros(3)
 
-    parameters = {}
+    fe = h5py.File(event_file, "w")
 
-    D_A = parameters["fid_d_a"][()]
+    pe = fe.create_group("parameters")
+    pe.create_dataset("exp_time", data=float(p["fid_exp_time"][()]))
+    pe.create_dataset("area", data=float(p["fid_area"][()]))
+    pe.create_dataset("sky_center", data=sky_center)
 
-    events = {}
+    event_fields = ["xsky", "ysky", "eobs"]
 
-    eobs = data["energy"][()]
+    n_events = 0
+    e_offset = 0
+    e_size = init_chunk
+    cell_chunk = init_chunk
 
-    if not no_shifting:
-        if comm.rank == 0:
-            mylog.info("Doppler-shifting photon energies.")
-        if isinstance(normal, str):
-            shift = self.photons["vel"][:,"xyz".index(normal)]*scale_shift
-        else:
-            shift = np.dot(self.photons["vel"], z_hat)*scale_shift
-        doppler_shift(shift, n_ph, eobs)
+    de = fe.create_group("data")
+    for field in event_fields:
+        de.create_dataset(field, data=np.zeros(init_chunk),
+                          maxshape=(None,), chunks=True)
 
-    if absorb_model is None:
-        det = np.ones(eobs.size, dtype='bool')
-        num_det = eobs.size
+    p_bins = np.cumsum(d["num_photons"][()])
+    p_bins = np.insert(p_bins, 0, [np.int64(0)])
+
+    if isinstance(normal, str):
+        norm = "xyz".index(normal)
     else:
-        if comm.rank == 0:
-            mylog.info("Foreground galactic absorption: using "
-                       "the %s model and nH = %g." % (absorb_model._name, nH))
-        det = absorb_model.absorb_photons(eobs, prng=prng)
-        num_det = det.sum()
+        norm = normal
 
-    events["eobs"] = YTArray(eobs[det], "keV")
+    #pbar = get_pbar("Projecting photons", p_bins[-1])
 
-    num_events = comm.mpi_allreduce(num_det)
+    for start_c in range(0, p_bins[-1], cell_chunk):
 
-    if comm.rank == 0:
-        mylog.info("%d events have been detected." % num_events)
+        end_c = start_c + cell_chunk
 
-    if num_det > 0:
+        n_ph = d["num_photons"][start_c:end_c]
+        dx = d["dx"][start_c:end_c]
+        start_e = p_bins[start_c]
+        end_e = p_bins[end_c]
+        eobs = d["energy"][start_e:end_e]
 
-        if comm.rank == 0:
-            mylog.info("Assigning positions to events.")
+        if not no_shifting:
+            #if comm.rank == 0:
+            #    mylog.info("Doppler-shifting photon energies.")
+            if isinstance(normal, str):
+                shift = d[f"v{normal}"][start_c:end_c]*scale_shift
+            else:
+                shift = (d["vx"][start_c:end_c]*z_hat[0] +
+                         d["vy"][start_c:end_c]*z_hat[1] +
+                         d["vz"][start_c:end_c]*z_hat[2])*scale_shift
+            doppler_shift(shift, n_ph, eobs)
 
-        if isinstance(normal, str):
-            norm = "xyz".index(normal)
+        if absorb_model is None:
+            det = np.ones(eobs.size, dtype='bool')
+            num_det = eobs.size
         else:
-            norm = normal
+            det = absorb_model.absorb_photons(eobs, prng=prng)
+            num_det = det.sum()
 
-        xsky, ysky = scatter_events(norm, prng, kernel,
-                                    parameters["data_type"][()],
-                                    num_det, det, self.photons["num_photons"],
-                                    self.photons["pos"].d, self.photons["dx"].d,
-                                    x_hat, y_hat)
+        #num_events = comm.mpi_allreduce(num_det)
 
-        if parameters["data_type"][()] == "cells" and sigma_pos is not None:
-            if comm.rank == 0:
-                mylog.info("Optionally smoothing sky positions.")
-            sigma = sigma_pos*np.repeat(self.photons["dx"].d, n_ph)[det]
-            xsky += sigma * prng.normal(loc=0.0, scale=1.0, size=num_det)
-            ysky += sigma * prng.normal(loc=0.0, scale=1.0, size=num_det)
+        #if comm.rank == 0:
+        #    mylog.info("%d events have been detected." % num_events)
 
-        d_a = D_A.to_value("kpc")
-        xsky /= d_a
-        ysky /= d_a
+        if num_det > 0:
 
-        if comm.rank == 0:
-            mylog.info("Converting pixel to sky coordinates.")
+            #if comm.rank == 0:
+            #    mylog.info("Assigning positions to events.")
 
-        pixel_to_cel(xsky, ysky, sky_center)
+            xsky, ysky = scatter_events(norm, prng, kernel, 
+                                        data_type, num_det, det, n_ph, 
+                                        d["x"][start_c:end_c],
+                                        d["y"][start_c:end_c],
+                                        d["z"][start_c:end_c],
+                                        dx, x_hat, y_hat)
 
-    else:
+            if data_type == "cells" and sigma_pos is not None:
+                #if comm.rank == 0:
+                #    mylog.info("Optionally smoothing sky positions.")
+                sigma = sigma_pos*np.repeat(dx, n_ph)[det]
+                xsky += sigma * prng.normal(loc=0.0, scale=1.0, size=num_det)
+                ysky += sigma * prng.normal(loc=0.0, scale=1.0, size=num_det)
 
-        xsky = []
-        ysky = []
+            xsky /= D_A
+            ysky /= D_A
 
-    events["xsky"] = YTArray(xsky, "degree")
-    events["ysky"] = YTArray(ysky, "degree")
+            #if comm.rank == 0:
+            #    mylog.info("Converting pixel to sky coordinates.")
 
-    parameters["exp_time"] = parameters["fid_exp_time"][()]
-    parameters["area"] = parameters["fid_area"][()]
-    parameters["sky_center"] = sky_center
+            pixel_to_cel(xsky, ysky, sky_center)
+
+            if e_size < n_events + num_det:
+                while n_events + num_det > e_size:
+                    e_size *= 2
+                for field in event_fields:
+                    de[field].resize((e_size,))
+
+            de["xsky"][e_offset:e_offset+num_det] = xsky
+            de["ysky"][e_offset:e_offset+num_det] = ysky
+            de["eobs"][e_offset:e_offset+num_det] = eobs[det]
+
+            n_events += num_det
+            e_offset = n_events
+
+        f.flush()
+
+        #pbar.update(cell_chunk)
+
+    #pbar.finish()
+
+    if e_size > n_events:
+        for field in event_fields:
+            d[field].resize((n_events,))
 
     f.close()
+    fe.close()
 
-    #return EventList(events, parameters)
+    mylog.info(f"Detected {n_events} events.")
 
 
 class PhotonList(object):
@@ -524,45 +562,6 @@ class PhotonList(object):
 
         p_bins = np.cumsum(photons["num_photons"])
         self.p_bins = np.insert(p_bins, 0, [np.int64(0)])
-
-    def keys(self):
-        return self.photons.keys()
-
-    def items(self):
-        return self.photons.items()
-
-    def values(self):
-        return self.photons.values()
-
-    def __getitem__(self, key):
-        return self.photons[key]
-
-    def __contains__(self, key):
-        return key in self.photons
-
-    def __iter__(self):
-        for k in self.photons:
-            yield k
-
-    def __repr__(self):
-        return self.photons.__repr__()
-
-    def __add__(self, other):
-        validate_parameters(self.parameters, other.parameters)
-        for param in ["hubble_constant", "omega_matter", "omega_lambda",
-                      "omega_curvature"]:
-            v1 = getattr(self.cosmo, param)
-            v2 = getattr(other.cosmo, param)
-            check_equal = np.allclose(np.array(v1), np.array(v2), rtol=0.0, atol=1.0e-10)
-            if not check_equal:
-                raise RuntimeError("The values for the parameter '%s' in the two" % param +
-                                   " cosmologies are not identical (%s vs. %s)!" % (v1, v2))
-        photons = {}
-        for item1, item2 in zip(self.photons.items(), other.photons.items()):
-            k1, v1 = item1
-            k2, v2 = item2
-            photons[k1] = uconcatenate([v1,v2])
-        return PhotonList(photons, self.parameters, self.cosmo)
 
     @classmethod
     def from_file(cls, filename):

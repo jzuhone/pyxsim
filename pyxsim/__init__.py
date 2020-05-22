@@ -2,7 +2,8 @@ from pyxsim.event_list import \
     EventList
 
 from pyxsim.photon_list import \
-    make_photons
+    make_photons, \
+    project_photons
 
 from pyxsim.source_models import \
    SourceModel, \
