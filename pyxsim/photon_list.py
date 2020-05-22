@@ -421,7 +421,7 @@ def project_photons(photon_file, event_file, normal, sky_center,
 
     d = f["data"]
 
-    D_A = p["fid_d_a"][()]*1.0e-3
+    D_A = p["fid_d_a"][()]*1.0e3
 
     if not isinstance(normal, str):
         L = np.array(normal)
@@ -447,21 +447,19 @@ def project_photons(photon_file, event_file, normal, sky_center,
     e_offset = 0
     e_size = init_chunk
     cell_chunk = init_chunk
+    start_e = 0
 
     de = fe.create_group("data")
     for field in event_fields:
         de.create_dataset(field, data=np.zeros(init_chunk),
                           maxshape=(None,), chunks=True)
 
-    p_bins = np.cumsum(d["num_photons"][()])
-    p_bins = np.insert(p_bins, 0, [np.int64(0)])
-
     if isinstance(normal, str):
         norm = "xyz".index(normal)
     else:
         norm = normal
 
-    n_cells = p_bins.size-1
+    n_cells = d["num_photons"].size
 
     pbar = get_pbar("Projecting photons from cells/particles", n_cells)
 
@@ -471,8 +469,7 @@ def project_photons(photon_file, event_file, normal, sky_center,
 
         n_ph = d["num_photons"][start_c:end_c]
         dx = d["dx"][start_c:end_c]
-        start_e = p_bins[start_c]
-        end_e = p_bins[end_c-1]
+        end_e = start_e + n_ph.sum()
         eobs = d["energy"][start_e:end_e]
 
         if not no_shifting:
@@ -523,7 +520,9 @@ def project_photons(photon_file, event_file, normal, sky_center,
             n_events += num_det
             e_offset = n_events
 
-        f.flush()
+            f.flush()
+
+        start_e = end_e
 
         pbar.update(end_c)
 
