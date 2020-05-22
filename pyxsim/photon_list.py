@@ -210,9 +210,10 @@ def make_photons(photon_prefix, data_source, redshift, area,
     else:
         mylog.info("Observing local source at distance %s." % D_A)
 
+    local_exp_time = parameters["fid_exp_time"].v/comm.size
     D_A = parameters["fid_d_a"].in_cgs()
     dist_fac = 1.0/(4.*np.pi*D_A.value*D_A.value*(1.+redshift)**2)
-    spectral_norm = parameters["fid_area"].v*parameters["fid_exp_time"].v*dist_fac
+    spectral_norm = parameters["fid_area"].v*local_exp_time*dist_fac
 
     source_model.setup_model(data_source, redshift, spectral_norm)
 
