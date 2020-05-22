@@ -4,15 +4,35 @@ Classes for generating lists of detected events
 import numpy as np
 from pyxsim.utils import mylog
 from yt.units.yt_array import YTQuantity, YTArray, uconcatenate
-import astropy.io.fits as pyfits
+from astropy.io import fits
 import astropy.wcs as pywcs
 import h5py
-from pyxsim.utils import validate_parameters, parse_value
+from pyxsim.utils import parse_value
 from soxs.simput import write_photon_list
 from yt.utilities.parallel_tools.parallel_analysis_interface import \
     communication_system, parallel_capable, get_mpi_type
 
 comm = communication_system.communicators[-1]
+
+def validate_parameters(first, second, skip=[]):
+    keys1 = list(first.keys())
+    keys2 = list(second.keys())
+    keys1.sort()
+    keys2.sort()
+    if keys1 != keys2:
+        raise RuntimeError("The two inputs do not have the same parameters!")
+    for k1, k2 in zip(keys1, keys2):
+        if k1 not in skip:
+            v1 = first[k1]
+            v2 = second[k2]
+            if isinstance(v1, str) or isinstance(v2, str):
+                check_equal = v1 == v2
+            else:
+                check_equal = np.allclose(np.asarray(v1), np.asarray(v2), 
+                                          rtol=0.0, atol=1.0e-10)
+            if not check_equal:
+                raise RuntimeError(f"The values for the parameter '{k1}' in the "
+                                   f"two inputs are not identical ({v1} vs. {v2})!")
 
 
 def communicate_events(my_events, root=0):
@@ -45,111 +65,33 @@ def communicate_events(my_events, root=0):
 
 class EventList(object):
 
-    def __init__(self, events, parameters):
-        self.events = events
-        self.parameters = parameters
-        self.num_events = comm.mpi_allreduce(events["xsky"].shape[0])
-
-    def keys(self):
-        return self.events.keys()
-
-    def items(self):
-        return self.events.items()
-
-    def values(self):
-        return self.events.values()
-
-    def __getitem__(self,key):
-        return self.events[key]
-
-    def __repr__(self):
-        return self.events.__repr__()
-
-    def __contains__(self, key):
-        return key in self.events
+    def __init__(self, filespec):
+        from glob import glob
+        if filespec.endswith(".h5"):
+            if "*" in filespec:
+                filenames = glob.glob(filespec)
+            else:
+                filenames = [filespec]
+        else:
+            raise RuntimeError(f"Invalid EventList file specification: {filespec}")
+        self.filenames = filenames
+        self.parameters = {"sky_center": []}
+        self.num_events = []
+        for i, fn in enumerate(self.filenames):
+            with h5py.File(fn, "r") as f:
+                p = f["parameters"]
+                self.num_events.append(f["data"]["xsky"].size)
+                if i == 0:
+                    for field in f["parameters"]:
+                        if field == "sky_center":
+                            self.parameters[field].append(p[field][()])
+                        else:
+                            self.parameters[field] = p[field][()]
+        self.tot_num_events = np.sum(self.num_events)
 
     def __add__(self, other):
-        validate_parameters(self.parameters, other.parameters, skip=["sky_center"])
-        events = {}
-        for item1, item2 in zip(self.items(), other.items()):
-            k1, v1 = item1
-            k2, v2 = item2
-            events[k1] = uconcatenate([v1,v2])
-        return type(self)(events, dict(self.parameters))
-
-    def __iter__(self):
-        for k in self.events:
-            yield k
-
-    @classmethod
-    def from_h5_file(cls, h5file):
-        """
-        Initialize an :class:`~pyxsim.event_list.EventList` from a HDF5 file with filename *h5file*.
-        """
-        events = {}
-        parameters = {}
-
-        f = h5py.File(h5file, "r")
-
-        p = f["/parameters"]
-        parameters["exp_time"] = YTQuantity(p["exp_time"][()], "s")
-        parameters["area"] = YTQuantity(p["area"][()], "cm**2")
-        parameters["sky_center"] = YTArray(p["sky_center"][:], "deg")
-
-        d = f["/data"]
-
-        num_events = d["xsky"].size
-        start_e = comm.rank*num_events//comm.size
-        end_e = (comm.rank+1)*num_events//comm.size
-
-        events["xsky"] = YTArray(d["xsky"][start_e:end_e], "deg")
-        events["ysky"] = YTArray(d["ysky"][start_e:end_e], "deg")
-        events["eobs"] = YTArray(d["eobs"][start_e:end_e], "keV")
-
-        f.close()
-
-        return EventList(events, parameters)
-
-    @classmethod
-    def from_fits_file(cls, fitsfile):
-        """
-        Initialize an :class:`~pyxsim.event_list.EventList` from a FITS 
-        file with filename *fitsfile*.
-        """
-        hdulist = pyfits.open(fitsfile, memmap=True)
-
-        tblhdu = hdulist["EVENTS"]
-
-        events = {}
-        parameters = {}
-
-        parameters["exp_time"] = YTQuantity(tblhdu.header["EXPOSURE"], "s")
-        parameters["area"] = YTQuantity(tblhdu.header["AREA"], "cm**2")
-        parameters["sky_center"] = YTArray([tblhdu.header["TCRVL2"], 
-                                            tblhdu.header["TCRVL3"]], "deg")
-
-        num_events = tblhdu.header["NAXIS2"]
-        start_e = comm.rank*num_events//comm.size
-        end_e = (comm.rank+1)*num_events//comm.size
-
-        wcs = pywcs.WCS(naxis=2)
-        wcs.wcs.crpix = [tblhdu.header["TCRPX2"], tblhdu.header["TCRPX3"]]
-        wcs.wcs.crval = parameters["sky_center"].d
-        wcs.wcs.cdelt = [tblhdu.header["TCDLT2"], tblhdu.header["TCDLT3"]]
-        wcs.wcs.ctype = ["RA---TAN", "DEC--TAN"]
-        wcs.wcs.cunit = ["deg"]*2
-
-        xx = tblhdu.data["X"][start_e:end_e]
-        yy = tblhdu.data["Y"][start_e:end_e]
-        xx, yy = wcs.wcs_pix2world(xx, yy, 1)
-
-        events["xsky"] = YTArray(xx, "degree")
-        events["ysky"] = YTArray(yy, "degree")
-        events["eobs"] = YTArray(tblhdu.data["ENERGY"][start_e:end_e]/1000., "keV")
-
-        hdulist.close()
-
-        return EventList(events, parameters)
+        validate_parameters(self, other, skip=["sky_center"])
+        return EventList(self.filenames+other.filenames)
 
     def write_fits_file(self, fitsfile, fov, nx, overwrite=False):
         """
@@ -203,17 +145,17 @@ class EventList(object):
             mylog.info("Threw out %d events because " % (xx.size-n_events) +
                        "they fell outside the field of view.")
 
-            col_e = pyfits.Column(name='ENERGY', format='E', unit='eV',
-                                  array=events["eobs"].in_units("eV").d[keep])
-            col_x = pyfits.Column(name='X', format='D', unit='pixel',
-                                  array=xx[keep])
-            col_y = pyfits.Column(name='Y', format='D', unit='pixel',
-                                  array=yy[keep])
+            col_e = fits.Column(name='ENERGY', format='E', unit='eV',
+                                array=events["eobs"].in_units("eV").d[keep])
+            col_x = fits.Column(name='X', format='D', unit='pixel',
+                                array=xx[keep])
+            col_y = fits.Column(name='Y', format='D', unit='pixel',
+                                array=yy[keep])
 
             cols = [col_e, col_x, col_y]
 
-            coldefs = pyfits.ColDefs(cols)
-            tbhdu = pyfits.BinTableHDU.from_columns(coldefs)
+            coldefs = fits.ColDefs(cols)
+            tbhdu = fits.BinTableHDU.from_columns(coldefs)
             tbhdu.name = "EVENTS"
 
             tbhdu.header["MTYPE1"] = "sky"
@@ -293,30 +235,6 @@ class EventList(object):
 
         comm.barrier()
 
-    def write_h5_file(self, h5file):
-        """
-        Write an :class:`~pyxsim.event_list.EventList` to the HDF5 file given by *h5file*.
-        """
-        events = communicate_events(self.events)
-
-        if comm.rank == 0:
-
-            f = h5py.File(h5file, "w")
-
-            p = f.create_group("parameters")
-            p.create_dataset("exp_time", data=float(self.parameters["exp_time"]))
-            p.create_dataset("area", data=float(self.parameters["area"]))
-            p.create_dataset("sky_center", data=self.parameters["sky_center"].d)
-
-            d = f.create_group("data")
-            d.create_dataset("xsky", data=events["xsky"].d)
-            d.create_dataset("ysky", data=events["ysky"].d)
-            d.create_dataset("eobs", data=events["eobs"].d)
-
-            f.close()
-
-        comm.barrier()
-
     def write_fits_image(self, imagefile, fov, nx, emin=None, 
                          emax=None, overwrite=False):
         r"""
@@ -373,7 +291,7 @@ class EventList(object):
 
         if comm.rank == 0:
 
-            hdu = pyfits.PrimaryHDU(H.T)
+            hdu = fits.PrimaryHDU(H.T)
 
             hdu.header["MTYPE1"] = "EQPOS"
             hdu.header["MFORM1"] = "RA,DEC"
@@ -420,14 +338,14 @@ class EventList(object):
 
         if comm.rank == 0:
 
-            col1 = pyfits.Column(name='CHANNEL', format='1J', array=np.arange(nchan).astype('int32')+1)
-            col2 = pyfits.Column(name='ENERGY', format='1D', array=bins.astype("float64"))
-            col3 = pyfits.Column(name='COUNTS', format='1J', array=spec.astype("int32"))
-            col4 = pyfits.Column(name='COUNT_RATE', format='1D', array=spec/float(self.parameters["exp_time"]))
+            col1 = fits.Column(name='CHANNEL', format='1J', array=np.arange(nchan).astype('int32')+1)
+            col2 = fits.Column(name='ENERGY', format='1D', array=bins.astype("float64"))
+            col3 = fits.Column(name='COUNTS', format='1J', array=spec.astype("int32"))
+            col4 = fits.Column(name='COUNT_RATE', format='1D', array=spec/float(self.parameters["exp_time"]))
 
-            coldefs = pyfits.ColDefs([col1, col2, col3, col4])
+            coldefs = fits.ColDefs([col1, col2, col3, col4])
 
-            tbhdu = pyfits.BinTableHDU.from_columns(coldefs)
+            tbhdu = fits.BinTableHDU.from_columns(coldefs)
             tbhdu.name = "SPECTRUM"
 
             tbhdu.header["DETCHANS"] = spec.shape[0]
@@ -455,7 +373,7 @@ class EventList(object):
             tbhdu.header["CORRSCAL"] = 0.0
             tbhdu.header["BACKSCAL"] = 1.0
 
-            hdulist = pyfits.HDUList([pyfits.PrimaryHDU(), tbhdu])
+            hdulist = fits.HDUList([fits.PrimaryHDU(), tbhdu])
 
             hdulist.writeto(specfile, overwrite=overwrite)
 
