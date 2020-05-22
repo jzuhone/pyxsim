@@ -190,15 +190,15 @@ class AbsorptionModel(object):
         if nchunk == 0:
             nchunk = n_events
         k = 0
-        pbar = get_pbar("Absorbing photons", n_events)
+        #pbar = get_pbar("Absorbing photons", n_events)
         while k < n_events:
             absorb = self.get_absorb(eobs[k:k+nchunk])
             nabs = absorb.size
             randvec = prng.uniform(size=nabs)
             detected[k:k+nabs] = randvec < absorb
             k += nabs
-            pbar.update(k)
-        pbar.finish()
+            #pbar.update(k)
+        #pbar.finish()
         return detected
 
 class TBabsModel(AbsorptionModel):

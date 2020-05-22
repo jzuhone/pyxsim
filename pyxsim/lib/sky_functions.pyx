@@ -1,7 +1,6 @@
 import numpy as np
 cimport numpy as np
 cimport cython
-from yt.funcs import get_pbar
 
 cdef extern from "math.h":
     double sqrt(double x) nogil
@@ -23,16 +22,12 @@ def doppler_shift(np.ndarray[np.float64_t, ndim=1] shift,
     cdef np.float64_t shft
     cdef np.int64_t i, j, k
 
-    pbar = get_pbar("Doppler shifting photons", num_cells)
-
     k = 0
     for i in range(num_cells):
         shft = sqrt((1.-shift[i])/(1.+shift[i]))
         for j in range(n_ph[i]):
             eobs[k] = eobs[k] * shft
             k += 1
-        pbar.update()
-    pbar.finish()
 
 @cython.cdivision(True)
 @cython.boundscheck(False)
@@ -55,8 +50,6 @@ def scatter_events(normal, prng, kernel, data_type,
 
     k = 0
     n = 0
-
-    pbar = get_pbar("Generating event positions", num_cells)
 
     if isinstance(normal, int):
 
@@ -99,7 +92,6 @@ def scatter_events(normal, prng, kernel, data_type,
                         ysky[k] += y[i]
                     k += 1
                 n += 1
-            pbar.update()
 
     else:
     
@@ -120,7 +112,6 @@ def scatter_events(normal, prng, kernel, data_type,
                         ysky[k] = yy
                         k += 1
                     n += 1
-                pbar.update()
         elif data_type  == "particles":
             if kernel == "gaussian":
                 xsky = prng.normal(loc=0.0, scale=1.0, size=num_det)
@@ -139,9 +130,6 @@ def scatter_events(normal, prng, kernel, data_type,
                             y[i]*y_hat[1] + z[i]*y_hat[2]
                         k += 1
                     n += 1
-                pbar.update()
-
-    pbar.finish()
     
     return xsky, ysky
 
@@ -163,8 +151,6 @@ def pixel_to_cel(np.ndarray[np.float64_t, ndim=1] xsky,
     sin_cy = sin(cy)
     cos_cy = cos(cy)
 
-    pbar = get_pbar("Converting pixel to celestial coordinates", n)
-
     for i in range(n):
         
         D = atan(sqrt(xsky[i]*xsky[i] + ysky[i]*ysky[i]))
@@ -178,7 +164,3 @@ def pixel_to_cel(np.ndarray[np.float64_t, ndim=1] xsky,
 
         xsky[i] *= 180.0/PI
         ysky[i] *= 180.0/PI
-        
-        pbar.update()
-        
-    pbar.finish()

@@ -287,7 +287,7 @@ def make_photons(photon_file, data_source, redshift, area,
                 d["energy"].resize((p_size,))
 
             for i, ax in enumerate("xyz"):
-                pos = chunk[p_fields[i]].d[idxs]
+                pos = chunk[p_fields[i]][idxs].to_value("kpc")
                 # Fix photon coordinates for regions crossing a periodic boundary
                 if ds.periodicity[i]:
                     tfl = pos < le[i]
@@ -295,7 +295,7 @@ def make_photons(photon_file, data_source, redshift, area,
                     pos[tfl] += dw[i]
                     pos[tfr] -= dw[i]
 
-                vel = chunk[v_fields[i]].d[idxs]
+                vel = chunk[v_fields[i]][idxs].to_value("km/s")
                 # Coordinates are centered
                 d[ax][c_offset:c_offset+chunk_nc] = pos-c[i]
                 d[f"v{ax}"][c_offset:c_offset+chunk_nc] = vel
@@ -306,7 +306,7 @@ def make_photons(photon_file, data_source, redshift, area,
             if w_field is None:
                 d["dx"][c_offset:c_offset+chunk_nc] = 0.0
             else:
-                d["dx"][c_offset:c_offset+chunk_nc] = chunk[w_field].d[idxs]
+                d["dx"][c_offset:c_offset+chunk_nc] = chunk[w_field][idxs].to_value("kpc")
 
             n_cells += chunk_nc
             n_photons += chunk_nph
@@ -394,7 +394,7 @@ def project_photons(photon_file, event_file, normal, sky_center,
 
     sky_center = ensure_numpy_array(sky_center)
 
-    scale_shift = -1.0/clight.to("km/s")
+    scale_shift = -1.0/clight.to_value("km/s")
 
     if isinstance(absorb_model, str):
         if absorb_model not in absorb_models:
@@ -461,21 +461,21 @@ def project_photons(photon_file, event_file, normal, sky_center,
     else:
         norm = normal
 
-    #pbar = get_pbar("Projecting photons", p_bins[-1])
+    n_cells = p_bins.size-1
 
-    for start_c in range(0, p_bins[-1], cell_chunk):
+    pbar = get_pbar("Projecting photons from cells/particles", n_cells)
 
-        end_c = start_c + cell_chunk
+    for start_c in range(0, n_cells, cell_chunk):
+
+        end_c = min(start_c + cell_chunk, n_cells)
 
         n_ph = d["num_photons"][start_c:end_c]
         dx = d["dx"][start_c:end_c]
         start_e = p_bins[start_c]
-        end_e = p_bins[end_c]
+        end_e = p_bins[end_c-1]
         eobs = d["energy"][start_e:end_e]
 
         if not no_shifting:
-            #if comm.rank == 0:
-            #    mylog.info("Doppler-shifting photon energies.")
             if isinstance(normal, str):
                 shift = d[f"v{normal}"][start_c:end_c]*scale_shift
             else:
@@ -491,15 +491,7 @@ def project_photons(photon_file, event_file, normal, sky_center,
             det = absorb_model.absorb_photons(eobs, prng=prng)
             num_det = det.sum()
 
-        #num_events = comm.mpi_allreduce(num_det)
-
-        #if comm.rank == 0:
-        #    mylog.info("%d events have been detected." % num_events)
-
         if num_det > 0:
-
-            #if comm.rank == 0:
-            #    mylog.info("Assigning positions to events.")
 
             xsky, ysky = scatter_events(norm, prng, kernel, 
                                         data_type, num_det, det, n_ph, 
@@ -509,17 +501,12 @@ def project_photons(photon_file, event_file, normal, sky_center,
                                         dx, x_hat, y_hat)
 
             if data_type == "cells" and sigma_pos is not None:
-                #if comm.rank == 0:
-                #    mylog.info("Optionally smoothing sky positions.")
                 sigma = sigma_pos*np.repeat(dx, n_ph)[det]
                 xsky += sigma * prng.normal(loc=0.0, scale=1.0, size=num_det)
                 ysky += sigma * prng.normal(loc=0.0, scale=1.0, size=num_det)
 
             xsky /= D_A
             ysky /= D_A
-
-            #if comm.rank == 0:
-            #    mylog.info("Converting pixel to sky coordinates.")
 
             pixel_to_cel(xsky, ysky, sky_center)
 
@@ -538,13 +525,13 @@ def project_photons(photon_file, event_file, normal, sky_center,
 
         f.flush()
 
-        #pbar.update(cell_chunk)
+        pbar.update(end_c)
 
-    #pbar.finish()
+    pbar.finish()
 
     if e_size > n_events:
         for field in event_fields:
-            d[field].resize((n_events,))
+            de[field].resize((n_events,))
 
     f.close()
     fe.close()
