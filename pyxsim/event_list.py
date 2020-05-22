@@ -18,7 +18,6 @@ comm = communication_system.communicators[-1]
 def communicate_events(my_events, root=0):
     if parallel_capable:
         new_events = {}
-        mpi_int = get_mpi_type("int32")
         mpi_double = get_mpi_type("float64")
         local_num_events = my_events["xsky"].size
         sizes = comm.comm.gather(local_num_events, root=root)
@@ -33,12 +32,8 @@ def communicate_events(my_events, root=0):
             for key in my_events:
                 new_events[key] = np.empty([])
         for key in my_events:
-            if key in ["pi", "pha"]:
-                mpi_type = mpi_int
-            else:
-                mpi_type = mpi_double
-            comm.comm.Gatherv([my_events[key], local_num_events, mpi_type],
-                              [new_events[key], (sizes, disps), mpi_type], root=root)
+            comm.comm.Gatherv([my_events[key], local_num_events, mpi_double],
+                              [new_events[key], (sizes, disps), mpi_double], root=root)
             if key == "eobs":
                 new_events[key] = YTArray(new_events[key], "keV")
             if key.endswith("sky"):

@@ -6,7 +6,6 @@ import numpy as np
 from soxs.spectra import ApecGenerator, \
     get_wabs_absorb, get_tbabs_absorb
 from soxs.utils import parse_prng
-from yt.funcs import get_pbar
 from yt.units.yt_array import YTArray, YTQuantity
 from yt.utilities.physical_constants import hcgs, clight
 
@@ -155,6 +154,7 @@ thermal_models = {"apec": TableApecModel}
 
 class AbsorptionModel(object):
     _name = ""
+
     def __init__(self, nH, energy, cross_section):
         self.nH = YTQuantity(nH*1.0e22, "cm**-2")
         self.emid = YTArray(energy, "keV")
@@ -185,21 +185,10 @@ class AbsorptionModel(object):
         n_events = eobs.size
         if n_events == 0:
             return np.array([], dtype='bool')
-        detected = np.zeros(n_events, dtype='bool')
-        nchunk = n_events // 100
-        if nchunk == 0:
-            nchunk = n_events
-        k = 0
-        pbar = get_pbar("Absorbing photons", n_events)
-        while k < n_events:
-            absorb = self.get_absorb(eobs[k:k+nchunk])
-            nabs = absorb.size
-            randvec = prng.uniform(size=nabs)
-            detected[k:k+nabs] = randvec < absorb
-            k += nabs
-            pbar.update(k)
-        pbar.finish()
-        return detected
+        absorb = self.get_absorb(eobs)
+        randvec = prng.uniform(size=n_events)
+        return randvec < absorb
+
 
 class TBabsModel(AbsorptionModel):
     r"""
@@ -216,12 +205,14 @@ class TBabsModel(AbsorptionModel):
     >>> tbabs_model = TBabsModel(0.1)
     """
     _name = "tbabs"
+
     def __init__(self, nH):
         self.nH = YTQuantity(nH, "1.0e22*cm**-2")
 
     def get_absorb(self, e):
         e = np.array(e)
         return get_tbabs_absorb(e, self.nH.v)
+
 
 class WabsModel(AbsorptionModel):
     r"""
@@ -238,12 +229,14 @@ class WabsModel(AbsorptionModel):
     >>> wabs_model = WabsModel(0.1)
     """
     _name = "wabs"
+
     def __init__(self, nH):
         self.nH = YTQuantity(nH, "1.0e22*cm**-2")
 
     def get_absorb(self, e):
         e = np.array(e)
         return get_wabs_absorb(e, self.nH.v)
+
 
 absorb_models = {"wabs": WabsModel,
                  "tbabs": TBabsModel}
