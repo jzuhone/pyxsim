@@ -165,7 +165,7 @@ def make_photons(photon_prefix, data_source, redshift, area,
                   "source using the 'dist' argument!"
             mylog.error(msg)
             raise ValueError(msg)
-        D_A = cosmo.angular_diameter_distance(0.0, redshift).in_units("Mpc")
+        D_A = cosmo.angular_diameter_distance(0.0, redshift).to("Mpc")
     else:
         D_A = parse_value(dist, "kpc")
         if redshift > 0.0:
