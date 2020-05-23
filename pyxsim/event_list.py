@@ -190,15 +190,9 @@ class EventList(object):
         fov = parse_value(fov, "arcmin")
 
         if emin is None:
-            mask_emin = np.ones(self.num_events, dtype='bool')
-        else:
-            mask_emin = self["eobs"].d > emin
+            emin = -1.0
         if emax is None:
-            mask_emax = np.ones(self.num_events, dtype='bool')
-        else:
-            mask_emax = self["eobs"].d < emax
-
-        mask = np.logical_and(mask_emin, mask_emax)
+            emax = 1.0e10
 
         dtheta = fov.to_value("deg").v/nx
 
@@ -212,10 +206,16 @@ class EventList(object):
         wcs.wcs.ctype = ["RA---TAN","DEC--TAN"]
         wcs.wcs.cunit = ["deg"]*2
 
-        xx, yy = wcs.wcs_world2pix(self["xsky"].d, self["ysky"].d, 1)
+        H = np.zeros((nx, nx))
 
-        H, xedges, yedges = np.histogram2d(xx[mask], yy[mask],
-                                           bins=[xbins, ybins])
+        for fn in self.filenames:
+            with h5py.File(fn, "r") as f:
+                d = f["data"]
+                mask = np.logical_and(d["eobs"] >= emin, 
+                                      d["eobs"] <= emax)
+                xx, yy = wcs.wcs_world2pix(d["xsky"][mask], 
+                                           d["ysky"][mask], 1)
+                H += np.histogram2d(xx, yy, bins=[xbins, ybins])[0]
 
         hdu = fits.PrimaryHDU(H.T)
 
@@ -253,14 +253,19 @@ class EventList(object):
         overwrite : boolean, optional
             Set to True to overwrite a previous file.
         """
-        espec = self["eobs"]
-        spec, ee = np.histogram(espec, bins=nchan, range=(emin, emax))
-        bins = 0.5*(ee[1:]+ee[:-1])
+        spec = np.zeros(nchan)
+        ebins = np.linspace(emin, emax, nchan+1, endpoint=True)
+        emid = 0.5*(ebins[1:]+ebins[:-1])
+
+        for fn in self.filenames:
+            with h5py.File(fn, "r") as f:
+                d = f["data"]
+                spec += np.histogram(d["eobs"], bins=ebins)[0]
 
         col1 = fits.Column(name='CHANNEL', format='1J', 
                            array=np.arange(nchan).astype('int32')+1)
         col2 = fits.Column(name='ENERGY', format='1D', 
-                           array=bins.astype("float64"))
+                           array=emid.astype("float64"))
         col3 = fits.Column(name='COUNTS', format='1J', 
                            array=spec.astype("int32"))
         col4 = fits.Column(name='COUNT_RATE', format='1D', 
