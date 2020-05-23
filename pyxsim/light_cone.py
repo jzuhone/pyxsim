@@ -1,17 +1,14 @@
 import time
 
-from pyxsim.photon_list import PhotonList
-from pyxsim.event_list import EventList
+from pyxsim.photon_list import make_photons, project_photons
 from pyxsim.utils import parse_value
 
 from yt_astro_analysis.cosmological_observation.api import LightCone
 
 from yt.convenience import load
-from yt.units.yt_array import uconcatenate, YTArray
 
 from soxs.utils import parse_prng
 
-from collections import defaultdict
 from yt.utilities.parallel_tools.parallel_analysis_interface import \
     communication_system
 
@@ -34,7 +31,8 @@ class XrayLightCone(LightCone):
                                             minimum_coherent_box_fraction=minimum_coherent_box_fraction)
         self.calculate_light_cone_solution(seed=seed)
 
-    def generate_events(self, area, exp_time, angular_width,
+    def generate_events(self, photon_prefix, event_prefix, 
+                        area, exp_time, angular_width,
                         source_model, sky_center, parameters=None,
                         velocity_fields=None, absorb_model=None,
                         nH=None, no_shifting=False, sigma_pos=None,
@@ -96,9 +94,7 @@ class XrayLightCone(LightCone):
         exp_time = parse_value(exp_time, "s")
         aw = parse_value(angular_width, "deg")
 
-        tot_events = defaultdict(list)
-
-        for output in self.light_cone_solution:
+        for i, output in enumerate(self.light_cone_solution):
             ds = load(output["filename"])
             ax = output["projection_axis"]
             c = output["projection_center"]*ds.domain_width + ds.domain_left_edge
@@ -112,31 +108,19 @@ class XrayLightCone(LightCone):
                 le[off_ax] -= 0.5*width
                 re[off_ax] += 0.5*width
             reg = ds.box(le, re)
-            photons = PhotonList.from_data_source(reg, output['redshift'], area,
-                                                  exp_time, source_model,
-                                                  parameters=parameters,
-                                                  center=c,
-                                                  velocity_fields=velocity_fields,
-                                                  cosmology=ds.cosmology)
-            if sum(photons["num_photons"]) > 0:
-                events = photons.project_photons("xyz"[ax], sky_center,
-                                                 absorb_model=absorb_model, nH=nH,
-                                                 no_shifting=no_shifting, 
-                                                 sigma_pos=sigma_pos,
-                                                 prng=prng)
-                if events.num_events > 0:
-                    tot_events["xsky"].append(events["xsky"])
-                    tot_events["ysky"].append(events["ysky"])
-                    tot_events["eobs"].append(events["eobs"])
-                del events
+            pprefix = f"{photon_prefix}.lc{i}"
+            n_photons, n_cells = make_photons(pprefix, reg, 
+                                              output['redshift'], 
+                                              area, exp_time, 
+                                              source_model, 
+                                              parameters=parameters, 
+                                              center=c,
+                                              velocity_fields=velocity_fields,
+                                              cosmology=ds.cosmology) 
+            eprefix = f"{event_prefix}.lc{i}"
+            n_events = project_photons(pprefix, eprefix, "xyz"[ax],
+                                       sky_center, absorb_model=absorb_model, 
+                                       nH=nH, no_shifting=no_shifting, 
+                                       sigma_pos=sigma_pos, prng=prng)
 
-            del photons
-
-        parameters = {"exp_time": exp_time,
-                      "area": area, 
-                      "sky_center": YTArray(sky_center, "deg")}
-
-        for key in tot_events:
-            tot_events[key] = uconcatenate(tot_events[key])
-
-        return EventList(tot_events, parameters)
+            comm.barrier()
