@@ -63,7 +63,7 @@ class EventList(object):
         dt = TimeDelta(self.parameters["exp_time"], format='sec')
         t_end = t_begin + dt
 
-        dtheta = fov.to("deg").v / nx
+        dtheta = fov.to_value("deg") / nx
 
         wcs = pywcs.WCS(naxis=2)
         wcs.wcs.crpix = [0.5*(nx+1)]*2
@@ -72,23 +72,32 @@ class EventList(object):
         wcs.wcs.ctype = ["RA---TAN", "DEC--TAN"]
         wcs.wcs.cunit = ["deg"]*2
 
-        xx, yy = wcs.wcs_world2pix(self["xsky"].d, self["ysky"].d, 1)
+        n_events = 0
 
-        keepx = np.logical_and(xx >= 0.5, xx <= float(nx)+0.5)
-        keepy = np.logical_and(yy >= 0.5, yy <= float(nx)+0.5)
-        keep = np.logical_and(keepx, keepy)
+        e = []
+        x = []
+        y = []
+        for fn in self.filenames:
+            with h5py.File(fn, "r") as f:
+                d = f["data"]
+                xx, yy = wcs.wcs_world2pix(d["xsky"][:], d["ysky"][:], 1)
+                keepx = np.logical_and(xx >= 0.5, xx <= float(nx)+0.5)
+                keepy = np.logical_and(yy >= 0.5, yy <= float(nx)+0.5)
+                keep = np.logical_and(keepx, keepy)
+                n_events += keep.sum()
+                e.append(d["eobs"][keep])
+                x.append(xx[keep])
+                y.append(yy[keep])
 
-        n_events = keep.sum()
-
-        mylog.info("Threw out %d events because " % (xx.size-n_events) +
-                   "they fell outside the field of view.")
+        mylog.info(f"Threw out {self.tot_num_events-n_events} events because "
+                   f"they fell outside the field of view.")
 
         col_e = fits.Column(name='ENERGY', format='E', unit='eV',
-                            array=events["eobs"].in_units("eV").d[keep])
+                            array=np.concatenate(e)*1000.0)
         col_x = fits.Column(name='X', format='D', unit='pixel',
-                            array=xx[keep])
+                            array=np.concatenate(x))
         col_y = fits.Column(name='Y', format='D', unit='pixel',
-                            array=yy[keep])
+                            array=np.concatenate(y))
 
         cols = [col_e, col_x, col_y]
 
@@ -146,24 +155,36 @@ class EventList(object):
         e_max : float, optional
             The maximum energy of the photons to save in keV.
         """
+        import unyt as u
 
         mylog.info(f"Writing SIMPUT catalog file {prefix}_simput.fits "
                    f"and SIMPUT photon list file {prefix}_phlist.fits.")
 
-        if emin is None and emax is None:
-            idxs = slice(None, None, None)
-        else:
-            if emin is None:
-                emin = events["eobs"].min().value
-            if emax is None:
-                emax = events["eobs"].max().value
-            idxs = np.logical_and(events["eobs"].d >= emin, events["eobs"].d <= emax)
+        if emin is None:
+            emin = -1.0
+        if emax is None:
+            emax = 1.0e10
 
-        flux = np.sum(events["eobs"][idxs]).to("erg") / \
+        e = []
+        x = []
+        y = []
+        for fn in self.filenames:
+            with h5py.File(fn, "r") as f:
+                d = f["data"]
+                mask = np.logical_and(d["eobs"] >= emin,
+                                      d["eobs"] <= emax)
+                e.append(d["eobs"][mask])
+                x.append(d["xsky"][mask])
+                y.append(d["ysky"][mask])
+
+        e = np.concatenate(e)
+        x = np.concatenate(x)
+        y = np.concatenate(y)
+
+        flux = np.sum(e*u.keV).to_value("erg") / \
                self.parameters["exp_time"]/self.parameters["area"]
 
-        write_photon_list(prefix, prefix, flux.v, events["xsky"][idxs].d,
-                          events["ysky"][idxs].d, events["eobs"][idxs].d,
+        write_photon_list(prefix, prefix, flux, x, y, e,
                           overwrite=overwrite)
 
     def write_fits_image(self, imagefile, fov, nx, emin=None, 
@@ -211,8 +232,8 @@ class EventList(object):
         for fn in self.filenames:
             with h5py.File(fn, "r") as f:
                 d = f["data"]
-                mask = np.logical_and(d["eobs"] >= emin, 
-                                      d["eobs"] <= emax)
+                mask = np.logical_and(d["eobs"][:] >= emin, 
+                                      d["eobs"][:] <= emax)
                 xx, yy = wcs.wcs_world2pix(d["xsky"][mask], 
                                            d["ysky"][mask], 1)
                 H += np.histogram2d(xx, yy, bins=[xbins, ybins])[0]
@@ -260,7 +281,7 @@ class EventList(object):
         for fn in self.filenames:
             with h5py.File(fn, "r") as f:
                 d = f["data"]
-                spec += np.histogram(d["eobs"], bins=ebins)[0]
+                spec += np.histogram(d["eobs"][:], bins=ebins)[0]
 
         col1 = fits.Column(name='CHANNEL', format='1J', 
                            array=np.arange(nchan).astype('int32')+1)
