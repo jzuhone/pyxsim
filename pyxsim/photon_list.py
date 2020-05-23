@@ -333,12 +333,13 @@ def make_photons(photon_prefix, data_source, redshift, area,
     source_model.cleanup_model()
 
     all_nphotons = comm.mpi_allreduce(n_photons)
-    if all_nphotons == 0:
-        raise RuntimeError("No photons were generated!!")
+    all_ncells = comm.mpi_allreduce(n_cells)
 
     mylog.info("Finished generating photons.")
-    mylog.info(f"Number of photons generated: {n_photons}")
-    mylog.info(f"Number of cells with photons: {n_cells}")
+    mylog.info(f"Number of photons generated: {all_nphotons}")
+    mylog.info(f"Number of cells with photons: {all_ncells}")
+
+    return all_nphotons, all_ncells
 
 
 def project_photons(photon_prefix, event_prefix, normal, sky_center, 
@@ -398,6 +399,17 @@ def project_photons(photon_prefix, event_prefix, normal, sky_center,
     """
     prng = parse_prng(prng)
 
+    if not isinstance(normal, str):
+        L = np.array(normal)
+        orient = Orientation(L, north_vector=north_vector)
+        x_hat = orient.unit_vectors[0]
+        y_hat = orient.unit_vectors[1]
+        z_hat = orient.unit_vectors[2]
+    else:
+        x_hat = np.zeros(3)
+        y_hat = np.zeros(3)
+        z_hat = np.zeros(3)
+
     if comm.size > 1:
         photon_file = f"{photon_prefix}.{comm.rank}.h5"
         event_file = f"{event_prefix}.{comm.rank}.h5"
@@ -436,117 +448,118 @@ def project_photons(photon_prefix, event_prefix, normal, sky_center,
 
     D_A = p["fid_d_a"][()]*1.0e3
 
-    if not isinstance(normal, str):
-        L = np.array(normal)
-        orient = Orientation(L, north_vector=north_vector)
-        x_hat = orient.unit_vectors[0]
-        y_hat = orient.unit_vectors[1]
-        z_hat = orient.unit_vectors[2]
+    if d["energy"].size == 0:
+
+        mylog.warning(f"No photons are in file {photon_file}, so "
+                      f"I am done.")
+        n_events = 0
+
     else:
-        x_hat = np.zeros(3)
-        y_hat = np.zeros(3)
-        z_hat = np.zeros(3)
 
-    fe = h5py.File(event_file, "w")
+        fe = h5py.File(event_file, "w")
 
-    pe = fe.create_group("parameters")
-    pe.create_dataset("exp_time", data=float(p["fid_exp_time"][()]))
-    pe.create_dataset("area", data=float(p["fid_area"][()]))
-    pe.create_dataset("sky_center", data=sky_center)
+        pe = fe.create_group("parameters")
+        pe.create_dataset("exp_time", data=float(p["fid_exp_time"][()]))
+        pe.create_dataset("area", data=float(p["fid_area"][()]))
+        pe.create_dataset("sky_center", data=sky_center)
 
-    event_fields = ["xsky", "ysky", "eobs"]
+        event_fields = ["xsky", "ysky", "eobs"]
 
-    n_events = 0
-    e_offset = 0
-    e_size = init_chunk
-    cell_chunk = init_chunk
-    start_e = 0
+        n_events = 0
+        e_offset = 0
+        e_size = init_chunk
+        cell_chunk = init_chunk
+        start_e = 0
 
-    de = fe.create_group("data")
-    for field in event_fields:
-        de.create_dataset(field, data=np.zeros(init_chunk),
-                          maxshape=(None,), chunks=True)
-
-    if isinstance(normal, str):
-        norm = "xyz".index(normal)
-    else:
-        norm = normal
-
-    n_cells = d["num_photons"].size
-
-    pbar = get_pbar("Projecting photons from cells/particles", n_cells)
-
-    for start_c in range(0, n_cells, cell_chunk):
-
-        end_c = min(start_c + cell_chunk, n_cells)
-
-        n_ph = d["num_photons"][start_c:end_c]
-        dx = d["dx"][start_c:end_c]
-        end_e = start_e + n_ph.sum()
-        eobs = d["energy"][start_e:end_e]
-
-        if not no_shifting:
-            if isinstance(normal, str):
-                shift = d[f"v{normal}"][start_c:end_c]*scale_shift
-            else:
-                shift = (d["vx"][start_c:end_c]*z_hat[0] +
-                         d["vy"][start_c:end_c]*z_hat[1] +
-                         d["vz"][start_c:end_c]*z_hat[2])*scale_shift
-            doppler_shift(shift, n_ph, eobs)
-
-        if absorb_model is None:
-            det = np.ones(eobs.size, dtype='bool')
-            num_det = eobs.size
-        else:
-            det = absorb_model.absorb_photons(eobs, prng=prng)
-            num_det = det.sum()
-
-        if num_det > 0:
-
-            xsky, ysky = scatter_events(norm, prng, kernel, 
-                                        data_type, num_det, det, n_ph, 
-                                        d["x"][start_c:end_c],
-                                        d["y"][start_c:end_c],
-                                        d["z"][start_c:end_c],
-                                        dx, x_hat, y_hat)
-
-            if data_type == "cells" and sigma_pos is not None:
-                sigma = sigma_pos*np.repeat(dx, n_ph)[det]
-                xsky += sigma * prng.normal(loc=0.0, scale=1.0, size=num_det)
-                ysky += sigma * prng.normal(loc=0.0, scale=1.0, size=num_det)
-
-            xsky /= D_A
-            ysky /= D_A
-
-            pixel_to_cel(xsky, ysky, sky_center)
-
-            if e_size < n_events + num_det:
-                while n_events + num_det > e_size:
-                    e_size *= 2
-                for field in event_fields:
-                    de[field].resize((e_size,))
-
-            de["xsky"][e_offset:e_offset+num_det] = xsky
-            de["ysky"][e_offset:e_offset+num_det] = ysky
-            de["eobs"][e_offset:e_offset+num_det] = eobs[det]
-
-            n_events += num_det
-            e_offset = n_events
-
-            f.flush()
-
-        start_e = end_e
-
-        pbar.update(end_c)
-
-    pbar.finish()
-
-    if e_size > n_events:
+        de = fe.create_group("data")
         for field in event_fields:
-            de[field].resize((n_events,))
+            de.create_dataset(field, data=np.zeros(init_chunk),
+                              maxshape=(None,), chunks=True)
+
+        if isinstance(normal, str):
+            norm = "xyz".index(normal)
+        else:
+            norm = normal
+
+        n_cells = d["num_photons"].size
+
+        pbar = get_pbar("Projecting photons from cells/particles", n_cells)
+
+        for start_c in range(0, n_cells, cell_chunk):
+
+            end_c = min(start_c + cell_chunk, n_cells)
+
+            n_ph = d["num_photons"][start_c:end_c]
+            dx = d["dx"][start_c:end_c]
+            end_e = start_e + n_ph.sum()
+            eobs = d["energy"][start_e:end_e]
+
+            if not no_shifting:
+                if isinstance(normal, str):
+                    shift = d[f"v{normal}"][start_c:end_c]*scale_shift
+                else:
+                    shift = (d["vx"][start_c:end_c]*z_hat[0] +
+                             d["vy"][start_c:end_c]*z_hat[1] +
+                             d["vz"][start_c:end_c]*z_hat[2])*scale_shift
+                doppler_shift(shift, n_ph, eobs)
+
+            if absorb_model is None:
+                det = np.ones(eobs.size, dtype='bool')
+                num_det = eobs.size
+            else:
+                det = absorb_model.absorb_photons(eobs, prng=prng)
+                num_det = det.sum()
+
+            if num_det > 0:
+
+                xsky, ysky = scatter_events(norm, prng, kernel, 
+                                            data_type, num_det, det, n_ph, 
+                                            d["x"][start_c:end_c],
+                                            d["y"][start_c:end_c],
+                                            d["z"][start_c:end_c],
+                                            dx, x_hat, y_hat)
+
+                if data_type == "cells" and sigma_pos is not None:
+                    sigma = sigma_pos*np.repeat(dx, n_ph)[det]
+                    xsky += sigma * prng.normal(loc=0.0, scale=1.0, size=num_det)
+                    ysky += sigma * prng.normal(loc=0.0, scale=1.0, size=num_det)
+
+                xsky /= D_A
+                ysky /= D_A
+
+                pixel_to_cel(xsky, ysky, sky_center)
+
+                if e_size < n_events + num_det:
+                    while n_events + num_det > e_size:
+                        e_size *= 2
+                    for field in event_fields:
+                        de[field].resize((e_size,))
+
+                de["xsky"][e_offset:e_offset+num_det] = xsky
+                de["ysky"][e_offset:e_offset+num_det] = ysky
+                de["eobs"][e_offset:e_offset+num_det] = eobs[det]
+
+                n_events += num_det
+                e_offset = n_events
+
+                f.flush()
+
+            start_e = end_e
+
+            pbar.update(end_c)
+
+        pbar.finish()
+
+        if e_size > n_events:
+            for field in event_fields:
+                de[field].resize((n_events,))
+
+        fe.close()
 
     f.close()
-    fe.close()
 
-    mylog.info(f"Detected {n_events} events.")
+    all_nevents = comm.mpi_allreduce(n_events)
 
+    mylog.info(f"Detected {all_nevents} events.")
+
+    return all_nevents
