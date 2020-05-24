@@ -85,8 +85,8 @@ def plaw_fit(alpha_sim, prng=None):
                                       A, exp_time, plaw_model)
 
     D_A = cosmo.angular_diameter_distance(0.0, redshift).to_value("cm")
-    dist_fac = 1.0/(4.*np.pi*D_A*D_A*(1.+redshift)**3).in_cgs()
-    norm_sim = float((sphere["hard_emission"]).sum()*dist_fac.in_cgs())*(1.+redshift)
+    dist_fac = 1.0/(4.*np.pi*D_A*D_A*(1.+redshift)**3)
+    norm_sim = float((sphere["hard_emission"]).sum()*dist_fac)*(1.+redshift)
 
     n_events = project_photons("plaw_photons.h5", "plaw_events.h5", "z", 
                                [30., 45.], absorb_model="wabs",
