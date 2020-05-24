@@ -145,6 +145,9 @@ def make_photons(photon_prefix, data_source, redshift, area,
     """
     ds = data_source.ds
 
+    if photon_prefix.endswith(".h5"):
+        photon_prefix = photon_prefix[:-3]
+
     if comm.size > 1:
         photon_file = f"{photon_prefix}.{comm.rank}.h5"
     else:
@@ -398,6 +401,12 @@ def project_photons(photon_prefix, event_prefix, normal, sky_center,
     >>> project_photons("my_photons.h5", "my_events.h5", L, [30., 45.])
     """
     prng = parse_prng(prng)
+
+    if photon_prefix.endswith(".h5"):
+        photon_prefix = photon_prefix[:-3]
+
+    if event_prefix.endswith(".h5"):
+        event_prefix = event_prefix[:-3]
 
     if not isinstance(normal, str):
         L = np.array(normal)

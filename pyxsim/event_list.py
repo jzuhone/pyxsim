@@ -171,8 +171,8 @@ class EventList(object):
         for fn in self.filenames:
             with h5py.File(fn, "r") as f:
                 d = f["data"]
-                mask = np.logical_and(d["eobs"] >= emin,
-                                      d["eobs"] <= emax)
+                mask = np.logical_and(d["eobs"][:] >= emin,
+                                      d["eobs"][:] <= emax)
                 e.append(d["eobs"][mask])
                 x.append(d["xsky"][mask])
                 y.append(d["ysky"][mask])

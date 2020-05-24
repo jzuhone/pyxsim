@@ -20,16 +20,18 @@ from soxs.events import write_spectrum
 from soxs.instrument_registry import get_instrument_from_registry, \
     make_simple_instrument
 
+
 def setup():
     from yt.config import ytcfg
     ytcfg["yt", "__withintesting"] = "True"
 
+
 try:
-    make_simple_instrument("chandra_acisi_cy20", "sq_acisi_cy20", 20.0, 2400)
+    make_simple_instrument("chandra_acisi_cy0", "sq_acisi_cy0", 20.0, 2400)
 except KeyError:
     pass
 
-acis_spec = get_instrument_from_registry("sq_acisi_cy20")
+acis_spec = get_instrument_from_registry("sq_acisi_cy0")
 
 rmf = RedistributionMatrixFile(acis_spec["rmf"])
 arf = AuxiliaryResponseFile(acis_spec['arf'])
@@ -46,8 +48,8 @@ def mymodel(pars, x, xhi=None):
 
 @requires_module("sherpa")
 def test_power_law():
-    plaw_fit(1.1, prng=29)
-    plaw_fit(0.8)
+    plaw_fit(1.1, prng=33)
+    plaw_fit(0.8, prng=28)
     plaw_fit(1.0, prng=23)
 
 
@@ -97,7 +99,7 @@ def plaw_fit(alpha_sim, prng=None):
     events.write_simput_file("plaw", overwrite=True)
 
     instrument_simulator("plaw_simput.fits", "plaw_evt.fits",
-                         exp_time, "sq_acisi_cy20", [30.0, 45.0],
+                         exp_time, "sq_acisi_cy0", [30.0, 45.0],
                          overwrite=True, foreground=False, ptsrc_bkgnd=False,
                          instr_bkgnd=False,
                          prng=prng)
