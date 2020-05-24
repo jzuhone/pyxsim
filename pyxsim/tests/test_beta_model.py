@@ -4,7 +4,8 @@ A unit test for the pyxsim analysis module.
 
 from pyxsim import \
     TableApecModel, TBabsModel, \
-    ThermalSourceModel, PhotonList
+    ThermalSourceModel, make_photons, \
+    project_photons, EventList
 from pyxsim.tests.utils import \
     BetaModelSource, ParticleBetaModelSource
 from yt.testing import requires_module
@@ -16,11 +17,13 @@ import shutil
 from sherpa.astro.ui import load_user_model, add_user_pars, \
     load_pha, ignore, fit, set_model, set_stat, set_method, \
     get_fit_results
-from six import string_types
 from soxs.instrument import RedistributionMatrixFile, \
     AuxiliaryResponseFile, instrument_simulator
 from soxs.events import write_spectrum
 from soxs.instrument_registry import get_instrument_from_registry
+from yt.utilities.cosmology import Cosmology
+
+cosmo = Cosmology()
 
 ckms = clight.in_units("km/s").v
 
@@ -118,19 +121,19 @@ def do_beta_model(source, axis="z", prng=None):
 
     thermal_model = ThermalSourceModel("apec", 0.1, 11.5, 20000,
                                        Zmet=Z_sim, prng=prng)
-    photons = PhotonList.from_data_source(sphere, redshift, A, exp_time,
-                                          thermal_model)
+    n_photons, n_cells = make_photons("my_photons", sphere, redshift, 
+                                      A, exp_time, thermal_model)
 
-    D_A = photons.parameters["fid_d_a"]
+    D_A = cosmo.angular_diameter_distance(0.0, redshift).to_value("cm")
 
-    norm_sim = sphere.quantities.total_quantity(("gas","emission_measure"))
+    norm_sim = sphere.quantities.total_quantity(("gas", "emission_measure"))
     norm_sim *= 1.0e-14/(4*np.pi*D_A*D_A*(1.+redshift)*(1.+redshift))
     norm_sim = float(norm_sim.in_cgs())
 
-    v1, v2 = sphere.quantities.weighted_variance(("gas","velocity_z"),
-                                                 ("gas","emission_measure"))
+    v1, v2 = sphere.quantities.weighted_variance(("gas", "velocity_z"),
+                                                 ("gas", "emission_measure"))
 
-    if isinstance(axis, string_types):
+    if isinstance(axis, str):
         if axis == "z":
             fac = 1.0
         else:
@@ -142,13 +145,15 @@ def do_beta_model(source, axis="z", prng=None):
     sigma_sim = fac*float(v1.in_units("km/s"))
     mu_sim = -fac*float(v2.in_units("km/s"))
 
-    events = photons.project_photons(axis, [30.0, 45.0], absorb_model="tbabs",
-                                     nH=nH_sim, prng=prng)
+    n_events = project_photons("my_photons", "my_events", axis, [30.0, 45.0],
+                               absorb_model="tbabs", nH=nH_sim, prng=prng)
+
+    events = EventList("my_events.h5")
 
     events.write_simput_file("beta_model", overwrite=True)
 
     instrument_simulator("beta_model_simput.fits", "beta_model_evt.fits",
-                         exp_time, "mucal", [30.0, 45.0],
+                         exp_time, "lynx_lxm", [30.0, 45.0],
                          overwrite=True, foreground=False, ptsrc_bkgnd=False,
                          instr_bkgnd=False, 
                          prng=prng)
@@ -216,17 +221,20 @@ def test_vapec_beta_model():
                                        Zmet=("gas","metallicity"), 
                                        prng=prng)
 
-    photons = PhotonList.from_data_source(sphere, redshift, A, exp_time,
-                                          thermal_model)
+    n_photons = make_photons("my_photons", sphere, redshift, A, exp_time,
+                             thermal_model)
 
-    D_A = photons.parameters["fid_d_a"]
+    D_A = cosmo.angular_diameter_distance(0.0, redshift).to("cm")
 
     norm_sim = sphere.quantities.total_quantity("emission_measure")
     norm_sim *= 1.0e-14/(4*np.pi*D_A*D_A*(1.+redshift)*(1.+redshift))
     norm_sim = float(norm_sim.in_cgs())
 
-    events = photons.project_photons("z", [30.0, 45.0], absorb_model="tbabs",
-                                     nH=nH_sim, prng=prng, no_shifting=True)
+    n_events = project_photons("my_photons", "my_events", "z", [30.0, 45.0], 
+                               absorb_model="tbabs", nH=nH_sim, prng=prng, 
+                               no_shifting=True)
+
+    events = EventList("my_events.h5")
 
     events.write_simput_file("vbeta_model", overwrite=True)
 
