@@ -4,7 +4,8 @@ Answer test pyxsim.
 
 from pyxsim import \
     ThermalSourceModel, \
-    PhotonList, merge_files, EventList
+    EventList, make_photons, \
+    project_photons
 from yt.utilities.answer_testing.framework import requires_ds, \
     GenericArrayTest, data_dir_load
 from numpy.testing import assert_array_equal, \
@@ -15,16 +16,20 @@ import tempfile
 import shutil
 import astropy.io.fits as pyfits
 
+
 def setup():
     from yt.config import ytcfg
     ytcfg["yt", "__withintesting"] = "True"
 
+
 gslr = "GasSloshingLowRes/sloshing_low_res_hdf5_plt_cnt_0300"
+
 
 def return_data(data):
     def _return_data(name):
         return data
     return _return_data
+
 
 @requires_ds(gslr)
 def test_sloshing():
@@ -45,29 +50,14 @@ def test_sloshing():
 
     thermal_model = ThermalSourceModel("apec", 0.1, 11.0, 10000, Zmet=0.3,
                                        thermal_broad=False, prng=prng)
-    photons1 = PhotonList.from_data_source(sphere, redshift, A, exp_time,
-                                           thermal_model)
+    n_photons1, n_cells1 = make_photons("photons1", sphere, redshift, A, 
+                                        exp_time, thermal_model)
 
     return_photons = return_data(photons1.photons)
 
-    nphots = 0
-    for i in range(4):
-        phots = PhotonList.from_data_source(sphere, redshift, A, 0.25*exp_time,
-                                            thermal_model)
-
-        phots.write_h5_file("split_photons_%d.h5" % i)
-        nphots += len(phots.photons["energy"])
-
-    merge_files(["split_photons_%d.h5" % i for i in range(4)],
-                "merged_photons.h5", add_exposure_times=True,
-                overwrite=True)
-
-    merged_photons = PhotonList.from_file("merged_photons.h5")
-    assert len(merged_photons.photons["energy"]) == nphots
-    assert merged_photons.parameters["fid_exp_time"] == exp_time
-
-    events1 = photons1.project_photons([1.0,-0.5,0.2], [30., 45.],
-                                       absorb_model="tbabs", nH=0.1, prng=prng)
+    n_events1 = project_photons("photons1", "events1", [1.0, -0.5, 0.2],
+                                [30., 45.], absorb_model="tbabs", nH=0.1,
+                                prng=prng)
 
     return_events = return_data(events1.events)
 
@@ -93,8 +83,6 @@ def test_sloshing():
         test_sloshing.__name__ = test.description
         yield test
 
-    photons1.write_h5_file("test_photons.h5")
-    events1.write_h5_file("test_events.h5")
     events1.write_fits_file("test_events.fits", 20.0, 1024)
 
     photons2 = PhotonList.from_file("test_photons.h5")
@@ -108,23 +96,6 @@ def test_sloshing():
     for k in events2.keys():
         assert_array_equal(events1[k], events2[k])
         assert_allclose(events2[k], events3[k], rtol=1.0e-6)
-
-    nevents = 0
-
-    for i in range(4):
-        events = photons1.project_photons([1.0, -0.5, 0.2], [30., 45.],
-                                          absorb_model="tbabs", nH=0.1,
-                                          prng=prng)
-        events.write_h5_file("split_events_%d.h5" % i)
-        nevents += len(events["xsky"])
-
-    merge_files(["split_events_%d.h5" % i for i in range(4)],
-                "merged_events.h5", add_exposure_times=True,
-                overwrite=True)
-
-    merged_events = EventList.from_h5_file("merged_events.h5")
-    assert len(merged_events["xsky"]) == nevents
-    assert merged_events.parameters["exp_time"] == 4.0*exp_time
 
     os.chdir(curdir)
     shutil.rmtree(tmpdir)
