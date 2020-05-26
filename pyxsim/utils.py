@@ -1,4 +1,3 @@
-import numpy as np
 from yt.funcs import iterable
 from yt.units.yt_array import YTQuantity, YTArray
 from unyt import unyt_array
