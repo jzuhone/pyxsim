@@ -1,6 +1,6 @@
 from numpy.random import RandomState
 from yt.utilities.answer_testing.framework import requires_ds, \
-    GenericArrayTest, data_dir_load
+    data_dir_load
 from pyxsim.light_cone import XrayLightCone
 from pyxsim import ThermalSourceModel
 
@@ -11,12 +11,6 @@ def setup():
 
 
 etc = "enzo_tiny_cosmology/DD0046/DD0046"
-
-
-def return_data(data):
-    def _return_data(name):
-        return data
-    return _return_data
 
 
 @requires_ds(etc)
@@ -39,8 +33,6 @@ def test_light_cone():
                        source_model, (30.0, 45.0), absorb_model="wabs", 
                        nH=0.02, sigma_pos=0.5, prng=prng)
 
-    return_events = return_data("my_events.h5")
 
-    test = GenericArrayTest(ds, return_events, args=["events"])
-    test_light_cone.__name__ = test.description
-    yield test
+if __name__ == "__main__":
+    test_light_cone()
