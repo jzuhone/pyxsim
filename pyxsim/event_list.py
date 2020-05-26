@@ -39,9 +39,11 @@ class EventList(object):
 
     def write_fits_file(self, fitsfile, fov, nx, overwrite=False):
         """
-        Write events to a FITS binary table file. The result is a
-        standard "event file" which can be processed by standard
-        X-ray analysis tools.
+        Write events to a FITS binary table file. The result is an
+        "event file" which can be opened in ds9, binned into a 
+        spectrum, etc., but NOTE that this does NOT represent an
+        actual observation since no instrumental effects are
+        included. 
 
         Parameters
         ----------
