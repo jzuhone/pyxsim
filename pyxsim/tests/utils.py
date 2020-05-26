@@ -4,6 +4,7 @@ from yt.utilities.physical_ratios import \
 from yt.frontends.stream.api import \
     load_uniform_grid, load_particles
 from numpy.random import RandomState
+from soxs.tests.utils import file_answer_testing
 
 # Gas parameters
 R = 1.0 # Mpc
@@ -20,6 +21,7 @@ Ca = 0.7
 # Dark matter parameters
 r_s = 0.350 # Mpc
 rho_s = 9.0e-26 # g/cm**3
+
 
 class BetaModelSource(object):
     def __init__(self):
@@ -107,3 +109,26 @@ class ParticleBetaModelSource(object):
         data["io", "particle_mass"] = (pmass, "g")
         data["io", "smoothing_length"] = (0.01*np.ones(num_particles)/(2.0*R), "code_length")
         self.ds = load_particles(data, length_unit=(2*R, "Mpc"), bbox=bbox)
+
+
+def hdf5_answer_testing(filename, answer_store, answer_dir):
+    import os
+    import shutil
+    import h5py
+    from numpy.testing import assert_almost_equal, assert_equal
+    oldf = os.path.join(answer_dir, filename)
+    if answer_store:
+        shutil.copy(filename, answer_dir)
+    else:
+        f_old = h5py.open(oldf, "r")
+        f_new = h5py.open(filename, "r")
+        p_old = f_old["parameters"]
+        p_new = f_new["parameters"]
+        d_old = f_old["data"]
+        d_new = f_new["data"]
+        for k in p_old:
+            assert_equal(p_old[k][()], p_new[k][()])
+        for k in d_old:
+            assert_almost_equal(d_old[k][()], d_new[k][()])
+        f_old.close()
+        f_new.close()
