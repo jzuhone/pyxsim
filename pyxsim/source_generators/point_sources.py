@@ -52,8 +52,8 @@ def make_point_sources(area, exp_time, positions, sky_center,
     for pos, spectrum in zip(positions, spectra):
         eobs = spectrum.generate_energies(t_exp, area.value, prng=prng)
         ne = eobs.size
-        x.append(YTArray([pos[0]] * ne, "deg"))
-        y.append(YTArray([pos[1]] * ne, "deg"))
+        x.append(YTArray([pos[0]] * ne, "degree"))
+        y.append(YTArray([pos[1]] * ne, "degree"))
         e.append(YTArray.from_astropy(eobs))
 
     parameters = {"sky_center": YTArray(sky_center, "degree"),
@@ -61,8 +61,8 @@ def make_point_sources(area, exp_time, positions, sky_center,
                   "area": area}
 
     events = {}
+    events["eobs"] = uconcatenate(e)
     events["xsky"] = uconcatenate(x)
     events["ysky"] = uconcatenate(y)
-    events["eobs"] = uconcatenate(e)
 
     return EventList(events, parameters)
