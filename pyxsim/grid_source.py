@@ -2,19 +2,21 @@ from yt.utilities.cosmology import Cosmology
 import numpy as np
 from pyxsim.lib.sky_functions import pixel_to_cel
 from pyxsim.utils import parse_value, mylog
-from astropy.table import Table
 from yt.convenience import load
 from yt.data_objects.api import Dataset
+from pyxsim.event_list import EventList
+from pyxsim.photon_list import make_photons, project_photons
 
-axis_wcs = [[1,2], [0,2], [0,1]]
+axis_wcs = [[1, 2], [0, 2], [0, 1]]
 
 
 def make_grid_source(ds, axis, width, center, redshift, area,
                      exp_time, source_model, sky_center, fov,
-                     simput_prefix, depth=None, cosmology=None, dist=None,
-                     absorb_model=None, nH=None, no_shifting=False,
-                     sigma_pos=None, kernel="top_hat", overwrite=False,
-                     prng=None):
+                     prefix, parameters=None, depth=None,
+                     cosmology=None, dist=None, absorb_model=None,
+                     nH=None, no_shifting=False, sigma_pos=None,
+                     kernel="top_hat", velocity_fields=None,
+                     overwrite=False, point_sources=False, prng=None):
     """
     Make a composite source from a rectangular grid of multiple
     fields of view. The photons from each field of view will be
@@ -68,7 +70,7 @@ def make_grid_source(ds, axis, width, center, redshift, area,
         Width of the field of view for each individual pointing of the
         grid. If units are specified, they are assumed to be in
         arcminutes.
-    simput_prefix : string, optional
+    prefix : string, optional
         The prefix of the SIMPUT catalog file to write or append 
         to. If not set, it will be the same as *prefix*.
     depth : A tuple or a float, optional
@@ -148,7 +150,8 @@ def make_grid_source(ds, axis, width, center, redshift, area,
         D_A = parse_value(dist, "Mpc", ds=ds).to("code_length")
         fov_width = fov.to_value("radian")*D_A
 
-    mylog.info("Linear width of field of view is {:.2f} kpc.".format(fov_width.to_value('kpc')))
+    mylog.info(f"Linear width of field of view is "
+               f"{fov_width.to_value('kpc'):.2f} kpc.")
 
     nx = int(np.ceil(xwidth / fov_width))
     ny = int(np.ceil(ywidth / fov_width))
@@ -159,8 +162,6 @@ def make_grid_source(ds, axis, width, center, redshift, area,
 
     first = True
 
-    ra = []
-    dec = []
     for i in range(nx):
         for j in range(ny):
             box_center = center.copy()
@@ -171,21 +172,22 @@ def make_grid_source(ds, axis, width, center, redshift, area,
             le[axis] = box_center[axis] - 0.5*depth
             re[axis] = box_center[axis] + 0.5*depth
             box = ds.box(le, re)
-            photons = PhotonList.from_data_source(box, redshift, area,
-                                                  exp_time, source_model,
-                                                  center=box_center,
-                                                  dist=dist, cosmology=cosmo)
+            make_photons(prefix, box, redshift, area, exp_time, 
+                         source_model, point_sources=point_sources,
+                         parameters=parameters, center=center, dist=dist,
+                         cosmology=cosmology, velocity_fields=velocity_fields)
             xsky = np.array([(box_center-center)[axisx]/D_A])
             ysky = np.array([(box_center-center)[axisy]/D_A])
             pixel_to_cel(xsky, ysky, sky_center)
-            events = photons.project_photons("xyz"[axis], (xsky[0], ysky[0]),
-                                             absorb_model=absorb_model,
-                                             nH=nH, no_shifting=no_shifting,
-                                             sigma_pos=sigma_pos, kernel=kernel,
-                                             prng=prng)
-            del photons
+            num_events = project_photons(prefix, f"events_{prefix}",
+                                         "xyz"[axis], (xsky[0], ysky[0]),
+                                         absorb_model=absorb_model, nH=nH,
+                                         no_shifting=no_shifting,
+                                         sigma_pos=sigma_pos, kernel=kernel,
+                                         prng=prng)
 
-            phlist_prefix = "{:s}_{:d}_{:d}".format(simput_prefix, i, j)
+            events = EventList(f"{prefix}*.h5")
+            phlist_prefix = f"{prefix:s}_{i:d}_{j:d}"
             if first:
                 append = False
                 first = False
@@ -193,20 +195,5 @@ def make_grid_source(ds, axis, width, center, redshift, area,
                 append = True
             events.write_simput_file(phlist_prefix, overwrite=overwrite,
                                      append=append, simput_prefix=simput_prefix)
-
-            del events
-
-            ra.append(xsky[0])
-            dec.append(ysky[0])
-
-    t = Table([ra, dec], names=("ra", "dec"))
-    t.meta["comments"] = ["simput: {}_simput.fits".format(simput_prefix)]
-    t['ra'].format = '.2f'
-    t['dec'].format = '.2f'
-
-    outfile = f"{simput_prefix}_photon_grid.txt"
-    mylog.info(f"Writing grid information to {outfile}.")
-    t.write(outfile, overwrite=overwrite, 
-            delimiter="\t", format='ascii.commented_header')
 
     return outfile
