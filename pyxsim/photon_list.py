@@ -51,8 +51,11 @@ def make_hsml(source_type):
 def determine_fields(ds, source_type, point_sources):
     ds_type = ds.index.__class__.__name__
     if "ParticleIndex" in ds_type:
-        position_fields = [(source_type, "particle_position_%s" % ax) for ax in "xyz"]
-        velocity_fields = [(source_type, "particle_velocity_%s" % ax) for ax in "xyz"]
+        ppos = ["particle_position_%s" % ax for ax in "xyz"]
+        pvel = ["particle_velocity_%s" % ax for ax in "xyz"]
+        if source_type in ds.known_filters:
+            ppos = ["x", "y", "z"]
+            pvel = ["velocity_%s" % ax for ax in "xyz"]
         if source_type in ["PartType0", "gas", "Gas"]:
             width_field = (source_type, "smoothing_length")
             if width_field not in ds.field_info and not point_sources:
@@ -62,6 +65,8 @@ def determine_fields(ds, source_type, point_sources):
                             units='code_length')
         else:
             width_field = None
+        position_fields = [(source_type, ppos[i]) for i in range(3)]
+        velocity_fields = [(source_type, pvel[i]) for i in range(3)]
     else:
         position_fields = [("index", ax) for ax in "xyz"]
         velocity_fields = [(source_type, "velocity_%s" % ax) for ax in "xyz"]
