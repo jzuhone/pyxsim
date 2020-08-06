@@ -3,7 +3,7 @@ language: python
 env:
     global:
         # Set defaults to avoid repeating in most cases
-        - NUMPY_VERSION=1.13
+        - NUMPY_VERSION=1.16
         - ANSWER_VER=pyxsim18
         - TEST_OPTS="--nologcapture -sv --with-answer-testing --local --local-dir ."
 matrix:
@@ -12,9 +12,9 @@ matrix:
         # Try all python versions with the latest numpy
         - python: 2.7
           env: CMD="nosetests ${TEST_OPTS} --answer-name=${ANSWER_VER}_2 pyxsim/tests"; PYTHON='python'
-        - python: 3.5
-          env: CMD="nosetests ${TEST_OPTS} --answer-name=${ANSWER_VER}_3 pyxsim/tests --with-coverage --cover-package=pyxsim"; PYTHON='python3'
         - python: 3.6
+          env: CMD="nosetests ${TEST_OPTS} --answer-name=${ANSWER_VER}_3 pyxsim/tests"; PYTHON='python3'
+        - python: 3.7
           env: CMD="nosetests ${TEST_OPTS} --answer-name=${ANSWER_VER}_3 pyxsim/tests"; PYTHON='python3'
 
 before_install:
@@ -56,7 +56,7 @@ install:
     # CORE DEPENDENCIES
     - conda config --add channels https://conda.anaconda.org/sherpa
     - conda config --add channels conda-forge
-    - conda install --yes numpy=$NUMPY_VERSION nose pip yt==3.5.1 astropy sherpa cython scipy pyembree==0.1.3
+    - conda install --yes numpy=$NUMPY_VERSION nose pip yt==3.6 astropy sherpa cython scipy
     - conda install --yes -c jzuhone soxs
 
     # COVERAGE DEPENDENCIES
