@@ -27,8 +27,9 @@ def determine_fields(ds, source_type, point_sources):
         ppos = ["particle_position_%s" % ax for ax in "xyz"]
         pvel = ["particle_velocity_%s" % ax for ax in "xyz"]
         if source_type in ds.known_filters:
-            ppos = ["x", "y", "z"]
-            pvel = ["velocity_%s" % ax for ax in "xyz"]
+            if ds.known_filters[source_type].filtered_type == "gas":
+                ppos = ["x", "y", "z"]  
+                pvel = ["velocity_%s" % ax for ax in "xyz"]
         elif source_type == "gas":
             source_type = ds._sph_ptypes[0]
         position_fields = [(source_type, ppos[i]) for i in range(3)]
