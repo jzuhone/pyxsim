@@ -9,7 +9,6 @@ from yt.units.yt_array import YTQuantity
 from yt.utilities.physical_constants import mp, clight, kboltz
 from pyxsim.spectral_models import thermal_models
 from pyxsim.utils import parse_value
-from yt.utilities.exceptions import YTUnitConversionError
 from soxs.utils import parse_prng
 from soxs.constants import elem_names, atomic_weights
 from yt.utilities.parallel_tools.parallel_analysis_interface import \
@@ -232,7 +231,7 @@ class ThermalSourceModel(SourceModel):
                         X_H = primordial_H_abund
                     if (ptype, 'ElectronAbundance') in data_source.ds.field_list:
                         nenh *= X_H * data[ptype, 'ElectronAbundance']
-                        nenh *= X_H * (1.-data[ptype, 'NeutralHydrogenAbundance'])
+                        nenh *= X_H
                     else:
                         nenh *= 0.5*(1.+X_H)*X_H
                     return nenh
