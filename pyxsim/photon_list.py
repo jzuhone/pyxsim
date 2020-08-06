@@ -54,6 +54,10 @@ def determine_fields(ds, source_type, point_sources):
         ppos = ["particle_position_%s" % ax for ax in "xyz"]
         pvel = ["particle_velocity_%s" % ax for ax in "xyz"]
         if source_type in ds.known_filters:
+            if ds.known_filters[source_type].filtered_type == "gas":
+                ppos = ["x", "y", "z"]
+                pvel = ["velocity_%s" % ax for ax in "xyz"]
+        elif source_type == "gas":
             ppos = ["x", "y", "z"]
             pvel = ["velocity_%s" % ax for ax in "xyz"]
         if source_type in ["PartType0", "gas", "Gas"]:
@@ -399,7 +403,7 @@ class PhotonList(object):
         p_fields, v_fields, w_field = determine_fields(ds,
                                                        source_model.source_type,
                                                        point_sources)
-
+        
         if velocity_fields is not None:
             v_fields = velocity_fields
 
