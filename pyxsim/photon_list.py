@@ -119,7 +119,7 @@ def make_photons(photon_prefix, data_source, redshift, area,
         a coordinate. If array-like and without units, it is assumed to be in 
         units of kpc. If not specified, pyxsim attempts to use the "center"
         field parameter of the data_source.
-    dist : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
+    dist : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`, optional
         The angular diameter distance, used for nearby sources. This may be
         optionally supplied instead of it being determined from the
         *redshift* and given *cosmology*. If units are not specified, it is
