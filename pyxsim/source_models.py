@@ -554,17 +554,22 @@ class LineSourceModel(SourceModel):
     >>> line_model = LineEmissionSourceModel(location, "dark_matter_density_squared", sigma=sigma)
     """
     def __init__(self, e0, emission_field, sigma=None, prng=None):
+        try:
+            from unyt.exceptions import UnitConversionError
+        except ImportError:
+            from yt.utilities.exceptions import \
+                YTUnitConversionError as UnitConversionError
         self.e0 = parse_value(e0, "keV")
         if isinstance(sigma, (float, YTQuantity)) or (isinstance(sigma, tuple) and isinstance(sigma[0], float)):
             # The broadening is constant
             try:
                 self.sigma = parse_value(sigma, "keV")
-            except YTUnitConversionError:
+            except UnitConversionError:
                 try:
                     self.sigma = parse_value(sigma, "km/s")
                     self.sigma *= self.e0/clight
                     self.sigma.convert_to_units("keV")
-                except YTUnitConversionError:
+                except UnitConversionError:
                     raise RuntimeError("Units for sigma must either be in dimensions of "
                                        "energy or velocity! sigma = %s" % sigma)
         else:
