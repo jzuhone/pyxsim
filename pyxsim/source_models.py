@@ -26,13 +26,13 @@ sqrt_two = np.sqrt(2.)
 class ParallelProgressBar(object):
     def __init__(self, title):
         self.title = title
-        mylog.info("Starting '%s'", title)
+        mylog.info(f"Starting '{title}'")
 
     def update(self, *args, **kwargs):
         return
 
     def close(self):
-        mylog.info("Finishing '%s'", self.title)
+        mylog.info(f"Finishing '{self.title}'")
 
 
 class SourceModel(object):
@@ -159,7 +159,8 @@ class ThermalSourceModel(SourceModel):
                  prng=None):
         if isinstance(spectral_model, str):
             if spectral_model not in thermal_models:
-                raise KeyError("%s is not a known thermal spectral model!" % spectral_model)
+                raise KeyError(f"{spectral_model} is not a known thermal "
+                               f"spectral model!")
             spectral_model = thermal_models[spectral_model]
         self.temperature_field = temperature_field
         self.Zmet = Zmet
@@ -211,8 +212,10 @@ class ThermalSourceModel(SourceModel):
 
     def setup_model(self, data_source, redshift, spectral_norm):
         if self.emission_measure_field is None:
-            self.emission_measure_field = (self.ftype, 'emission_measure')
-        ftype = data_source.ds._get_field_info(self.emission_measure_field).name[0]
+            self.emission_measure_field = \
+                (self.ftype, 'emission_measure')
+        ftype = data_source.ds._get_field_info(
+            self.emission_measure_field).name[0]
         self.ftype = ftype
         self.redshift = redshift
         if not self.nei and not isinstance(self.Zmet, float):
@@ -222,7 +225,8 @@ class ThermalSourceModel(SourceModel):
             elif Z_units == "Zsun":
                 self.Zconvert = 1.0
             else:
-                raise RuntimeError("I don't understand metallicity units of %s!" % Z_units)
+                raise RuntimeError(f"I don't understand metallicity "
+                                   f"units of {Z_units}!")
         if self.num_var_elem > 0:
             for key, value in self.var_elem.items():
                 if not isinstance(value, float):
@@ -239,18 +243,23 @@ class ThermalSourceModel(SourceModel):
                     elif m_units == "Zsun":
                         self.mconvert[key] = 1.0
                     else:
-                        raise RuntimeError("I don't understand units of %s for element %s!" % (m_units, key))
+                        raise RuntimeError(f"I don't understand units of "
+                                           f"{m_units} for element {key}!")
         self.density_field = (ftype, "density")
-        mylog.info("Using emission measure field '(%s, %s)'." % self.emission_measure_field)
+        mylog.info(f"Using emission measure field "
+                   f"'{self.emission_measure_field}'.")
         if self.temperature_field is None:
             self.temperature_field = (ftype, 'temperature')
-        mylog.info("Using temperature field '(%s, %s)'." % self.temperature_field)
+        mylog.info(f"Using temperature field "
+                   f"'{self.temperature_field}'.")
         self.spectral_model.prepare_spectrum(redshift)
         self.spectral_norm = spectral_norm
         if self.kT_scale == "linear":
-            self.kT_bins = np.linspace(self.kT_min, self.kT_max, num=self.n_kT+1)
+            self.kT_bins = np.linspace(self.kT_min, self.kT_max, 
+                                       num=self.n_kT+1)
         elif self.kT_scale == "log":
-            self.kT_bins = np.logspace(np.log10(self.kT_min), np.log10(self.kT_max), 
+            self.kT_bins = np.logspace(np.log10(self.kT_min),
+                                       np.log10(self.kT_max),
                                        num=self.n_kT+1)
         self.dkT = np.diff(self.kT_bins)
         citer = data_source.chunks([], "io")

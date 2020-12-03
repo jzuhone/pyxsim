@@ -10,7 +10,7 @@ from yt.utilities.cosmology import Cosmology
 from yt.utilities.orientation import Orientation
 from yt.utilities.parallel_tools.parallel_analysis_interface import \
     communication_system
-from yt.units.yt_array import YTQuantity, YTArray, uconcatenate
+from yt.units.yt_array import YTArray
 import h5py
 from pyxsim.spectral_models import absorb_models
 from pyxsim.utils import parse_value, mylog
@@ -24,12 +24,12 @@ init_chunk = 100000
 def determine_fields(ds, source_type, point_sources):
     ds_type = ds.index.__class__.__name__
     if "ParticleIndex" in ds_type:
-        ppos = ["particle_position_%s" % ax for ax in "xyz"]
-        pvel = ["particle_velocity_%s" % ax for ax in "xyz"]
+        ppos = [f"particle_position_{ax}" for ax in "xyz"]
+        pvel = [f"particle_velocity_{ax}" for ax in "xyz"]
         if source_type in ds.known_filters:
             if ds.known_filters[source_type].filtered_type == "gas":
-                ppos = ["x", "y", "z"]  
-                pvel = ["velocity_%s" % ax for ax in "xyz"]
+                ppos = ["x", "y", "z"]
+                pvel = [f"velocity_{ax}" for ax in "xyz"]
         elif source_type == "gas":
             source_type = ds._sph_ptypes[0]
         position_fields = [(source_type, ppos[i]) for i in range(3)]
@@ -40,7 +40,7 @@ def determine_fields(ds, source_type, point_sources):
             width_field = None
     else:
         position_fields = [("index", ax) for ax in "xyz"]
-        velocity_fields = [(source_type, "velocity_%s" % ax) for ax in "xyz"]
+        velocity_fields = [(source_type, f"velocity_{ax}") for ax in "xyz"]
         width_field = ("index", "dx")
     if point_sources:
         width_field = None
@@ -52,7 +52,6 @@ def find_object_bounds(data_source):
     This logic is required to determine the bounds of the object, which is 
     solely for fixing coordinates at periodic boundaries
     """
-
     if hasattr(data_source, "base_object"):
         # This is a cut region so we'll figure out
         # its bounds from its parent object
@@ -210,10 +209,11 @@ def make_photons(photon_prefix, data_source, redshift, area,
     parameters["center"].convert_to_units("kpc")
 
     if redshift > 0.0:
-        mylog.info("Cosmology: h = %g, omega_matter = %g, omega_lambda = %g" %
-                   (cosmo.hubble_constant, cosmo.omega_matter, cosmo.omega_lambda))
+        mylog.info(f"Cosmology: h = {cosmo.hubble_constant}, "
+                   f"omega_matter = {cosmo.omega_matter}, "
+                   f"omega_lambda = {cosmo.omega_lambda}")
     else:
-        mylog.info("Observing local source at distance %s." % D_A)
+        mylog.info(f"Observing local source at distance {D_A}.")
 
     local_exp_time = parameters["fid_exp_time"].v/comm.size
     D_A = parameters["fid_d_a"].in_cgs()
@@ -346,9 +346,9 @@ def make_photons(photon_prefix, data_source, redshift, area,
     return all_nphotons, all_ncells
 
 
-def project_photons(photon_prefix, event_prefix, normal, sky_center, 
-                    absorb_model=None, nH=None, no_shifting=False, 
-                    north_vector=None, sigma_pos=None, 
+def project_photons(photon_prefix, event_prefix, normal, sky_center,
+                    absorb_model=None, nH=None, no_shifting=False,
+                    north_vector=None, sigma_pos=None,
                     kernel="top_hat", prng=None):
     r"""
     Projects photons onto an image plane given a line of sight.
@@ -433,7 +433,7 @@ def project_photons(photon_prefix, event_prefix, normal, sky_center,
 
     if isinstance(absorb_model, str):
         if absorb_model not in absorb_models:
-            raise KeyError("%s is not a known absorption model!" % absorb_model)
+            raise KeyError(f"{absorb_model} is not a known absorption model!")
         absorb_model = absorb_models[absorb_model]
     if absorb_model is not None:
         if nH is None:
@@ -441,8 +441,8 @@ def project_photons(photon_prefix, event_prefix, normal, sky_center,
                                "specify a value for nH!")
         absorb_model = absorb_model(nH)
         if comm.rank == 0:
-            mylog.info("Foreground galactic absorption: using "
-                       "the %s model and nH = %g." % (absorb_model._name, nH))
+            mylog.info(f"Foreground galactic absorption: using the "
+                       f"{absorb_model._name} model and nH = {nH}.")
 
     f = h5py.File(photon_file, "r")
 
