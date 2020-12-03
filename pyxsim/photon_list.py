@@ -22,8 +22,12 @@ init_chunk = 100000
 
 
 def determine_fields(ds, source_type, point_sources):
-    ds_type = ds.index.__class__.__name__
-    if "ParticleIndex" in ds_type:
+    from yt.geometry.particle_geometry_handler import ParticleIndex
+    # Figure out if this is a particle field or otherwise
+    ptype = (source_type in ds.particle_types) | \
+            (source_type in ds.known_filters) | \
+            (source_type == "gas" & isinstance(ds.index, ParticleIndex))
+    if ptype:
         ppos = [f"particle_position_{ax}" for ax in "xyz"]
         pvel = [f"particle_velocity_{ax}" for ax in "xyz"]
         if source_type in ds.known_filters:
@@ -195,7 +199,8 @@ def make_photons(photon_prefix, data_source, redshift, area,
             parameters["center"] = ds.arr(center, "code_length")
     elif center is None:
         if hasattr(data_source, "left_edge"):
-            parameters["center"] = 0.5*(data_source.left_edge+data_source.right_edge)
+            parameters["center"] = 0.5*(data_source.left_edge + 
+                                        data_source.right_edge)
         else:
             parameters["center"] = data_source.get_field_parameter("center")
 
@@ -216,8 +221,8 @@ def make_photons(photon_prefix, data_source, redshift, area,
         mylog.info(f"Observing local source at distance {D_A}.")
 
     local_exp_time = parameters["fid_exp_time"].v/comm.size
-    D_A = parameters["fid_d_a"].in_cgs()
-    dist_fac = 1.0/(4.*np.pi*D_A.value*D_A.value*(1.+redshift)**2)
+    D_A = parameters["fid_d_a"].to_value("cm")
+    dist_fac = 1.0/(4.*np.pi*D_A*D_A*(1.+redshift)**2)
     spectral_norm = parameters["fid_area"].v*local_exp_time*dist_fac
 
     source_model.setup_model(data_source, redshift, spectral_norm)
