@@ -6,10 +6,10 @@ Installing pyXSIM
 Dependencies
 ------------
 
-pyXSIM is compatible with Python 3.5+, and requires the following Python
+pyXSIM 3.x is compatible with Python 3.6+, and requires the following Python
 packages:
 
-- `yt <http://yt-project.org>`_ (version 3.5 or higher)
+- `yt <http://yt-project.org>`_ (version 4.0 or higher)
 - `soxs <http://hea-www.cfa.harvard.edu/~jzuhone/soxs>`_ (version 2.1.0 or 
   higher)
 - `NumPy <http://www.numpy.org>`_

@@ -91,13 +91,17 @@ def make_photons(photon_prefix, data_source, redshift, area,
                  parameters=None, center=None, dist=None,
                  cosmology=None, velocity_fields=None):
     r"""
-    Initialize a :class:`~pyxsim.photon_list.PhotonList` from a yt data
-    source. The redshift, collecting area, exposure time, and cosmology
-    are stored in the *parameters* dictionary which is passed to the
-    *source_model* function.
+    Write a photon list dataset to disk from a yt data source and assuming a
+    source model for the photons. The redshift, collecting area, exposure time,
+    and cosmology are stored in the *parameters* dictionary which is passed to
+    the *source_model* function.
 
     Parameters
     ----------
+    photon_prefix : string
+        The prefix of the filename which will be written to contain the photon
+        list. If run in serial, the filename will be "{photon_prefix}.h5", if
+        run in parallel, the filenames will be "{photon_prefix}.{mpi_rank}.h5".
     data_source : :class:`~yt.data_objects.data_containers.YTSelectionContainer`
         The data source from which the photons will be generated.
     redshift : float
@@ -137,14 +141,20 @@ def make_photons(photon_prefix, data_source, redshift, area,
         ['velocity_x', 'velocity_y', 'velocity_z'] for grid datasets
         ['particle_velocity_x', 'particle_velocity_y', 'particle_velocity_z'] for particle datasets
 
+    Returns
+    -------
+    A tuple of two integers, the number of photons and the number of cells with
+    photons
+
     Examples
     --------
-    >>> thermal_model = ThermalSourceModel(apec_model, Zmet=0.3)
+    >>> thermal_model = pyxsim.ThermalSourceModel("apec",  0.1, 10.0,
+    ...                                           1000, Zmet=0.3)
     >>> redshift = 0.05
     >>> area = 6000.0 # assumed here in cm**2
     >>> time = 2.0e5 # assumed here in seconds
     >>> sp = ds.sphere("c", (500., "kpc"))
-    >>> my_photons = PhotonList.from_data_source(sp, redshift, area,
+    >>> n_photons, n_cells = pyxsim.make_photons(sp, redshift, area,
     ...                                          time, thermal_model)
     """
     ds = data_source.ds
@@ -321,7 +331,8 @@ def make_photons(photon_prefix, data_source, redshift, area,
             if w_field is None:
                 d["dx"][c_offset:c_offset+chunk_nc] = 0.0
             else:
-                d["dx"][c_offset:c_offset+chunk_nc] = chunk[w_field][idxs].to_value("kpc")
+                d["dx"][c_offset:c_offset+chunk_nc] = \
+                    chunk[w_field][idxs].to_value("kpc")
 
             n_cells += chunk_nc
             n_photons += chunk_nph
@@ -356,11 +367,19 @@ def project_photons(photon_prefix, event_prefix, normal, sky_center,
                     north_vector=None, sigma_pos=None,
                     kernel="top_hat", prng=None):
     r"""
-    Projects photons onto an image plane given a line of sight.
-    Returns a new :class:`~pyxsim.event_list.EventList`.
+    Projects photons onto an image plane given a line of sight, and
+    stores them in an HDF5 dataset which contains an event list.
 
     Parameters
     ----------
+    photon_prefix : string
+        The prefix of the filename containing the photon list. If run in
+        serial, the filename will be "{photon_prefix}.h5", if run in
+        parallel, the filenames will be "{photon_prefix}.{mpi_rank}.h5".
+    event_prefix : string
+        The prefix of the filename which will be written to contain the
+        event list. If run in serial, the filename will be "{event_prefix}.h5",
+        if run in parallel, the filename will be "{event_prefix}.{mpi_rank}.h5".
     normal : character or array-like
         Normal vector to the plane of projection. If "x", "y", or "z", will
         assume to be along that axis (and will probably be faster). Otherwise,
@@ -401,10 +420,16 @@ def project_photons(photon_prefix, event_prefix, normal, sky_center,
         such as for a test. Default is to use the :mod:`numpy.random`
         module.
 
+    Returns
+    -------
+    A integer for the number of events created
+
     Examples
     --------
     >>> L = np.array([0.1,-0.2,0.3])
-    >>> project_photons("my_photons.h5", "my_events.h5", L, [30., 45.])
+    >>> n_events = pyxsim.project_photons("my_photons.h5", "my_events.h5", L,
+    ...                                   [30., 45.], absorb_model='tbabs',
+    ...                                   nH=0.04)
     """
     prng = parse_prng(prng)
 
@@ -528,7 +553,7 @@ def project_photons(photon_prefix, event_prefix, normal, sky_center,
             if num_det > 0:
 
                 xsky, ysky = scatter_events(norm, prng, kernel, 
-                                            data_type, num_det, det, n_ph, 
+                                            data_type, num_det, det, n_ph,
                                             d["x"][start_c:end_c],
                                             d["y"][start_c:end_c],
                                             d["z"][start_c:end_c],
@@ -536,8 +561,8 @@ def project_photons(photon_prefix, event_prefix, normal, sky_center,
 
                 if data_type == "cells" and sigma_pos is not None:
                     sigma = sigma_pos*np.repeat(dx, n_ph)[det]
-                    xsky += sigma * prng.normal(loc=0.0, scale=1.0, size=num_det)
-                    ysky += sigma * prng.normal(loc=0.0, scale=1.0, size=num_det)
+                    xsky += sigma*prng.normal(loc=0.0, scale=1.0, size=num_det)
+                    ysky += sigma*prng.normal(loc=0.0, scale=1.0, size=num_det)
 
                 xsky /= D_A
                 ysky /= D_A

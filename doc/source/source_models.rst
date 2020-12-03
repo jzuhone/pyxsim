@@ -5,9 +5,8 @@ Source Models for Generating Photons
 
 pyXSIM comes with three pre-defined ``SourceModel`` types for generating a new
 :class:`~pyxsim.photon_list.PhotonList`, for use with the 
-:meth:`~pyxsim.photon_list.PhotonList.from_data_source` method. Though these 
-should cover the vast majority of use cases, there is also the option to design
-your own source model. 
+:func:`~pyxsim.make_photons` function. Though these should cover the vast 
+majority of use cases, there is also the option to design your own source model. 
 
 .. _thermal-sources:
 
@@ -396,39 +395,43 @@ An example of a line with a spatially varying broadening field:
 Designing Your Own Source Model
 -------------------------------
 
-Though the three source models above cover a wide variety of possible use cases for X-ray emission,
-you may find that you need to add a different source altogether. It is possible to create your own
-source model to generate photon energies and positions. We will outline in brief the required steps
-to do so here. We'll use the already exising :class:`~pyxsim.source_models.PowerLawSourceModel` as
-an example.
+Though the three source models above cover a wide variety of possible use cases
+for X-ray emission, you may find that you need to add a different source
+altogether. It is possible to create your own source model to generate photon 
+energies and positions. We will outline in brief the required steps to do so 
+here. We'll use the already exising 
+:class:`~pyxsim.source_models.PowerLawSourceModel` as an example.
 
-To create a new source model, you'll need to make it a subclass of ``SourceModel``. The first thing
-your source model needs is an ``__init__`` method to initialize a new instance of the model. This is
-where you pass in necessary parameters and initialize specific quantities such as the ``spectral_norm``
-and ``redshift`` to ``None``. These will be set to their appropriate values later, in the ``setup_model``
-method. In this case, for a power-law spectrum, we need to define the maximum and minimum energies of the
-spectrum (``emin`` and ``emax``), a reference energy (``e0``), an emissivity field that normalizes the
-spectrum (``norm_field``), and a spectral index field or single number ``alpha``:
+To create a new source model, you'll need to make it a subclass of 
+``SourceModel``. The first thing your source model needs is an ``__init__``
+method to initialize a new instance of the model. This is where you pass in 
+necessary parameters and initialize specific quantities such as the 
+``spectral_norm`` and ``redshift`` to ``None``. These will be set to their 
+appropriate values later, in the ``setup_model`` method. In this case, for 
+a power-law spectrum, we need to define the maximum and minimum energies of the
+spectrum (``emin`` and ``emax``), a reference energy (``e0``), an emissivity 
+field that normalizes the spectrum (``emission_field``), and a spectral index 
+field or single number ``alpha``:
 
 .. code-block:: python
 
-    class PowerLawSourceModel(SourceModel):
-        def __init__(self, e0, emin, emax, norm_field, alpha, prng=None):
-            self.e0 = parse_value(e0, "keV")
-            self.emin = parse_value(emin, "keV")
-            self.emax = parse_value(emax, "keV")
-            self.norm_field = norm_field
-            self.alpha = alpha
-            if prng is None:
-                self.prng = np.random
-            else:
-                self.prng = prng
-            self.spectral_norm = None
-            self.redshift = None
+    def __init__(self, e0, emin, emax, emission_field, alpha, prng=None):
+        self.e0 = parse_value(e0, "keV")
+        self.emin = parse_value(emin, "keV")
+        self.emax = parse_value(emax, "keV")
+        self.emission_field = emission_field
+        self.alpha = alpha
+        self.prng = parse_prng(prng)
+        self.spectral_norm = None
+        self.redshift = None
+        self.ftype = None
 
-It's also always a good idea to have an optional keyword argument ``prng`` for a custom pseudo-random
-number generator. In this way, you can pass in a random number generator (such as a :class:`~numpy.random.RandomState`
-instance) to get reproducible results. The default should be the :mod:`~numpy.random` module.
+You need to also have an attribute for the yt field type stored in 
+``self.ftype`` so that things such as position and velocity fields can be
+determined. It's also always a good idea to have an optional keyword argument
+``prng`` for a custom pseudo-random number generator. In this way, you can pass
+in a random number generator (such as a :class:`~numpy.random.RandomState` 
+instance) to get reproducible results. 
 
 The next method you need to specify is the ``setup_model`` method:
 
@@ -437,21 +440,29 @@ The next method you need to specify is the ``setup_model`` method:
     def setup_model(self, data_source, redshift, spectral_norm):
         self.spectral_norm = spectral_norm
         self.redshift = redshift
+        self.scale_factor = 1.0 / (1.0 + self.redshift)
+        self.ftype = data_source.ds._get_field_info(self.emission_field).name[0]
 
-``setup_model`` should always have this exact method signature. It is called from :meth:`~pyxsim.photon_list.PhotonList.from_data_source`
-and is used to set up the distance, redshift, and other aspects of the source being simulated. This does not happen in
-``__init__`` because we may want to use the same source model for a number of different sources.
+It is called from :meth:`~pyxsim.photon_list.PhotonList.from_data_source` and is
+used to set up the distance, redshift, and other aspects of the source being 
+simulated. This does not happen in ``__init__`` because we may want to use the 
+same source model for a number of different sources. You need to use one of the 
+normalization fields (in this case the emission field) to determine the field
+type.
 
-The next method you need is ``__call__``. ``__call__`` is where the action really happens and the photon energies
-are generated. ``__call__`` takes a chunk of data from the data source, and for this chunk determines the emission
-coming from each cell based on the normalization of the emission (in this case given by the yt field ``"norm_field"``)
-and the spectrum of the source. We have reproduced the method here with additional comments so that it is clearer
+The next method you need is ``__call__``. ``__call__`` is where the action 
+really happens and the photon energies are generated. ``__call__`` takes a 
+chunk of data from the data source, and for this chunk determines the emission
+coming from each cell based on the normalization of the emission (in this case
+given by the yt field ``"norm_field"``) and the spectrum of the source. We have
+reproduced the method here with additional comments so that it is clearer
 what is going on.
 
 .. code-block:: python
 
     def __call__(self, chunk):
 
+        # Determine the number of cells in this chunk
         num_cells = len(chunk[self.norm_field])
 
         # alpha can either be a single float number (the spectral index
@@ -469,20 +480,16 @@ what is going on.
         # the approximate number of photons in each cell.
         norm_fac = (self.emax.v**(1.-alpha)-self.emin.v**(1.-alpha))
         norm_fac[alpha == 1] = np.log(self.emax.v/self.emin.v)
-        norm = norm_fac*chunk[self.norm_field].v*self.e0.v**alpha
+        norm = norm_fac*chunk[self.emission_field].v*self.e0.v**alpha
         norm[alpha != 1] /= (1.-alpha[alpha != 1])
-        norm *= self.spectral_norm
+        norm *= self.spectral_norm*self.scale_factor
 
         # "norm" is now the approximate number of photons in each cell.
-        # what we have to do next is determine the actual number of
-        # photons in each cell. What we do here is split "norm" into
-        # its integer and fractional parts, and use the latter as the
-        # probability that an extra photon will be observed from this
-        # cell in addition to those from the integer part.
-        norm = np.modf(norm)
-        u = self.prng.uniform(size=num_cells)
-        number_of_photons = np.uint64(norm[1]) + np.uint64(norm[0] >= u)
+        # We will determine the number of photons from "norm" assuming
+        # a Poisson distribution.
+        number_of_photons = self.prng.poisson(lam=norm)
 
+        # Generate an empty array for the energies
         energies = np.zeros(number_of_photons.sum())
 
         # Here we loop over the cells and determine the energies of the
@@ -501,8 +508,7 @@ what is going on.
                 else:
                     e = self.emin.v**(1.-alpha[i]) + u*norm_fac[i]
                     e **= 1./(1.-alpha[i])
-                # Scale by the redshift
-                energies[start_e:end_e] = e / (1.+self.redshift)
+                energies[start_e:end_e] = e * self.scale_factor
                 start_e = end_e
 
         # Finally, __call__ must report the number of cells with photons, the 
@@ -511,5 +517,5 @@ what is going on.
         # and the energies of the photons.
         active_cells = number_of_photons > 0
         ncells = active_cells.sum()
-        
+
         return ncells, number_of_photons[active_cells], active_cells, energies[:end_e].copy()

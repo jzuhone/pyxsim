@@ -64,10 +64,8 @@ class ThermalSourceModel(SourceModel):
 
     Parameters
     ----------
-    spectral_model : string or :class:`~pyxsim.spectral_models.SpectralModel`
-        A thermal spectral model instance, e.g.
-       :class:`~pyxsim.spectral_models.TableApecModel`. Known options for 
-       strings are "apec".
+    spectral_model : string
+        The thermal model spectrum type to use. Known options are "apec".
     emin : float
         The minimum energy for the spectrum in keV.
     emax : float
@@ -75,30 +73,33 @@ class ThermalSourceModel(SourceModel):
     nchan : integer
         The number of channels in the spectrum.
     temperature_field : string or (ftype, fname) tuple, optional
-        The yt temperature field to use for the thermal modeling. Must have units
-        of Kelvin. If not specified, the default temperature field for the dataset
-        will be used.
+        The yt temperature field to use for the thermal modeling. Must have
+        units of Kelvin. If not specified, the default temperature field for
+        the dataset will be used.
     emission_measure_field : string or (ftype, fname) tuple, optional
-        The yt emission measure field to use for the thermal modeling. Must have units
-        of cm^-3. If not specified, the default emission measure field for the dataset
-        will be used or derived.
+        The yt emission measure field to use for the thermal modeling. Must
+        have units of cm^-3. If not specified, the default emission measure
+        field for the dataset will be used or derived.
     kT_min : float, optional
-        The default minimum temperature in keV to compute emission for. Default: 0.008
+        The default minimum temperature in keV to compute emission for.
+        Default: 0.008
     kT_max : float, optional
-        The default maximum temperature in keV to compute emission for. Default: 64.0
+        The default maximum temperature in keV to compute emission for.
+        Default: 64.0
     n_kT : integer, optional
-        The number of temperature bins to use when computing emission. Default: 10000
+        The number of temperature bins to use when computing emission.
+        Default: 10000
     kT_scale : string, optional
-        The scaling of the bins to use when computing emission, "linear" or "log". 
-        Default: "linear"
+        The scaling of the bins to use when computing emission, 
+        "linear" or "log". Default: "linear"
     Zmet : float, string, or tuple of strings, optional
-        The metallicity. If a float, assumes a constant metallicity throughout in
-        solar units. If a string or tuple of strings, is taken to be the name of 
-        the metallicity field.
+        The metallicity. If a float, assumes a constant metallicity throughout
+        in solar units. If a string or tuple of strings, is taken to be the 
+        name of the metallicity field.
     max_density : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
-        The maximum density of the cells or particles to use when generating photons.
-        If a float, the units are assumed to be g/cm**3. Default: None, which means
-        there will be no limit on the density.
+        The maximum density of the cells or particles to use when generating 
+        photons. If a float, the units are assumed to be g/cm**3. Default: None,
+        which means there will be no limit on the density.
     var_elem : dictionary, optional
         Elements that should be allowed to vary freely from the single abundance
         parameter. Each dictionary value, specified by the abundance symbol, 
@@ -114,7 +115,7 @@ class ThermalSourceModel(SourceModel):
         Whether or not the spectral lines should be thermally
         broadened. Default: True
     model_root : string, optional
-        The directory root where the model files are stored. If not provided, 
+        The directory root where the model files are stored. If not provided,
         a default location known to pyXSIM is used. 
     model_vers : string, optional
         The version identifier string for the model files, e.g.
@@ -142,12 +143,13 @@ class ThermalSourceModel(SourceModel):
         "lodd" : from Lodders, K (2003, ApJ 591, 1220)
     prng : integer or :class:`~numpy.random.RandomState` object 
         A pseudo-random number generator. Typically will only be specified
-        if you have a reason to generate the same set of random numbers, such as for a
-        test. Default is to use the :mod:`numpy.random` module.
+        if you have a reason to generate the same set of random numbers, 
+        such as for a test. Default is to use the :mod:`numpy.random` module.
 
     Examples
     --------
-    >>> source_model = ThermalSourceModel("apec", 0.1, 10.0, 10000, Zmet="metallicity")
+    >>> source_model = ThermalSourceModel("apec", 0.1, 10.0, 10000, 
+    ...                                   Zmet="metallicity")
     """
     def __init__(self, spectral_model, emin, emax, nchan,
                  temperature_field=None, emission_measure_field=None,
