@@ -49,8 +49,8 @@ def make_hsml(source_type):
 
 
 def determine_fields(ds, source_type, point_sources):
-    ds_type = ds.index.__class__.__name__
-    if "ParticleIndex" in ds_type:
+    from yt.geometry.particle_geometry_handler import ParticleIndex
+    if isinstance(ds.index, ParticleIndex):
         ppos = ["particle_position_%s" % ax for ax in "xyz"]
         pvel = ["particle_velocity_%s" % ax for ax in "xyz"]
         if source_type in ds.known_filters:

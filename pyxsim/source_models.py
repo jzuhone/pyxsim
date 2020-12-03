@@ -237,7 +237,7 @@ class ThermalSourceModel(SourceModel):
                     return nenh
                 data_source.ds.add_field((ptype, 'emission_measure'),
                                          function=_emission_measure,
-                                         particle_type=True,
+                                         sampling_type='particle',
                                          units="cm**-3")
                 self.emission_measure_field = (ptype, 'emission_measure')
             else:
