@@ -15,12 +15,9 @@ class EventList(object):
     def __init__(self, filespec):
         from glob import glob
         if filespec.endswith(".h5"):
-            if "*" in filespec:
-                filenames = glob(filespec)
-            else:
-                filenames = [filespec]
+            filenames = glob(filespec)
         elif isinstance(filespec, list):
-            if not np.all([fn.endswith("*.h5") for fn in filespec]):
+            if not np.all([fn.endswith(".h5") for fn in filespec]):
                 raise RuntimeError("Not all filenames are valid!")
             filenames = filespec
         else:
