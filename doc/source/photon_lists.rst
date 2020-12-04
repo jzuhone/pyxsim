@@ -32,8 +32,8 @@ This sphere object ``sp`` can then be used as input to the
 The arguments taken by :func:`~pyxsim.photon_list.make_photons` are as follows:
 
 * ``photon_prefix``: The prefix of the filename(s) to be written. If run in 
-  serial, the filename will be "{photon_prefix}.h5", if run in parallel, the 
-  filenames will be "{photon_prefix}.{mpi_rank}.h5".
+  serial, the filename will be ``"{photon_prefix}.h5"``, if run in parallel, the 
+  filenames will be ``"{photon_prefix}.{mpi_rank}.h5"``.
 * ``data_source``: A :class:`~yt.data_objects.data_containers.YTSelectionContainer`. 
   The 3D data source from which the photons will be generated.
 * ``redshift``: The cosmological redshift for the photons. Determines the 
@@ -41,33 +41,37 @@ The arguments taken by :func:`~pyxsim.photon_list.make_photons` are as follows:
   which determines the number of photons. 
 * ``area``: The collecting area to determine the number of photons. If units are
   not specified, it is assumed to be in :math:`cm^2`.
-* ``exp_time``: The exposure time to determine the number of photons. If units are
-  not specified, it is assumed to be in seconds.
-* ``source_model`` : A :class:`~pyxsim.source_models.SourceModel` used to generate the
-  photons. see :ref:`source-models` for options.
-* ``parameters`` (optional): A dictionary of parameters to be passed to the source model if 
-  necessary.
-* ``point_sources`` (optional): If True, the photons will be assumed to be generated 
-  from the exact positions of the cells or particles and not smeared around within
-  a volume. Default: False
-* ``center`` (optional): string or array-like object. The origin of the photon spatial 
-  coordinates. Accepts "c", "max", or a coordinate. If not specified, pyXSIM attempts to use 
-  the "center" field parameter of the data_source. 
-* ``dist`` (optional): The angular diameter distance, only should be used for nearby sources. 
-  This may be supplied instead of it being determined from the ``redshift`` and ``cosmology``.
-  If units are not specified, it is assumed to be in Mpc. To use this, the redshift must be 
-  set to zero. 
-* ``cosmology`` (optional): A :class:`~yt.utilities.cosmology.Cosmology` object which supplies 
-  cosmological informaton. If the ``data_source`` has cosmological parameters, they will be
-  used, otherwise a :math:`\Lambda{\rm CDM}` cosmology with the following parameters are assumed: 
-  :math:`H_0` = 71 km/s/Mpc, :math:`\Omega_m` = 0.27, :math:`\Omega_\Lambda` = 0.73. 
-* ``velocity_fields`` (optional): A list of fields to use for the velocity to Doppler-shift the 
-  photons. If not specified, the following will be assumed:   
+* ``exp_time``: The exposure time to determine the number of photons. If units
+  are not specified, it is assumed to be in seconds.
+* ``source_model`` : A :class:`~pyxsim.source_models.SourceModel` used to 
+  generate the photons. see :ref:`source-models` for options.
+* ``parameters`` (optional): A dictionary of parameters to be passed to the 
+  source model if necessary.
+* ``point_sources`` (optional): If True, the photons will be assumed to be
+  generated from the exact positions of the cells or particles and not smeared
+  around within a volume. Default: False
+* ``center`` (optional): string or array-like object. The origin of the photon
+  spatial coordinates. Accepts "c", "max", or a coordinate. If not specified, 
+  pyXSIM attempts to use the "center" field parameter of the data_source. 
+* ``dist`` (optional): The angular diameter distance, only should be used for
+  nearby sources. This may be supplied instead of it being determined from the 
+  ``redshift`` and ``cosmology``. If units are not specified, it is assumed to
+  be in Mpc. To use this, the redshift must be set to zero. 
+* ``cosmology`` (optional): A :class:`~yt.utilities.cosmology.Cosmology` object
+  which supplies cosmological informaton. If the ``data_source`` has 
+  cosmological parameters, they will be used, otherwise a 
+  :math:`\Lambda{\rm CDM}` cosmology with the following parameters are assumed: 
+  :math:`H_0` = 71 km/s/Mpc, :math:`\Omega_m` = 0.27, 
+  :math:`\Omega_\Lambda` = 0.73. 
+* ``velocity_fields`` (optional): A list of fields to use for the velocity to
+  Doppler-shift the photons. If not specified, the following will be assumed:   
   ``['velocity_x', 'velocity_y', 'velocity_z']`` for grid datasets, and 
-  ``['particle_velocity_x', 'particle_velocity_y', 'particle_velocity_z']`` for particle datasets.
+  ``['particle_velocity_x', 'particle_velocity_y', 'particle_velocity_z']`` 
+  for particle datasets.
 
-As an example, we'll assume we have created a ``source_model`` representing the thermal emission 
-from the plasma (see :ref:`source-models` for more details on how to create one): 
+As an example, we'll assume we have created a ``source_model`` representing the
+thermal emission from the plasma (see :ref:`source-models` for more details on
+how to create one): 
 
 .. code-block:: python
 

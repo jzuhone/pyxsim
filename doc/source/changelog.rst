@@ -14,6 +14,8 @@ Version 3.0
 * Support for Python 2.7 has been dropped in this version. 
 * The minimum supported yt version is now 4.0.
 * The X-ray binaries source generator has been dropped from pyXSIM.
+* The background and point-source source generators have been removed, as this
+  functionality can now be used within SOXS. 
 
 Version 2.2.0
 -------------

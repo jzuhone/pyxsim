@@ -143,8 +143,8 @@ class EventList(object):
 
     def write_simput_file(self, prefix, overwrite=False, emin=None, emax=None):
         r"""
-        Write events to a SIMPUT file that may be read by the SIMX instrument
-        simulator.
+        Write events to a SIMPUT file that may be utilized by various
+        instrument simulators.
 
         Parameters
         ----------

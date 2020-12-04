@@ -12,9 +12,9 @@ information about how light cones are created and used in yt,
 see `the yt documentation <http://yt-project.org/doc/analyzing/analysis_modules/light_cone_generator.html>`_.
 
 The :class:`~pyxsim.source_generators.light_cone.XrayLightCone` object allows 
-one to make a projected set of X-ray events from a light cone solution, combining 
-yt's light cone machinery with the X-ray photon generation capabilities of 
-pyXSIM. The dataset used in this example is the 
+one to make a projected set of X-ray events from a light cone solution, 
+combining yt's light cone machinery with the X-ray photon generation
+capabilities of pyXSIM. The dataset used in this example is the 
 `Enzo_64 <http://yt-project.org/data/Enzo_64.tar.gz>`_ dataset and can be 
 downloaded from http://yt-project.org/data.
 
@@ -58,8 +58,6 @@ They are:
   invented to allow light cones with thin slices to sample coherent large 
   scale structure, but in practice does not work so well. Try setting this 
   parameter to 1 and see what happens. Default: 0.0.
-* ``output_prefix`` (string): The prefix of all images and data files. 
-  Default: ‘LightCone’.
 
 After the :class:`~pyxsim.source_generators.light_cone.XrayLightCone` has been 
 created, we have to implement a source model to determine how the photons will 
@@ -72,16 +70,16 @@ use the :class:`~pyxsim.source_models.ThermalSourceModel`:
 
 Now, we are ready to generate our simulated events using 
 :meth:`~pyxsim.source_generators.light_cone.XrayLightCone.generate_events`. 
-Since by definition a light cone is a projection, in this case there is no 
-intermediate step of creating a :class:`~pyxsim.photon_list.PhotonList` 
-first--the output is an :class:`~pyxsim.event_list.EventList`. We must 
-specify an exposure time, collecting area, field of view in units of angle, 
-the source model, and the center of the field of view in (RA, Dec). The 
+Since by definition a light cone is a projection, the 
+:class:`~pyxsim.source_generators.light_cone.XrayLightCone` creates both
+photon and event lists together from a single call. We must specify an exposure
+time, collecting area, field of view in units of angle, the source model, and 
+the center of the field of view in (RA, Dec). The 
 :meth:`~pyxsim.source_generators.light_cone.XrayLightCone.generate_events` 
 method also takes a number of the same optional parameters as 
-:class:`~pyxsim.photon_list.PhotonList.project_photons`, so we'll also absorb
-the events with the ``wabs`` model and smooth the positions just a bit for
-visualization purposes.
+:class:`~pyxsim.photon_list.project_photons`, so we'll also absorb the events 
+with the ``wabs`` model and smooth the positions just a bit for visualization 
+purposes.
 
 .. code-block:: python
 
@@ -89,15 +87,18 @@ visualization purposes.
     area = 25000.0 # collecting area in cm**2
     fov = (2.0, "deg") # field of view
     sky_center = (30.0, 45.0) # sky center in degrees
-    events = lc.generate_events(area, exp_time, fov, source_model, 
-                                sky_center, absorb_model="wabs", 
-                                nH=0.02, sigma_pos=0.5)
+    photon_prefix = "enzo_64_photons"
+    event_prefix = "enzo_64_events"
+    lc.generate_events(photon_prefix, event_prefix, area, exp_time,
+                       fov, source_model, sky_center, absorb_model="wabs",
+                       nH=0.02, sigma_pos=0.5)
 
 If we make an image of this :class:`~pyxsim.event_list.EventList`, it looks
 like this:
 
 .. code-block:: python
 
+    events = pyxsim.EventList("enzo_64_events")
     events.write_fits_image("light_cone_img.fits", fov, 1024)
 
 .. image:: _images/light_cone.png

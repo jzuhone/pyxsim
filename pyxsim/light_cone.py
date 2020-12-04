@@ -42,6 +42,15 @@ class XrayLightCone(LightCone):
 
         Parameters
         ----------
+        photon_prefix : string
+            The prefix of the filename(s) containing the photon list. If run in
+            serial, the filename will be "{photon_prefix}.lc{i}.h5", where i
+            iterates over the elements of the light cone solution. If run in
+            parallel, the filenames will be "{photon_prefix}.lc{i}.{mpi_rank}.h5".
+        event_prefix : string
+            The prefix of the filename(s) which will be written to contain the
+            event list. If run in serial, the filename will be "{event_prefix}.h5",
+            if run in parallel, the filename will be "{event_prefix}.{mpi_rank}.h5".
         area : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`
             The collecting area to determine the number of events. If units are
             not specified, it is assumed to be in cm^2.

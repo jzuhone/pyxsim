@@ -99,9 +99,9 @@ def make_photons(photon_prefix, data_source, redshift, area,
     Parameters
     ----------
     photon_prefix : string
-        The prefix of the filename which will be written to contain the photon
-        list. If run in serial, the filename will be "{photon_prefix}.h5", if
-        run in parallel, the filenames will be "{photon_prefix}.{mpi_rank}.h5".
+        The prefix of the filename(s) to contain the photon list. If run in
+        serial, the filename will be "{photon_prefix}.h5", if run in
+        parallel, the filenames will be "{photon_prefix}.{mpi_rank}.h5".
     data_source : :class:`~yt.data_objects.data_containers.YTSelectionContainer`
         The data source from which the photons will be generated.
     redshift : float
@@ -373,11 +373,11 @@ def project_photons(photon_prefix, event_prefix, normal, sky_center,
     Parameters
     ----------
     photon_prefix : string
-        The prefix of the filename containing the photon list. If run in
+        The prefix of the filename(s) containing the photon list. If run in
         serial, the filename will be "{photon_prefix}.h5", if run in
         parallel, the filenames will be "{photon_prefix}.{mpi_rank}.h5".
     event_prefix : string
-        The prefix of the filename which will be written to contain the
+        The prefix of the filename(s) which will be written to contain the
         event list. If run in serial, the filename will be "{event_prefix}.h5",
         if run in parallel, the filename will be "{event_prefix}.{mpi_rank}.h5".
     normal : character or array-like
