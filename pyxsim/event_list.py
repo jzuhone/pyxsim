@@ -138,7 +138,7 @@ class EventList(object):
 
         fits.HDUList(hdulist).writeto(fitsfile, overwrite=overwrite)
 
-    def write_simput_file(self, prefix, overwrite=False, emin=None, emax=None):
+    def write_simput_file(self, prefix, overwrite=False):
         r"""
         Write events to a SIMPUT file that may be utilized by various
         instrument simulators.
@@ -149,20 +149,11 @@ class EventList(object):
             The filename prefix.
         overwrite : boolean, optional
             Set to True to overwrite previous files.
-        e_min : float, optional
-            The minimum energy of the photons to save in keV.
-        e_max : float, optional
-            The maximum energy of the photons to save in keV.
         """
         import unyt as u
 
         mylog.info(f"Writing SIMPUT catalog file {prefix}_simput.fits "
                    f"and SIMPUT photon list file {prefix}_phlist.fits.")
-
-        if emin is None:
-            emin = -1.0
-        if emax is None:
-            emax = 1.0e10
 
         e = []
         x = []
@@ -170,11 +161,9 @@ class EventList(object):
         for fn in self.filenames:
             with h5py.File(fn, "r") as f:
                 d = f["data"]
-                mask = np.logical_and(d["eobs"][:] >= emin,
-                                      d["eobs"][:] <= emax)
-                e.append(d["eobs"][mask])
-                x.append(d["xsky"][mask])
-                y.append(d["ysky"][mask])
+                e.append(d["eobs"][()])
+                x.append(d["xsky"][()])
+                y.append(d["ysky"][()])
 
         e = np.concatenate(e)
         x = np.concatenate(x)
@@ -182,6 +171,8 @@ class EventList(object):
 
         flux = np.sum(e*u.keV).to_value("erg") / \
                self.parameters["exp_time"]/self.parameters["area"]
+
+        print("calling SOXS")
 
         write_photon_list(prefix, prefix, flux, x, y, e,
                           overwrite=overwrite)
