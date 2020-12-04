@@ -9,4 +9,3 @@ pyXSIM API
    source_models
    spectral_models
    source_generators
-   utils

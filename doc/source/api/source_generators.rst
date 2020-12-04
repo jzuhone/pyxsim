@@ -5,10 +5,6 @@ Source Generators API
     :members:
     :undoc-members: 
 
-.. automodule:: pyxsim.source_generators.background
-    :members:
-    :undoc-members: 
-
-.. automodule:: pyxsim.source_generators.point_sources
+.. automodule:: pyxsim.source_generators.grid_source
     :members:
     :undoc-members: 
