@@ -26,7 +26,7 @@ def determine_fields(ds, source_type, point_sources):
     # Figure out if this is a particle field or otherwise
     ptype = (source_type in ds.particle_types) | \
             (source_type in ds.known_filters) | \
-            (source_type == "gas" & isinstance(ds.index, ParticleIndex))
+            ((source_type == "gas") & isinstance(ds.index, ParticleIndex))
     if ptype:
         ppos = [f"particle_position_{ax}" for ax in "xyz"]
         pvel = [f"particle_velocity_{ax}" for ax in "xyz"]

@@ -1,9 +1,6 @@
 from pyxsim.event_list import \
     EventList
 
-from pyxsim.grid_source import \
-    make_grid_source
-
 from pyxsim.photon_list import \
     make_photons, \
     project_photons

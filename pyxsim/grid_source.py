@@ -2,7 +2,7 @@ from yt.utilities.cosmology import Cosmology
 import numpy as np
 from pyxsim.lib.sky_functions import pixel_to_cel
 from pyxsim.utils import parse_value, mylog
-from yt.convenience import load
+from yt.loaders import load
 from yt.data_objects.api import Dataset
 from pyxsim.event_list import EventList
 from pyxsim.photon_list import make_photons, project_photons

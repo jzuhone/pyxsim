@@ -5,7 +5,7 @@ from pyxsim.utils import parse_value
 
 from yt_astro_analysis.cosmological_observation.api import LightCone
 
-from yt.convenience import load
+from yt.loaders import load
 
 from soxs.utils import parse_prng
 
