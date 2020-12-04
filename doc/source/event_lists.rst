@@ -138,10 +138,10 @@ such as `SOXS <http://hea-www.cfa.harvard.edu/soxs>`_,
                              emin=0.1, emax=9.0)
 
 where the first argument is the prefix for the files that will be created (the
-SIMPUT file and a photon list sidecar file), and the other optional arguments 
-control whether or not an existing file will be overwritten and the minimum 
-and maximum energies of the events written to the file. Currently, SIMPUT files
-are used for export only; they cannot be used to read events back into pyXSIM. 
+SIMPUT file and a photon list sidecar file), and the other optional argument 
+controls whether or not an existing file will be overwritten. Currently, SIMPUT
+files are used for export only; they cannot be used to read events back into 
+pyXSIM. 
 
 Images
 ++++++
