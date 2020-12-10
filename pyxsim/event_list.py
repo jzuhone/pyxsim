@@ -7,7 +7,6 @@ from astropy.io import fits
 import astropy.wcs as pywcs
 import h5py
 from pyxsim.utils import parse_value
-from soxs.simput import write_photon_list
 
 
 class EventList(object):
@@ -139,46 +138,49 @@ class EventList(object):
 
         fits.HDUList(hdulist).writeto(fitsfile, overwrite=overwrite)
 
-    def write_simput_file(self, prefix, overwrite=False):
+    def write_to_simput(self, prefix, overwrite=False):
         r"""
-        Write events to a SIMPUT file that may be utilized by various
+        Write events to a SIMPUT catalog that may be utilized by various
         instrument simulators.
 
         Parameters
         ----------
         prefix : string
-            The filename prefix.
+            The filename prefix. The files to be written have the
+            signature:
+            f"{prefix}_simput.fits", f"{prefix}_phlist.fits", etc.
         overwrite : boolean, optional
             Set to True to overwrite previous files.
         """
         import unyt as u
+        from soxs.simput import SimputCatalog, SimputPhotonList
 
-        mylog.info(f"Writing SIMPUT catalog file {prefix}_simput.fits "
-                   f"and SIMPUT photon list file {prefix}_phlist.fits.")
+        simput_file = f"{prefix}_simput.fits"
 
-        e = []
-        x = []
-        y = []
-        for fn in self.filenames:
+        for i, fn in enumerate(self.filenames):
+            if len(self.filenames) == 1:
+                phlist_file = f"{prefix}_phlist.fits"
+                name = prefix
+            else:
+                phlist_file = f"{prefix}_phlist.{i:04d}.fits"
+                name = f"{prefix}.{i:04d}"
             with h5py.File(fn, "r") as f:
                 d = f["data"]
-                e.append(d["eobs"][()])
-                x.append(d["xsky"][()])
-                y.append(d["ysky"][()])
+                flux = np.sum(d["eobs"][()]*u.keV).to_value("erg") / \
+                       self.parameters["exp_time"]/self.parameters["area"]
 
-        e = np.concatenate(e)
-        x = np.concatenate(x)
-        y = np.concatenate(y)
+                src = SimputPhotonList(d["xsky"][()], d["ysky"][()],
+                                       d["eobs"][()], flux, name=name)
 
-        flux = np.sum(e*u.keV).to_value("erg") / \
-               self.parameters["exp_time"]/self.parameters["area"]
+                if i == 0:
+                    cat = SimputCatalog.from_source(simput_file, src,
+                                                    src_filename=phlist_file,
+                                                    overwrite=overwrite)
+                else:
+                    cat.append(src, src_filename=phlist_file,
+                               overwrite=overwrite)
 
-        print("calling SOXS")
-
-        write_photon_list(prefix, prefix, flux, x, y, e,
-                          overwrite=overwrite)
-
-    def write_fits_image(self, imagefile, fov, nx, emin=None, 
+    def write_fits_image(self, imagefile, fov, nx, emin=None,
                          emax=None, overwrite=False):
         r"""
         Generate a image by binning X-ray counts and write it to a FITS file.
