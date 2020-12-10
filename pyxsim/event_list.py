@@ -23,6 +23,7 @@ class EventList(object):
         else:
             raise RuntimeError(f"Invalid EventList file spec: {filespec}")
         self.filenames = filenames
+        self.filenames.sort()
         self.parameters = {}
         self.num_events = []
         for i, fn in enumerate(self.filenames):
