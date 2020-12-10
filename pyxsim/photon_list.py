@@ -163,7 +163,7 @@ def make_photons(photon_prefix, data_source, redshift, area,
         photon_prefix = photon_prefix[:-3]
 
     if comm.size > 1:
-        photon_file = f"{photon_prefix}.{comm.rank}.h5"
+        photon_file = f"{photon_prefix}.{comm.rank:04d}.h5"
     else:
         photon_file = f"{photon_prefix}.h5"
 
@@ -451,8 +451,8 @@ def project_photons(photon_prefix, event_prefix, normal, sky_center,
         z_hat = np.zeros(3)
 
     if comm.size > 1:
-        photon_file = f"{photon_prefix}.{comm.rank}.h5"
-        event_file = f"{event_prefix}.{comm.rank}.h5"
+        photon_file = f"{photon_prefix}.{comm.rank:04d}.h5"
+        event_file = f"{event_prefix}.{comm.rank:04d}.h5"
     else:
         photon_file = f"{photon_prefix}.h5"
         event_file = f"{event_prefix}.h5"
