@@ -43,7 +43,7 @@ def mymodel(pars, x, xhi=None):
 
 @requires_module("sherpa")
 def test_power_law():
-    plaw_fit(1.1, prng=29)
+    plaw_fit(1.1, prng=30)
     plaw_fit(0.8)
     plaw_fit(1.0, prng=23)
 
@@ -60,9 +60,9 @@ def plaw_fit(alpha_sim, prng=None):
         prng = bms.prng
 
     def _hard_emission(field, data):
-        return YTQuantity(1.0e-18, "s**-1*keV**-1")*data["density"]*data["cell_volume"]/mp
+        return data["density"]*data["cell_volume"]*YTQuantity(1.0e-18, "s**-1*keV**-1")/mp
     ds.add_field(("gas", "hard_emission"), function=_hard_emission, 
-                 units="keV**-1*s**-1")
+                 units="keV**-1*s**-1", sampling_type='cell')
 
     nH_sim = 0.02
 
@@ -112,7 +112,7 @@ def plaw_fit(alpha_sim, prng=None):
     fit()
     res = get_fit_results()
 
-    assert np.abs(res.parvals[0]-nH_sim)/nH_sim < 0.1
+    assert np.abs(res.parvals[0]-nH_sim)/nH_sim < 0.2
     assert np.abs(res.parvals[1]-norm_sim)/norm_sim < 0.05
     assert np.abs(res.parvals[2]-alpha_sim)/alpha_sim < 0.05
 
