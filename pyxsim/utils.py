@@ -118,7 +118,7 @@ def merge_files(input_files, output_file, overwrite=False,
         if key.endswith("exp_time"):
             exp_time_key = key
         else:
-            p_out[key] = param.value
+            p_out[key] = param[()]
 
     skip = [exp_time_key] if add_exposure_times else []
     for fn in input_files[1:]:
