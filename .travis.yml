@@ -4,18 +4,18 @@ env:
     global:
         # Set defaults to avoid repeating in most cases
         - NUMPY_VERSION=1.16
-        - ANSWER_VER=pyxsim18
+        - ANSWER_VER=pyxsim19
         - TEST_OPTS="--nologcapture -sv --with-answer-testing --local --local-dir ."
 matrix:
     include:
 
         # Try all python versions with the latest numpy
         - python: 3.6
-          env: CMD="nosetests ${TEST_OPTS} --answer-name=${ANSWER_VER}_3 pyxsim/tests"; PYTHON='python'
+          env: CMD="nosetests ${TEST_OPTS} --answer-name=${ANSWER_VER} pyxsim/tests"; PYTHON='python3'
         - python: 3.7
-          env: CMD="nosetests ${TEST_OPTS} --answer-name=${ANSWER_VER}_3 pyxsim/tests"; PYTHON='python3'
+          env: CMD="nosetests ${TEST_OPTS} --answer-name=${ANSWER_VER} pyxsim/tests"; PYTHON='python3'
         - python: 3.8
-          env: CMD="nosetests ${TEST_OPTS} --answer-name=${ANSWER_VER}_3 pyxsim/tests"; PYTHON='python3'
+          env: CMD="nosetests ${TEST_OPTS} --answer-name=${ANSWER_VER} pyxsim/tests"; PYTHON='python3'
 
 before_install:
 
@@ -25,10 +25,8 @@ before_install:
     - tar -zxvf GasSloshingLowRes.tar.gz
     - wget http://yt-project.org/data/FIRE_M12i_ref11.tar.gz
     - tar -zxvf FIRE_M12i_ref11.tar.gz
-    - wget http://hea-www.cfa.harvard.edu/~jzuhone/${ANSWER_VER}_2.tar.gz
-    - tar -zxvf ${ANSWER_VER}_2.tar.gz		
-    - wget http://hea-www.cfa.harvard.edu/~jzuhone/${ANSWER_VER}_3.tar.gz
-    - tar -zxvf ${ANSWER_VER}_3.tar.gz		
+    - wget http://hea-www.cfa.harvard.edu/~jzuhone/${ANSWER_VER}.tar.gz
+    - tar -zxvf ${ANSWER_VER}.tar.gz		
     - mkdir -p ~/.config/yt
     - printf "[yt]\ntest_data_dir = $PWD" >> $HOME/.config/yt/ytrc
     - wget http://hea-www.cfa.harvard.edu/soxs/soxs_responses.tar.gz
