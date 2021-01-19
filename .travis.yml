@@ -11,7 +11,7 @@ matrix:
 
         # Try all python versions with the latest numpy
         - python: 3.6
-          env: CMD="nosetests ${TEST_OPTS} --answer-name=${ANSWER_VER}_2 pyxsim/tests"; PYTHON='python'
+          env: CMD="nosetests ${TEST_OPTS} --answer-name=${ANSWER_VER}_3 pyxsim/tests"; PYTHON='python'
         - python: 3.7
           env: CMD="nosetests ${TEST_OPTS} --answer-name=${ANSWER_VER}_3 pyxsim/tests"; PYTHON='python3'
         - python: 3.8
