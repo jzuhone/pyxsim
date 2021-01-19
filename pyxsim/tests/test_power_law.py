@@ -24,11 +24,11 @@ def setup():
     ytcfg["yt", "__withintesting"] = "True"
 
 try:
-    make_simple_instrument("chandra_acisi_cy20", "sq_acisi_cy20", 20.0, 2400)
+    make_simple_instrument("chandra_acisi_cy22", "sq_acisi_cy22", 20.0, 2400)
 except KeyError:
     pass
 
-acis_spec = get_instrument_from_registry("sq_acisi_cy20")
+acis_spec = get_instrument_from_registry("sq_acisi_cy22")
 
 rmf = RedistributionMatrixFile(acis_spec["rmf"])
 arf = AuxiliaryResponseFile(acis_spec['arf'])
