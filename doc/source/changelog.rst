@@ -3,6 +3,26 @@
 ChangeLog
 =========
 
+Version 2.3.0
+-------------
+
+This version contains bug fixes and minor enhancements.
+
+* This version supports ``h5py`` 3.x, which deprecated the use of accessing 
+  HDF5 dataset data using the ``.value`` attribute. 
+* This version supports both the ``yt`` 3.x series and the ``yt`` 4.0 beta 
+  version.
+* Previous versions of pyXSIM scaled thermal emission by :math:`n_en_{H+}`, 
+  where :math:`n_{H+}` is the number density of free protons. However, the
+  correct scaling is :math:`n_en_{H}`, where :math:`n_{H}` is the number 
+  density of hydrogen. This has been fixed.
+* A bug which occurred when variable individual elements were used has been
+  fixed.
+* The progress bar now updates correctly for generating sky positions when
+  creating a :class:`~pyxsim.event_list.EventList`. 
+* Some minor speedups have been achieved in the 
+  :class:`~pyxsim.source_models.ThermalSourceModel` class.
+
 Version 2.2.0
 -------------
 

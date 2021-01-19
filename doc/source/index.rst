@@ -60,7 +60,7 @@ pyXSIM is released under a `BSD 3-clause license <https://opensource.org/license
 Current Version
 ---------------
 
-The current stable version is 2.2.0. See the :ref:`changelog` for details on changes from previous
+The current stable version is 2.3.0. See the :ref:`changelog` for details on changes from previous
 versions.
 
 Table of Contents
