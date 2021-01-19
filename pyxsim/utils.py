@@ -73,7 +73,7 @@ def validate_parameters(first, second, skip=[]):
                 v2 = first[k2][()]
             else:
                 v2 = first[k2]
-            if isinstance(v1, string_types) or isinstance(v2, string_types):
+            if isinstance(v1, (string_types, bytes)) or isinstance(v2, (string_types, bytes)):
                 check_equal = v1 == v2
             else:
                 check_equal = np.allclose(np.array(v1), np.array(v2), rtol=0.0, atol=1.0e-10)
