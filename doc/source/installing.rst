@@ -6,15 +6,14 @@ Installing pyXSIM
 Dependencies
 ------------
 
-pyXSIM is compatible with Python 2.7 or 3.5+, and requires the following Python packages:
+pyXSIM is compatible with Python 3.6+, and requires the following Python packages:
 
-- `yt <http://yt-project.org>`_ (version 3.3.5 or higher)
-- `soxs <http://hea-www.cfa.harvard.edu/~jzuhone/soxs>`_ (version 1.2.0 or higher)
+- `yt <http://yt-project.org>`_ (version 3.6.1 or higher)
+- `soxs <http://hea-www.cfa.harvard.edu/~jzuhone/soxs>`_ (version 2.3.0 or higher)
 - `NumPy <http://www.numpy.org>`_
 - `SciPy <http://www.scipy.org>`_
-- `AstroPy <http://www.astropy.org>`_ (version 1.3 or higher)
+- `AstroPy <http://www.astropy.org>`_ (version 3.0 or higher)
 - `h5py <http://www.h5py.org>`_
-- `six <https://pythonhosted.org/six/>`_
 
 pyXSIM also has the following optional dependencies:
 
@@ -30,7 +29,8 @@ you have the `Anaconda Python Distribution <https://store.continuum.io/cshop/ana
 
     [~]$ conda install -c jzuhone -c astropy pyxsim
 
-Note both the ``jzuhone`` and ``astropy`` channels are required.
+Note both the ``jzuhone`` and ``astropy`` channels are required. This will install all of
+the necessary dependencies.
 
 The second way to install pyXSIM is via pip. pip will attempt to download the dependencies and 
 install them, if they are not already installed in your Python distribution:
@@ -42,5 +42,7 @@ install them, if they are not already installed in your Python distribution:
 Alternatively, to install into your Python distribution from `source <http://github.com/jzuhone/pyxsim>`_:
 
 .. code-block:: bash
-
-    [~]$ python setup.py install
+    
+    [~]$ git clone http://github.com/jzuhone/pyxsim
+    [~]$ cd pyxsim
+    [~]$ pip install . 
