@@ -56,6 +56,7 @@ def parse_value(value, default_units, ds=None):
 
 
 def validate_parameters(first, second, skip=[]):
+    from h5py import Dataset
     keys1 = list(first.keys())
     keys2 = list(second.keys())
     keys1.sort()
@@ -64,8 +65,14 @@ def validate_parameters(first, second, skip=[]):
         raise RuntimeError("The two inputs do not have the same parameters!")
     for k1, k2 in zip(keys1, keys2):
         if k1 not in skip:
-            v1 = getattr(first[k1], "value", first[k1])
-            v2 = getattr(second[k2], "value", second[k2])
+            if isinstance(first[k1], Dataset):
+                v1 = first[k1][()]
+            else:
+                v1 = first[k1]
+            if isinstance(first[k2], Dataset):
+                v2 = first[k2][()]
+            else:
+                v2 = first[k2]
             if isinstance(v1, string_types) or isinstance(v2, string_types):
                 check_equal = v1 == v2
             else:
@@ -134,9 +141,9 @@ def merge_files(input_files, output_file, overwrite=False,
     for i, fn in enumerate(input_files):
         f = h5py.File(fn, "r")
         if add_exposure_times:
-            tot_exp_time += f["/parameters"][exp_time_key].value
+            tot_exp_time += f["/parameters"][exp_time_key][()]
         else:
-            tot_exp_time = max(tot_exp_time, f["/parameters"][exp_time_key].value)
+            tot_exp_time = max(tot_exp_time, f["/parameters"][exp_time_key][()])
         for key in f["/data"]:
             data[key].append(f["/data"][key][:])
         f.close()

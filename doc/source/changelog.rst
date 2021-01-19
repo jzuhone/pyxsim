@@ -16,8 +16,8 @@ This version contains bug fixes and minor enhancements.
   where :math:`n_{H+}` is the number density of free protons. However, the
   correct scaling is :math:`n_en_{H}`, where :math:`n_{H}` is the number 
   density of hydrogen. This has been fixed.
-* A bug which occurred when variable individual elements were used has been
-  fixed.
+* A bug which occurred when variable individual elements were used in the
+  :class:`~pyxsim.source_models.ThermalSourceModel` has been fixed.
 * The progress bar now updates correctly for generating sky positions when
   creating a :class:`~pyxsim.event_list.EventList`. 
 * Some minor speedups have been achieved in the 
