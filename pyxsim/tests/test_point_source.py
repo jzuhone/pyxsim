@@ -18,11 +18,11 @@ from soxs.instrument import RedistributionMatrixFile, \
 prng = 49
 
 try:
-    make_simple_instrument("chandra_aciss_cy20", "sq_aciss_cy20", 20.0, 2400)
+    make_simple_instrument("chandra_aciss_cy22", "sq_aciss_cy22", 20.0, 2400)
 except KeyError:
     pass
 
-acis_spec = get_instrument_from_registry("sq_aciss_cy20")
+acis_spec = get_instrument_from_registry("sq_aciss_cy22")
 
 rmf = RedistributionMatrixFile(acis_spec["rmf"])
 arf = AuxiliaryResponseFile(acis_spec['arf'])
@@ -68,7 +68,7 @@ def test_point_source():
     events.write_simput_file("ptsrc", overwrite=True)
 
     instrument_simulator("ptsrc_simput.fits", "ptsrc_evt.fits",
-                         exp_time, "sq_aciss_cy20", [30.0, 45.0],
+                         exp_time, "sq_aciss_cy22", [30.0, 45.0],
                          overwrite=True, foreground=False, ptsrc_bkgnd=False,
                          instr_bkgnd=False,
                          prng=prng)

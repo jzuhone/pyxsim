@@ -6,7 +6,6 @@ from yt.units.yt_array import YTQuantity, uconcatenate
 import numpy as np
 import yt.units as u
 from yt.utilities.physical_constants import clight
-from numpy.random import RandomState
 
 cross_section = 500.0e-22*u.cm**3/u.s
 m_chi = (10.0*u.GeV).to_equivalent("g", "mass_energy")

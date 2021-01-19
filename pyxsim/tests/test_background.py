@@ -22,11 +22,11 @@ def setup():
     ytcfg["yt", "__withintesting"] = "True"
 
 try:
-    make_simple_instrument("chandra_acisi_cy20", "sq_acisi_cy20", 20.0, 2400)
+    make_simple_instrument("chandra_acisi_cy22", "sq_acisi_cy22", 20.0, 2400)
 except KeyError:
     pass
 
-acis_spec = get_instrument_from_registry("sq_acisi_cy20")
+acis_spec = get_instrument_from_registry("sq_acisi_cy22")
 
 rmf = RedistributionMatrixFile(acis_spec["rmf"])
 arf = AuxiliaryResponseFile(acis_spec['arf'])
@@ -66,7 +66,7 @@ def test_background():
     events.write_simput_file("bkgnd", overwrite=True)
 
     instrument_simulator("bkgnd_simput.fits", "bkgnd_evt.fits", 
-                         exp_time, "sq_acisi_cy20", [30.0, 45.0],
+                         exp_time, "sq_acisi_cy22", [30.0, 45.0],
                          overwrite=True, foreground=False, ptsrc_bkgnd=False,
                          instr_bkgnd=False,
                          prng=prng)

@@ -88,7 +88,7 @@ def plaw_fit(alpha_sim, prng=None):
     events.write_simput_file("plaw", overwrite=True)
 
     instrument_simulator("plaw_simput.fits", "plaw_evt.fits",
-                         exp_time, "sq_acisi_cy20", [30.0, 45.0],
+                         exp_time, "sq_acisi_cy22", [30.0, 45.0],
                          overwrite=True, foreground=False, ptsrc_bkgnd=False,
                          instr_bkgnd=False,
                          prng=prng)

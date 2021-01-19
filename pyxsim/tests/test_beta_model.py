@@ -157,7 +157,7 @@ def do_beta_model(source, v_field, em_field, axis="z",
     events.write_simput_file("beta_model", overwrite=True)
 
     instrument_simulator("beta_model_simput.fits", "beta_model_evt.fits",
-                         exp_time, "mucal", [30.0, 45.0],
+                         exp_time, "lynx_lxm", [30.0, 45.0],
                          overwrite=True, foreground=False, ptsrc_bkgnd=False,
                          instr_bkgnd=False, 
                          prng=prng)
@@ -265,6 +265,7 @@ def test_vapec_beta_model():
 
     os.chdir(curdir)
     shutil.rmtree(tmpdir)
+
 
 if __name__ == "__main__":
     test_beta_model_nomove()
