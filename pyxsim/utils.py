@@ -1,5 +1,4 @@
 import numpy as np
-from more_itertools import always_iterable as iterable
 from yt.units.yt_array import YTQuantity
 from six import string_types
 from collections import defaultdict
@@ -48,7 +47,7 @@ def parse_value(value, default_units, ds=None):
         quan = ds.quan
     if isinstance(value, YTQuantity):
         return quan(value.v, value.units).in_units(default_units)
-    elif iterable(value):
+    elif isinstance(value, tuple):
         return quan(value[0], value[1]).in_units(default_units)
     else:
         return quan(value, default_units)
