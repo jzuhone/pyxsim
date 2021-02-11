@@ -4,7 +4,7 @@ Classes for generating lists of photons
 from six import string_types
 from collections import defaultdict
 import numpy as np
-from yt.funcs import iterable, issue_deprecation_warning
+from more_itertools import always_iterable as iterable
 from pyxsim.lib.sky_functions import pixel_to_cel, \
     scatter_events, doppler_shift
 from yt.utilities.physical_constants import clight
@@ -16,7 +16,7 @@ from yt.units.yt_array import YTQuantity, YTArray, uconcatenate
 import h5py
 from pyxsim.spectral_models import absorb_models
 from pyxsim.utils import parse_value, force_unicode, validate_parameters, \
-    key_warning, ParameterDict, mylog
+    key_warning, ParameterDict, mylog, issue_deprecation_warning
 from pyxsim.event_list import EventList
 from soxs.utils import parse_prng
 

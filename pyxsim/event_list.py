@@ -2,8 +2,7 @@
 Classes for generating lists of detected events
 """
 import numpy as np
-from yt.funcs import issue_deprecation_warning
-from pyxsim.utils import mylog
+from pyxsim.utils import mylog, issue_deprecation_warning
 from yt.units.yt_array import YTQuantity, YTArray, uconcatenate
 import astropy.io.fits as pyfits
 import astropy.wcs as pywcs

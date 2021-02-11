@@ -1,33 +1,32 @@
 import numpy as np
-from yt.funcs import iterable
+from more_itertools import always_iterable as iterable
 from yt.units.yt_array import YTQuantity
 from six import string_types
 from collections import defaultdict
 import h5py
 import os
-import sys
-from yt.config import ytcfg
 from astropy.units import Quantity
 import logging
 
+try:
+    # yt 3.x
+    from yt.funcs import issue_deprecation_warning
+except ImportError:
+    # yt 4.x
+    from yt._maintenance.deprecation import issue_deprecation_warning
+
 pyxsimLogger = logging.getLogger("pyxsim")
 
-if ytcfg.getboolean("yt", "stdoutStreamLogging"):
-    stream = sys.stdout
-else:
-    stream = sys.stderr
-
-level = min(max(ytcfg.getint("yt", "loglevel"), 0), 50)
 ufstring = "%(name)-3s : [%(levelname)-9s] %(asctime)s %(message)s"
 cfstring = "%(name)-3s : [%(levelname)-18s] %(asctime)s %(message)s"
 
-pyxsim_sh = logging.StreamHandler(stream=stream)
+pyxsim_sh = logging.StreamHandler()
 # create formatter and add it to the handlers
 formatter = logging.Formatter(ufstring)
 pyxsim_sh.setFormatter(formatter)
 # add the handler to the logger
 pyxsimLogger.addHandler(pyxsim_sh)
-pyxsimLogger.setLevel(level)
+pyxsimLogger.setLevel('INFO')
 pyxsimLogger.propagate = False
 
 mylog = pyxsimLogger
