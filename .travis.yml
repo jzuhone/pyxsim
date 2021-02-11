@@ -16,8 +16,6 @@ matrix:
           env: CMD="nosetests ${TEST_OPTS} --answer-name=${ANSWER_VER} pyxsim/tests"; PYTHON='python3'
         - python: 3.8
           env: CMD="nosetests ${TEST_OPTS} --answer-name=${ANSWER_VER} pyxsim/tests"; PYTHON='python3'
-        - python: 3.9
-          env: NUMPY_VERSION=1.19; CMD="nosetests ${TEST_OPTS} --answer-name=${ANSWER_VER} pyxsim/tests"; PYTHON='python3'
 
 before_install:
 
