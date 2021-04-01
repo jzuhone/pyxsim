@@ -12,11 +12,6 @@ external packages. The supported software packages are:
 * `SIXTE <http://https://www.sternwarte.uni-erlangen.de/research/sixte/>`_
 * `SOXS <http://hea-www.cfa.harvard.edu/~jzuhone/soxs>`_
 
-.. note::
-
-    The old built-in instrument models have been deprecated in favor of 
-    exporting to one of these packages.
-
 MARX
 ----
 
@@ -118,14 +113,14 @@ pyXSIM:
 
 .. code-block:: python
 
-    from soxs import instrument_simulator
+    import soxs
     simput_file = "snr_simput.fits" # SIMPUT file to be read
     out_file = "evt_mucal.fits" # event file to be written
     exp_time = 30000. # The exposure time in seconds
     instrument = "mucal" # short name for instrument to be used
     sky_center = [30., 45.] # RA, Dec of pointing in degrees
-    instrument_simulator(simput_file, out_file, exp_time, instrument,
-                         sky_center, overwrite=True)
+    soxs.instrument_simulator(simput_file, out_file, exp_time, instrument,
+                              sky_center, overwrite=True)
 
 Refer to the relevant documentation for all of those packages for more details,
 as well as the :ref:`simput` section of the :class:`~pyxsim.event_list.EventList`

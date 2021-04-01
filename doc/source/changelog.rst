@@ -3,9 +3,11 @@
 ChangeLog
 =========
 
-Version 3.0
------------
+Version 3.0.0
+-------------
 
+* A brand-new paradigm for generating photon lists and event lists has been
+  
 * Support for Python 2.7 has been dropped in this version. 
 * The minimum supported yt version is now 4.0.
 * The X-ray binaries source generator has been dropped from pyXSIM.
