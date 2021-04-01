@@ -96,7 +96,7 @@ def plaw_fit(alpha_sim, prng=None):
 
     events = EventList("plaw_events.h5")
 
-    events.write_simput_file("plaw", overwrite=True)
+    events.write_to_simput("plaw", overwrite=True)
 
     instrument_simulator("plaw_simput.fits", "plaw_evt.fits",
                          exp_time, "sq_acisi_cy0", [30.0, 45.0],
@@ -123,7 +123,7 @@ def plaw_fit(alpha_sim, prng=None):
     fit()
     res = get_fit_results()
 
-    assert np.abs(res.parvals[0]-nH_sim)/nH_sim < 0.1
+    assert np.abs(res.parvals[0]-nH_sim)/nH_sim < 0.2
     assert np.abs(res.parvals[1]-norm_sim)/norm_sim < 0.05
     assert np.abs(res.parvals[2]-alpha_sim)/alpha_sim < 0.05
 

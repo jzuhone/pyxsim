@@ -2,7 +2,7 @@
 Classes for generating lists of photons
 """
 import numpy as np
-from yt.funcs import iterable, get_pbar, ensure_numpy_array
+from yt.funcs import get_pbar
 from pyxsim.lib.sky_functions import pixel_to_cel, \
     scatter_events, doppler_shift
 from yt.utilities.physical_constants import clight
@@ -14,7 +14,7 @@ from yt.units.yt_array import YTArray
 import h5py
 from pyxsim.spectral_models import absorb_models
 from pyxsim.utils import parse_value, mylog
-from soxs.utils import parse_prng
+from soxs.utils import parse_prng, iterable
 
 comm = communication_system.communicators[-1]
 

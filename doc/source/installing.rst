@@ -32,7 +32,8 @@ conda package if you have the
 
     [~]$ conda install -c jzuhone -c astropy pyxsim
 
-Note both the ``jzuhone`` and ``astropy`` channels are required.
+Note both the ``jzuhone`` and ``astropy`` channels are required. This will install all of
+the necessary dependencies.
 
 The second way to install pyXSIM is via pip. pip will attempt to download the 
 dependencies and install them, if they are not already installed in your Python
@@ -46,5 +47,7 @@ Alternatively, to install into your Python distribution from
 `source <http://github.com/jzuhone/pyxsim>`_:
 
 .. code-block:: bash
-
-    [~]$ python setup.py install
+    
+    [~]$ git clone http://github.com/jzuhone/pyxsim
+    [~]$ cd pyxsim
+    [~]$ pip install . 

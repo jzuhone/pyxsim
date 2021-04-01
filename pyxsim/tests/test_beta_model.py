@@ -150,7 +150,7 @@ def do_beta_model(source, axis="z", prng=None):
 
     events = EventList("my_events.h5")
 
-    events.write_simput_file("beta_model", overwrite=True)
+    events.write_to_simput("beta_model", overwrite=True)
 
     instrument_simulator("beta_model_simput.fits", "beta_model_evt.fits",
                          exp_time, "lynx_lxm", [30.0, 45.0],
@@ -236,7 +236,7 @@ def test_vapec_beta_model():
 
     events = EventList("my_events.h5")
 
-    events.write_simput_file("vbeta_model", overwrite=True)
+    events.write_to_simput("vbeta_model", overwrite=True)
 
     instrument_simulator("vbeta_model_simput.fits", "vbeta_model_evt.fits",
                          exp_time, "lynx_lxm", [30.0, 45.0],

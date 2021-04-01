@@ -4,9 +4,11 @@ from yt.utilities.answer_testing.framework import \
 from yt.testing import requires_module, fake_random_ds
 from numpy.testing import assert_allclose
 
+
 def setup():
     from yt.config import ytcfg
     ytcfg["yt", "__withintesting"] = "True"
+
 
 ds = fake_random_ds(64)
 @requires_module("astropy")

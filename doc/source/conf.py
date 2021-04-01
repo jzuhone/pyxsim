@@ -71,7 +71,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'pyXSIM'
-copyright = '2018, John ZuHone'
+copyright = '2021, John ZuHone'
 author = 'John ZuHone'
 
 # The version info for the project you're documenting, acts as replacement for
