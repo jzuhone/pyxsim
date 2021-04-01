@@ -75,14 +75,15 @@ Table of Contents
    :maxdepth: 2
 
    installing
+   v2_to_v3
    how_it_works
    basic_yt_concepts
    photon_lists
    source_models
    absorb_models    
    event_lists
+   light_cone
    instruments
-   source_generators
    parallel
    getting_help
    cookbook/index
