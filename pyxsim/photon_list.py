@@ -14,7 +14,7 @@ from yt.units.yt_array import YTArray
 import h5py
 from pyxsim.spectral_models import absorb_models
 from pyxsim.utils import parse_value, mylog
-from soxs.utils import parse_prng, iterable
+from soxs.utils import parse_prng
 
 comm = communication_system.communicators[-1]
 
@@ -195,18 +195,17 @@ def make_photons(photon_prefix, data_source, redshift, area,
             parameters["center"] = ds.domain_center
         elif center == "max" or center == "m":
             parameters["center"] = ds.find_max("density")[-1]
-    elif iterable(center):
-        if isinstance(center, YTArray):
-            parameters["center"] = center.in_units("code_length")
-        elif isinstance(center, tuple):
-            if center[0] == "min":
-                parameters["center"] = ds.find_min(center[1])[-1]
-            elif center[0] == "max":
-                parameters["center"] = ds.find_max(center[1])[-1]
-            else:
-                raise RuntimeError
+    elif isinstance(center, YTArray):
+        parameters["center"] = center.in_units("code_length")
+    elif isinstance(center, tuple):
+        if center[0] == "min":
+            parameters["center"] = ds.find_min(center[1])[-1]
+        elif center[0] == "max":
+            parameters["center"] = ds.find_max(center[1])[-1]
         else:
-            parameters["center"] = ds.arr(center, "code_length")
+            raise RuntimeError
+    elif isinstance(center, (list, np.ndarray)):
+        parameters["center"] = ds.arr(center, "code_length")
     elif center is None:
         if hasattr(data_source, "left_edge"):
             parameters["center"] = 0.5*(data_source.left_edge + 
