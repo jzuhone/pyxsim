@@ -3,7 +3,7 @@ language: python
 env:
     global:
         # Set defaults to avoid repeating in most cases
-        - NUMPY_VERSION=1.16
+        - NUMPY_VERSION=1.18
         - ANSWER_VER=pyxsim20
         - TEST_OPTS="--nologcapture -sv --with-answer-testing --local --local-dir ."
 
