@@ -430,6 +430,7 @@ def project_photons(photon_prefix, event_prefix, normal, sky_center,
     ...                                   [30., 45.], absorb_model='tbabs',
     ...                                   nH=0.04)
     """
+    from yt.funcs import ensure_numpy_array
     prng = parse_prng(prng)
 
     if photon_prefix.endswith(".h5"):
@@ -477,7 +478,7 @@ def project_photons(photon_prefix, event_prefix, normal, sky_center,
 
     p = f["parameters"]
 
-    data_type = p["data_type"][()]
+    data_type = p["data_type"].asstr()[()]
 
     if sigma_pos is not None and data_type == "particles":
         raise RuntimeError("The 'smooth_positions' argument should "
