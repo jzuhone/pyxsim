@@ -157,6 +157,7 @@ class EventList(object):
 
         simput_file = f"{prefix}_simput.fits"
 
+        begin_cat = True
         for i, fn in enumerate(self.filenames):
             if len(self.filenames) == 1:
                 phlist_file = f"{prefix}_phlist.fits"
@@ -166,19 +167,23 @@ class EventList(object):
                 name = f"{prefix}.{i:04d}"
             with h5py.File(fn, "r") as f:
                 d = f["data"]
-                flux = np.sum(d["eobs"][()]*u.keV).to_value("erg") / \
-                       self.parameters["exp_time"]/self.parameters["area"]
+                if d["eobs"].shape[0] > 0:
+                    flux = np.sum(d["eobs"][()]*u.keV).to_value("erg") / \
+                           self.parameters["exp_time"]/self.parameters["area"]
 
-                src = SimputPhotonList(d["xsky"][()], d["ysky"][()],
-                                       d["eobs"][()], flux, name=name)
+                    src = SimputPhotonList(d["xsky"][()], d["ysky"][()],
+                                           d["eobs"][()], flux, name=name)
 
-                if i == 0:
-                    cat = SimputCatalog.from_source(simput_file, src,
-                                                    src_filename=phlist_file,
-                                                    overwrite=overwrite)
+                    if begin_cat:
+                        cat = SimputCatalog.from_source(simput_file, src,
+                                                        src_filename=phlist_file,
+                                                        overwrite=overwrite)
+                        begin_cat = False
+                    else:
+                        cat.append(src, src_filename=phlist_file,
+                                   overwrite=overwrite)
                 else:
-                    cat.append(src, src_filename=phlist_file,
-                               overwrite=overwrite)
+                    mylog.warning(f"No events found in file {fn}, so skipping.")
 
     def write_fits_image(self, imagefile, fov, nx, emin=None,
                          emax=None, overwrite=False):
