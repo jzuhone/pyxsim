@@ -8,7 +8,6 @@ from pyxsim import \
     project_photons, EventList
 from pyxsim.tests.utils import \
     BetaModelSource, ParticleBetaModelSource
-from yt.testing import requires_module
 import numpy as np
 from yt.utilities.physical_constants import clight
 import os
@@ -60,37 +59,31 @@ def mymodel_var(pars, x, xhi=None):
     return tbabs*bapec[eidxs]
 
 
-@requires_module("sherpa")
 def test_beta_model():
     bms = BetaModelSource()
     do_beta_model(bms)
 
 
-@requires_module("sherpa")
 def test_beta_model_nomove():
     bms = BetaModelSource()
     do_beta_model(bms, axis="x", prng=89)
 
 
-@requires_module("sherpa")
 def test_beta_model_offaxis():
     bms = BetaModelSource()
     do_beta_model(bms, axis=[1.0, -2.0, 5.0], prng=78)
 
 
-@requires_module("sherpa")
 def test_particle_beta_model():
     bms = ParticleBetaModelSource()
     do_beta_model(bms, prng=29)
 
 
-@requires_module("sherpa")
 def test_particle_beta_model_nomove():
     bms = ParticleBetaModelSource()
     do_beta_model(bms, axis="x", prng=72)
 
 
-@requires_module("sherpa")
 def test_particle_beta_model_offaxis():
     bms = ParticleBetaModelSource()
     do_beta_model(bms, prng=67, axis=[1.0, -2.0, 5.0])

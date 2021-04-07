@@ -16,7 +16,6 @@ import yt
 gslr = "GasSloshingLowRes/sloshing_low_res_hdf5_plt_cnt_0300"
 
 
-
 def test_sloshing(answer_store, answer_dir):
 
     tmpdir = tempfile.mkdtemp()

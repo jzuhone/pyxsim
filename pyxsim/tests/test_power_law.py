@@ -5,7 +5,6 @@ from pyxsim.tests.utils import \
     BetaModelSource
 from yt.units.yt_array import YTQuantity
 import numpy as np
-from yt.testing import requires_module
 import os
 import shutil
 import tempfile
@@ -19,11 +18,6 @@ from soxs.instrument import RedistributionMatrixFile, \
 from soxs.events import write_spectrum
 from soxs.instrument_registry import get_instrument_from_registry, \
     make_simple_instrument
-
-
-def setup():
-    from yt.config import ytcfg
-    ytcfg["yt", "__withintesting"] = "True"
 
 
 try:
@@ -46,7 +40,6 @@ def mymodel(pars, x, xhi=None):
     return wabs*plaw
 
 
-@requires_module("sherpa")
 def test_power_law():
     plaw_fit(1.1, prng=33)
     plaw_fit(0.8, prng=28)

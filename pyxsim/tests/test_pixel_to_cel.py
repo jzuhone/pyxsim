@@ -5,6 +5,7 @@ from numpy.random import RandomState
 from pyxsim.lib.sky_functions import pixel_to_cel
 from numpy.testing import assert_allclose
 
+
 def test_pixel_to_cel():
 
     prng = RandomState(24)
