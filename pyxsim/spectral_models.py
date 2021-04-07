@@ -83,12 +83,14 @@ class TableApecModel(ApecGenerator):
                                              abund_table=abund_table, nei=nei)
         self.nchan = self.nbins
 
-    def prepare_spectrum(self, zobs):
+    def prepare_spectrum(self, zobs, kT_min, kT_max):
         """
         Prepare the thermal model for execution given a redshift *zobs* for the spectrum.
         """
+        idx_min = min(np.searchsorted(self.Tvals, kT_min)-1, 0)
+        idx_max = max(np.searchsorted(self.Tvals, kT_max), self.nT-1)
         cosmic_spec, metal_spec, var_spec = \
-            self._get_table(list(range(self.nT)), zobs, 0.0)
+            self._get_table(list(range(idx_min, idx_max+1)), zobs, 0.0)
         self.cosmic_spec = YTArray(cosmic_spec, "cm**3/s")
         self.metal_spec = YTArray(metal_spec, "cm**3/s")
         if var_spec is None:

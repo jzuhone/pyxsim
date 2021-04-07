@@ -254,7 +254,8 @@ class ThermalSourceModel(SourceModel):
             self.temperature_field = (ftype, 'temperature')
         mylog.info(f"Using temperature field "
                    f"'{self.temperature_field}'.")
-        self.spectral_model.prepare_spectrum(redshift)
+        self.spectral_model.prepare_spectrum(redshift, self.kT_min,
+                                             self.kT_max)
         self.spectral_norm = spectral_norm
         if self.kT_scale == "linear":
             self.kT_bins = np.linspace(self.kT_min, self.kT_max, 
