@@ -208,14 +208,14 @@ class EventList(object):
         if emax is None:
             emax = 1.0e10
 
-        dtheta = fov.to_value("deg").v/nx
+        dtheta = fov.to_value("deg")/nx
 
         xbins = np.linspace(0.5, float(nx)+0.5, nx+1, endpoint=True)
         ybins = np.linspace(0.5, float(nx)+0.5, nx+1, endpoint=True)
 
         wcs = pywcs.WCS(naxis=2)
         wcs.wcs.crpix = [0.5*(nx+1)]*2
-        wcs.wcs.crval = self.parameters["sky_center"].d
+        wcs.wcs.crval = self.parameters["sky_center"]
         wcs.wcs.cdelt = [-dtheta, dtheta]
         wcs.wcs.ctype = ["RA---TAN","DEC--TAN"]
         wcs.wcs.cunit = ["deg"]*2
