@@ -3,7 +3,6 @@ language: python
 env:
     global:
         # Set defaults to avoid repeating in most cases
-        - NUMPY_VERSION=1.18
         - ANSWER_VER=pyxsim20
 
 matrix:
@@ -55,7 +54,7 @@ install:
     # CORE DEPENDENCIES
     - conda config --add channels https://conda.anaconda.org/sherpa
     - conda config --add channels conda-forge
-    - conda install --yes numpy=$NUMPY_VERSION pytest pip h5py astropy sherpa cython scipy
+    - conda install --yes numpy pytest pip h5py astropy sherpa cython scipy
     - git clone --branch=main https://github.com/yt-project/yt $YT_DIR
     - pushd $YT_DIR
     - pip install -e .
