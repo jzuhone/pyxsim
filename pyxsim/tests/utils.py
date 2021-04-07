@@ -23,7 +23,7 @@ r_s = 0.350 # Mpc
 rho_s = 9.0e-26 # g/cm**3
 
 
-class BetaModelSource(object):
+class BetaModelSource:
     def __init__(self):
 
         self.prng = RandomState(32)
@@ -68,7 +68,7 @@ class BetaModelSource(object):
                                     nprocs=64, bbox=bbox)
 
 
-class ParticleBetaModelSource(object):
+class ParticleBetaModelSource:
     def __init__(self):
 
         self.prng = RandomState(35)

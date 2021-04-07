@@ -7,12 +7,6 @@ from soxs.spectra import ApecGenerator, \
     get_wabs_absorb, get_tbabs_absorb
 from soxs.utils import parse_prng
 from yt.units.yt_array import YTArray, YTQuantity
-from yt.utilities.physical_constants import hcgs, clight
-
-hc = (hcgs*clight).in_units("keV*angstrom").v
-# NOTE: XSPEC has hc = 12.39854 keV*A, so there may be slight differences in
-# placement of spectral lines due to the above
-cl = clight.v
 
 
 class TableApecModel(ApecGenerator):
@@ -154,7 +148,7 @@ class TableApecModel(ApecGenerator):
 thermal_models = {"apec": TableApecModel}
 
 
-class AbsorptionModel(object):
+class AbsorptionModel:
     _name = ""
 
     def __init__(self, nH, energy, cross_section):
