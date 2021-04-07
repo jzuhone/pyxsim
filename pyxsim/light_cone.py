@@ -103,8 +103,8 @@ class XrayLightCone(LightCone):
         aw = parse_value(angular_width, "deg")
 
         for i, output in enumerate(self.light_cone_solution):
-            dw = ds.domain_width
             ds = load(output["filename"])
+            dw = ds.domain_width
             ax = output["projection_axis"]
             c = output["projection_center"]*dw + ds.domain_left_edge
             le = c.copy()
