@@ -1,7 +1,7 @@
 import numpy as np
 from yt.utilities.physical_ratios import \
     K_per_keV, mass_hydrogen_grams, cm_per_mpc
-from yt.frontends.stream.api import \
+from yt.loaders import \
     load_uniform_grid, load_particles
 from numpy.random import RandomState
 from soxs.tests.utils import file_answer_testing

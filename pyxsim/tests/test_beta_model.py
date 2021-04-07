@@ -20,19 +20,17 @@ from sherpa.astro.ui import load_user_model, add_user_pars, \
 from soxs.instrument import RedistributionMatrixFile, \
     AuxiliaryResponseFile, instrument_simulator
 from soxs.events import write_spectrum
-from soxs.instrument_registry import get_instrument_from_registry
+from soxs.instrument_registry import get_instrument_from_registry, \
+    make_simple_instrument
 from yt.utilities.cosmology import Cosmology
 
 cosmo = Cosmology()
 
 ckms = clight.in_units("km/s").v
 
-def setup():
-    from yt.config import ytcfg
-    ytcfg["yt", "__withintesting"] = "True"
-
 try:
     mucal_spec = get_instrument_from_registry("lynx_lxm")
+    make_simple_instrument("lynx_lxm", "lynx_lxm_big", 20.0, 1200)
 except KeyError:
     pass
 
@@ -153,7 +151,7 @@ def do_beta_model(source, axis="z", prng=None):
     events.write_to_simput("beta_model", overwrite=True)
 
     instrument_simulator("beta_model_simput.fits", "beta_model_evt.fits",
-                         exp_time, "lynx_lxm", [30.0, 45.0],
+                         exp_time, "lynx_lxm_big", [30.0, 45.0],
                          overwrite=True, foreground=False, ptsrc_bkgnd=False,
                          instr_bkgnd=False, 
                          prng=prng)
@@ -182,7 +180,7 @@ def do_beta_model(source, axis="z", prng=None):
     assert np.abs(res.parvals[0]-kT_sim)/kT_sim < 0.05
     assert np.abs(res.parvals[1]-Z_sim)/Z_sim < 0.05
     assert np.abs(res.parvals[2]-redshift_sim)/redshift_sim < 0.05
-    assert np.abs(res.parvals[3]-norm_sim) < 0.05
+    assert np.abs(res.parvals[3]-norm_sim)/norm_sim < 0.05
     assert np.abs(res.parvals[4]-sigma_sim) < 30.0
 
     os.chdir(curdir)
@@ -239,7 +237,7 @@ def test_vapec_beta_model():
     events.write_to_simput("vbeta_model", overwrite=True)
 
     instrument_simulator("vbeta_model_simput.fits", "vbeta_model_evt.fits",
-                         exp_time, "lynx_lxm", [30.0, 45.0],
+                         exp_time, "lynx_lxm_big", [30.0, 45.0],
                          overwrite=True, foreground=False, ptsrc_bkgnd=False,
                          instr_bkgnd=False,
                          prng=prng)
@@ -266,7 +264,7 @@ def test_vapec_beta_model():
     assert np.abs(res.parvals[0]-kT_sim)/kT_sim < 0.05
     assert np.abs(res.parvals[1]-norm_sim)/norm_sim < 0.05
     assert np.abs(res.parvals[2]-O_sim)/O_sim < 0.05
-    assert np.abs(res.parvals[3]-Ca_sim)/Ca_sim < 0.15
+    assert np.abs(res.parvals[3]-Ca_sim)/Ca_sim < 0.05
 
     os.chdir(curdir)
     shutil.rmtree(tmpdir)

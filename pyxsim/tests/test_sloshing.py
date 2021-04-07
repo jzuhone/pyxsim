@@ -7,23 +7,16 @@ from pyxsim import \
     EventList, make_photons, \
     project_photons
 from pyxsim.tests.utils import hdf5_answer_testing, file_answer_testing
-from yt.utilities.answer_testing.framework import requires_ds, \
-    data_dir_load
 from numpy.random import RandomState
 import os
 import tempfile
 import shutil
-
-
-def setup():
-    from yt.config import ytcfg
-    ytcfg["yt", "__withintesting"] = "True"
-
+import yt
 
 gslr = "GasSloshingLowRes/sloshing_low_res_hdf5_plt_cnt_0300"
 
 
-@requires_ds(gslr)
+
 def test_sloshing(answer_store, answer_dir):
 
     tmpdir = tempfile.mkdtemp()
@@ -32,12 +25,12 @@ def test_sloshing(answer_store, answer_dir):
 
     prng = RandomState(0x4d3d3d3)
 
-    ds = data_dir_load(gslr)
+    ds = yt.load(gslr)
     A = 2000.
     exp_time = 1.0e4
     redshift = 0.1
 
-    sphere = ds.sphere("c", (0.1, "Mpc"))
+    sphere = ds.sphere("c", (0.5, "Mpc"))
     sphere.set_field_parameter("X_H", 0.75)
 
     thermal_model = ThermalSourceModel("apec", 0.1, 11.0, 10000, Zmet=0.3,
@@ -55,8 +48,7 @@ def test_sloshing(answer_store, answer_dir):
 
     events1 = EventList("events1.h5")
 
-    events1.write_fits_file("test_events.fits", (20.0, "arcmin"), 1024,
-                            emin=0.5, emax=7.0)
+    events1.write_fits_file("test_events.fits", (20.0, "arcmin"), 1024)
     events1.write_spectrum("test_spec.fits", 0.2, 10.0, 2000)
     events1.write_fits_image("test_img.fits", (20.0, "arcmin"), 1024)
 
