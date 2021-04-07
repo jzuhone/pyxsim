@@ -9,9 +9,20 @@ import h5py
 from pyxsim.utils import parse_value
 
 
-class EventList(object):
+class EventList:
 
     def __init__(self, filespec):
+        """
+        Read an EventList from disk so it can be exported to 
+        other formats.
+
+        Parameters
+        ----------
+        filespec : str
+            A filename, list of filenames, or globbable path
+            that yields a single or list of HDF5 files containing
+            event data. 
+        """
         from glob import glob
         if filespec.endswith(".h5"):
             filenames = glob(filespec)
