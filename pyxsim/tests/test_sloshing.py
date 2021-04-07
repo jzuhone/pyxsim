@@ -8,19 +8,12 @@ from pyxsim import \
     project_photons
 from pyxsim.tests.utils import hdf5_answer_testing, file_answer_testing
 from numpy.random import RandomState
-import os
-import tempfile
-import shutil
 import yt
 
 gslr = "GasSloshingLowRes/sloshing_low_res_hdf5_plt_cnt_0300"
 
 
 def test_sloshing(answer_store, answer_dir):
-
-    tmpdir = tempfile.mkdtemp()
-    curdir = os.getcwd()
-    os.chdir(tmpdir)
 
     prng = RandomState(0x4d3d3d3)
 
@@ -56,5 +49,3 @@ def test_sloshing(answer_store, answer_dir):
     file_answer_testing("SPECTRUM", "test_spec.fits", answer_store,
                         answer_dir)
 
-    os.chdir(curdir)
-    shutil.rmtree(tmpdir)
