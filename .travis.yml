@@ -5,16 +5,15 @@ env:
         # Set defaults to avoid repeating in most cases
         - NUMPY_VERSION=1.18
         - ANSWER_VER=pyxsim20
-        - TEST_OPTS="--nologcapture -sv --with-answer-testing --local --local-dir ."
 
 matrix:
     include:
 
         # Try all python versions with the latest numpy
         - python: 3.7
-          env: CMD="nosetests ${TEST_OPTS} --answer-name=${ANSWER_VER} pyxsim/tests"; PYTHON='python3'
+          env: CMD="py.test pyxsim/tests --answer_dir=$PWD/$ANSWER_VER"; PYTHON='python3'
         - python: 3.8
-          env: CMD="nosetests ${TEST_OPTS} --answer-name=${ANSWER_VER} pyxsim/tests"; PYTHON='python3'
+          env: CMD="py.test pyxsim/tests --answer_dir=$PWD/$ANSWER_VER"; PYTHON='python3'
 
 before_install:
 
@@ -56,7 +55,7 @@ install:
     # CORE DEPENDENCIES
     - conda config --add channels https://conda.anaconda.org/sherpa
     - conda config --add channels conda-forge
-    - conda install --yes numpy=$NUMPY_VERSION nose pip h5py astropy sherpa cython scipy
+    - conda install --yes numpy=$NUMPY_VERSION pytest pip h5py astropy sherpa cython scipy
     - git clone --branch=main https://github.com/yt-project/yt $YT_DIR
     - pushd $YT_DIR
     - pip install -e .
