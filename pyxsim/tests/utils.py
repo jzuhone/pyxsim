@@ -120,8 +120,8 @@ def hdf5_answer_testing(filename, answer_store, answer_dir):
     if answer_store:
         shutil.copy(filename, answer_dir)
     else:
-        f_old = h5py.open(oldf, "r")
-        f_new = h5py.open(filename, "r")
+        f_old = h5py.File(oldf, "r")
+        f_new = h5py.File(filename, "r")
         p_old = f_old["parameters"]
         p_new = f_new["parameters"]
         d_old = f_old["data"]
