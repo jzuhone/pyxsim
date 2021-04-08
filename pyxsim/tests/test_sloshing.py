@@ -25,7 +25,7 @@ def test_sloshing(answer_store, answer_dir):
     sphere = ds.sphere("c", (0.5, "Mpc"))
     sphere.set_field_parameter("X_H", 0.75)
 
-    thermal_model = ThermalSourceModel("apec", 0.1, 11.0, 10000, Zmet=0.3,
+    thermal_model = ThermalSourceModel("apec", 0.1, 11.0, 10000, 0.3,
                                        thermal_broad=False, prng=prng)
     n_photons1, n_cells1 = make_photons("photons1", sphere, redshift, A, 
                                         exp_time, thermal_model)

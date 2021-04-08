@@ -41,12 +41,14 @@ object requires the following arguments:
 * ``nchan``: The number of channels in the spectrum. If one is thermally 
   broadening lines (the default), it is recommended that this number create an 
   energy resolution per channel of roughly 1 eV.
+* ``Zmet``: The metallicity. Either a floating-point number for a constant
+  metallicity, or the name of a yt field for a spatially-varying metallicity.
 
 So creating a default instance is rather simple:
 
 .. code-block:: python
 
-    thermal_model = pyxsim.ThermalSourceModel("apec", 0.1, 11.0, 10000)
+    thermal_model = pyxsim.ThermalSourceModel("apec", 0.1, 11.0, 10000, 0.3)
 
 However, this model is very customizable. There are a number of other optional 
 parameters which can be set:
@@ -64,15 +66,12 @@ parameters which can be set:
   ``("PartType0", "NeutralHydrogenAbundance")`` to construct the electron and
   hydrogen ion number densities if they are present in the dataset.
 * ``kT_min``: The minimum temperature in units of keV in the set of temperature
-  bins. Default is 0.008.
+  bins. Default is 0.025.
 * ``kT_max``: The maximum temperature in units of keV in the set of temperature
   bins. Default is 64.0.
 * ``n_kT``: The number of temperature bins to use. Default is 10000.
 * ``kT_scale``: The scaling of the temperature bins, either "linear" or "log".
   Default: "linear"
-* ``Zmet``: The metallicity. Either a floating-point number for a constant
-  metallicity, or the name of 
-  a yt field for a spatially-varying metallicity. Default is 0.3.
 * ``method``: The method used to generate the photon energies from the spectrum.
   Either ``"invert_cdf"``,
   which inverts the cumulative distribution function of the spectrum, or 
@@ -145,6 +144,7 @@ The Solar abundance table can be changed like this:
 .. code-block:: python
 
     thermal_model = pyxsim.ThermalSourceModel("apec", 0.1, 20.0, 10000, 
+                                              ("gas","metallicity"),
                                               prng=25, abund_table='lodd')
 
 Alternatively, one can supply their own abundance table by providing a NumPy 
@@ -186,14 +186,14 @@ number or field name:
     # Setting abundances by yt field names
     Zmet = ("gas", "metallicity")
     var_elem = {"O": "oxygen", "Ca": "calcium"} 
-    source_model = pyxsim.ThermalSourceModel(0.05, 50.0, 10000, Zmet=Zmet, var_elem=var_elem)
+    source_model = pyxsim.ThermalSourceModel(0.05, 50.0, 10000, Zmet, var_elem=var_elem)
     
 .. code-block:: python
 
     # Setting abundances by numbers
     Zmet = 0.3
     var_elem = {"O": 0.4, "Ca": 0.5} 
-    source_model = pyxsim.ThermalSourceModel(0.05, 50.0, 10000, Zmet=Zmet, var_elem=var_elem)
+    source_model = pyxsim.ThermalSourceModel(0.05, 50.0, 10000, Zmet, var_elem=var_elem)
 
 Whatever elements are not specified here are assumed to be set as normal, 
 whether they are H, He, trace elements, or metals covered by the ``Zmet`` 
@@ -242,7 +242,8 @@ specify their location in ``model_root``. One may also have to change the
     # model files are located here
     model_root = "/Users/jzuhone/atomdb_v3.0.9"
 
-    source_model = pyxsim.ThermalSourceModel("apec", 0.3, 1.7, 1000, nei=True, 
+    source_model = pyxsim.ThermalSourceModel("apec", 0.3, 1.7, 1000, 
+                                             ("gas","metallicity"), nei=True, 
                                              model_root=model_root,
                                              var_elem=var_elem)
 
@@ -253,26 +254,26 @@ Examples
 Here, we will show several examples of constructing 
 :class:`~pyxsim.source_models.ThermalSourceModel` objects. 
 
-An example where we use the default parameters, except we set a constant 
+An example where we use the default parameters, and a constant 
 metallicity:
 
 .. code-block:: python
 
-    thermal_model = pyxsim.ThermalSourceModel("apec", 0.1, 20.0, 10000, Zmet=0.5)
+    thermal_model = pyxsim.ThermalSourceModel("apec", 0.1, 20.0, 10000, 0.5)
 
 An example where we use a metallicity field and change the temperature field:
 
 .. code-block:: python
 
     thermal_model = pyxsim.ThermalSourceModel("apec", 0.1, 20.0, 10000, 
-                                              Zmet=("gas", "metallicity"),
-                                              temperature_field="hot_gas_temp")
+                                              ("gas", "metallicity"),
+                                              temperature_field=("hot_gas","temperature")
 
 An example where we change the limits and number of the temperature bins:
 
 .. code-block:: python
 
-    thermal_model = pyxsim.ThermalSourceModel("apec", 0.1, 20.0, 10000, 
+    thermal_model = pyxsim.ThermalSourceModel("apec", 0.1, 20.0, 10000, 0.3,
                                               kT_min=0.1, kT_max=100.,
                                               n_kT=50000)
                                               
@@ -281,7 +282,7 @@ directory to find the model files, and specify the model version:
 
 .. code-block:: python
 
-    thermal_model = pyxsim.ThermalSourceModel("apec", 0.1, 20.0, 10000,
+    thermal_model = pyxsim.ThermalSourceModel("apec", 0.1, 20.0, 10000, 0.3,
                                               thermal_broad=False, 
                                               model_root="/Users/jzuhone/data",
                                               model_vers="3.0.3")
@@ -290,14 +291,14 @@ An example where we specify a random number generator:
 
 .. code-block:: python
 
-    thermal_model = pyxsim.ThermalSourceModel("apec", 0.1, 20.0, 10000, 
+    thermal_model = pyxsim.ThermalSourceModel("apec", 0.1, 20.0, 10000, 0.3,
                                               prng=25)
 
 Turning off line emission:
 
 .. code-block:: python
 
-    thermal_model = pyxsim.ThermalSourceModel("apec", 0.1, 20.0, 10000, 
+    thermal_model = pyxsim.ThermalSourceModel("apec", 0.1, 20.0, 10000, 0.3,
                                               prng=25, nolines=True)
 
 .. _power-law-sources:

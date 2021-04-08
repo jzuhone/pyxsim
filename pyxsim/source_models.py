@@ -72,6 +72,10 @@ class ThermalSourceModel(SourceModel):
         The maximum energy for the spectrum in keV.
     nchan : integer
         The number of channels in the spectrum.
+    Zmet : float, string, or tuple of strings
+        The metallicity. If a float, assumes a constant metallicity throughout
+        in solar units. If a string or tuple of strings, is taken to be the 
+        name of the metallicity field.
     temperature_field : string or (ftype, fname) tuple, optional
         The yt temperature field to use for the thermal modeling. Must have
         units of Kelvin. If not specified, the default temperature field for
@@ -82,7 +86,7 @@ class ThermalSourceModel(SourceModel):
         field for the dataset will be used or derived.
     kT_min : float, optional
         The default minimum temperature in keV to compute emission for.
-        Default: 0.008
+        Default: 0.025
     kT_max : float, optional
         The default maximum temperature in keV to compute emission for.
         Default: 64.0
@@ -92,14 +96,10 @@ class ThermalSourceModel(SourceModel):
     kT_scale : string, optional
         The scaling of the bins to use when computing emission, 
         "linear" or "log". Default: "linear"
-    Zmet : float, string, or tuple of strings, optional
-        The metallicity. If a float, assumes a constant metallicity throughout
-        in solar units. If a string or tuple of strings, is taken to be the 
-        name of the metallicity field.
     max_density : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
         The maximum density of the cells or particles to use when generating 
-        photons. If a float, the units are assumed to be g/cm**3. Default: None,
-        which means there will be no limit on the density.
+        photons. If a float, the units are assumed to be g/cm**3. 
+        Default: 5e-25 g/cm**3.
     var_elem : dictionary, optional
         Elements that should be allowed to vary freely from the single abundance
         parameter. Each dictionary value, specified by the abundance symbol, 
@@ -151,10 +151,10 @@ class ThermalSourceModel(SourceModel):
     >>> source_model = ThermalSourceModel("apec", 0.1, 10.0, 10000, 
     ...                                   Zmet="metallicity")
     """
-    def __init__(self, spectral_model, emin, emax, nchan,
+    def __init__(self, spectral_model, emin, emax, nchan, Zmet,
                  temperature_field=None, emission_measure_field=None,
-                 kT_min=0.008, kT_max=64.0, n_kT=10000,
-                 kT_scale="linear", Zmet=0.3, max_density=None,
+                 kT_min=0.025, kT_max=64.0, n_kT=10000,
+                 kT_scale="linear", max_density=5.0e-25,
                  var_elem=None, method="invert_cdf", thermal_broad=True,
                  model_root=None, model_vers=None, nei=False,
                  nolines=False, abund_table="angr",

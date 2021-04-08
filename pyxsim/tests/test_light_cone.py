@@ -16,7 +16,7 @@ def test_light_cone(answer_store, answer_dir):
     lc = XrayLightCone('enzo_tiny_cosmology/32Mpc_32.enzo', 
                        'Enzo', 0., 0.1, seed=24)
 
-    source_model = ThermalSourceModel("apec", 0.1, 10.0, 1000, prng=prng)
+    source_model = ThermalSourceModel("apec", 0.1, 10.0, 1000, 0.3, prng=prng)
 
     lc.generate_events("lc_photons", "lc_events", A, exp_time, fov,
                        source_model, (30.0, 45.0), absorb_model="wabs",

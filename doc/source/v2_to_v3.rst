@@ -7,6 +7,36 @@ This section documents the most important API changes between
 pyXSIM version 2 and 3, with code examples showing how to update 
 your code for version 3. 
 
+Metallicity in Thermal Sources
+------------------------------
+
+In the :class:`~pyxsim.source_models.ThermalSourceModel` class, the ``Zmet``
+keyword argument has been changed to a required argument. Whereas previously 
+one would not have to set ``Zmet`` at all, and it would default to 
+0.3 :math:`Z_\odot`, it now must be set. 
+
+Old way:
+
+.. code-block:: python
+
+    # spatially constant metallicity
+    source_model = pyxsim.ThermalSourceModel("apec", 0.1, 11.0, 1000.0, Zmet=0.4)
+    
+    # metallicity field
+    source_model = pyxsim.ThermalSourceModel("apec", 0.1, 11.0, 1000.0, 
+                                             Zmet=("gas","metallicity"))
+
+New way:
+
+.. code-block:: python
+
+    # spatially constant metallicity
+    source_model = pyxsim.ThermalSourceModel("apec", 0.1, 11.0, 1000.0, 0.4)
+    
+    # metallicity field
+    source_model = pyxsim.ThermalSourceModel("apec", 0.1, 11.0, 1000.0, 
+                                             ("gas","metallicity"))
+
 Creating Photon Lists
 ---------------------
 
