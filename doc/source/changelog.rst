@@ -3,6 +3,12 @@
 ChangeLog
 =========
 
+Version 2.3.1
+-------------
+
+This version contains fixes to ensure compatibility with yt 3.x and 
+yt 4.0 (beta).
+
 Version 2.3.0
 -------------
 
