@@ -8,9 +8,9 @@ from soxs.spectra import ApecGenerator, \
     get_wabs_absorb, get_tbabs_absorb
 from soxs.utils import parse_prng
 from pyxsim.utils import mylog
-from yt.funcs import get_pbar
 from yt.units.yt_array import YTArray, YTQuantity
 from yt.utilities.physical_constants import hcgs, clight
+from tqdm.auto import tqdm
 
 hc = (hcgs*clight).in_units("keV*angstrom").v
 # NOTE: XSPEC has hc = 12.39854 keV*A, so there may be slight differences in
@@ -192,15 +192,15 @@ class AbsorptionModel(object):
         if nchunk == 0:
             nchunk = n_events
         k = 0
-        pbar = get_pbar("Absorbing photons", n_events)
+        pbar = tqdm(leave=True, total=n_events, desc="Absorbing photons")
         while k < n_events:
             absorb = self.get_absorb(eobs[k:k+nchunk])
             nabs = absorb.size
             randvec = prng.uniform(size=nabs)
             detected[k:k+nabs] = randvec < absorb
             k += nabs
-            pbar.update(k)
-        pbar.finish()
+            pbar.update(nabs)
+        pbar.close()
         return detected
 
 class TBabsModel(AbsorptionModel):

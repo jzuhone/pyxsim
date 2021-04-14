@@ -3,7 +3,7 @@ Classes for specific source models
 """
 import numpy as np
 from six import string_types
-from yt.funcs import get_pbar, ensure_numpy_array
+from yt.funcs import ensure_numpy_array
 from pyxsim.utils import mylog
 from yt.units.yt_array import YTQuantity
 from yt.utilities.physical_constants import mp, clight, kboltz
@@ -13,6 +13,7 @@ from soxs.utils import parse_prng
 from soxs.constants import elem_names, atomic_weights
 from yt.utilities.parallel_tools.parallel_analysis_interface import \
     parallel_objects, communication_system
+from tqdm.auto import tqdm
 
 K_per_keV = YTQuantity(1.0, "keV").to_value("K","thermal")
 
@@ -278,7 +279,7 @@ class ThermalSourceModel(SourceModel):
             num_cells += np.count_nonzero((T > T_min) & (T < T_max))
         num_cells = comm.mpi_allreduce(num_cells)
         self.source_type = data_source.ds._get_field_info(self.emission_measure_field).name[0]
-        self.pbar = get_pbar("Processing cells/particles ", num_cells)
+        self.pbar = tqdm(leave=True, total=num_cells, desc="Processing cells/particles")
 
     def cleanup_model(self):
         self.emission_measure_field = None
@@ -386,7 +387,7 @@ class ThermalSourceModel(SourceModel):
 
             ei = start_e
             for icell in range(ibegin, iend):
-                self.pbar.update()
+                self.pbar.update(1)
                 cn = number_of_photons[icell]
                 if cn == 0:
                     continue
@@ -430,6 +431,9 @@ class ThermalSourceModel(SourceModel):
         ncells = idxs.size
 
         return ncells, number_of_photons[active_cells], idxs, energies[:end_e].copy()
+
+    def cleanup_model(self):
+        self.pbar.close()
 
 
 class PowerLawSourceModel(SourceModel):
