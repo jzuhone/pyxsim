@@ -3,7 +3,7 @@ Classes for specific source models
 """
 import numpy as np
 from yt.funcs import ensure_numpy_array
-from tqdm import tqdm
+from tqdm.auto import tqdm
 from pyxsim.utils import mylog
 from yt.units.yt_array import YTQuantity
 from yt.utilities.physical_constants import mp, clight
@@ -435,6 +435,9 @@ class ThermalSourceModel(SourceModel):
         ncells = idxs.size
 
         return ncells, number_of_photons[active_cells], idxs, energies[:end_e].copy()
+
+    def cleanup_model(self):
+        self.pbar.close()
 
 
 class PowerLawSourceModel(SourceModel):

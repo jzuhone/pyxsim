@@ -1,6 +1,7 @@
 from unyt import unyt_array, unyt_quantity
 from astropy.units import Quantity
 import logging
+from more_itertools import always_iterable
 
 pyxsimLogger = logging.getLogger("pyxsim")
 
@@ -44,3 +45,7 @@ def isunitful(a):
         except:
             pass
     return False
+
+
+def ensure_list(obj):
+    return list(always_iterable(obj))

@@ -33,6 +33,15 @@ your code to version 3.x, please read :ref:`v2_to_v3`.
 * The background and point-source source generators have been removed, as this
   functionality can now be used within SOXS. 
 
+Version 2.3.1
+-------------
+
+This version contains bug fixes.
+
+* Bugs were fixed to ensure compatibility with both yt 3.x and yt 4.0 (beta).
+* A bug was fixed that resulted in odd behavior of the progress bars when in
+  a Jupyter notebook. 
+
 Version 2.3.0
 -------------
 

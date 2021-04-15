@@ -49,8 +49,7 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx.ext.napoleon',
     'sphinx.ext.autosummary',
-    'RunNotebook.notebook_sphinxext',
-    'RunNotebook.notebookcell_sphinxext',
+    'nbsphinx',
 ]
 
 numpydoc_show_class_members = False
