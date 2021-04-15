@@ -9,6 +9,6 @@ out on your own, using `sample datasets provided by the yt Project <http://yt-pr
 .. toctree::
     :maxdepth: 1
         
-    sloshing
-    power_law
-    line_emission
+    Thermal_Emission
+    Power_Law
+    Line_Emission
