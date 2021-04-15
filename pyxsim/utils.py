@@ -6,6 +6,7 @@ import h5py
 import os
 from astropy.units import Quantity
 import logging
+from more_itertools import always_iterable
 
 try:
     # yt 3.x
@@ -192,3 +193,7 @@ class ParameterDict(object):
 
     def __repr__(self):
         return self.param_dict.__repr__()
+
+
+def ensure_list(obj):
+    return list(always_iterable(obj))

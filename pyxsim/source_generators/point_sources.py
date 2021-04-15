@@ -1,6 +1,5 @@
 from soxs.utils import parse_prng
-from yt.funcs import ensure_list
-from pyxsim.utils import parse_value
+from pyxsim.utils import parse_value, ensure_list
 from yt.units.yt_array import uconcatenate, YTArray
 from yt.utilities.parallel_tools.parallel_analysis_interface import \
     communication_system

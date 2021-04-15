@@ -12,7 +12,13 @@ except ImportError:
     except ImportError:
         raise ImportError("Cannot import LightCone from yt or yt_astro_analysis!")
 
-from yt.convenience import load
+try:
+    # yt 3.x
+    from yt.convenience import load 
+except:
+    # yt 4.x
+    from yt.loaders import load
+
 from yt.units.yt_array import uconcatenate, YTArray
 
 from soxs.utils import parse_prng

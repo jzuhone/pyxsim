@@ -4,7 +4,12 @@ from soxs.instrument import \
     AuxiliaryResponseFile, \
     RedistributionMatrixFile
 from soxs.utils import parse_prng
-from yt.funcs import issue_deprecation_warning
+try:
+    # yt 3.x
+    from yt.funcs import issue_deprecation_warning
+except ImportError:
+    # yt 4.x
+    from yt._maintenance.deprecation import issue_deprecation_warning
 
 
 class InstrumentSimulator(object):

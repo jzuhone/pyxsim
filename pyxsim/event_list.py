@@ -410,7 +410,7 @@ class EventList(object):
             d = f.create_group("data")
             d.create_dataset("xsky", data=events["xsky"].d)
             d.create_dataset("ysky", data=events["ysky"].d)
-            d.create_dataset("eobs", data=events["eobs"].d)
+            d.create_dataset("eobs", data=np.asarray(events["eobs"]))
             if "rmf" in self.parameters:
                 p.create_dataset("arf", data=self.parameters["arf"])
                 p.create_dataset("rmf", data=self.parameters["rmf"])

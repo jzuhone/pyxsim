@@ -5,8 +5,6 @@ A unit test for the pyxsim analysis module.
 from pyxsim import \
     TableApecModel, TBabsModel, \
     ThermalSourceModel, PhotonList
-from pyxsim.instruments import \
-    Lynx_Calorimeter
 from pyxsim.tests.utils import \
     BetaModelSource, ParticleBetaModelSource
 from yt.testing import requires_module
@@ -22,9 +20,16 @@ from six import string_types
 from soxs.instrument import RedistributionMatrixFile, \
     AuxiliaryResponseFile, instrument_simulator
 from soxs.events import write_spectrum
-from soxs.instrument_registry import get_instrument_from_registry
+from soxs.instrument_registry import get_instrument_from_registry, \
+    make_simple_instrument
 
 ckms = clight.in_units("km/s").v
+
+try:
+    mucal_spec = get_instrument_from_registry("lynx_lxm")
+    make_simple_instrument("lynx_lxm", "lynx_lxm_big", 20.0, 1200)
+except KeyError:
+    pass
 
 def setup():
     from yt.config import ytcfg
@@ -237,11 +242,17 @@ def test_vapec_beta_model():
     events = photons.project_photons("z", [30.0, 45.0], absorb_model="tbabs",
                                      nH=nH_sim, prng=prng, no_shifting=True)
 
-    new_events = Lynx_Calorimeter(events, prng=prng)
+    events.write_simput_file("beta_model", overwrite=True)
 
     os.system("cp %s %s ." % (arf.filename, rmf.filename))
 
-    new_events.write_channel_spectrum("var_abund_beta_model_evt.pha", overwrite=True)
+    instrument_simulator("beta_model_simput.fits", "beta_model_evt.fits",
+                         exp_time, "lynx_lxm_big", [30.0, 45.0],
+                         overwrite=True, foreground=False, ptsrc_bkgnd=False,
+                         instr_bkgnd=False,
+                         prng=prng)
+
+    write_spectrum("beta_model_evt.fits", "var_abund_beta_model_evt.pha", overwrite=True)
 
     load_user_model(mymodel_var, "tbapec")
     add_user_pars("tbapec", ["nH", "kT", "abund", "redshift", "norm", "O", "Ca"],

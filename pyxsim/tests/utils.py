@@ -1,8 +1,15 @@
 import numpy as np
 from yt.utilities.physical_ratios import \
     K_per_keV, mass_hydrogen_grams, cm_per_mpc
-from yt.frontends.stream.api import \
-    load_uniform_grid, load_particles
+try:
+    # yt 3.x
+    from yt.frontends.stream.api import \
+        load_uniform_grid, load_particles
+except ImportError:
+    # yt 4.x
+    from yt.loaders import load_uniform_grid, \
+        load_particles
+
 from numpy.random import RandomState
 
 # Gas parameters
@@ -20,6 +27,7 @@ Ca = 0.7
 # Dark matter parameters
 r_s = 0.350 # Mpc
 rho_s = 9.0e-26 # g/cm**3
+
 
 class BetaModelSource(object):
     def __init__(self):
@@ -64,6 +72,7 @@ class BetaModelSource(object):
         data["metallicity"] = (self.Z*np.ones(ddims), "Zsun")
         self.ds = load_uniform_grid(data, ddims, length_unit=(2*R, "Mpc"),
                                     nprocs=64, bbox=bbox)
+
 
 class ParticleBetaModelSource(object):
     def __init__(self):

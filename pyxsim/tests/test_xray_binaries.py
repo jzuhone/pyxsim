@@ -4,7 +4,7 @@ from pyxsim.source_generators.xray_binaries import \
     make_xrb_photons, make_xrb_particles, \
     bc_lmxb, bc_hmxb, convert_bands, alpha_lmxb, \
     emin_lmxb, emax_lmxb, emin_hmxb, emax_hmxb
-from yt.units.yt_array import uconcatenate, loadtxt
+from yt.units.yt_array import uconcatenate
 import numpy as np
 import tempfile
 import os
@@ -34,7 +34,7 @@ def test_xray_binaries():
         return age
 
     ds.add_field(("PartType4", "particle_age"), function=_age, units="Gyr", 
-                 particle_type=True)
+                 sampling_type="particle")
 
     sp = ds.sphere("max", (0.25, "Mpc"))
 

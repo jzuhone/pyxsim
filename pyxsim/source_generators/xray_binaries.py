@@ -1,7 +1,14 @@
 import numpy as np
-from yt.frontends.stream.api import load_particles
+try:
+    # yt 3.x
+    from yt.frontends.stream.api import \
+        load_particles
+except ImportError:
+    # yt 4.x
+    from yt.loaders import load_particles
+
 from yt.units.yt_array import uconcatenate, YTArray, \
-    YTQuantity, savetxt
+    YTQuantity
 from yt.utilities.physical_ratios import keV_per_erg
 from scipy.interpolate import InterpolatedUnivariateSpline
 from six import string_types

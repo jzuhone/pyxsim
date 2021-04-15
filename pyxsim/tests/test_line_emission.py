@@ -16,8 +16,9 @@ def test_line_emission():
     ds = bms.ds
 
     def _dm_emission(field, data):
-        return cross_section*(data["dark_matter_density"]/m_chi)**2*data["cell_volume"]
-    ds.add_field(("gas","dm_emission"), function=_dm_emission, units="s**-1")
+        return (data["dark_matter_density"]/m_chi)**2*data["cell_volume"]*cross_section
+    ds.add_field(("gas","dm_emission"), function=_dm_emission, 
+                 sampling_type="cell", units="s**-1")
 
     location = YTQuantity(3.5, "keV")
     sigma = YTQuantity(1000., "km/s")
