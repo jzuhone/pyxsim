@@ -26,10 +26,6 @@ before_install:
     - tar -zxvf ${ANSWER_VER}.tar.gz		
     - mkdir -p ~/.config/yt
     - printf "[yt]\ntest_data_dir = $PWD" >> $HOME/.config/yt/ytrc
-    - wget http://hea-www.cfa.harvard.edu/soxs/soxs_responses.tar.gz
-    - tar -zxvf soxs_responses.tar.gz
-    - mkdir -p $HOME/.config/soxs
-    - printf "[soxs]\nresponse_path = $PWD/soxs_responses" >> $HOME/.config/soxs/soxs.cfg    
     # Use utf8 encoding. Should be default, but this is insurance against
     # future changes
     - export PYTHONIOENCODING=UTF8
@@ -40,7 +36,6 @@ before_install:
     - conda update --yes conda
     - export YT_DIR=$HOME/yt-git
     - export YAA_DIR=$HOME/yaa-git
-    - export SOXS_DIR=$HOME/soxs-git
 
     # UPDATE APT-GET LISTINGS
     - sudo apt-get update
@@ -54,17 +49,13 @@ install:
     # CORE DEPENDENCIES
     - conda config --add channels https://conda.anaconda.org/sherpa
     - conda config --add channels conda-forge
-    - conda install --yes numpy pytest pip h5py astropy sherpa cython scipy
+    - conda install --yes numpy pytest pip h5py astropy sherpa cython scipy soxs
     - git clone --branch=main https://github.com/yt-project/yt $YT_DIR
     - pushd $YT_DIR
     - pip install -e .
     - popd
     - git clone --branch=main https://github.com/yt-project/yt_astro_analysis $YAA_DIR
     - pushd $YAA_DIR
-    - pip install -e .
-    - popd
-    - git clone --branch=soxs-3.0 https://github.com/jzuhone/soxs $SOXS_DIR
-    - pushd $SOXS_DIR
     - pip install -e .
     - popd
 
