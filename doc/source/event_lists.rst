@@ -180,3 +180,22 @@ This bins the unconvolved event energies using the ``emin``, ``emax``, and
 ``nchan`` arguments into a histogram which will be written to the file as a
 spectrum. As usual, the ``overwrite`` argument determines whether or not a file
 can be overwritten. 
+
+Merging Event Lists
+-------------------
+
+Event lists which have been written to files can be merged together, using the 
+:func:`~pyxsim.utils.merge_files` function. This may be useful if you generate events from
+different sources or source types that are co-located on the sky.
+
+:func:`~pyxsim.utils.merge_files` takes a list of input filenames, and an output filename. 
+The optional keyword arguments are ``overwrite``, which decides whether or not an existing file 
+will be overwritten, and ``add_exposure_times`` decides whether or not the final file will 
+have an exposure time of the sum of the times in the separate files or that of the longest 
+exposure time between the files. 
+
+.. code-block:: python
+
+    from pyxsim import merge_files
+    merge_files(["events_0.h5","events_1.h5","events_3.h5"], "events.h5",
+                overwrite=True, add_exposure_times=True)

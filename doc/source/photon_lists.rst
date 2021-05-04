@@ -129,3 +129,22 @@ fields, you can specify them using the ``velocity_fields`` keyword argument:
                                              center=center, dist=(4., "kpc"), 
                                              velocity_fields=vfields)
 
+
+Merging Photon Lists
+--------------------
+
+Photon lists which have been written to files can be merged together, using the 
+:func:`~pyxsim.utils.merge_files` function. This may be useful if you generate photons from
+different sources or source types that are co-spatial.
+
+:func:`~pyxsim.utils.merge_files` takes a list of input filenames, and an output filename. 
+The optional keyword arguments are ``overwrite``, which decides whether or not an existing file 
+will be overwritten, and ``add_exposure_times`` decides whether or not the final file will 
+have an exposure time of the sum of the times in the separate files or that of the longest 
+exposure time between the files. 
+
+.. code-block:: python
+
+    from pyxsim import merge_files
+    merge_files(["photons_0.h5","photons_1.h5","photons_3.h5"], "photons.h5",
+                overwrite=True, add_exposure_times=True)
