@@ -30,6 +30,17 @@ table of temperatures, and for each bin a spectrum is calculated. Provided the
 bins are finely spaced enough, the accuracy of this method is sufficient for 
 most purposes. 
 
+.. warning::
+
+    This only works if your dataset has a `("gas", "emission_measure")`
+    field from yt, which is defined by yt if you have species defined in 
+    your dataset such that yt detects them and generates the
+    `("gas", "H_nuclei_density")` (total number density of all species of
+    hydrogen) and `("gas", "El_number_density")` (number density of free
+    electrons) fields. If you do not have these fields defined in your
+    dataset, you may assume full ionization by loading your dataset like
+    this: ``ds = yt.load(filename, default_species_fields="ionized")``. 
+
 By default, setting up a :class:`~pyxsim.source_models.ThermalSourceModel` 
 object requires the following arguments:
 

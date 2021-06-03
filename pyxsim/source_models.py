@@ -6,11 +6,12 @@ from yt.funcs import ensure_numpy_array
 from tqdm.auto import tqdm
 from pyxsim.utils import mylog
 from yt.units.yt_array import YTQuantity
-from yt.utilities.physical_constants import mp, clight
+from yt.utilities.physical_constants import clight
 from pyxsim.spectral_models import thermal_models
 from pyxsim.utils import parse_value, isunitful
 from soxs.utils import parse_prng
 from soxs.constants import elem_names, atomic_weights
+from yt.utilities.exceptions import YTFieldNotFound
 from yt.utilities.parallel_tools.parallel_analysis_interface import \
     parallel_objects, communication_system, parallel_capable
 from numbers import Number
@@ -216,8 +217,15 @@ class ThermalSourceModel(SourceModel):
         if self.emission_measure_field is None:
             self.emission_measure_field = \
                 (self.ftype, 'emission_measure')
-        ftype = data_source.ds._get_field_info(
-            self.emission_measure_field).name[0]
+        try:
+            ftype = data_source.ds._get_field_info(
+                self.emission_measure_field).name[0]
+        except YTFieldNotFound:
+            raise RuntimeError(f"The {self.emission_measure_field} field is not"
+                               "found. If you do not have species fields in "
+                               "your dataset, you may need to set "
+                               "default_species_fields='ionized' in the call "
+                               "to yt.load().")
         self.ftype = ftype
         self.redshift = redshift
         if not self.nei and not isinstance(self.Zmet, float):
