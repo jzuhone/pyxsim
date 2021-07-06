@@ -24,7 +24,7 @@ primordial_H_abund = 0.76
 sqrt_two = np.sqrt(2.)
 
 
-class ParallelProgressBar(object):
+class ParallelProgressBar:
     def __init__(self, title):
         self.title = title
         mylog.info(f"Starting '{title}'")
@@ -36,7 +36,7 @@ class ParallelProgressBar(object):
         mylog.info(f"Finishing '{self.title}'")
 
 
-class SourceModel(object):
+class SourceModel:
     def __init__(self, prng=None):
         self.spectral_norm = None
         self.redshift = None
@@ -154,7 +154,7 @@ class ThermalSourceModel(SourceModel):
     Examples
     --------
     >>> source_model = ThermalSourceModel("apec", 0.1, 10.0, 10000, 
-    ...                                   Zmet="metallicity")
+    ...                                   ("gas", "metallicity"))
     """
     def __init__(self, spectral_model, emin, emax, nchan, Zmet,
                  temperature_field=None, emission_measure_field=None,
@@ -216,7 +216,8 @@ class ThermalSourceModel(SourceModel):
         self.density_field = None  # Will be determined later
         self.tot_num_cells = 0  # Will be determined later
         self.ftype = "gas"
-
+        self.h_fraction = h_fraction
+        
     def setup_model(self, data_source, redshift, spectral_norm):
         if self.emission_measure_field is None:
             self.emission_measure_field = \
@@ -254,7 +255,7 @@ class ThermalSourceModel(SourceModel):
                     m_units = str(data_source.ds._get_field_info(value).units)
                     if m_units in ["dimensionless", "", "code_metallicity"]:
                         self.mconvert[key] = atomic_weights[1]/(self.atable[n_elem] *
-                                                                atomic_weights[n_elem]) *
+                                                                atomic_weights[n_elem])
                     elif m_units == "Zsun":
                         self.mconvert[key] = 1.0
                     else:
