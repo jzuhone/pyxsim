@@ -7,6 +7,7 @@ from astropy.io import fits
 import astropy.wcs as pywcs
 import h5py
 from pyxsim.utils import parse_value
+import os
 
 
 class EventList:
@@ -167,15 +168,15 @@ class EventList:
         from soxs.simput import SimputCatalog, SimputPhotonList
 
         simput_file = f"{prefix}_simput.fits"
-
+        
         begin_cat = True
         for i, fn in enumerate(self.filenames):
             if len(self.filenames) == 1:
                 phlist_file = f"{prefix}_phlist.fits"
-                name = prefix
+                name = os.path.basename(prefix)
             else:
                 phlist_file = f"{prefix}_phlist.{i:04d}.fits"
-                name = f"{prefix}.{i:04d}"
+                name = f"{os.path.basename(prefix)}.{i:04d}"
             with h5py.File(fn, "r") as f:
                 d = f["data"]
                 if d["eobs"].shape[0] > 0:
