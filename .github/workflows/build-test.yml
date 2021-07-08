@@ -13,12 +13,14 @@ jobs:
     build:
         strategy:
             matrix:
-                os: [macos-latest, ubuntu-latest]
+                os: [ubuntu-latest]
                 python-version: [ 3.9 ]
                 include:
-                    - os: ubuntu-18.04
+                    - os: macos-latest
+                      python-version: 3.8
+                    - os: ubuntu-latest
                       python-version: 3.7
-                    - os: ubuntu-18.04
+                    - os: ubuntu-latest
                       python-version: 3.8
             fail-fast: false
         runs-on: ${{ matrix.os }}
@@ -41,6 +43,6 @@ jobs:
               shell: bash
               run: source ./tests/ci_install.sh
             - name: Run Tests
-              run: py.test pyxsim/tests --answer_dir=$PWD/$ANSWER_VER
+              run: py.test -vv pyxsim/tests --answer_dir=$PWD/$ANSWER_VER
 
 
