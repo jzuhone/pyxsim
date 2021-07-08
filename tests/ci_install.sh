@@ -3,16 +3,16 @@ set -x   # Show which command is being run
 # Download test data
 
 wget -q http://yt-project.org/data/enzo_tiny_cosmology.tar.gz
-tar -zxvf enzo_tiny_cosmology.tar.gz
+tar -zxf enzo_tiny_cosmology.tar.gz
 wget -q http://yt-project.org/data/GasSloshingLowRes.tar.gz
-tar -zxvf GasSloshingLowRes.tar.gz
+tar -zxf GasSloshingLowRes.tar.gz
 wget -q http://yt-project.org/data/FIRE_M12i_ref11.tar.gz
-tar -zxvf FIRE_M12i_ref11.tar.gz
+tar -zxf FIRE_M12i_ref11.tar.gz
 
 # Download answers
 
-wget http://hea-www.cfa.harvard.edu/~jzuhone/${ANSWER_VER}.tar.gz
-tar -zxvf ${ANSWER_VER}.tar.gz		
+wget -q http://hea-www.cfa.harvard.edu/~jzuhone/${ANSWER_VER}.tar.gz
+tar -zxf ${ANSWER_VER}.tar.gz		
 
 # Set location of yt test data
 mkdir -p $HOME/.config/yt
@@ -22,6 +22,6 @@ cat $HOME/.config/yt/yt.toml
 
 # Install dependencies using conda
 
-conda install --yes numpy pytest pip h5py astropy sherpa cython scipy
+conda install --yes numpy pytest pip h5py astropy sherpa cython scipy yt
 conda install --yes -c jzuhone soxs
 
