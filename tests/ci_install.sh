@@ -2,11 +2,11 @@ set -x   # Show which command is being run
 
 # Download test data
 
-wget http://yt-project.org/data/enzo_tiny_cosmology.tar.gz
+wget -q http://yt-project.org/data/enzo_tiny_cosmology.tar.gz
 tar -zxvf enzo_tiny_cosmology.tar.gz
-wget http://yt-project.org/data/GasSloshingLowRes.tar.gz
+wget -q http://yt-project.org/data/GasSloshingLowRes.tar.gz
 tar -zxvf GasSloshingLowRes.tar.gz
-wget http://yt-project.org/data/FIRE_M12i_ref11.tar.gz
+wget -q http://yt-project.org/data/FIRE_M12i_ref11.tar.gz
 tar -zxvf FIRE_M12i_ref11.tar.gz
 
 # Download answers

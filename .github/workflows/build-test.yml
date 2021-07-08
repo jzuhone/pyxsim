@@ -18,12 +18,8 @@ jobs:
                 include:
                     - os: ubuntu-18.04
                       python-version: 3.7
-                      dependencies: full
-                      tests-type: unit
                     - os: ubuntu-18.04
                       python-version: 3.8
-                      dependencies: full
-                      tests-type: unit
         runs-on: ${{ matrix.os }}
         steps:
             - name: Install Python
@@ -44,6 +40,6 @@ jobs:
               shell: bash
               run: source ./tests/ci_install.sh
             - name: Run Tests
-              run: python -m nose -c nose_${testsuite}.cfg --traverse-namespace
+              run: py.test pyxsim/tests --answer_dir=$PWD/$ANSWER_VER
 
 
