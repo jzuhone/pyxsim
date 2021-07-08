@@ -1,0 +1,52 @@
+name: Build and Test
+
+on: [push, pull_request]
+
+defaults:
+    run:
+        shell: bash
+    
+env:
+    ANSWER_VER: pyxsim20
+    
+jobs:
+    build:
+        strategy:
+            matrix:
+                os: [macos-latest, ubuntu-18.04]
+                python-version: [ 3.9 ]
+                dependencies: [ full ]
+                tests-type: [ unit ]
+                include:
+                    - os: ubuntu-18.04
+                      python-version: 3.7
+                      dependencies: full
+                      tests-type: unit
+                    - os: ubuntu-18.04
+                      python-version: 3.8
+                      dependencies: full
+                      tests-type: unit
+        runs-on: ${{ matrix.os }}
+        steps:
+            - name: Install Python
+              uses: actions/setup-python@v2
+              with:
+                  python-version: ${{ matrix.python-version }}
+            - uses: actions/checkout@v2
+              with:
+                  submodules: recursive
+                  fetch-depth: 0
+            - uses: s-weigand/setup-conda@v1
+              if: matrix.os == 'windows-latest'
+              with:
+                  update-conda: true
+                  conda-channels: conda-forge
+                  activate-conda: true
+                  python-version: ${{matrix.python-version}}
+            - name: Install dependencies and yt
+              shell: bash
+              env:
+                  dependencies: ${{ matrix.dependencies }}
+              run: source ./tests/ci_install.sh
+
+
