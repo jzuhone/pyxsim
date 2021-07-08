@@ -25,3 +25,6 @@ cat $HOME/.config/yt/yt.toml
 conda install --yes numpy pytest pip h5py astropy sherpa cython scipy yt
 conda install --yes -c jzuhone soxs
 
+# Install pyxsim
+
+python -m pip install -e .
