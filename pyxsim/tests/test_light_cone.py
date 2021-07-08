@@ -2,10 +2,10 @@ from numpy.random import RandomState
 from pyxsim import ThermalSourceModel
 from pyxsim.tests.utils import hdf5_answer_testing
 from glob import glob
-from yt.testing import requires_module
+from pytest import importorskip
 
 
-@requires_module("yt_astro_analysis")
+@importorskip("yt_astro_analysis")
 def test_light_cone(answer_store, answer_dir):
 
     from pyxsim.light_cone import XrayLightCone
