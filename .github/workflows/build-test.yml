@@ -15,8 +15,6 @@ jobs:
             matrix:
                 os: [macos-latest, ubuntu-18.04]
                 python-version: [ 3.9 ]
-                dependencies: [ full ]
-                tests-type: [ unit ]
                 include:
                     - os: ubuntu-18.04
                       python-version: 3.7
@@ -37,16 +35,15 @@ jobs:
                   submodules: recursive
                   fetch-depth: 0
             - uses: s-weigand/setup-conda@v1
-              if: matrix.os == 'windows-latest'
               with:
                   update-conda: true
-                  conda-channels: conda-forge
+                  conda-channels: conda-forge, sherpa
                   activate-conda: true
                   python-version: ${{matrix.python-version}}
-            - name: Install dependencies and yt
+            - name: Install dependencies and pyxsim
               shell: bash
-              env:
-                  dependencies: ${{ matrix.dependencies }}
               run: source ./tests/ci_install.sh
+            - name: Run Tests
+              run: python -m nose -c nose_${testsuite}.cfg --traverse-namespace
 
 

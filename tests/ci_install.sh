@@ -19,3 +19,9 @@ mkdir -p $HOME/.config/yt
 echo "[yt]" > $HOME/.config/yt/yt.toml
 echo "test_data_dir = ${PWD}" >> $HOME/.config/yt/yt.toml
 cat $HOME/.config/yt/yt.toml
+
+# Install dependencies using conda
+
+conda install --yes numpy pytest pip h5py astropy sherpa cython scipy
+conda install --yes -c jzuhone soxs
+
