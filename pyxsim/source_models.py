@@ -226,7 +226,7 @@ class ThermalSourceModel(SourceModel):
             ftype = data_source.ds._get_field_info(
                 self.emission_measure_field).name[0]
         except YTFieldNotFound:
-            raise RuntimeError(f"The {self.emission_measure_field} field is not"
+            raise RuntimeError(f"The {self.emission_measure_field} field is not "
                                "found. If you do not have species fields in "
                                "your dataset, you may need to set "
                                "default_species_fields='ionized' in the call "

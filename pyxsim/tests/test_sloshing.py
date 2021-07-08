@@ -17,7 +17,7 @@ def test_sloshing(answer_store, answer_dir):
 
     prng = RandomState(0x4d3d3d3)
 
-    ds = yt.load(gslr)
+    ds = yt.load(gslr, default_species_fields="ionized")
     A = 2000.
     exp_time = 1.0e4
     redshift = 0.1

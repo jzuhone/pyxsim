@@ -65,7 +65,8 @@ class BetaModelSource:
         data["calcium"] = (self.Ca*np.ones(ddims), "Zsun")
         data["metallicity"] = (self.Z*np.ones(ddims), "Zsun")
         self.ds = load_uniform_grid(data, ddims, length_unit=(2*R, "Mpc"),
-                                    nprocs=64, bbox=bbox)
+                                    nprocs=64, bbox=bbox, 
+                                    default_species_fields="ionized")
 
 
 class ParticleBetaModelSource:
@@ -108,7 +109,8 @@ class ParticleBetaModelSource:
         data["io", "particle_velocity_z"] = (velz, "cm/s")
         data["io", "particle_mass"] = (pmass, "g")
         data["io", "smoothing_length"] = (0.01*np.ones(num_particles)/(2.0*R), "code_length")
-        self.ds = load_particles(data, length_unit=(2*R, "Mpc"), bbox=bbox)
+        self.ds = load_particles(data, length_unit=(2*R, "Mpc"), bbox=bbox,
+                                 default_species_fields="ionized")
 
 
 def hdf5_answer_testing(filename, answer_store, answer_dir):
