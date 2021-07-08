@@ -1,11 +1,14 @@
 from numpy.random import RandomState
-from pyxsim.light_cone import XrayLightCone
 from pyxsim import ThermalSourceModel
 from pyxsim.tests.utils import hdf5_answer_testing
 from glob import glob
+from yt.testing import requires_module
 
 
+@requires_module("yt_astro_analysis")
 def test_light_cone(answer_store, answer_dir):
+
+    from pyxsim.light_cone import XrayLightCone
 
     prng = RandomState(0x4d3d3d3)
 
