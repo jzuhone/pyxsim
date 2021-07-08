@@ -20,6 +20,7 @@ jobs:
                       python-version: 3.7
                     - os: ubuntu-18.04
                       python-version: 3.8
+            fail-fast: false
         runs-on: ${{ matrix.os }}
         steps:
             - name: Install Python
