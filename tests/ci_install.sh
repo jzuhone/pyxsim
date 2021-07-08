@@ -22,7 +22,7 @@ cat $HOME/.config/yt/yt.toml
 
 # Install dependencies using conda
 
-conda install --yes numpy pytest pip h5py astropy sherpa cython scipy yt
+conda install --yes numpy pytest pip h5py astropy nose sherpa cython scipy yt
 conda install --yes -c jzuhone soxs
 
 # Install pyxsim
