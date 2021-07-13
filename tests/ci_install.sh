@@ -22,9 +22,9 @@ cat $HOME/.config/yt/yt.toml
 
 # Install dependencies using conda
 
-conda install --yes numpy pytest pip h5py astropy nose cython scipy yt
+conda config --add channels https://conda.anaconda.org/sherpa
+conda install --yes numpy pytest pip h5py astropy nose cython scipy yt sherpa
 conda install --yes -c jzuhone soxs
-pip install sherpa
 
 # Install pyxsim
 
