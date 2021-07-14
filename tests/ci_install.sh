@@ -22,10 +22,12 @@ cat $HOME/.config/yt/yt.toml
 
 # Install dependencies using conda
 
+PYVER=`python --version`
+
 conda config --add channels https://conda.anaconda.org/sherpa
 conda install --yes numpy pytest pip h5py astropy nose cython scipy yt
 conda install --yes -c jzuhone soxs
-if [[ ${python-version} == "3.9" ]]; then
+if [[ $PYVER == *"3.9"* ]]; then
   conda install --yes \
     https://anaconda.org/sherpa/sherpa/4.13.1/download/linux-64/sherpa-4.13.1-py39h3fd9d12_246.tar.bz2
 else
