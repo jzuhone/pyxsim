@@ -22,15 +22,14 @@ cat $HOME/.config/yt/yt.toml
 
 # Install dependencies using conda
 
-echo ${python-version}
 conda config --add channels https://conda.anaconda.org/sherpa
 conda install --yes numpy pytest pip h5py astropy nose cython scipy yt sherpa
 conda install --yes -c jzuhone soxs
 if [[ ${python-version} == "3.9" ]]; then
-  conda install sherpa
-else
   conda install \
     https://anaconda.org/sherpa/sherpa/4.13.1/download/linux-64/sherpa-4.13.1-py39h3fd9d12_246.tar.bz2
+else
+  conda install sherpa
 fi 
 # Install pyxsim
 
