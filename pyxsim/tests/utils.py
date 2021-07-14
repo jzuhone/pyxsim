@@ -1,16 +1,10 @@
 import numpy as np
 from yt.utilities.physical_ratios import \
     K_per_keV, mass_hydrogen_grams, cm_per_mpc
-try:
-    # yt 3.x
-    from yt.frontends.stream.api import \
-        load_uniform_grid, load_particles
-except ImportError:
-    # yt 4.x
-    from yt.loaders import load_uniform_grid, \
-        load_particles
-
+from yt.loaders import \
+    load_uniform_grid, load_particles
 from numpy.random import RandomState
+from soxs.tests.utils import file_answer_testing
 
 # Gas parameters
 R = 1.0 # Mpc
@@ -29,7 +23,7 @@ r_s = 0.350 # Mpc
 rho_s = 9.0e-26 # g/cm**3
 
 
-class BetaModelSource(object):
+class BetaModelSource:
     def __init__(self):
 
         self.prng = RandomState(32)
@@ -71,10 +65,11 @@ class BetaModelSource(object):
         data["calcium"] = (self.Ca*np.ones(ddims), "Zsun")
         data["metallicity"] = (self.Z*np.ones(ddims), "Zsun")
         self.ds = load_uniform_grid(data, ddims, length_unit=(2*R, "Mpc"),
-                                    nprocs=64, bbox=bbox)
+                                    nprocs=64, bbox=bbox, 
+                                    default_species_fields="ionized")
 
 
-class ParticleBetaModelSource(object):
+class ParticleBetaModelSource:
     def __init__(self):
 
         self.prng = RandomState(35)
@@ -113,5 +108,29 @@ class ParticleBetaModelSource(object):
         data["io", "particle_velocity_y"] = (np.zeros(num_particles), "cm/s")
         data["io", "particle_velocity_z"] = (velz, "cm/s")
         data["io", "particle_mass"] = (pmass, "g")
+        data["io", "smoothing_length"] = (0.01*np.ones(num_particles)/(2.0*R), "code_length")
+        self.ds = load_particles(data, length_unit=(2*R, "Mpc"), bbox=bbox,
+                                 default_species_fields="ionized")
 
-        self.ds = load_particles(data, length_unit=(2*R, "Mpc"), bbox=bbox)
+
+def hdf5_answer_testing(filename, answer_store, answer_dir):
+    import os
+    import shutil
+    import h5py
+    from numpy.testing import assert_almost_equal, assert_equal
+    oldf = os.path.join(answer_dir, filename)
+    if answer_store:
+        shutil.copy(filename, answer_dir)
+    else:
+        f_old = h5py.File(oldf, "r")
+        f_new = h5py.File(filename, "r")
+        p_old = f_old["parameters"]
+        p_new = f_new["parameters"]
+        d_old = f_old["data"]
+        d_new = f_new["data"]
+        for k in p_old:
+            assert_equal(p_old[k][()], p_new[k][()])
+        for k in d_old:
+            assert_almost_equal(d_old[k][()], d_new[k][()])
+        f_old.close()
+        f_new.close()

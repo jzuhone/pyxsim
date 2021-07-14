@@ -1,18 +1,11 @@
 import numpy as np
-try:
-    # yt 3.x
-    from yt.frontends.stream.api import \
-        load_particles
-except ImportError:
-    # yt 4.x
-    from yt.loaders import load_particles
-
+from yt.loaders import load_particles
 from yt.units.yt_array import uconcatenate, YTArray, \
     YTQuantity
 from yt.utilities.physical_ratios import keV_per_erg
 from scipy.interpolate import InterpolatedUnivariateSpline
 from six import string_types
-from pyxsim.photon_list import PhotonList
+from pyxsim.photon_list import make_photons
 from pyxsim.source_models import PowerLawSourceModel
 from pyxsim.utils import mylog, parse_value
 from soxs.utils import parse_prng
@@ -25,6 +18,7 @@ Gilfanov, M. 2004, MNRAS, 349, 146
 Mineo, S., Gilfanov, M., & Sunyaev, R. 2012, MNRAS, 419, 2095 
 """
 
+
 # Function to calculate the scale factor for a power
 # law with F = K*E**-alpha (K in units of ct/s/keV)
 def get_scale_factor(ind, emin, emax):
@@ -33,6 +27,7 @@ def get_scale_factor(ind, emin, emax):
     else:
         k = (emax**(2.0-ind)-emin**(2.0-ind))/(2.0-ind)
     return keV_per_erg/k
+
 
 # Function to convert between two different energy
 # bands for a single power law
@@ -47,10 +42,11 @@ def convert_bands(ind, emin_a, emax_a, emin_b, emax_b):
 
 # Spectral indices for both types of XRBs
 
+
 alpha_lmxb = 1.56
 alpha_hmxb = 2.0
 
-# Energy bands for luminosities in XRB 
+# Energy bands for luminosities in XRB
 # distribution functions
 
 emin_lmxb = 0.5
@@ -59,7 +55,7 @@ emax_lmxb = 8.0
 emin_hmxb = 2.0
 emax_hmxb = 10.0
 
-# Bolometric corrections 
+# Bolometric corrections
 
 bc_lmxb = convert_bands(alpha_lmxb, 0.03, 100.0, emin_lmxb, emax_lmxb)
 bc_hmxb = convert_bands(alpha_hmxb, 0.03, 100.0, emin_hmxb, emax_hmxb)
@@ -80,7 +76,7 @@ alpha2 = 1.86
 alpha3 = 4.8
 
 # The luminosities from Gilfanov 2004 are
-# in the 0.5-8 keV band. 
+# in the 0.5-8 keV band.
 
 Lb1 = 0.19
 Lb2 = 5.0
@@ -100,6 +96,7 @@ I1 = C1*np.log(Lb1/Lmin)
 I2 = C2 - D2 + I1
 I3 = C3 - D3 + I2
 
+
 def lmxb_cdf(L):
     if L < Lb1:
         N = C1*np.log(L/Lmin)
@@ -112,6 +109,7 @@ def lmxb_cdf(L):
     return N
 
 # HMXB distribution function from Mineo et al. 2012
+
 
 chi = 1.49
 gamma1 = 1.58
@@ -128,6 +126,7 @@ F2 = E2*Lb**(1.0-gamma2)
 J1 = E1*Lb**(1.0-gamma1) - F1
 J2 = E2*Lcut**(1.0-gamma2) - F2 + J1
 
+
 def hmxb_cdf(L):
     if L < Lb:
         N = E1*L**(1.0-gamma1) - F1
@@ -136,6 +135,7 @@ def hmxb_cdf(L):
     else:
         N = J2
     return N
+
 
 def make_xrb_particles(data_source, age_field, scale_length, 
                        sfr_time_range=(1.0, "Gyr"), prng=None):
@@ -338,7 +338,8 @@ def make_xrb_particles(data_source, age_field, scale_length,
 
     return new_ds
 
-def make_xrb_photons(ds, redshift, area, exp_time, emin, emax,
+
+def make_xrb_photons(photon_prefix, ds, redshift, area, exp_time, emin, emax,
                      center="c", cosmology=None, prng=None):
     r"""
     Take a dataset produced by 
@@ -347,6 +348,10 @@ def make_xrb_photons(ds, redshift, area, exp_time, emin, emax,
 
     Parameters
     ----------
+    photon_prefix : string
+        The prefix of the filename(s) containing the photon list. If run in
+        serial, the filename will be "{photon_prefix}.h5", if run in
+        parallel, the filenames will be "{photon_prefix}.{mpi_rank}.h5".
     ds : :class:`~yt.data_objects.static_output.Dataset`
         The dataset of XRB particles to use to make the photons.
     redshift : float
@@ -381,8 +386,8 @@ def make_xrb_photons(ds, redshift, area, exp_time, emin, emax,
     xrb_model = PowerLawSourceModel(e0, emin, emax, 
                                     "particle_count_rate",
                                     "particle_spectral_index", prng=prng)
-    photons = PhotonList.from_data_source(dd, redshift, area, exp_time,
-                                          xrb_model, center=center,
-                                          point_sources=True,
-                                          cosmology=cosmology)
-    return photons
+    n_photons, n_cells = make_photons(photon_prefix, dd, redshift, area, 
+                                      exp_time, xrb_model, center=center,
+                                      point_sources=True,
+                                      cosmology=cosmology)
+    return n_photons, n_cells

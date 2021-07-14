@@ -2,20 +2,11 @@
 Photon emission and absoprtion models.
 """
 import numpy as np
-import h5py
 
 from soxs.spectra import ApecGenerator, \
     get_wabs_absorb, get_tbabs_absorb
 from soxs.utils import parse_prng
-from pyxsim.utils import mylog
 from yt.units.yt_array import YTArray, YTQuantity
-from yt.utilities.physical_constants import hcgs, clight
-from tqdm.auto import tqdm
-
-hc = (hcgs*clight).in_units("keV*angstrom").v
-# NOTE: XSPEC has hc = 12.39854 keV*A, so there may be slight differences in
-# placement of spectral lines due to the above
-cl = clight.v
 
 
 class TableApecModel(ApecGenerator):
@@ -86,12 +77,14 @@ class TableApecModel(ApecGenerator):
                                              abund_table=abund_table, nei=nei)
         self.nchan = self.nbins
 
-    def prepare_spectrum(self, zobs):
+    def prepare_spectrum(self, zobs, kT_min, kT_max):
         """
         Prepare the thermal model for execution given a redshift *zobs* for the spectrum.
         """
+        idx_min = min(np.searchsorted(self.Tvals, kT_min)-1, 0)
+        idx_max = max(np.searchsorted(self.Tvals, kT_max), self.nT-1)
         cosmic_spec, metal_spec, var_spec = \
-            self._get_table(list(range(self.nT)), zobs, 0.0)
+            self._get_table(list(range(idx_min, idx_max+1)), zobs, 0.0)
         self.cosmic_spec = YTArray(cosmic_spec, "cm**3/s")
         self.metal_spec = YTArray(metal_spec, "cm**3/s")
         if var_spec is None:
@@ -155,8 +148,9 @@ class TableApecModel(ApecGenerator):
 thermal_models = {"apec": TableApecModel}
 
 
-class AbsorptionModel(object):
+class AbsorptionModel:
     _name = ""
+
     def __init__(self, nH, energy, cross_section):
         self.nH = YTQuantity(nH*1.0e22, "cm**-2")
         self.emid = YTArray(energy, "keV")
@@ -187,21 +181,10 @@ class AbsorptionModel(object):
         n_events = eobs.size
         if n_events == 0:
             return np.array([], dtype='bool')
-        detected = np.zeros(n_events, dtype='bool')
-        nchunk = n_events // 100
-        if nchunk == 0:
-            nchunk = n_events
-        k = 0
-        pbar = tqdm(leave=True, total=n_events, desc="Absorbing photons")
-        while k < n_events:
-            absorb = self.get_absorb(eobs[k:k+nchunk])
-            nabs = absorb.size
-            randvec = prng.uniform(size=nabs)
-            detected[k:k+nabs] = randvec < absorb
-            k += nabs
-            pbar.update(nabs)
-        pbar.close()
-        return detected
+        absorb = self.get_absorb(eobs)
+        randvec = prng.uniform(size=n_events)
+        return randvec < absorb
+
 
 class TBabsModel(AbsorptionModel):
     r"""
@@ -218,12 +201,14 @@ class TBabsModel(AbsorptionModel):
     >>> tbabs_model = TBabsModel(0.1)
     """
     _name = "tbabs"
+
     def __init__(self, nH):
         self.nH = YTQuantity(nH, "1.0e22*cm**-2")
 
     def get_absorb(self, e):
         e = np.array(e)
         return get_tbabs_absorb(e, self.nH.v)
+
 
 class WabsModel(AbsorptionModel):
     r"""
@@ -240,12 +225,14 @@ class WabsModel(AbsorptionModel):
     >>> wabs_model = WabsModel(0.1)
     """
     _name = "wabs"
+
     def __init__(self, nH):
         self.nH = YTQuantity(nH, "1.0e22*cm**-2")
 
     def get_absorb(self, e):
         e = np.array(e)
         return get_wabs_absorb(e, self.nH.v)
+
 
 absorb_models = {"wabs": WabsModel,
                  "tbabs": TBabsModel}

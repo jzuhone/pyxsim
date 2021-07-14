@@ -1,0 +1,46 @@
+name: Build and Test
+
+on: [push, pull_request]
+
+defaults:
+    run:
+        shell: bash
+    
+env:
+    ANSWER_VER: pyxsim20
+    
+jobs:
+    build:
+        strategy:
+            matrix:
+                os: [ubuntu-latest]
+                python-version: [ 3.9 ]
+                include:
+                    - os: ubuntu-latest
+                      python-version: 3.7
+                    - os: ubuntu-latest
+                      python-version: 3.8
+            fail-fast: false
+        runs-on: ${{ matrix.os }}
+        steps:
+            - name: Install Python
+              uses: actions/setup-python@v2
+              with:
+                  python-version: ${{ matrix.python-version }}
+            - uses: actions/checkout@v2
+              with:
+                  submodules: recursive
+                  fetch-depth: 0
+            - uses: s-weigand/setup-conda@v1
+              with:
+                  update-conda: true
+                  conda-channels: conda-forge
+                  activate-conda: true
+                  python-version: ${{matrix.python-version}}
+            - name: Install dependencies and pyxsim
+              shell: bash
+              run: source ./tests/ci_install.sh
+            - name: Run Tests
+              run: py.test -vv pyxsim/tests --answer_dir=$PWD/$ANSWER_VER
+
+

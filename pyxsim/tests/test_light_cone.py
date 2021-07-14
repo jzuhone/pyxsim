@@ -1,43 +1,35 @@
 from numpy.random import RandomState
-from yt.utilities.answer_testing.framework import requires_ds, \
-    GenericArrayTest, data_dir_load
 from pyxsim import ThermalSourceModel
-from pyxsim.source_generators import XrayLightCone
+from pyxsim.tests.utils import hdf5_answer_testing
+from glob import glob
+from pytest import importorskip
 
 
-def setup():
-    from yt.config import ytcfg
-    ytcfg["yt", "__withintesting"] = "True"
+@importorskip("yt_astro_analysis")
+def test_light_cone(answer_store, answer_dir):
 
-etc = "enzo_tiny_cosmology/DD0046/DD0046"
-
-def return_data(data):
-    def _return_data(name):
-        return data
-    return _return_data
-
-@requires_ds(etc)
-def test_light_cone():
+    from pyxsim.light_cone import XrayLightCone
 
     prng = RandomState(0x4d3d3d3)
 
-    ds = data_dir_load(etc)
-
-    A = 2000.
-    exp_time = 1.0e5
+    A = 20000.
+    exp_time = 1.0e6
     fov = (0.5, "deg")
 
-    lc = XrayLightCone('%s/32Mpc_32.enzo' % etc[:-14], 'Enzo', 0., 0.1,
-                       seed=24)
+    lc = XrayLightCone('enzo_tiny_cosmology/32Mpc_32.enzo', 
+                       'Enzo', 0., 0.1, seed=24)
 
-    source_model = ThermalSourceModel("apec", 0.1, 10.0, 1000, prng=prng)
+    source_model = ThermalSourceModel("apec", 0.1, 10.0, 1000, 0.3, prng=prng)
 
-    events = lc.generate_events(A, exp_time, fov, source_model, (30.0, 45.0),
-                                absorb_model="wabs", nH=0.02,
-                                sigma_pos=0.5, prng=prng)
+    lc.generate_events("lc_photons", "lc_events", A, exp_time, fov,
+                       source_model, (30.0, 45.0), absorb_model="wabs",
+                       nH=0.02, sigma_pos=0.5, prng=prng)
 
-    return_events = return_data(events.events)
+    fn_ph = glob("lc_photons.*.h5")
+    fn_ev = glob("lc_events.*.h5")
 
-    test = GenericArrayTest(ds, return_events, args=["events"])
-    test_light_cone.__name__ = test.description
-    yield test
+    for fn in fn_ph:
+        hdf5_answer_testing(fn, answer_store, answer_dir)
+    for fn in fn_ev:
+        hdf5_answer_testing(fn, answer_store, answer_dir)
+

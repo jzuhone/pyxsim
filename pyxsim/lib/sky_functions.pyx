@@ -1,7 +1,6 @@
 import numpy as np
 cimport numpy as np
 cimport cython
-from tqdm.auto import tqdm
 
 cdef extern from "math.h":
     double sqrt(double x) nogil
@@ -23,15 +22,12 @@ def doppler_shift(np.ndarray[np.float64_t, ndim=1] shift,
     cdef np.float64_t shft
     cdef np.int64_t i, j, k
 
-    pbar = tqdm(leave=True, total=num_cells, desc="Doppler shifting photons")
     k = 0
     for i in range(num_cells):
         shft = sqrt((1.-shift[i])/(1.+shift[i]))
         for j in range(n_ph[i]):
             eobs[k] = eobs[k] * shft
             k += 1
-        pbar.update(1)
-    pbar.close()
 
 @cython.cdivision(True)
 @cython.boundscheck(False)
@@ -40,7 +36,9 @@ def scatter_events(normal, prng, kernel, data_type,
                    int num_det,
                    np.ndarray[np.uint8_t, cast=True] det,
                    np.ndarray[np.int64_t, ndim=1] n_ph,
-                   np.ndarray[np.float64_t, ndim=2] pos,
+                   np.ndarray[np.float64_t, ndim=1] x,
+                   np.ndarray[np.float64_t, ndim=1] y,
+                   np.ndarray[np.float64_t, ndim=1] z,
                    np.ndarray[np.float64_t, ndim=1] dx,
                    np.ndarray[np.float64_t, ndim=1] x_hat,
                    np.ndarray[np.float64_t, ndim=1] y_hat):
@@ -53,8 +51,6 @@ def scatter_events(normal, prng, kernel, data_type,
     k = 0
     n = 0
 
-    pbar = tqdm(leave=True, total=num_cells, desc="Generating event positions")
-    
     if isinstance(normal, int):
 
         if normal == 0:
@@ -83,11 +79,19 @@ def scatter_events(normal, prng, kernel, data_type,
         for i in range(num_cells):
             for j in range(n_ph[i]):
                 if det[n]:
-                    xsky[k] = xsky[k]*dx[i] + pos[i, xax]
-                    ysky[k] = ysky[k]*dx[i] + pos[i, yax]
+                    xsky[k] *= dx[i]
+                    ysky[k] *= dx[i]
+                    if normal == 0:
+                        xsky[k] += y[i]
+                        ysky[k] += z[i]
+                    elif normal == 1:
+                        xsky[k] += z[i]
+                        ysky[k] += x[i]
+                    elif normal == 2:
+                        xsky[k] += x[i]
+                        ysky[k] += y[i]
                     k += 1
                 n += 1
-            pbar.update(1)
 
     else:
     
@@ -97,9 +101,9 @@ def scatter_events(normal, prng, kernel, data_type,
             for i in range(num_cells):
                 for j in range(n_ph[i]):
                     if det[n]:
-                        xsky[k] = xsky[k]*dx[i] + pos[i, 0]
-                        ysky[k] = ysky[k]*dx[i] + pos[i, 1]
-                        zsky[k] = zsky[k]*dx[i] + pos[i, 2]
+                        xsky[k] = xsky[k]*dx[i] + x[i]
+                        ysky[k] = ysky[k]*dx[i] + y[i]
+                        zsky[k] = zsky[k]*dx[i] + z[i]
                         xx = (xsky[k]*x_hat[0]+ ysky[k]*x_hat[1]+
                               zsky[k]*x_hat[2])
                         yy = (xsky[k]*y_hat[0]+ ysky[k]*y_hat[1]+
@@ -108,7 +112,6 @@ def scatter_events(normal, prng, kernel, data_type,
                         ysky[k] = yy
                         k += 1
                     n += 1
-                pbar.update(1)
         elif data_type  == "particles":
             if kernel == "gaussian":
                 xsky = prng.normal(loc=0.0, scale=1.0, size=num_det)
@@ -121,15 +124,12 @@ def scatter_events(normal, prng, kernel, data_type,
             for i in range(num_cells):
                 for j in range(n_ph[i]):
                     if det[n]:
-                        xsky[k] = xsky[k]*dx[i] + pos[i, 0]*x_hat[0] + \
-                            pos[i, 1]*x_hat[1] + pos[i, 2]*x_hat[2]
-                        ysky[k] = ysky[k]*dx[i] + pos[i, 0]*y_hat[0] + \
-                            pos[i, 1]*y_hat[1] + pos[i, 2]*y_hat[2]
+                        xsky[k] = xsky[k]*dx[i] + x[i]*x_hat[0] + \
+                            y[i]*x_hat[1] + z[i]*x_hat[2]
+                        ysky[k] = ysky[k]*dx[i] + x[i]*y_hat[0] + \
+                            y[i]*y_hat[1] + z[i]*y_hat[2]
                         k += 1
                     n += 1
-                pbar.update(1)
-
-    pbar.close()
     
     return xsky, ysky
 
@@ -151,8 +151,6 @@ def pixel_to_cel(np.ndarray[np.float64_t, ndim=1] xsky,
     sin_cy = sin(cy)
     cos_cy = cos(cy)
 
-    pbar = tqdm(leave=True, total=n, desc="Converting pixel to celestial coordinates")
-    
     for i in range(n):
         
         D = atan(sqrt(xsky[i]*xsky[i] + ysky[i]*ysky[i]))
@@ -166,7 +164,3 @@ def pixel_to_cel(np.ndarray[np.float64_t, ndim=1] xsky,
 
         xsky[i] *= 180.0/PI
         ysky[i] *= 180.0/PI
-        
-        pbar.update(1)
-        
-    pbar.close()

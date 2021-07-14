@@ -3,6 +3,36 @@
 ChangeLog
 =========
 
+Version 3.0.0
+-------------
+
+This major update to pyXSIM contains a number of updates, including some 
+backwards-incompatible changes to the API. To figure out how to transfer 
+your code to version 3.x, please read :ref:`v2_to_v3`.
+
+* A brand-new paradigm for generating photon lists and event lists has been
+  created. In the new scheme, one does not create ``PhotonList`` and ``EventList``
+  classes, but instead two functions, :func:`~pyxsim.photon_list.make_photons`
+  and :func:`~pyxsim.photon_list.project_photons` are used to create photon lists
+  and event lists which are stored on disk as they are made. This allows for very
+  large photon lists and event lists to be created without holding them all in 
+  memory at once. For guidance on how to use the new functions, see 
+  :ref:`photon-lists` and :ref:`event-lists`. 
+* Support for Python 2.7 has been dropped in this version. 
+* The minimum supported yt version is now 4.0.
+* The ``Zmet`` keyword argument to 
+  :class:`~pyxsim.source_models.ThermalSourceModel` has been changed to a required
+  argument. 
+* The default minimum temperature ``kT_min`` for the 
+  :class:`~pyxsim.source_models.ThermalSourceModel` has been changed from 0.008 
+  keV to 0.025 keV.
+* The ``max_density`` keyword argument to
+  :class:`~pyxsim.source_models.ThermalSourceModel` has had its default value
+  set to :math:`5 \times 10^{-25} g cm^{-3}`; previously it was ``None``.
+* The X-ray binaries source generator has been dropped from pyXSIM.
+* The background and point-source source generators have been removed, as this
+  functionality can now be used within SOXS. 
+
 Version 2.3.1
 -------------
 

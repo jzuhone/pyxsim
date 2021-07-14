@@ -1,14 +1,14 @@
 from pyxsim import \
-    PowerLawSourceModel, PhotonList, \
-    WabsModel
+    PowerLawSourceModel, make_photons, \
+    WabsModel, project_photons, EventList
 from pyxsim.tests.utils import \
     BetaModelSource
 from yt.units.yt_array import YTQuantity
 import numpy as np
-from yt.testing import requires_module
 import os
 import shutil
 import tempfile
+from yt.utilities.cosmology import Cosmology 
 from yt.utilities.physical_constants import mp
 from sherpa.astro.ui import load_user_model, add_user_pars, \
     load_pha, ignore, fit, set_model, set_stat, set_method, \
@@ -19,19 +19,17 @@ from soxs.events import write_spectrum
 from soxs.instrument_registry import get_instrument_from_registry, \
     make_simple_instrument
 
-def setup():
-    from yt.config import ytcfg
-    ytcfg["yt", "__withintesting"] = "True"
 
 try:
-    make_simple_instrument("chandra_acisi_cy22", "sq_acisi_cy22", 20.0, 2400)
+    make_simple_instrument("chandra_acisi_cy0", "sq_acisi_cy0", 20.0, 2400)
 except KeyError:
     pass
 
-acis_spec = get_instrument_from_registry("sq_acisi_cy22")
+acis_spec = get_instrument_from_registry("sq_acisi_cy0")
 
 rmf = RedistributionMatrixFile(acis_spec["rmf"])
 arf = AuxiliaryResponseFile(acis_spec['arf'])
+
 
 def mymodel(pars, x, xhi=None):
     dx = x[1]-x[0]
@@ -41,11 +39,12 @@ def mymodel(pars, x, xhi=None):
     plaw = pars[1]*dx*(xmid*(1.0+pars[2]))**(-pars[3])
     return wabs*plaw
 
-@requires_module("sherpa")
+
 def test_power_law():
-    plaw_fit(1.1, prng=30)
-    plaw_fit(0.8)
+    plaw_fit(1.1, prng=33)
+    plaw_fit(0.8, prng=28)
     plaw_fit(1.0, prng=23)
+
 
 def plaw_fit(alpha_sim, prng=None):
 
@@ -60,9 +59,9 @@ def plaw_fit(alpha_sim, prng=None):
         prng = bms.prng
 
     def _hard_emission(field, data):
-        return data["density"]*data["cell_volume"]*YTQuantity(1.0e-18, "s**-1*keV**-1")/mp
+        return data.ds.quan(1.0e-18, "s**-1*keV**-1")*data["density"]*data["cell_volume"]/mp
     ds.add_field(("gas", "hard_emission"), function=_hard_emission, 
-                 units="keV**-1*s**-1", sampling_type='cell')
+                 units="keV**-1*s**-1", sampling_type="local")
 
     nH_sim = 0.02
 
@@ -70,25 +69,30 @@ def plaw_fit(alpha_sim, prng=None):
     exp_time = YTQuantity(2.0e5, "s")
     redshift = 0.01
 
+    cosmo = Cosmology()
+
     sphere = ds.sphere("c", (100., "kpc"))
 
     plaw_model = PowerLawSourceModel(1.0, 0.01, 11.0, "hard_emission", 
                                      alpha_sim, prng=prng)
 
-    photons = PhotonList.from_data_source(sphere, redshift, A, exp_time,
-                                          plaw_model)
+    n_photons, n_cells = make_photons("plaw_photons.h5", sphere, redshift, 
+                                      A, exp_time, plaw_model)
 
-    D_A = photons.parameters["fid_d_a"]
-    dist_fac = 1.0/(4.*np.pi*D_A*D_A*(1.+redshift)**3).in_cgs()
-    norm_sim = float((sphere["hard_emission"]).sum()*dist_fac.in_cgs())*(1.+redshift)
+    D_A = cosmo.angular_diameter_distance(0.0, redshift).to_value("cm")
+    dist_fac = 1.0/(4.*np.pi*D_A*D_A*(1.+redshift)**3)
+    norm_sim = float((sphere["hard_emission"]).sum()*dist_fac)*(1.+redshift)
 
-    events = photons.project_photons("z", [30., 45.], absorb_model="wabs",
-                                     nH=nH_sim, prng=bms.prng, no_shifting=True)
+    n_events = project_photons("plaw_photons.h5", "plaw_events.h5", "z", 
+                               [30., 45.], absorb_model="wabs",
+                               nH=nH_sim, prng=bms.prng, no_shifting=True)
 
-    events.write_simput_file("plaw", overwrite=True)
+    events = EventList("plaw_events.h5")
+
+    events.write_to_simput("plaw", overwrite=True)
 
     instrument_simulator("plaw_simput.fits", "plaw_evt.fits",
-                         exp_time, "sq_acisi_cy22", [30.0, 45.0],
+                         exp_time, "sq_acisi_cy0", [30.0, 45.0],
                          overwrite=True, foreground=False, ptsrc_bkgnd=False,
                          instr_bkgnd=False,
                          prng=prng)
@@ -118,6 +122,7 @@ def plaw_fit(alpha_sim, prng=None):
 
     os.chdir(curdir)
     shutil.rmtree(tmpdir)
+
 
 if __name__ == "__main__":
     test_power_law()

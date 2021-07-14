@@ -2,7 +2,8 @@ from pyxsim.event_list import \
     EventList
 
 from pyxsim.photon_list import \
-    PhotonList
+    make_photons, \
+    project_photons
 
 from pyxsim.source_models import \
    SourceModel, \
@@ -15,8 +16,7 @@ from pyxsim.spectral_models import \
     AbsorptionModel, \
     TBabsModel, WabsModel
 
-from pyxsim.utils import \
-    merge_files
+from pyxsim.utils import merge_files
 
 from ._version import get_versions
 __version__ = get_versions()['version']

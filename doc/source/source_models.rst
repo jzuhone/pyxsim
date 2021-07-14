@@ -5,9 +5,8 @@ Source Models for Generating Photons
 
 pyXSIM comes with three pre-defined ``SourceModel`` types for generating a new
 :class:`~pyxsim.photon_list.PhotonList`, for use with the 
-:meth:`~pyxsim.photon_list.PhotonList.from_data_source` method. Though these 
-should cover the vast majority of use cases, there is also the option to design
-your own source model. 
+:func:`~pyxsim.make_photons` function. Though these should cover the vast 
+majority of use cases, there is also the option to design your own source model. 
 
 .. _thermal-sources:
 
@@ -22,67 +21,87 @@ and metallicity, and is proportional to the density squared:
 
     \varepsilon(E) = n_en_H\Lambda(T, Z, E)
 
-:class:`~pyxsim.source_models.ThermalSourceModel` requires the use of a thermal spectral 
-model, described in the next sub-section. From this spectral model, which depends on 
-temperature and metallicity, a spectrum of photon energies can be generated from each 
-cell or particle. Since generating a new spectrum for each cell would be prohibitively 
-expensive, the cells are binned into a 1-D table of temperatures, and for each bin 
-a spectrum is calculated. Provided the bins are finely spaced enough, the accuracy of 
-this method is sufficient for most purposes. 
+:class:`~pyxsim.source_models.ThermalSourceModel` requires the use of a thermal
+spectral model, described in the next sub-section. From this spectral model, 
+which depends on temperature and metallicity, a spectrum of photon energies can
+be generated from each cell or particle. Since generating a new spectrum for 
+each cell would be prohibitively expensive, the cells are binned into a 1-D 
+table of temperatures, and for each bin a spectrum is calculated. Provided the
+bins are finely spaced enough, the accuracy of this method is sufficient for 
+most purposes. 
 
-By default, setting up a :class:`~pyxsim.source_models.ThermalSourceModel` object
-requires the following arguments:
+.. warning::
+
+    This only works if your dataset has a `("gas", "emission_measure")`
+    field from yt, which is defined by yt if you have species defined in 
+    your dataset such that yt detects them and generates the
+    `("gas", "H_nuclei_density")` (total number density of all species of
+    hydrogen) and `("gas", "El_number_density")` (number density of free
+    electrons) fields. If you do not have these fields defined in your
+    dataset, you may assume full ionization by loading your dataset like
+    this: ``ds = yt.load(filename, default_species_fields="ionized")``. 
+
+By default, setting up a :class:`~pyxsim.source_models.ThermalSourceModel` 
+object requires the following arguments:
 
 * ``spectral_model``: The thermal spectral model to assume. Can be a string or 
   :class:`~pyxsim.spectral_models.SpectralModel` instance. Currently, the only
   string value built into pyXSIM is ``"apec"``. 
 * ``emin``: The minimum energy for the spectrum in keV.
 * ``emax``: The maximum energy for the spectrum in keV.
-* ``nchan``: The number of channels in the spectrum. If one is thermally broadening
-  lines (the default), it is recommended that this number create an energy resolution
-  per channel of roughly 1 eV.
+* ``nchan``: The number of channels in the spectrum. If one is thermally 
+  broadening lines (the default), it is recommended that this number create an 
+  energy resolution per channel of roughly 1 eV.
+* ``Zmet``: The metallicity. Either a floating-point number for a constant
+  metallicity, or the name of a yt field for a spatially-varying metallicity.
 
 So creating a default instance is rather simple:
 
 .. code-block:: python
 
-    thermal_model = pyxsim.ThermalSourceModel("apec", 0.1, 11.0, 10000)
+    thermal_model = pyxsim.ThermalSourceModel("apec", 0.1, 11.0, 10000, 0.3)
 
 However, this model is very customizable. There are a number of other optional 
 parameters which can be set:
 
-* ``temperature_field``: The yt field to use as the temperature. Must have dimensions
-  of temperature. The default is ``("gas", "temperature")`` for grid-based datasets and
-  ``("PartType0", "Temperature")`` or ``("io", "temperature")`` for particle-based datasets,
-  depending on which is available.
-* ``emission_measure_field``: The yt field to use as the emission measure. Must have
-  dimensions of number density or per-volume. The default is ``("gas", "emission_measure")``
-  for grid-based datasets. For particle-based datasets, a new field is constructed, using
-  the default density and mass fields of the dataset, and the fields ``("PartType0", "ElectronAbundance")``
-  ``("PartType0", "NeutralHydrogenAbundance")`` to construct the electron and hydrogen ion
-  number densities if they are present in the dataset.
-* ``kT_min``: The minimum temperature in units of keV in the set of temperature bins. Default is 0.008.
-* ``kT_max``: The maximum temperature in units of keV in the set of temperature bins. Default is 64.0.
+* ``temperature_field``: The yt field to use as the temperature. Must have 
+  dimensions of temperature. The default is ``("gas", "temperature")`` for 
+  grid-based datasets and ``("PartType0", "Temperature")`` or 
+  ``("io", "temperature")`` for particle-based datasets, depending on which is
+  available.
+* ``emission_measure_field``: The yt field to use as the emission measure. Must
+  have dimensions of number density or per-volume. The default is 
+  ``("gas", "emission_measure")`` for grid-based datasets. For particle-based 
+  datasets, a new field is constructed, using the default density and mass 
+  fields of the dataset, and the fields ``("PartType0", "ElectronAbundance")``
+  ``("PartType0", "NeutralHydrogenAbundance")`` to construct the electron and
+  hydrogen ion number densities if they are present in the dataset.
+* ``kT_min``: The minimum temperature in units of keV in the set of temperature
+  bins. Default is 0.025.
+* ``kT_max``: The maximum temperature in units of keV in the set of temperature
+  bins. Default is 64.0.
 * ``n_kT``: The number of temperature bins to use. Default is 10000.
-* ``kT_scale``: The scaling of the temperature bins, either "linear" or "log". Default: "linear"
-* ``Zmet``: The metallicity. Either a floating-point number for a constant metallicity, or the name of 
-  a yt field for a spatially-varying metallicity. Default is 0.3.
-* ``method``: The method used to generate the photon energies from the spectrum. Either ``"invert_cdf"``,
-  which inverts the cumulative distribution function of the spectrum, or ``"accept_reject"``, which uses 
-  the acceptance-rejection method on the spectrum. The first method should be sufficient for most cases.
-* ``thermal_broad``: A boolean specifying whether or not the spectral lines should be thermally
-  broadened. Default: True
-* ``model_root``: A path specifying where the model files are stored. If not provided, a default
-  location known to pyXSIM is used.
-* ``model_vers``: The version identifier string for the model files, e.g. "2.0.2". The default 
-  depends on the model used.
-* ``var_elem``: Used to specify the abundances of specific elements, whether via floating-point 
-  numbers of yt fields. A dictionary of elements and values should be specified. See :ref:`var-abund`
-  below for more details.
-* ``nolines``: If set to ``True``, the photons for this source will be generated assuming no emission
-  lines. Default: ``False``
-* ``abund_table``: The solar abundance table assumed for the different elements. See the discussion
-  in :ref:`solar-abund-tables` below for more details. Default: ``"angr"``
+* ``kT_scale``: The scaling of the temperature bins, either "linear" or "log".
+  Default: "linear"
+* ``method``: The method used to generate the photon energies from the spectrum.
+  Either ``"invert_cdf"``,
+  which inverts the cumulative distribution function of the spectrum, or 
+  ``"accept_reject"``, which uses the acceptance-rejection method on the 
+  spectrum. The first method should be sufficient for most cases.
+* ``thermal_broad``: A boolean specifying whether or not the spectral lines
+  should be thermally broadened. Default: True
+* ``model_root``: A path specifying where the model files are stored. If not 
+  provided, a default location known to pyXSIM is used.
+* ``model_vers``: The version identifier string for the model files, e.g. 
+  "2.0.2". The default depends on the model used.
+* ``var_elem``: Used to specify the abundances of specific elements, whether via
+  floating-point numbers of yt fields. A dictionary of elements and values 
+  should be specified. See :ref:`var-abund` below for more details.
+* ``nolines``: If set to ``True``, the photons for this source will be generated 
+  assuming no emission lines. Default: ``False``
+* ``abund_table``: The solar abundance table assumed for the different elements.
+  See the discussion in :ref:`solar-abund-tables` below for more details. 
+  Default: ``"angr"``
 * ``prng``: A pseudo-random number generator. Typically will only be specified
   if you have a reason to generate the same set of random numbers, such as for a 
   test or a comparison. Default is the :mod:`numpy.random` module, but a 
@@ -91,22 +110,26 @@ parameters which can be set:
 Tweaking the Temperature Bins
 +++++++++++++++++++++++++++++
 
-As mentioned above, :class:`~pyxsim.source_models.ThermalSourceModel` bins the dataset's cells/particles 
-into a 1-D table of temperatures, each bin containing a spectrum. It is important that this temperature 
-binning faithfully reflects the temperature distribution within the dataset adequately. It may be necessary
-to tweak the number, limits, or scaling of the temperature bins. Some example situations where it may
-be necessary to do this are:
+As mentioned above, :class:`~pyxsim.source_models.ThermalSourceModel` bins the 
+dataset's cells/particles into a 1-D table of temperatures, each bin containing
+a spectrum. It is important that this temperature binning faithfully reflects 
+the temperature distribution within the dataset adequately. It may be necessary
+to tweak the number, limits, or scaling of the temperature bins. Some example 
+situations where it may be necessary to do this are:
 
-* A situation in which there is a lot of low-temperature, high-density gas that is not expected to emit
-  X-rays, in which case one could set ``kT_min`` to a higher value than these temperatures. 
-* A situation in which the temperatures in the dataset span a small dynamic range, in which case one would
-  set both ``kT_min`` and ``kT_max`` to bracket this range, and set ``n_kT`` to ensure that the bins are 
-  finely  spaced. 
-* A situation with both low and high temperature gas which are expected to emit X-rays, requiring resolution
-  over a large dynamic range. One could set ``n_kT`` to a large value, or alternatively one could set 
-  ``kT_scale="log"`` to adopt logarithmic binning. 
+* A situation in which there is a lot of low-temperature, high-density gas that 
+  is not expected to emit X-rays, in which case one could set ``kT_min`` to a 
+  higher value than these temperatures. 
+* A situation in which the temperatures in the dataset span a small dynamic 
+  range, in which case one would set both ``kT_min`` and ``kT_max`` to bracket 
+  this range, and set ``n_kT`` to ensure that the bins are finely spaced. 
+* A situation with both low and high temperature gas which are expected to emit 
+  X-rays, requiring resolution over a large dynamic range. One could set 
+  ``n_kT`` to a large value, or alternatively one could set ``kT_scale="log"`` 
+  to adopt logarithmic binning. 
 
-Some degree of trial and error may be necessary to determine the correct setup of the temperature bins.
+Some degree of trial and error may be necessary to determine the correct setup 
+of the temperature bins.
 
 .. _solar-abund-tables:
 
@@ -117,8 +140,8 @@ The abundance parameters discussed so far assume abundance of a particular
 element or a number of elements relative to the Solar value. Underlying this
 are the values of the Solar abundances themselves. It is possible to change the
 Solar abundance table in pyXSIM via the optional ``abund_table`` argument to 
-:class:`~pyxsim.source_models.ThermalSourceModel`. By default, pyXSIM assumes the 
-`Anders & Grevesse 1989 <http://adsabs.harvard.edu/abs/1989GeCoA..53..197A>`_ 
+:class:`~pyxsim.source_models.ThermalSourceModel`. By default, pyXSIM assumes 
+the `Anders & Grevesse 1989 <http://adsabs.harvard.edu/abs/1989GeCoA..53..197A>`_ 
 abundances corresponding to a setting of ``"angr"`` for this parameter, but it 
 is possible to use other tables of solar abundances. The other tables included 
 which can be used are:
@@ -132,12 +155,14 @@ The Solar abundance table can be changed like this:
 .. code-block:: python
 
     thermal_model = pyxsim.ThermalSourceModel("apec", 0.1, 20.0, 10000, 
+                                              ("gas","metallicity"),
                                               prng=25, abund_table='lodd')
 
-Alternatively, one can supply their own abundance table by providing a NumPy array, list,
-or tuple of abundances 30 elements in length corresponding to the Solar abundances
-relative to hydrogen in the order of H, He, Li, Be, B, C, N, O, F, Ne, Na, Mg, Al, Si, P,
-S, Cl, Ar, K, Ca, Sc, Ti, V, Cr, Mn, Fe, Co, Ni, Cu, and Zn. An example:
+Alternatively, one can supply their own abundance table by providing a NumPy 
+array, list, or tuple of abundances 30 elements in length corresponding to the
+Solar abundances relative to hydrogen in the order of H, He, Li, Be, B, C, N, O,
+F, Ne, Na, Mg, Al, Si, P, S, Cl, Ar, K, Ca, Sc, Ti, V, Cr, Mn, Fe, Co, Ni, Cu, 
+and Zn. An example:
 
 .. code-block:: python
 
@@ -156,32 +181,34 @@ S, Cl, Ar, K, Ca, Sc, Ti, V, Cr, Mn, Fe, Co, Ni, Cu, and Zn. An example:
 Variable Abundances
 +++++++++++++++++++
 
-By default, :class:`~pyxsim.source_models.ThermalSourceModel` assumes all abundances 
-besides H, He, and the trace elements are set by the single value or yt field provided 
-by the ``Zmet`` parameter. However, more fine-grained control is possible. 
-:class:`~pyxsim.source_models.ThermalSourceModel` accepts a ``var_elem`` optional argument
-to specify which elements should be allowed to vary freely. The syntax is the same as
-for ``Zmet``, in that each element set can be a single floating-point value or a 
-yt field name corresponding to a field in the dataset. ``var_elem`` should be a dictionary
-of key, value pairs where the key is the standard abbreviation for the element and the
-value is the single number or field name:
+By default, :class:`~pyxsim.source_models.ThermalSourceModel` assumes all 
+abundances besides H, He, and the trace elements are set by the single value or
+yt field provided by the ``Zmet`` parameter. However, more fine-grained control
+is possible. :class:`~pyxsim.source_models.ThermalSourceModel` accepts a 
+``var_elem`` optional argument to specify which elements should be allowed to
+vary freely. The syntax is the same as for ``Zmet``, in that each element set 
+can be a single floating-point value or a yt field name corresponding to a field
+in the dataset. ``var_elem`` should be a dictionary of key, value pairs where 
+the key is the standard abbreviation for the element and the value is the single 
+number or field name:
 
 .. code-block:: python
 
     # Setting abundances by yt field names
     Zmet = ("gas", "metallicity")
     var_elem = {"O": "oxygen", "Ca": "calcium"} 
-    source_model = pyxsim.ThermalSourceModel(0.05, 50.0, 10000, Zmet=Zmet, var_elem=var_elem)
+    source_model = pyxsim.ThermalSourceModel(0.05, 50.0, 10000, Zmet, var_elem=var_elem)
     
 .. code-block:: python
 
     # Setting abundances by numbers
     Zmet = 0.3
     var_elem = {"O": 0.4, "Ca": 0.5} 
-    source_model = pyxsim.ThermalSourceModel(0.05, 50.0, 10000, Zmet=Zmet, var_elem=var_elem)
+    source_model = pyxsim.ThermalSourceModel(0.05, 50.0, 10000, Zmet, var_elem=var_elem)
 
-Whatever elements are not specified here are assumed to be set as normal, whether
-they are H, He, trace elements, or metals covered by the ``Zmet`` parameter. 
+Whatever elements are not specified here are assumed to be set as normal, 
+whether they are H, He, trace elements, or metals covered by the ``Zmet`` 
+parameter. 
 
 .. _nei:
 
@@ -226,7 +253,8 @@ specify their location in ``model_root``. One may also have to change the
     # model files are located here
     model_root = "/Users/jzuhone/atomdb_v3.0.9"
 
-    source_model = pyxsim.ThermalSourceModel("apec", 0.3, 1.7, 1000, nei=True, 
+    source_model = pyxsim.ThermalSourceModel("apec", 0.3, 1.7, 1000, 
+                                             ("gas","metallicity"), nei=True, 
                                              model_root=model_root,
                                              var_elem=var_elem)
 
@@ -237,25 +265,26 @@ Examples
 Here, we will show several examples of constructing 
 :class:`~pyxsim.source_models.ThermalSourceModel` objects. 
 
-An example where we use the default parameters, except we set a constant metallicity:
+An example where we use the default parameters, and a constant 
+metallicity:
 
 .. code-block:: python
 
-    thermal_model = pyxsim.ThermalSourceModel("apec", 0.1, 20.0, 10000, Zmet=0.5)
+    thermal_model = pyxsim.ThermalSourceModel("apec", 0.1, 20.0, 10000, 0.5)
 
 An example where we use a metallicity field and change the temperature field:
 
 .. code-block:: python
 
     thermal_model = pyxsim.ThermalSourceModel("apec", 0.1, 20.0, 10000, 
-                                              Zmet=("gas", "metallicity"),
-                                              temperature_field="hot_gas_temp")
+                                              ("gas", "metallicity"),
+                                              temperature_field=("hot_gas","temperature")
 
 An example where we change the limits and number of the temperature bins:
 
 .. code-block:: python
 
-    thermal_model = pyxsim.ThermalSourceModel("apec", 0.1, 20.0, 10000, 
+    thermal_model = pyxsim.ThermalSourceModel("apec", 0.1, 20.0, 10000, 0.3,
                                               kT_min=0.1, kT_max=100.,
                                               n_kT=50000)
                                               
@@ -264,7 +293,7 @@ directory to find the model files, and specify the model version:
 
 .. code-block:: python
 
-    thermal_model = pyxsim.ThermalSourceModel("apec", 0.1, 20.0, 10000,
+    thermal_model = pyxsim.ThermalSourceModel("apec", 0.1, 20.0, 10000, 0.3,
                                               thermal_broad=False, 
                                               model_root="/Users/jzuhone/data",
                                               model_vers="3.0.3")
@@ -273,14 +302,14 @@ An example where we specify a random number generator:
 
 .. code-block:: python
 
-    thermal_model = pyxsim.ThermalSourceModel("apec", 0.1, 20.0, 10000, 
+    thermal_model = pyxsim.ThermalSourceModel("apec", 0.1, 20.0, 10000, 0.3,
                                               prng=25)
 
 Turning off line emission:
 
 .. code-block:: python
 
-    thermal_model = pyxsim.ThermalSourceModel("apec", 0.1, 20.0, 10000, 
+    thermal_model = pyxsim.ThermalSourceModel("apec", 0.1, 20.0, 10000, 0.3,
                                               prng=25, nolines=True)
 
 .. _power-law-sources:
@@ -288,19 +317,20 @@ Turning off line emission:
 Power-Law Sources
 -----------------
 
-:class:`~pyxsim.source_models.PowerLawSourceModel` assumes that the emission can be 
-described by a pure power law:
+:class:`~pyxsim.source_models.PowerLawSourceModel` assumes that the emission can
+be described by a pure power law:
 
 .. math::
 
     \varepsilon(E) = K\left(\frac{E}{E_0}\right)^{-\alpha}, E_{\rm min} \leq E \leq E_{\rm max}
     
-between the energies ``emin`` and ``emax``, with a power-law spectral index ``alpha``.
-The power law normalization :math:`K` is represented by an ``emission_field`` specified 
-by the user, which must have units of counts/s/keV in the source rest frame. ``alpha``
-may be a single floating-point number (implying the spectral index is the same everywhere), 
-or a field specification corresponding to a spatially varying spectral index. A reference
-energy ``e0`` (see above equation) must also be specified.
+between the energies ``emin`` and ``emax``, with a power-law spectral index 
+``alpha``. The power law normalization :math:`K` is represented by an 
+``emission_field`` specified by the user, which must have units of counts/s/keV 
+in the source rest frame. ``alpha`` may be a single floating-point number 
+(implying the spectral index is the same everywhere), or a field specification
+corresponding to a spatially varying spectral index. A reference energy ``e0`` 
+(see above equation) must also be specified.
 
 Examples
 ++++++++
@@ -334,35 +364,38 @@ Another example where you have a spatially varying spectral index:
 Line Emission Sources
 ---------------------
 
-:class:`~pyxsim.source_models.LineSourceModel` assumes that the emission is occuring at a 
-single energy, and that it may or may not be broadened by thermal or other motions. In the 
-former case, the emission is a delta function at a single rest-frame energy :math:`E_0`:
+:class:`~pyxsim.source_models.LineSourceModel` assumes that the emission is 
+occuring at a single energy, and that it may or may not be broadened by thermal
+or other motions. In the former case, the emission is a delta function at a 
+single rest-frame energy :math:`E_0`:
 
 .. math::
 
     \varepsilon(E) = A\delta(E-E_0)
 
-In the latter case, the emission is represented by a Gaussian with mean :math:`E_0` and
-standard deviation :math:`\sigma_E`:
+In the latter case, the emission is represented by a Gaussian with mean 
+:math:`E_0` and standard deviation :math:`\sigma_E`:
 
 .. math::
 
     \varepsilon(E) = \frac{A}{\sigma_E\sqrt{2\pi}}e^{-\frac{(E-E_0)^2}{2\sigma_E^2}}
 
-When creating a :class:`~pyxsim.source_models.LineSourceModel`, it is initialized with
-the line rest-frame energy ``e0`` and an ``emission_field`` field specification that 
-represents the normalization :math:`A` in the equations above, which must be in units of
-counts/s. Optionally, the line may be broadened by passing in a ``sigma`` parameter, which
-can be a field specification or ``YTQuantity``, corresponding to either a spatially
-varying field or a single constant value. In either case, ``sigma`` may have units of energy or 
-velocity; if the latter, it will be converted to a broadening in energy units via
+When creating a :class:`~pyxsim.source_models.LineSourceModel`, it is 
+initialized with the line rest-frame energy ``e0`` and an ``emission_field`` 
+field specification that represents the normalization :math:`A` in the equations 
+above, which must be in units of counts/s. Optionally, the line may be broadened 
+by passing in a ``sigma`` parameter, which can be a field specification or 
+``YTQuantity``, corresponding to either a spatially varying field or a single 
+constant value. In either case, ``sigma`` may have units of energy or velocity;
+if the latter, it will be converted to a broadening in energy units via 
 :math:`\sigma_E = \sigma_v\frac{E_0}{c}`.
 
 .. note:: 
 
-    In most cases, you will want velocity broadening of lines to be handled by the 
-    inputted velocity fields instead of by the ``sigma`` parameter. This parameter
-    is designed for thermal or other sources of "intrinsic" broadening.
+    In most cases, you will want velocity broadening of lines to be handled by 
+    the inputted velocity fields instead of by the ``sigma`` parameter. This 
+    parameter is designed for thermal or other sources of "intrinsic" 
+    broadening.
 
 Examples
 ++++++++
@@ -396,39 +429,43 @@ An example of a line with a spatially varying broadening field:
 Designing Your Own Source Model
 -------------------------------
 
-Though the three source models above cover a wide variety of possible use cases for X-ray emission,
-you may find that you need to add a different source altogether. It is possible to create your own
-source model to generate photon energies and positions. We will outline in brief the required steps
-to do so here. We'll use the already exising :class:`~pyxsim.source_models.PowerLawSourceModel` as
-an example.
+Though the three source models above cover a wide variety of possible use cases
+for X-ray emission, you may find that you need to add a different source
+altogether. It is possible to create your own source model to generate photon 
+energies and positions. We will outline in brief the required steps to do so 
+here. We'll use the already exising 
+:class:`~pyxsim.source_models.PowerLawSourceModel` as an example.
 
-To create a new source model, you'll need to make it a subclass of ``SourceModel``. The first thing
-your source model needs is an ``__init__`` method to initialize a new instance of the model. This is
-where you pass in necessary parameters and initialize specific quantities such as the ``spectral_norm``
-and ``redshift`` to ``None``. These will be set to their appropriate values later, in the ``setup_model``
-method. In this case, for a power-law spectrum, we need to define the maximum and minimum energies of the
-spectrum (``emin`` and ``emax``), a reference energy (``e0``), an emissivity field that normalizes the
-spectrum (``norm_field``), and a spectral index field or single number ``alpha``:
+To create a new source model, you'll need to make it a subclass of 
+``SourceModel``. The first thing your source model needs is an ``__init__``
+method to initialize a new instance of the model. This is where you pass in 
+necessary parameters and initialize specific quantities such as the 
+``spectral_norm`` and ``redshift`` to ``None``. These will be set to their 
+appropriate values later, in the ``setup_model`` method. In this case, for 
+a power-law spectrum, we need to define the maximum and minimum energies of the
+spectrum (``emin`` and ``emax``), a reference energy (``e0``), an emissivity 
+field that normalizes the spectrum (``emission_field``), and a spectral index 
+field or single number ``alpha``:
 
 .. code-block:: python
 
-    class PowerLawSourceModel(SourceModel):
-        def __init__(self, e0, emin, emax, norm_field, alpha, prng=None):
-            self.e0 = parse_value(e0, "keV")
-            self.emin = parse_value(emin, "keV")
-            self.emax = parse_value(emax, "keV")
-            self.norm_field = norm_field
-            self.alpha = alpha
-            if prng is None:
-                self.prng = np.random
-            else:
-                self.prng = prng
-            self.spectral_norm = None
-            self.redshift = None
+    def __init__(self, e0, emin, emax, emission_field, alpha, prng=None):
+        self.e0 = parse_value(e0, "keV")
+        self.emin = parse_value(emin, "keV")
+        self.emax = parse_value(emax, "keV")
+        self.emission_field = emission_field
+        self.alpha = alpha
+        self.prng = parse_prng(prng)
+        self.spectral_norm = None
+        self.redshift = None
+        self.ftype = None
 
-It's also always a good idea to have an optional keyword argument ``prng`` for a custom pseudo-random
-number generator. In this way, you can pass in a random number generator (such as a :class:`~numpy.random.RandomState`
-instance) to get reproducible results. The default should be the :mod:`~numpy.random` module.
+You need to also have an attribute for the yt field type stored in 
+``self.ftype`` so that things such as position and velocity fields can be
+determined. It's also always a good idea to have an optional keyword argument
+``prng`` for a custom pseudo-random number generator. In this way, you can pass
+in a random number generator (such as a :class:`~numpy.random.RandomState` 
+instance) to get reproducible results. 
 
 The next method you need to specify is the ``setup_model`` method:
 
@@ -437,21 +474,29 @@ The next method you need to specify is the ``setup_model`` method:
     def setup_model(self, data_source, redshift, spectral_norm):
         self.spectral_norm = spectral_norm
         self.redshift = redshift
+        self.scale_factor = 1.0 / (1.0 + self.redshift)
+        self.ftype = data_source.ds._get_field_info(self.emission_field).name[0]
 
-``setup_model`` should always have this exact method signature. It is called from :meth:`~pyxsim.photon_list.PhotonList.from_data_source`
-and is used to set up the distance, redshift, and other aspects of the source being simulated. This does not happen in
-``__init__`` because we may want to use the same source model for a number of different sources.
+It is called from :meth:`~pyxsim.photon_list.PhotonList.from_data_source` and is
+used to set up the distance, redshift, and other aspects of the source being 
+simulated. This does not happen in ``__init__`` because we may want to use the 
+same source model for a number of different sources. You need to use one of the 
+normalization fields (in this case the emission field) to determine the field
+type.
 
-The next method you need is ``__call__``. ``__call__`` is where the action really happens and the photon energies
-are generated. ``__call__`` takes a chunk of data from the data source, and for this chunk determines the emission
-coming from each cell based on the normalization of the emission (in this case given by the yt field ``"norm_field"``)
-and the spectrum of the source. We have reproduced the method here with additional comments so that it is clearer
+The next method you need is ``__call__``. ``__call__`` is where the action 
+really happens and the photon energies are generated. ``__call__`` takes a 
+chunk of data from the data source, and for this chunk determines the emission
+coming from each cell based on the normalization of the emission (in this case
+given by the yt field ``"norm_field"``) and the spectrum of the source. We have
+reproduced the method here with additional comments so that it is clearer
 what is going on.
 
 .. code-block:: python
 
     def __call__(self, chunk):
 
+        # Determine the number of cells in this chunk
         num_cells = len(chunk[self.norm_field])
 
         # alpha can either be a single float number (the spectral index
@@ -469,20 +514,16 @@ what is going on.
         # the approximate number of photons in each cell.
         norm_fac = (self.emax.v**(1.-alpha)-self.emin.v**(1.-alpha))
         norm_fac[alpha == 1] = np.log(self.emax.v/self.emin.v)
-        norm = norm_fac*chunk[self.norm_field].v*self.e0.v**alpha
+        norm = norm_fac*chunk[self.emission_field].v*self.e0.v**alpha
         norm[alpha != 1] /= (1.-alpha[alpha != 1])
-        norm *= self.spectral_norm
+        norm *= self.spectral_norm*self.scale_factor
 
         # "norm" is now the approximate number of photons in each cell.
-        # what we have to do next is determine the actual number of
-        # photons in each cell. What we do here is split "norm" into
-        # its integer and fractional parts, and use the latter as the
-        # probability that an extra photon will be observed from this
-        # cell in addition to those from the integer part.
-        norm = np.modf(norm)
-        u = self.prng.uniform(size=num_cells)
-        number_of_photons = np.uint64(norm[1]) + np.uint64(norm[0] >= u)
+        # We will determine the number of photons from "norm" assuming
+        # a Poisson distribution.
+        number_of_photons = self.prng.poisson(lam=norm)
 
+        # Generate an empty array for the energies
         energies = np.zeros(number_of_photons.sum())
 
         # Here we loop over the cells and determine the energies of the
@@ -501,8 +542,7 @@ what is going on.
                 else:
                     e = self.emin.v**(1.-alpha[i]) + u*norm_fac[i]
                     e **= 1./(1.-alpha[i])
-                # Scale by the redshift
-                energies[start_e:end_e] = e / (1.+self.redshift)
+                energies[start_e:end_e] = e * self.scale_factor
                 start_e = end_e
 
         # Finally, __call__ must report the number of cells with photons, the 
@@ -511,5 +551,5 @@ what is going on.
         # and the energies of the photons.
         active_cells = number_of_photons > 0
         ncells = active_cells.sum()
-        
+
         return ncells, number_of_photons[active_cells], active_cells, energies[:end_e].copy()
