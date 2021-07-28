@@ -25,6 +25,7 @@ html_theme_options = dict(
     bootswatch_theme = "cerulean",
     navbar_sidebarrel = False,
     globaltoc_depth = 2,
+    body_max_width="none",
 )
 
 sys.path.insert(0, os.path.abspath('../../pyxsim'))
