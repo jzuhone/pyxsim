@@ -10,5 +10,6 @@ out on your own, using `sample datasets provided by the yt Project <http://yt-pr
     :maxdepth: 1
         
     Thermal_Emission
+    Advanced_Thermal_Emission
     Power_Law
     Line_Emission

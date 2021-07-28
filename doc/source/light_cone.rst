@@ -9,7 +9,14 @@ cone, the width of individual slices is adjusted such that each slice has the
 same angular size. Each slice is randomly shifted and projected along a random 
 axis to ensure that the same structures are not sampled multiple times. For more 
 information about how light cones are created and used in yt, 
-see `the yt documentation <http://yt-project.org/doc/analyzing/analysis_modules/light_cone_generator.html>`_.
+see `this documentation <https://yt-astro-analysis.readthedocs.io/en/latest/light_cone_generator.html>`_.
+
+.. note::
+
+    This functionality requires installing the 
+    `yt_astro_analysis package <https://yt-astro-analysis.readthedocs.io/>`_,
+    and it should be installed from source. To do this, checkout the 
+    `installation documentation <https://yt-astro-analysis.readthedocs.io/en/latest/Installation.html#installing-from-source>`_.
 
 The :class:`~pyxsim.source_generators.light_cone.XrayLightCone` object allows 
 one to make a projected set of X-ray events from a light cone solution, 
