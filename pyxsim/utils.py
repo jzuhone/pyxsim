@@ -2,6 +2,7 @@ from unyt import unyt_array, unyt_quantity
 from astropy.units import Quantity
 import logging
 from more_itertools import always_iterable
+import numpy as np
 
 pyxsimLogger = logging.getLogger("pyxsim")
 
@@ -51,8 +52,9 @@ def ensure_list(obj):
     return list(always_iterable(obj))
 
 
-def validate_parameters(first, second, skip=[]):
-    from h5py import Dataset
+def validate_parameters(first, second, skip=None):
+    if skip is None:
+        skip = []
     keys1 = list(first.keys())
     keys2 = list(second.keys())
     keys1.sort()
@@ -99,8 +101,10 @@ def merge_files(input_files, output_file, overwrite=False,
     same values, with the exception of the exposure time parameter "exp_time". If
     add_exposure_times=False, the maximum exposure time will be used.
     """
+    from collections import defaultdict
+    from pathlib import Path
     import h5py
-    if os.path.exists(output_file) and not overwrite:
+    if Path(output_file).exists() and not overwrite:
         raise IOError(f"Cannot overwrite existing file {output_file}. "
                       "If you want to do this, set overwrite=True.")
 

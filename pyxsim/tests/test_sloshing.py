@@ -1,14 +1,17 @@
 """
 Answer test pyxsim.
 """
+import numpy as np
 
 from pyxsim import \
     ThermalSourceModel, \
     EventList, make_photons, \
-    project_photons
+    project_photons, merge_files
 from pyxsim.tests.utils import hdf5_answer_testing, file_answer_testing
+from numpy.testing import assert_array_equal
 from numpy.random import RandomState
 import yt
+import h5py
 
 gslr = "GasSloshingLowRes/sloshing_low_res_hdf5_plt_cnt_0300"
 
@@ -49,3 +52,28 @@ def test_sloshing(answer_store, answer_dir):
     file_answer_testing("SPECTRUM", "test_spec.fits", answer_store,
                         answer_dir)
 
+    n_photons2, n_cells2 = make_photons("photons2", sphere, redshift, A,
+                                        exp_time, thermal_model)
+    n_events2 = project_photons("photons2", "events2", [1.0, -0.5, 0.2],
+                                [30., 45.], absorb_model="tbabs", nH=0.1,
+                                prng=prng)
+
+    merge_files(["photons1.h5", "photons2.h5"], "photons.h5")
+    merge_files(["events1.h5", "events2.h5"], "events.h5")
+
+    with h5py.File("photons.h5", "r") as f, h5py.File("photons1.h5", "r") as f1, \
+        h5py.File("photons2.h5", "r") as f2:
+        assert f["data"]["energy"].size == n_photons1 + n_photons2
+        assert f["data"]["x"].size == n_cells1 + n_cells2
+        for k in f["data"]:
+            assert_array_equal(f["data"][k][()],
+                               np.concatenate([f1["data"][k][()],
+                                               f2["data"][k][()]]))
+
+    with h5py.File("events.h5", "r") as f, h5py.File("events1.h5", "r") as f1, \
+            h5py.File("events2.h5", "r") as f2:
+        assert f["data"]["eobs"].size == n_events1 + n_events2
+        for k in f["data"]:
+            assert_array_equal(f["data"][k][()],
+                               np.concatenate([f1["data"][k][()],
+                                               f2["data"][k][()]]))
