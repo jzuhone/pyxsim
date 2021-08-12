@@ -300,8 +300,9 @@ class ThermalSourceModel(SourceModel):
             dens_cut = np.ones(orig_ncells, dtype="bool")
         else:
             dens_cut = chunk[self.density_field] < self.max_density
-        kT = chunk[self.temperature_field].to_value("keV", "thermal")
-        EM = chunk[self.emission_measure_field].d*dens_cut
+        kT = np.atleast_1d(
+            chunk[self.temperature_field].to_value("keV", "thermal"))
+        EM = np.atleast_1d(chunk[self.emission_measure_field].d*dens_cut)
 
         idxs = np.argsort(kT)
 
@@ -339,7 +340,8 @@ class ThermalSourceModel(SourceModel):
             if isinstance(self.Zmet, float):
                 metalZ = self.Zmet*np.ones(num_cells)
             else:
-                metalZ = chunk[self.Zmet].d[idxs]*self.Zconvert
+                metalZ = np.atleast_1d(chunk[self.Zmet].d[idxs]*
+                                       self.Zconvert)
 
         elemZ = None
         if self.num_var_elem > 0:
@@ -349,7 +351,8 @@ class ThermalSourceModel(SourceModel):
                 if isinstance(value, float):
                     elemZ[j, :] = value
                 else:
-                    elemZ[j, :] = chunk[value].d[idxs]*self.mconvert[key]
+                    elemZ[j, :] = np.atleast_1d(chunk[value].d[idxs]*
+                                                self.mconvert[key])
 
         number_of_photons = np.zeros(num_cells, dtype="int64")
         energies = np.zeros(num_photons_max)
