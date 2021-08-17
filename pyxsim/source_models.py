@@ -296,6 +296,8 @@ class ThermalSourceModel(SourceModel):
         nchan = len(emid)
 
         orig_ncells = chunk[self.temperature_field].size
+        if orig_ncells == 0:
+            return
         if self.max_density is None:
             dens_cut = np.ones(orig_ncells, dtype="bool")
         else:
