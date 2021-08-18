@@ -30,11 +30,14 @@ PYVER=`python --version`
 conda config --add channels https://conda.anaconda.org/sherpa
 conda install --yes numpy pytest pip h5py astropy nose cython scipy yt
 conda install --yes -c jzuhone soxs
-if [[ $PYVER == *"3.9"* ]]; then
-  conda install --yes \
-    https://anaconda.org/sherpa/sherpa/4.13.1/download/linux-64/sherpa-4.13.1-py39h3fd9d12_246.tar.bz2
-else
-  conda install --yes sherpa
+
+if [[ ${mode} == "testing" ]]; then
+  # install sherpa for testing
+  if [[ $PYVER == *"3.9"* ]]; then
+    conda install --yes -c sherpa/label/dev sherpa
+  else
+    conda install --yes sherpa
+  fi 
 fi 
 
 if [[ ${mode} == "wheels" ]]; then

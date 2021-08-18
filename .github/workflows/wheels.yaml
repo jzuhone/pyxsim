@@ -5,7 +5,7 @@ on:
     branches:
       - main
     tags:
-      - 'pyxsim-*'
+      - '*'
 
 jobs:
   build_wheels:
