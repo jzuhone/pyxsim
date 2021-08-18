@@ -41,6 +41,7 @@ if [[ ${mode} == "wheels" ]]; then
   conda install --yes wheel setuptools
 fi 
 
-# Install pyxsim
-
-python -m pip install -e .
+if [[ ${mode} == "testing" ]]; then
+  # Install pyxsim
+  python -m pip install -e .
+fi
