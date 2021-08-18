@@ -31,7 +31,7 @@ jobs:
           update-conda: true
           conda-channels: conda-forge
           activate-conda: true
-          python-version: ${{matrix.python-version}}
+          python-version: 3.9
 
       - name: Install dependencies and pyxsim
         shell: bash
