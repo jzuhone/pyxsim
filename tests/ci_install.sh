@@ -36,6 +36,11 @@ if [[ $PYVER == *"3.9"* ]]; then
 else
   conda install --yes sherpa
 fi 
+
+if [[ ${mode} == "wheels" ]]; then
+  conda install --yes wheel setuptools
+fi 
+
 # Install pyxsim
 
 python -m pip install -e .
