@@ -3,6 +3,18 @@
 ChangeLog
 =========
 
+Version 3.0.1
+-------------
+
+This is a bugfix release to pyXSIM. All users are strongly encouraged to upgrade.
+
+* A bug in the :class:`~pyxsim.source_models.ThermalSourceModel` which resulted
+  in crashes when encountering a chunk of one or zero gas particles has been fixed.
+* When using variable elements in :class:`~pyxsim.source_models.ThermalSourceModel`,
+  if the ``Zmet`` argument for the remaining elements was a field and was a mass 
+  fraction, its conversion to solar units was computed incorrectly. This has now
+  been fixed.
+
 Version 3.0.0
 -------------
 
