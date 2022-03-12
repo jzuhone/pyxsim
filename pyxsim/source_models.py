@@ -287,7 +287,7 @@ class ThermalSourceModel(SourceModel):
         self.temperature_field = None
         self.pbar.close()
 
-    def __call__(self, chunk):
+    def make_photons(self, chunk):
 
         num_photons_max = 10000000
         emid = self.spectral_model.emid
@@ -502,7 +502,7 @@ class PowerLawSourceModel(SourceModel):
         self.scale_factor = 1.0 / (1.0 + self.redshift)
         self.ftype = data_source.ds._get_field_info(self.emission_field).name[0]
 
-    def __call__(self, chunk):
+    def make_photons(self, chunk):
 
         num_cells = len(chunk[self.emission_field])
 
@@ -600,7 +600,7 @@ class LineSourceModel(SourceModel):
         self.scale_factor = 1.0 / (1.0 + self.redshift)
         self.ftype = data_source.ds._get_field_info(self.emission_field).name[0]
 
-    def __call__(self, chunk):
+    def make_photons(self, chunk):
         num_cells = len(chunk[self.emission_field])
         F = chunk[self.emission_field]*self.spectral_norm*self.scale_factor
         number_of_photons = self.prng.poisson(lam=F.in_cgs().v)
