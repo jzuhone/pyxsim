@@ -19,3 +19,6 @@ from pyxsim.spectral_models import \
     TBabsModel, WabsModel
 
 from pyxsim.utils import merge_files
+
+from pyxsim.xray_fields import \
+    make_xray_fields

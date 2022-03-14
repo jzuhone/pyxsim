@@ -5,6 +5,7 @@ import numpy as np
 from yt.funcs import ensure_numpy_array
 from tqdm.auto import tqdm
 from pyxsim.utils import mylog
+from yt.data_objects.static_output import Dataset
 from yt.units.yt_array import YTQuantity
 from yt.utilities.physical_constants import clight
 from pyxsim.spectral_models import thermal_models
@@ -35,13 +36,24 @@ class ParallelProgressBar:
         mylog.info(f"Finishing '{self.title}'")
 
 
+class DummyProgressBar:
+    def __init__(self):
+        pass
+
+    def update(self, *args, **kwargs):
+        return
+
+    def close(self):
+        return
+
+
 class SourceModel:
     def __init__(self, prng=None):
         self.spectral_norm = None
         self.redshift = None
         self.prng = parse_prng(prng)
 
-    def __call__(self, chunk):
+    def process_data(self, mode, chunk):
         pass
 
     def setup_model(self, data_source, redshift, spectral_norm):
@@ -175,6 +187,8 @@ class ThermalSourceModel(SourceModel):
             var_elem_keys = list(var_elem.keys())
             self.num_var_elem = len(var_elem_keys)
         self.var_elem = var_elem
+        self.emin = parse_value(emin, "keV")
+        self.emax = parse_value(emax, "keV")
         self.spectral_model = spectral_model(emin, emax, nchan,
                                              var_elem=var_elem_keys,
                                              thermal_broad=thermal_broad,
@@ -212,11 +226,15 @@ class ThermalSourceModel(SourceModel):
         self.ftype = "gas"
 
     def setup_model(self, data_source, redshift, spectral_norm):
+        if isinstance(data_source, Dataset):
+            ds = data_source
+        else:
+            ds = data_source.ds
         if self.emission_measure_field is None:
             self.emission_measure_field = \
                 (self.ftype, 'emission_measure')
         try:
-            ftype = data_source.ds._get_field_info(
+            ftype = ds._get_field_info(
                 self.emission_measure_field).name[0]
         except YTFieldNotFound:
             raise RuntimeError(f"The {self.emission_measure_field} field is not "
@@ -227,7 +245,7 @@ class ThermalSourceModel(SourceModel):
         self.ftype = ftype
         self.redshift = redshift
         if not self.nei and not isinstance(self.Zmet, float):
-            Z_units = str(data_source.ds._get_field_info(self.Zmet).units)
+            Z_units = str(ds._get_field_info(self.Zmet).units)
             if Z_units in ["dimensionless", "", "code_metallicity"]:
                 Zsum = (self.atable*atomic_weights)[metal_elem].sum()
                 self.Zconvert = atomic_weights[1]/(Zsum*solar_H_abund)
@@ -244,7 +262,7 @@ class ThermalSourceModel(SourceModel):
                     else:
                         elem = key
                     n_elem = elem_names.index(elem)
-                    m_units = str(data_source.ds._get_field_info(value).units)
+                    m_units = str(ds._get_field_info(value).units)
                     if m_units in ["dimensionless", "", "code_metallicity"]:
                         m = self.atable[n_elem]*atomic_weights[n_elem]
                         self.mconvert[key] = atomic_weights[1]/(m*solar_H_abund)
@@ -271,39 +289,48 @@ class ThermalSourceModel(SourceModel):
                                        np.log10(self.kT_max),
                                        num=self.n_kT+1)
         self.dkT = np.diff(self.kT_bins)
-        citer = data_source.chunks([], "io")
-        num_cells = 0
-        for chunk in parallel_objects(citer):
-            num_cells += chunk[self.temperature_field].size
-        self.tot_num_cells = comm.mpi_allreduce(num_cells)
-        if parallel_capable:
-            self.pbar = ParallelProgressBar("Processing cells/particles ")
+        if isinstance(data_source, Dataset):
+            self.pbar = DummyProgressBar()
         else:
-            self.pbar = tqdm(leave=True, total=self.tot_num_cells,
-                             desc="Processing cells/particles ")
+            citer = data_source.chunks([], "io")
+            num_cells = 0
+            for chunk in parallel_objects(citer):
+                num_cells += chunk[self.temperature_field].size
+            self.tot_num_cells = comm.mpi_allreduce(num_cells)
+            if parallel_capable:
+                self.pbar = ParallelProgressBar("Processing cells/particles ")
+            else:
+                self.pbar = tqdm(leave=True, total=self.tot_num_cells,
+                                 desc="Processing cells/particles ")
 
     def cleanup_model(self):
         self.emission_measure_field = None
         self.temperature_field = None
         self.pbar.close()
 
-    def make_photons(self, chunk):
+    def process_data(self, mode, chunk):
 
-        num_photons_max = 10000000
         emid = self.spectral_model.emid
         ebins = self.spectral_model.ebins
         nchan = len(emid)
 
-        orig_ncells = chunk[self.temperature_field].size
+        orig_shape = chunk[self.temperature_field].shape
+        if len(orig_shape) == 0:
+            orig_ncells = 0
+        else:
+            orig_ncells = np.prod(orig_shape)
         if orig_ncells == 0:
             return
+
+        ret = np.zeros(orig_ncells)
+
         if self.max_density is None:
             dens_cut = np.ones(orig_ncells, dtype="bool")
         else:
             dens_cut = chunk[self.density_field] < self.max_density
         kT = np.atleast_1d(
-            chunk[self.temperature_field].to_value("keV", "thermal"))
-        EM = np.atleast_1d(chunk[self.emission_measure_field].d*dens_cut)
+            chunk[self.temperature_field].to_value("keV", "thermal")).flat
+        EM = np.atleast_1d(chunk[self.emission_measure_field].d*dens_cut).flat
 
         idxs = np.argsort(kT)
 
@@ -313,11 +340,14 @@ class ThermalSourceModel(SourceModel):
         idxs = idxs[idx_min:idx_max]
         num_cells = len(idxs)
 
-        if num_cells == 0:
-            self.pbar.update(orig_ncells)
-            return
-        else:
-            self.pbar.update(orig_ncells-num_cells)
+        if mode == "photons":
+            if num_cells == 0:
+                self.pbar.update(orig_ncells)
+                return
+            else:
+                self.pbar.update(orig_ncells-num_cells)
+        elif num_cells == 0:
+            return np.zeros(orig_shape)
 
         kT_idxs = np.digitize(kT[idxs], self.kT_bins)-1
         bcounts = np.bincount(kT_idxs).astype("int")
@@ -342,7 +372,7 @@ class ThermalSourceModel(SourceModel):
                 metalZ = self.Zmet*np.ones(num_cells)
             else:
                 metalZ = np.atleast_1d(chunk[self.Zmet].d[idxs]*
-                                       self.Zconvert)
+                                       self.Zconvert).flat
 
         elemZ = None
         if self.num_var_elem > 0:
@@ -353,8 +383,9 @@ class ThermalSourceModel(SourceModel):
                     elemZ[j, :] = value
                 else:
                     elemZ[j, :] = np.atleast_1d(chunk[value].d[idxs]*
-                                                self.mconvert[key])
+                                                self.mconvert[key]).flat
 
+        num_photons_max = 10000000
         number_of_photons = np.zeros(num_cells, dtype="int64")
         energies = np.zeros(num_photons_max)
 
@@ -371,84 +402,109 @@ class ThermalSourceModel(SourceModel):
 
             cspec, mspec, vspec = self.spectral_model.get_spectrum(kT)
 
-            tot_ph_c = cspec.d.sum()
-            tot_ph_m = mspec.d.sum()
+            if mode in ["photons", "photon_field"]:
 
-            cell_norm_c = tot_ph_c*cem
-            cell_norm_m = tot_ph_m*metalZ[ibegin:iend]*cem
-            cell_norm = cell_norm_c + cell_norm_m
+                tot_ph_c = cspec.d.sum()
+                tot_ph_m = mspec.d.sum()
 
-            if vspec is not None:
-                cell_norm_v = np.zeros(cem.size)
-                for j in range(self.num_var_elem):
-                    tot_ph_v = vspec.d[j, :].sum()
-                    cell_norm_v += tot_ph_v*elemZ[j, ibegin:iend]*cem
-                cell_norm += cell_norm_v
+                cell_norm_c = tot_ph_c*cem
+                cell_norm_m = tot_ph_m*metalZ[ibegin:iend]*cem
+                cell_norm = cell_norm_c + cell_norm_m
 
-            cell_n = ensure_numpy_array(self.prng.poisson(lam=cell_norm))
-
-            number_of_photons[ibegin:iend] = cell_n
-
-            end_e += int(cell_n.sum())
-
-            if self.method == "invert_cdf":
-                cumspec_c = np.insert(np.cumsum(cspec.d), 0, 0.0)
-                cumspec_m = np.insert(np.cumsum(mspec.d), 0, 0.0)
-                if vspec is None:
-                    cumspec_v = None
-                else:
-                    cumspec_v = np.zeros((self.num_var_elem, nchan+1))
+                if vspec is not None:
+                    cell_norm_v = np.zeros(cem.size)
                     for j in range(self.num_var_elem):
-                        cumspec_v[j, 1:] = np.cumsum(vspec.d[j, :])
+                        tot_ph_v = vspec.d[j, :].sum()
+                        cell_norm_v += tot_ph_v*elemZ[j, ibegin:iend]*cem
+                    cell_norm += cell_norm_v
 
-            ei = start_e
-            for icell in range(ibegin, iend):
-                cn = number_of_photons[icell]
-                if cn == 0:
-                    continue
-                # The rather verbose form of the few next statements is a
-                # result of code optimization and shouldn't be changed
-                # without checking for perfomance degradation. See
-                # https://bitbucket.org/yt_analysis/yt/pull-requests/1766
-                # for details.
-                if self.method == "invert_cdf":
-                    cumspec = cumspec_c
-                    cumspec += metalZ[icell] * cumspec_m
-                    if cumspec_v is not None:
-                        for j in range(self.num_var_elem):
-                            cumspec += elemZ[j, icell]*cumspec_v[j, :]
-                    norm_factor = 1.0 / cumspec[-1]
-                    cumspec *= norm_factor
-                    randvec = self.prng.uniform(size=cn)
-                    randvec.sort()
-                    cell_e = np.interp(randvec, cumspec, ebins)
-                elif self.method == "accept_reject":
-                    tot_spec = cspec.d
-                    tot_spec += metalZ[icell] * mspec.d
-                    if vspec is not None:
-                        for j in range(self.num_var_elem):
-                            tot_spec += elemZ[j, icell]*vspec.d[j, :]
-                    norm_factor = 1.0 / tot_spec.sum()
-                    tot_spec *= norm_factor
-                    eidxs = self.prng.choice(nchan, size=cn, p=tot_spec)
-                    cell_e = emid[eidxs]
-                while ei+cn > num_photons_max:
-                    num_photons_max *= 2
-                if num_photons_max > energies.size:
-                    energies.resize(num_photons_max, refcheck=False)
-                energies[ei:ei+cn] = cell_e
-                ei += cn
+                if mode == "photons":
 
-            start_e = end_e
+                    cell_n = ensure_numpy_array(self.prng.poisson(lam=cell_norm))
 
-        active_cells = number_of_photons > 0
-        idxs = idxs[active_cells]
-        ncells = idxs.size
+                    number_of_photons[ibegin:iend] = cell_n
 
-        return ncells, number_of_photons[active_cells], idxs, energies[:end_e].copy()
+                    end_e += int(cell_n.sum())
 
-    def cleanup_model(self):
-        self.pbar.close()
+                    if self.method == "invert_cdf":
+                        cumspec_c = np.insert(np.cumsum(cspec.d), 0, 0.0)
+                        cumspec_m = np.insert(np.cumsum(mspec.d), 0, 0.0)
+                        if vspec is None:
+                            cumspec_v = None
+                        else:
+                            cumspec_v = np.zeros((self.num_var_elem, nchan+1))
+                            for j in range(self.num_var_elem):
+                                cumspec_v[j, 1:] = np.cumsum(vspec.d[j, :])
+
+                    ei = start_e
+                    for icell in range(ibegin, iend):
+                        cn = number_of_photons[icell]
+                        if cn == 0:
+                            continue
+                        # The rather verbose form of the few next statements is a
+                        # result of code optimization and shouldn't be changed
+                        # without checking for perfomance degradation. See
+                        # https://bitbucket.org/yt_analysis/yt/pull-requests/1766
+                        # for details.
+                        if self.method == "invert_cdf":
+                            cumspec = cumspec_c
+                            cumspec += metalZ[icell] * cumspec_m
+                            if cumspec_v is not None:
+                                for j in range(self.num_var_elem):
+                                    cumspec += elemZ[j, icell]*cumspec_v[j, :]
+                            norm_factor = 1.0 / cumspec[-1]
+                            cumspec *= norm_factor
+                            randvec = self.prng.uniform(size=cn)
+                            randvec.sort()
+                            cell_e = np.interp(randvec, cumspec, ebins)
+                        elif self.method == "accept_reject":
+                            tot_spec = cspec.d
+                            tot_spec += metalZ[icell] * mspec.d
+                            if vspec is not None:
+                                for j in range(self.num_var_elem):
+                                    tot_spec += elemZ[j, icell]*vspec.d[j, :]
+                            norm_factor = 1.0 / tot_spec.sum()
+                            tot_spec *= norm_factor
+                            eidxs = self.prng.choice(nchan, size=cn, p=tot_spec)
+                            cell_e = emid[eidxs]
+                        while ei+cn > num_photons_max:
+                            num_photons_max *= 2
+                        if num_photons_max > energies.size:
+                            energies.resize(num_photons_max, refcheck=False)
+                        energies[ei:ei+cn] = cell_e
+                        ei += cn
+
+                    start_e = end_e
+
+                elif mode == "photon_field":
+
+                    ret[idxs[ibegin:iend]] = cell_norm
+
+            elif mode == "energy_field":
+
+                tot_e_c = (cspec.d*emid).sum()
+                tot_e_m = (mspec.d*emid).sum()
+
+                cell_e_c = tot_e_c * cem
+                cell_e_m = tot_e_m * metalZ[ibegin:iend] * cem
+                cell_e = cell_e_c + cell_e_m
+
+                if vspec is not None:
+                    cell_e_v = np.zeros(cem.size)
+                    for j in range(self.num_var_elem):
+                        tot_e_v = (vspec.d[j, :]*emid).sum()
+                        cell_e_v += tot_e_v * elemZ[j, ibegin:iend] * cem
+                    cell_e += cell_e_v
+
+                ret[idxs[ibegin:iend]] = cell_e
+
+        if mode == "photons":
+            active_cells = number_of_photons > 0
+            idxs = idxs[active_cells]
+            ncells = idxs.size
+            return ncells, number_of_photons[active_cells], idxs, energies[:end_e].copy()
+        else:
+            return np.resize(ret, orig_shape)
 
 
 class PowerLawSourceModel(SourceModel):
@@ -497,12 +553,16 @@ class PowerLawSourceModel(SourceModel):
         self.ftype = None
 
     def setup_model(self, data_source, redshift, spectral_norm):
+        if isinstance(data_source, Dataset):
+            ds = data_source
+        else:
+            ds = data_source.ds
         self.spectral_norm = spectral_norm
         self.redshift = redshift
         self.scale_factor = 1.0 / (1.0 + self.redshift)
-        self.ftype = data_source.ds._get_field_info(self.emission_field).name[0]
+        self.ftype = ds._get_field_info(self.emission_field).name[0]
 
-    def make_photons(self, chunk):
+    def process_data(self, mode, chunk):
 
         num_cells = len(chunk[self.emission_field])
 
@@ -511,34 +571,51 @@ class PowerLawSourceModel(SourceModel):
         else:
             alpha = chunk[self.alpha].v
 
-        norm_fac = (self.emax.v**(1.-alpha)-self.emin.v**(1.-alpha))
-        norm_fac[alpha == 1] = np.log(self.emax.v/self.emin.v)
-        norm = norm_fac*chunk[self.emission_field].v*self.e0.v**alpha
-        norm[alpha != 1] /= (1.-alpha[alpha != 1])
-        norm *= self.spectral_norm*self.scale_factor
+        if mode in ["photons", "photon_field"]:
 
-        number_of_photons = self.prng.poisson(lam=norm)
+            norm_fac = (self.emax.v ** (1. - alpha) - self.emin.v ** (1. - alpha))
+            norm_fac[alpha == 1] = np.log(self.emax.v / self.emin.v)
+            norm_fac *= self.e0.v ** alpha
+            norm_fac[alpha != 1] /= (1. - alpha[alpha != 1])
+            norm = norm_fac * chunk[self.emission_field].v
 
-        energies = np.zeros(number_of_photons.sum())
+            if mode == "photons":
 
-        start_e = 0
-        end_e = 0
-        for i in range(num_cells):
-            if number_of_photons[i] > 0:
-                end_e = start_e+number_of_photons[i]
-                u = self.prng.uniform(size=number_of_photons[i])
-                if alpha[i] == 1:
-                    e = self.emin.v*(self.emax.v/self.emin.v)**u
-                else:
-                    e = self.emin.v**(1.-alpha[i]) + u*norm_fac[i]
-                    e **= 1./(1.-alpha[i])
-                energies[start_e:end_e] = e * self.scale_factor
-                start_e = end_e
+                norm *= self.spectral_norm*self.scale_factor
 
-        active_cells = number_of_photons > 0
-        ncells = active_cells.sum()
+                number_of_photons = self.prng.poisson(lam=norm)
 
-        return ncells, number_of_photons[active_cells], active_cells, energies[:end_e].copy()
+                energies = np.zeros(number_of_photons.sum())
+
+                start_e = 0
+                end_e = 0
+                for i in range(num_cells):
+                    if number_of_photons[i] > 0:
+                        end_e = start_e+number_of_photons[i]
+                        u = self.prng.uniform(size=number_of_photons[i])
+                        if alpha[i] == 1:
+                            e = self.emin.v*(self.emax.v/self.emin.v)**u
+                        else:
+                            e = self.emin.v**(1.-alpha[i]) + u*norm_fac[i]
+                            e **= 1./(1.-alpha[i])
+                        energies[start_e:end_e] = e * self.scale_factor
+                        start_e = end_e
+
+                active_cells = number_of_photons > 0
+                ncells = active_cells.sum()
+
+                return ncells, number_of_photons[active_cells], active_cells, energies[:end_e].copy()
+
+            elif mode == "photon_field":
+
+                return norm
+
+        elif mode == "energy_field":
+
+            norm_fac = (self.emax.v ** (2. - alpha) - self.emin.v ** (2. - alpha))
+            norm_fac *= self.e0.v ** alpha / (2. - alpha)
+
+            return norm_fac * chunk[self.emission_field].v
 
 
 class LineSourceModel(SourceModel):
@@ -595,37 +672,51 @@ class LineSourceModel(SourceModel):
         self.ftype = None
 
     def setup_model(self, data_source, redshift, spectral_norm):
+        if isinstance(data_source, Dataset):
+            ds = data_source
+        else:
+            ds = data_source.ds
         self.spectral_norm = spectral_norm
         self.redshift = redshift
         self.scale_factor = 1.0 / (1.0 + self.redshift)
-        self.ftype = data_source.ds._get_field_info(self.emission_field).name[0]
+        self.ftype = ds._get_field_info(self.emission_field).name[0]
 
-    def make_photons(self, chunk):
+    def process_data(self, mode, chunk):
         num_cells = len(chunk[self.emission_field])
-        F = chunk[self.emission_field]*self.spectral_norm*self.scale_factor
-        number_of_photons = self.prng.poisson(lam=F.in_cgs().v)
 
-        energies = self.e0*np.ones(number_of_photons.sum())
+        if mode == "photons":
 
-        if isinstance(self.sigma, YTQuantity):
-            dE = self.prng.normal(loc=0.0, scale=float(self.sigma),
-                                  size=number_of_photons.sum())*self.e0.uq
-            energies += dE
-        elif self.sigma is not None:
-            sigma = (chunk[self.sigma]*self.e0/clight).in_units("keV")
-            start_e = 0
-            for i in range(num_cells):
-                if number_of_photons[i] > 0:
-                    end_e = start_e+number_of_photons[i]
-                    dE = self.prng.normal(loc=0.0, scale=float(sigma[i]),
-                                          size=number_of_photons[i])*self.e0.uq
-                    energies[start_e:end_e] += dE
-                    start_e = end_e
+            F = chunk[self.emission_field]*self.spectral_norm*self.scale_factor
+            number_of_photons = self.prng.poisson(lam=F.in_cgs().v)
 
-        energies = energies * self.scale_factor
+            energies = self.e0*np.ones(number_of_photons.sum())
 
-        active_cells = number_of_photons > 0
-        ncells = active_cells.sum()
+            if isinstance(self.sigma, YTQuantity):
+                dE = self.prng.normal(loc=0.0, scale=float(self.sigma),
+                                      size=number_of_photons.sum())*self.e0.uq
+                energies += dE
+            elif self.sigma is not None:
+                sigma = (chunk[self.sigma]*self.e0/clight).in_units("keV")
+                start_e = 0
+                for i in range(num_cells):
+                    if number_of_photons[i] > 0:
+                        end_e = start_e+number_of_photons[i]
+                        dE = self.prng.normal(loc=0.0, scale=float(sigma[i]),
+                                              size=number_of_photons[i])*self.e0.uq
+                        energies[start_e:end_e] += dE
+                        start_e = end_e
 
-        return ncells, number_of_photons[active_cells], active_cells, energies
+            energies = energies * self.scale_factor
 
+            active_cells = number_of_photons > 0
+            ncells = active_cells.sum()
+
+            return ncells, number_of_photons[active_cells], active_cells, energies
+
+        elif mode == "photon_field":
+
+            return chunk[self.emission_field]
+
+        elif mode == "energy_field":
+
+            return self.e0*chunk[self.emission_field]

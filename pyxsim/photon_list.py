@@ -288,7 +288,7 @@ def make_photons(photon_prefix, data_source, redshift, area,
 
     for chunk in data_source.chunks([], "io"):
 
-        chunk_data = source_model.make_photons(chunk)
+        chunk_data = source_model.process_data("photons", chunk)
 
         if chunk_data is not None:
 
