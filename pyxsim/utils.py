@@ -121,9 +121,8 @@ def merge_files(input_files, output_file, overwrite=False,
 
     skip = [exp_time_key] if add_exposure_times else []
     for fn in input_files[1:]:
-        f = h5py.File(fn, "r")
-        validate_parameters(f_in["parameters"], f["parameters"], skip=skip)
-        f.close()
+        with h5py.File(fn, "r") as f:
+            validate_parameters(f_in["parameters"], f["parameters"], skip=skip)
 
     f_in.close()
 
@@ -131,14 +130,13 @@ def merge_files(input_files, output_file, overwrite=False,
     tot_exp_time = 0.0
 
     for i, fn in enumerate(input_files):
-        f = h5py.File(fn, "r")
-        if add_exposure_times:
-            tot_exp_time += f["/parameters"][exp_time_key][()]
-        else:
-            tot_exp_time = max(tot_exp_time, f["/parameters"][exp_time_key][()])
-        for key in f["/data"]:
-            data[key].append(f["/data"][key][:])
-        f.close()
+        with h5py.File(fn, "r") as f:
+            if add_exposure_times:
+                tot_exp_time += f["/parameters"][exp_time_key][()]
+            else:
+                tot_exp_time = max(tot_exp_time, f["/parameters"][exp_time_key][()])
+            for key in f["/data"]:
+                data[key].append(f["/data"][key][:])
 
     p_out[exp_time_key] = tot_exp_time
 
