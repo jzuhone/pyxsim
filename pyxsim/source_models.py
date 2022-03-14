@@ -573,11 +573,11 @@ class PowerLawSourceModel(SourceModel):
 
         if mode in ["photons", "photon_field"]:
 
-            norm_fac = (self.emax.v ** (1. - alpha) - self.emin.v ** (1. - alpha))
+            norm_fac = self.emax.v**(1.-alpha) - self.emin.v**(1.-alpha)
             norm_fac[alpha == 1] = np.log(self.emax.v / self.emin.v)
-            norm_fac *= self.e0.v ** alpha
-            norm_fac[alpha != 1] /= (1. - alpha[alpha != 1])
+            norm_fac *= self.e0.v**alpha
             norm = norm_fac * chunk[self.emission_field].v
+            norm[alpha != 1] /= (1.-alpha[alpha != 1])
 
             if mode == "photons":
 
@@ -612,7 +612,7 @@ class PowerLawSourceModel(SourceModel):
 
         elif mode == "energy_field":
 
-            norm_fac = (self.emax.v ** (2. - alpha) - self.emin.v ** (2. - alpha))
+            norm_fac = self.emax.v**(2.-alpha) - self.emin.v**(2.-alpha)
             norm_fac *= self.e0.v ** alpha / (2. - alpha)
 
             return norm_fac * chunk[self.emission_field].v
