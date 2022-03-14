@@ -107,7 +107,7 @@ def make_xray_fields(ds, source_model, redshift=0.0,
         ei_name = (
             ftype, emiss_name[1].replace("emissivity", "intensity")
         )
-        ei_dname = emiss_name.replace("\epsilon", "I")
+        ei_dname = emiss_dname.replace("\epsilon", "I")
         def _intensity_field(field, data):
             I = dist_fac * data[emiss_name]
             return I.in_units("erg/cm**3/s/arcsec**2")
@@ -123,7 +123,7 @@ def make_xray_fields(ds, source_model, redshift=0.0,
         i_name = (
             ftype, phot_emiss_name[1].replace("emissivity", "intensity")
         )
-        i_dname = phot_emiss_name.replace("\epsilon", "I")
+        i_dname = emiss_dname.replace("\epsilon", "I")
 
         def _photon_intensity_field(field, data):
             I = (1.0 + redshift) * dist_fac * data[phot_emiss_name]
