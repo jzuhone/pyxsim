@@ -6,7 +6,7 @@ from yt.funcs import ensure_numpy_array
 from tqdm.auto import tqdm
 from pyxsim.utils import mylog
 from yt.data_objects.static_output import Dataset
-from yt.units.yt_array import YTQuantity
+from yt.units.yt_array import YTQuantity, YTArray
 from yt.utilities.physical_constants import clight
 from yt.utilities.cosmology import Cosmology
 from pyxsim.spectral_models import thermal_models
@@ -17,6 +17,11 @@ from yt.utilities.exceptions import YTFieldNotFound
 from yt.utilities.parallel_tools.parallel_analysis_interface import \
     parallel_objects, communication_system, parallel_capable
 from numbers import Number
+from scipy.stats import norm
+
+
+gx = np.linspace(-6, 6, 2400)
+gcdf = norm.cdf(gx)
 
 comm = communication_system.communicators[-1]
 
@@ -199,6 +204,7 @@ class SourceModel:
             xray_fields += [ei_name, i_name]
 
         return xray_fields
+
 
 metal_abund = {"angr": 0.0189,
                "aspl": 0.0134,
@@ -444,6 +450,13 @@ class ThermalSourceModel(SourceModel):
         self.temperature_field = None
         self.pbar.close()
 
+    def make_spectrum(self, data_source):
+        spec = np.zeros(self.spectral_model.emid.size)
+        for chunk in data_source.chunks([], "io"):
+            spec += self.process_data("spectrum", chunk)
+        ebins = YTArray(self.spectral_model.ebins, "keV")
+        return ebins, YTArray(spec, "photons/s")
+
     def process_data(self, mode, chunk):
 
         emid = self.spectral_model.emid
@@ -528,6 +541,8 @@ class ThermalSourceModel(SourceModel):
         start_e = 0
         end_e = 0
 
+        spec = np.zeros(nchan)
+
         for ibegin, iend, bcount, ikT in zip(bcell, ecell, bcounts, kT_idxs):
 
             self.pbar.update(bcount)
@@ -579,9 +594,7 @@ class ThermalSourceModel(SourceModel):
                             continue
                         # The rather verbose form of the few next statements is a
                         # result of code optimization and shouldn't be changed
-                        # without checking for perfomance degradation. See
-                        # https://bitbucket.org/yt_analysis/yt/pull-requests/1766
-                        # for details.
+                        # without checking for perfomance degradation.
                         if self.method == "invert_cdf":
                             cumspec = cumspec_c
                             cumspec += metalZ[icell] * cumspec_m
@@ -634,11 +647,21 @@ class ThermalSourceModel(SourceModel):
 
                 ret[idxs[ibegin:iend]] = cell_e
 
+            elif mode == "spectrum":
+
+                spec += cem.sum()*cspec.d
+                spec += np.sum(metalZ[ibegin:iend]*cem)*mspec.d
+                if vspec is not None:
+                    for j in range(self.num_var_elem):
+                        spec += np.sum(elemZ[j, ibegin:iend]*cem)*vspec.d[j, :]
+
         if mode == "photons":
             active_cells = number_of_photons > 0
             idxs = idxs[active_cells]
             ncells = idxs.size
             return ncells, number_of_photons[active_cells], idxs, energies[:end_e].copy()
+        elif mode == "spectrum":
+            return spec
         else:
             return np.resize(ret, orig_shape)
 
@@ -698,7 +721,16 @@ class PowerLawSourceModel(SourceModel):
         self.scale_factor = 1.0 / (1.0 + self.redshift)
         self.ftype = ds._get_field_info(self.emission_field).name[0]
 
-    def process_data(self, mode, chunk):
+    def make_spectrum(self, data_source, emin, emax, nbins):
+        ebins = np.linspace(emin, emax, nbins+1)
+        emid = 0.5*(ebins[1:]+ebins[:-1])
+        spec = np.zeros(nbins)
+        for chunk in data_source.chunks([], "io"):
+            spec += self.process_data("spectrum", chunk, emid=emid)
+        ebins = YTArray(ebins, "keV")
+        return ebins, YTArray(spec, "photons/s")
+
+    def process_data(self, mode, chunk, emid=None):
 
         num_cells = len(chunk[self.emission_field])
 
@@ -752,6 +784,10 @@ class PowerLawSourceModel(SourceModel):
             norm_fac *= self.e0.v ** alpha / (2. - alpha)
 
             return norm_fac * chunk[self.emission_field].v
+
+        elif mode == "spectrum":
+
+            return chunk[self.emission_field].v.sum()*(emid/self.e0.v)**(-alpha)
 
 
 class LineSourceModel(SourceModel):
@@ -817,13 +853,22 @@ class LineSourceModel(SourceModel):
         self.scale_factor = 1.0 / (1.0 + self.redshift)
         self.ftype = ds._get_field_info(self.emission_field).name[0]
 
-    def process_data(self, mode, chunk):
+    def make_spectrum(self, data_source, emin, emax, nbins):
+        ebins = np.linspace(emin, emax, nbins+1)
+        spec = np.zeros(nbins)
+        for chunk in data_source.chunks([], "io"):
+            spec += self.process_data("spectrum", chunk, ebins=ebins)
+        ebins = YTArray(ebins, "keV")
+        return ebins, YTArray(spec, "photons/s")
+
+    def process_data(self, mode, chunk, ebins=None):
+
         num_cells = len(chunk[self.emission_field])
 
         if mode == "photons":
 
             F = chunk[self.emission_field]*self.spectral_norm*self.scale_factor
-            number_of_photons = self.prng.poisson(lam=F.in_cgs().v)
+            number_of_photons = self.prng.poisson(lam=F.in_cgs().d)
 
             energies = self.e0*np.ones(number_of_photons.sum())
 
@@ -856,3 +901,25 @@ class LineSourceModel(SourceModel):
         elif mode == "energy_field":
 
             return self.e0*chunk[self.emission_field]
+
+        elif mode == "spectrum":
+
+            de = ebins-self.e0.value
+
+            if isinstance(self.sigma, YTQuantity):
+                xtmp = de/self.sigma.value
+                ret = np.interp(xtmp, gx, gcdf)
+                spec = chunk[self.emission_field].d.sum()*(ret[1:]-ret[:-1])
+            elif self.sigma is not None:
+                spec = np.zeros(ebins.size-1)
+                sigma = (chunk[self.sigma]*self.e0/clight).to_value("keV")
+                for i in range(num_cells):
+                    xtmp = de/sigma[i]
+                    ret = np.interp(xtmp, gx, gcdf)
+                    spec += chunk[self.emission_field].d[i]*(ret[1:]-ret[:-1])
+            else:
+                spec = np.zeros(ebins.size-1)
+                idx = np.searchsorted(ebins, self.e0.value)
+                spec[idx] = chunk[self.emission_field].d.sum()
+
+            return spec
