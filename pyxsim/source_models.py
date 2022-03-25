@@ -70,7 +70,26 @@ class SourceModel:
         pass
 
     def make_xray_fields(self, ds, redshift=0.0, dist=None, cosmology=None):
+        r"""
+        
+        Parameters
+        ----------
+        ds : `~yt.data_objects.static_output.Dataset`
+            The loaded yt dataset to make the fields for.
+        redshift : float, optional
+            The redshift of the source. Default: 0.0
+        dist : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity, optional     
+            The angular diameter distance, used for nearby sources. This may be
+            optionally supplied instead of it being determined from the
+            *redshift* and given *cosmology*. If units are not specified, it is
+            assumed to be in kpc. To use this, the redshift must be set to zero.
 
+        cosmology
+
+        Returns
+        -------
+        The list of fields which are generated.
+        """
         spectral_norm = 1.0
 
         self.setup_model(ds, redshift, spectral_norm)
@@ -238,6 +257,10 @@ class ThermalSourceModel(SourceModel):
         The yt emission measure field to use for the thermal modeling. Must
         have units of cm^-3. If not specified, the default emission measure
         field for the dataset will be used or derived.
+    h_fraction : float, string, or tuple of strings, optional
+        The hydrogen mass fraction. If a float, assumes a constant mass 
+        fraction of hydrogen throughout. If a string or tuple of strings, 
+        is taken to be the name of the hydrogen fraction field. Default: 0.74
     kT_min : float, optional
         The default minimum temperature in keV to compute emission for.
         Default: 0.025
@@ -307,11 +330,11 @@ class ThermalSourceModel(SourceModel):
     """
     def __init__(self, spectral_model, emin, emax, nchan, Zmet,
                  temperature_field=None, emission_measure_field=None,
-                 kT_min=0.025, kT_max=64.0, n_kT=10000, kT_scale="linear",
-                 max_density=5.0e-25, var_elem=None, method="invert_cdf",
-                 thermal_broad=True, model_root=None, model_vers=None,
-                 nei=False, nolines=False, abund_table="angr",
-                 h_fraction=None, prng=None):
+                 h_fraction=None, kT_min=0.025, kT_max=64.0, n_kT=10000, 
+                 kT_scale="linear", max_density=5.0e-25, var_elem=None, 
+                 method="invert_cdf", thermal_broad=True, model_root=None, 
+                 model_vers=None, nei=False, nolines=False, abund_table="angr",
+                 prng=None):
         if isinstance(spectral_model, str):
             if spectral_model not in thermal_models:
                 raise KeyError(f"{spectral_model} is not a known thermal "
