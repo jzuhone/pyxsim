@@ -12,7 +12,7 @@ from yt.utilities.cosmology import Cosmology
 from pyxsim.spectral_models import thermal_models
 from pyxsim.utils import parse_value, isunitful
 from soxs.utils import parse_prng
-from soxs.constants import elem_names, atomic_weights, metal_elem
+from soxs.constants import elem_names, atomic_weights
 from yt.utilities.exceptions import YTFieldNotFound
 from yt.utilities.parallel_tools.parallel_analysis_interface import \
     parallel_objects, communication_system, parallel_capable
@@ -307,11 +307,11 @@ class ThermalSourceModel(SourceModel):
     """
     def __init__(self, spectral_model, emin, emax, nchan, Zmet,
                  temperature_field=None, emission_measure_field=None,
-                 kT_min=0.025, kT_max=64.0, n_kT=10000, kT_scale="linear", 
-                 max_density=5.0e-25, var_elem=None, method="invert_cdf", 
-                 thermal_broad=True, model_root=None, model_vers=None, 
+                 kT_min=0.025, kT_max=64.0, n_kT=10000, kT_scale="linear",
+                 max_density=5.0e-25, var_elem=None, method="invert_cdf",
+                 thermal_broad=True, model_root=None, model_vers=None,
                  nei=False, nolines=False, abund_table="angr",
-                 prng=None):
+                 h_fraction=None, prng=None):
         if isinstance(spectral_model, str):
             if spectral_model not in thermal_models:
                 raise KeyError(f"{spectral_model} is not a known thermal "
@@ -355,6 +355,7 @@ class ThermalSourceModel(SourceModel):
         self.Zconvert = 1.0
         self.abund_table = abund_table
         self.atable = self.spectral_model.atable
+        self.metal_elem = self.spectral_model.metal_elem
         self.mconvert = {}
         if max_density is not None:
             if not isinstance(max_density, YTQuantity):
@@ -366,6 +367,9 @@ class ThermalSourceModel(SourceModel):
         self.density_field = None  # Will be determined later
         self.tot_num_cells = 0  # Will be determined later
         self.ftype = "gas"
+        if h_fraction is None:
+            h_fraction = solar_H_abund
+        self.h_fraction = h_fraction
 
     def setup_model(self, data_source, redshift, spectral_norm):
         if isinstance(data_source, Dataset):
@@ -389,8 +393,8 @@ class ThermalSourceModel(SourceModel):
         if not self.nei and not isinstance(self.Zmet, float):
             Z_units = str(ds._get_field_info(self.Zmet).units)
             if Z_units in ["dimensionless", "", "code_metallicity"]:
-                Zsum = (self.atable*atomic_weights)[metal_elem].sum()
-                self.Zconvert = atomic_weights[1]/(Zsum*solar_H_abund)
+                Zsum = (self.atable*atomic_weights)[self.metal_elem].sum()
+                self.Zconvert = atomic_weights[1]/Zsum
             elif Z_units == "Zsun":
                 self.Zconvert = 1.0
             else:
@@ -407,7 +411,7 @@ class ThermalSourceModel(SourceModel):
                     m_units = str(ds._get_field_info(value).units)
                     if m_units in ["dimensionless", "", "code_metallicity"]:
                         m = self.atable[n_elem]*atomic_weights[n_elem]
-                        self.mconvert[key] = atomic_weights[1]/(m*solar_H_abund)
+                        self.mconvert[key] = atomic_weights[1]/m
                     elif m_units == "Zsun":
                         self.mconvert[key] = 1.0
                     else:
@@ -512,6 +516,11 @@ class ThermalSourceModel(SourceModel):
 
         cell_em = EM[idxs]*self.spectral_norm
 
+        if isinstance(self.h_fraction, float):
+            X_H = self.h_fraction
+        else:
+            X_H = chunk[self.h_fraction].d[idxs]
+
         if self.nei:
             metalZ = np.zeros(num_cells)
             elem_keys = self.var_ion_keys
@@ -521,7 +530,7 @@ class ThermalSourceModel(SourceModel):
                 metalZ = self.Zmet*np.ones(num_cells)
             else:
                 metalZ = np.atleast_1d(chunk[self.Zmet].d[idxs]*
-                                       self.Zconvert).flat
+                                       self.Zconvert/X_H).flat
 
         elemZ = None
         if self.num_var_elem > 0:
@@ -532,7 +541,7 @@ class ThermalSourceModel(SourceModel):
                     elemZ[j, :] = value
                 else:
                     elemZ[j, :] = np.atleast_1d(chunk[value].d[idxs]*
-                                                self.mconvert[key]).flat
+                                                self.mconvert[key]/X_H).flat
 
         num_photons_max = 10000000
         number_of_photons = np.zeros(num_cells, dtype="int64")
