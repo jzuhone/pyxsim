@@ -552,8 +552,11 @@ class ThermalSourceModel(SourceModel):
             if isinstance(self.Zmet, float):
                 metalZ = self.Zmet*np.ones(num_cells)
             else:
-                metalZ = np.atleast_1d(chunk[self.Zmet].d[idxs]*
-                                       self.Zconvert/X_H).flat
+                mZ = chunk[self.Zmet]
+                fac = self.Zconvert
+                if str(mZ.units) != "Zsun":
+                    fac /= X_H
+                metalZ = np.atleast_1d(mZ.d[idxs]*fac).flat
 
         elemZ = None
         if self.num_var_elem > 0:
@@ -563,8 +566,11 @@ class ThermalSourceModel(SourceModel):
                 if isinstance(value, float):
                     elemZ[j, :] = value
                 else:
-                    elemZ[j, :] = np.atleast_1d(chunk[value].d[idxs]*
-                                                self.mconvert[key]/X_H).flat
+                    eZ = chunk[value]
+                    fac = self.mconvert[key]
+                    if str(eZ.units) != "Zsun":
+                        fac /= X_H
+                    elemZ[j, :] = np.atleast_1d(eZ.d[idxs]*fac).flat
 
         num_photons_max = 10000000
         number_of_photons = np.zeros(num_cells, dtype="int64")
