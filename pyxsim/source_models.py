@@ -12,7 +12,7 @@ from yt.utilities.cosmology import Cosmology
 from pyxsim.spectral_models import thermal_models
 from pyxsim.utils import parse_value, isunitful
 from soxs.utils import parse_prng
-from soxs.constants import elem_names, atomic_weights
+from soxs.constants import elem_names, atomic_weights, metal_elem
 from yt.utilities.exceptions import YTFieldNotFound
 from yt.utilities.parallel_tools.parallel_analysis_interface import \
     parallel_objects, communication_system, parallel_capable
@@ -416,7 +416,7 @@ class ThermalSourceModel(SourceModel):
         if not self.nei and not isinstance(self.Zmet, float):
             Z_units = str(ds._get_field_info(self.Zmet).units)
             if Z_units in ["dimensionless", "", "code_metallicity"]:
-                Zsum = (self.atable*atomic_weights)[self.metal_elem].sum()
+                Zsum = (self.atable*atomic_weights)[metal_elem].sum()
                 self.Zconvert = atomic_weights[1]/Zsum
             elif Z_units == "Zsun":
                 self.Zconvert = 1.0
