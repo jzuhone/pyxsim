@@ -9,13 +9,14 @@ from pyxsim.photon_list import \
 
 from pyxsim.source_models import \
    SourceModel, \
-   ThermalSourceModel, \
+   CIESourceModel, \
+   NEISourceModel, \
    LineSourceModel, \
    PowerLawSourceModel
 
 from pyxsim.spectral_models import \
     TableApecModel, \
-    AbsorptionModel, \
-    TBabsModel, WabsModel
+    TBabsModel, WabsModel, \
+    XSpecAtableModel    
 
 from pyxsim.utils import merge_files

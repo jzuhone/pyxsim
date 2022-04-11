@@ -7,7 +7,11 @@ from soxs.spectra import ApecGenerator, \
     get_wabs_absorb, get_tbabs_absorb
 from soxs.utils import parse_prng
 from yt.units.yt_array import YTArray, YTQuantity
+from yt.units import keV
+import h5py
+from astropy.io import fits
 
+K_per_keV = (1.0*keV).to_value("K", "thermal")
 
 
 class ThermalSpectralModel:
@@ -165,9 +169,37 @@ class TableApecModel(ThermalSpectralModel):
         return YTArray(spec.flux*spec.de, "photons/s/cm**2")
 
 
-thermal_models = {"apec": TableApecModel}
+class XSpecAtableModel(ThermalSpectralModel):
+    def __init__(self, tablefile, var_elem=None):
+        self.tablefile = tablefile
+        self.var_elem = var_elem
+        self._handle = fits.open(self.tablefile, memmap=True)
+        self.ebins = np.append(self._handle["ENERGIES"].data["ENERG_LO"], 
+                               self._handle["ENERGIES"].data["ENERG_HI"][-1])
+        self.emid = 0.5*(self.ebins[1:]+self.ebins[:-1])
+        self.n_D = self._handle["PARAMETERS"].data["NUMBVALS"][0]
+        self.n_T = self._handle["PARAMETERS"].data["NUMBVALS"][1]
+        self.Dvals = self._handle["PARAMETERS"].data["VALUE"][0][:self.n_D]
+        self.Tvals = self._handle["PARAMETERS"].data["VALUE"][1][:self.n_T]
+        self.dDvals = np.diff(self.Dvals)
+        self.dTvals = np.diff(self.Tvals)
 
-
+    def get_spectrum(self, kT, nH):
+        lkT = np.atleast_1d(np.log10(kT*K_per_keV))
+        lnH = np.atleast_1d(np.log10(nH))
+        tidxs = np.searchsorted(self.Tvals, lkT)-1
+        didxs = np.searchsorted(self.Dvals, lnH)-1
+        dT = (lkT - self.Tvals[tidxs]) / self.dTvals[tidxs]
+        dn = (lnH - self.Dvals[didxs]) / self.dDvals[didxs]
+        spec_data = self._handle["SPECTRA"].data["INTPSPEC"]
+        idx1 = np.ravel_multi_index((didxs+1,tidxs+1), (self.n_D, self.n_T))
+        idx2 = np.ravel_multi_index((didxs+1,tidxs), (self.n_D, self.n_T))
+        idx3 = np.ravel_multi_index((didxs,tidxs+1), (self.n_D, self.n_T))
+        idx4 = np.ravel_multi_index((didxs,tidxs), (self.n_D, self.n_T))
+        spec = dT*dn*spec_data[idx1,:] + (1.0-dT)*dn*spec_data[idx2,:]
+        spec += dT*(1.0-dn)*spec_data[idx3,:] + (1.0-dT)*(1.0-dn)*spec_data[idx4,:]
+        return spec
+    
 class AbsorptionModel:
     _name = ""
 

@@ -4,7 +4,7 @@ A unit test for the pyxsim analysis module.
 
 from pyxsim import \
     TableApecModel, TBabsModel, \
-    ThermalSourceModel, make_photons, \
+    CIESourceModel, make_photons, \
     project_photons, EventList
 from pyxsim.tests.utils import \
     BetaModelSource, ParticleBetaModelSource
@@ -110,8 +110,7 @@ def do_beta_model(source, axis="z", prng=None):
     kT_sim = source.kT
     Z_sim = source.Z
 
-    thermal_model = ThermalSourceModel("apec", 0.1, 11.5, 20000, Z_sim,
-                                       prng=prng)
+    thermal_model = CIESourceModel(0.1, 11.5, 20000, Z_sim, prng=prng)
     n_photons, n_cells = make_photons("my_photons", sphere, redshift, 
                                       A, exp_time, thermal_model)
 
@@ -207,10 +206,8 @@ def test_vapec_beta_model():
     var_elem = {"O": ("stream", "oxygen"),
                 "Ca": ("stream", "calcium")}
 
-    thermal_model = ThermalSourceModel("apec", 0.1, 11.5, 20000, 
-                                       ("gas","metallicity"),
-                                       var_elem=var_elem,
-                                       prng=prng)
+    thermal_model = CIESourceModel(0.1, 11.5, 20000, ("gas","metallicity"),
+                                   var_elem=var_elem, prng=prng)
 
     n_photons = make_photons("my_photons", sphere, redshift, A, exp_time,
                              thermal_model)

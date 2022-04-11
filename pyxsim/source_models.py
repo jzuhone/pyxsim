@@ -9,7 +9,7 @@ from yt.data_objects.static_output import Dataset
 from yt.units.yt_array import YTQuantity, YTArray
 from yt.utilities.physical_constants import clight
 from yt.utilities.cosmology import Cosmology
-from pyxsim.spectral_models import thermal_models
+from pyxsim.spectral_models import TableApecModel, XSpecAtableModel
 from pyxsim.utils import parse_value, isunitful
 from soxs.utils import parse_prng
 from soxs.constants import elem_names, atomic_weights, metal_elem
@@ -232,13 +232,67 @@ metal_abund = {"angr": 0.0189,
 
 
 class ThermalSourceModel(SourceModel):
+    def __init__(self, kT_min=0.025, kT_max=64.0, n_kT=10000, kT_scale="linear", 
+                 var_elem=None, max_density=5.0e-25, method="invert_cdf", 
+                 abund_table="angr", prng=None):
+        if var_elem is None:
+            var_elem = {}
+            var_elem_keys = None
+            self.num_var_elem = 0
+        else:
+            var_elem_keys = list(var_elem.keys())
+            self.num_var_elem = len(var_elem_keys)
+        self.var_elem = var_elem
+        if max_density is not None:
+            if not isinstance(max_density, YTQuantity):
+                if isinstance(max_density, tuple):
+                    max_density = YTQuantity(max_density[0], max_density[1])
+                else:
+                    max_density = YTQuantity(max_density, "g/cm**3")
+        self.max_density = max_density
+        self.tot_num_cells = 0  # Will be determined later
+        self.ftype = "gas"
+        self.abund_table = abund_table
+        self.method = method
+        self.prng = parse_prng(prng)
+        self.kT_min = kT_min
+        self.kT_max = kT_max
+        self.kT_scale = kT_scale
+        self.n_kT = n_kT
+        if self.kT_scale == "linear":
+            self.kT_bins = np.linspace(self.kT_min, self.kT_max,
+                                       num=self.n_kT+1)
+        elif self.kT_scale == "log":
+            self.kT_bins = np.logspace(np.log10(self.kT_min),
+                                       np.log10(self.kT_max),
+                                       num=self.n_kT+1)
+        self.dkT = np.diff(self.kT_bins)
+
+    def make_spectrum(self, data_source):
+        spec = np.zeros(self.spectral_model.emid.size)
+        for chunk in data_source.chunks([], "io"):
+            spec += self.process_data("spectrum", chunk)
+        ebins = YTArray(self.spectral_model.ebins, "keV")
+        return ebins, YTArray(spec, "photons/s")
+
+
+class AtableSourceModel(ThermalSourceModel):
+    def __init__(self, filename, temperature_field=None, norm_field=None, 
+                 h_fraction=None, kT_min=0.025, kT_max=64.0, n_kT=10000, 
+                 kT_scale="linear", max_density=5.0e-25, var_elem=None, 
+                 method="invert_cdf", abund_table="angr", prng=None):
+        super().__init__(kT_min=kT_min, kT_max=kT_max, n_kT=n_kT, kT_scale=kT_scale,
+                         var_elem=var_elem, max_density=max_density,
+                         method=method, abund_table=abund_table, prng=prng)
+        self.spectral_model = XSpecAtableModel(filename)
+
+
+class CIESourceModel(ThermalSourceModel):
     r"""
     Initialize a source model from a thermal spectrum.
 
     Parameters
     ----------
-    spectral_model : string
-        The thermal model spectrum type to use. Known options are "apec".
     emin : float
         The minimum energy for the spectrum in keV.
     emax : float
@@ -297,11 +351,6 @@ class ThermalSourceModel(SourceModel):
     model_vers : string, optional
         The version identifier string for the model files, e.g.
         "2.0.2". Default depends on the model used.
-    nei : boolean, optional
-        If True, use the non-equilibrium ionization tables. These are
-        not supplied with pyXSIM/SOXS but must be downloaded separately, in
-        which case the *apec_root* parameter must also be set to their
-        location. Default: False
     nolines : boolean, optional
         Turn off lines entirely for generating emission.
         Default: False
@@ -328,33 +377,20 @@ class ThermalSourceModel(SourceModel):
     >>> source_model = ThermalSourceModel("apec", 0.1, 10.0, 10000, 
     ...                                   ("gas", "metallicity"))
     """
-    def __init__(self, spectral_model, emin, emax, nchan, Zmet,
-                 temperature_field=None, emission_measure_field=None,
-                 h_fraction=None, kT_min=0.025, kT_max=64.0, n_kT=10000, 
-                 kT_scale="linear", max_density=5.0e-25, var_elem=None, 
-                 method="invert_cdf", thermal_broad=True, model_root=None, 
-                 model_vers=None, nei=False, nolines=False, abund_table="angr",
+    def __init__(self, emin, emax, nchan, Zmet, temperature_field=None, 
+                 emission_measure_field=None, h_fraction=None, kT_min=0.025, 
+                 kT_max=64.0, n_kT=10000, kT_scale="linear", max_density=5.0e-25, 
+                 var_elem=None, method="invert_cdf", thermal_broad=True, 
+                 model_root=None, model_vers=None, nolines=False, abund_table="angr",
                  prng=None):
-        if isinstance(spectral_model, str):
-            if spectral_model not in thermal_models:
-                raise KeyError(f"{spectral_model} is not a known thermal "
-                               f"spectral model!")
-            spectral_model = thermal_models[spectral_model]
+        super().__init__(kT_min=kT_min, kT_max=kT_max, n_kT=n_kT, kT_scale=kT_scale, 
+                         var_elem=var_elem, max_density=max_density,
+                         method=method, abund_table=abund_table, prng=prng)
         self.temperature_field = temperature_field
         self.Zmet = Zmet
-        self.nei = nei
-        self.ftype = None
-        if var_elem is None:
-            var_elem = {}
-            var_elem_keys = None
-            self.num_var_elem = 0
-        else:
-            var_elem_keys = list(var_elem.keys())
-            self.num_var_elem = len(var_elem_keys)
-        self.var_elem = var_elem
         self.emin = parse_value(emin, "keV")
         self.emax = parse_value(emax, "keV")
-        self.spectral_model = spectral_model(emin, emax, nchan,
+        self.spectral_model = TableApecModel(emin, emax, nchan,
                                              var_elem=var_elem_keys,
                                              thermal_broad=thermal_broad,
                                              model_root=model_root,
@@ -363,36 +399,18 @@ class ThermalSourceModel(SourceModel):
                                              abund_table=abund_table)
         self.var_elem_keys = self.spectral_model.var_elem_names
         self.var_ion_keys = self.spectral_model.var_ion_names
-        self.method = method
-        self.prng = parse_prng(prng)
-        self.kT_min = kT_min
-        self.kT_max = kT_max
-        self.kT_scale = kT_scale
-        self.n_kT = n_kT
         self.spectral_norm = None
         self.redshift = None
         self.pbar = None
-        self.kT_bins = None
-        self.dkT = None
         self.emission_measure_field = emission_measure_field
         self.Zconvert = 1.0
-        self.abund_table = abund_table
         self.atable = self.spectral_model.atable
-        self.metal_elem = self.spectral_model.metal_elem
         self.mconvert = {}
-        if max_density is not None:
-            if not isinstance(max_density, YTQuantity):
-                if isinstance(max_density, tuple):
-                    max_density = YTQuantity(max_density[0], max_density[1])
-                else:
-                    max_density = YTQuantity(max_density, "g/cm**3")
-        self.max_density = max_density
         self.density_field = None  # Will be determined later
-        self.tot_num_cells = 0  # Will be determined later
-        self.ftype = "gas"
         if h_fraction is None:
             h_fraction = solar_H_abund
         self.h_fraction = h_fraction
+        self.nei = False
 
     def setup_model(self, data_source, redshift, spectral_norm):
         if isinstance(data_source, Dataset):
@@ -450,14 +468,6 @@ class ThermalSourceModel(SourceModel):
         self.spectral_model.prepare_spectrum(redshift, self.kT_min,
                                              self.kT_max)
         self.spectral_norm = spectral_norm
-        if self.kT_scale == "linear":
-            self.kT_bins = np.linspace(self.kT_min, self.kT_max, 
-                                       num=self.n_kT+1)
-        elif self.kT_scale == "log":
-            self.kT_bins = np.logspace(np.log10(self.kT_min),
-                                       np.log10(self.kT_max),
-                                       num=self.n_kT+1)
-        self.dkT = np.diff(self.kT_bins)
         if isinstance(data_source, Dataset):
             self.pbar = DummyProgressBar()
         else:
@@ -477,13 +487,6 @@ class ThermalSourceModel(SourceModel):
         self.temperature_field = None
         self.pbar.close()
 
-    def make_spectrum(self, data_source):
-        spec = np.zeros(self.spectral_model.emid.size)
-        for chunk in data_source.chunks([], "io"):
-            spec += self.process_data("spectrum", chunk)
-        ebins = YTArray(self.spectral_model.ebins, "keV")
-        return ebins, YTArray(spec, "photons/s")
-
     def process_data(self, mode, chunk):
 
         emid = self.spectral_model.emid
@@ -501,12 +504,12 @@ class ThermalSourceModel(SourceModel):
         ret = np.zeros(orig_ncells)
 
         if self.max_density is None:
-            dens_cut = np.ones(orig_ncells, dtype="bool")
+            dens_cut = 1
         else:
             dens_cut = chunk[self.density_field] < self.max_density
         kT = np.atleast_1d(
             chunk[self.temperature_field].to_value("keV", "thermal")).flat
-        EM = np.atleast_1d(chunk[self.emission_measure_field].d*dens_cut).flat
+        norm = np.atleast_1d(chunk[self.emission_measure_field].d*dens_cut).flat
 
         idxs = np.argsort(kT)
 
@@ -537,7 +540,7 @@ class ThermalSourceModel(SourceModel):
             n += bcount
         kT_idxs = np.unique(kT_idxs)
 
-        cell_em = EM[idxs]*self.spectral_norm
+        cell_norm = norm[idxs]*self.spectral_norm
 
         if isinstance(self.h_fraction, float):
             X_H = self.h_fraction
@@ -587,7 +590,7 @@ class ThermalSourceModel(SourceModel):
 
             kT = self.kT_bins[ikT] + 0.5*self.dkT[ikT]
 
-            cem = cell_em[ibegin:iend]
+            cnm = cell_norm[ibegin:iend]
 
             cspec, mspec, vspec = self.spectral_model.get_spectrum(kT)
 
@@ -596,15 +599,15 @@ class ThermalSourceModel(SourceModel):
                 tot_ph_c = cspec.d.sum()
                 tot_ph_m = mspec.d.sum()
 
-                cell_norm_c = tot_ph_c*cem
-                cell_norm_m = tot_ph_m*metalZ[ibegin:iend]*cem
+                cell_norm_c = tot_ph_c*cnm
+                cell_norm_m = tot_ph_m*metalZ[ibegin:iend]*cnm
                 cell_norm = cell_norm_c + cell_norm_m
 
                 if vspec is not None:
-                    cell_norm_v = np.zeros(cem.size)
+                    cell_norm_v = np.zeros(cnm.size)
                     for j in range(self.num_var_elem):
                         tot_ph_v = vspec.d[j, :].sum()
-                        cell_norm_v += tot_ph_v*elemZ[j, ibegin:iend]*cem
+                        cell_norm_v += tot_ph_v*elemZ[j, ibegin:iend]*cnm
                     cell_norm += cell_norm_v
 
                 if mode == "photons":
@@ -616,8 +619,8 @@ class ThermalSourceModel(SourceModel):
                     end_e += int(cell_n.sum())
 
                     if self.method == "invert_cdf":
-                        cumspec_c = np.insert(np.cumsum(cspec.d), 0, 0.0)
-                        cumspec_m = np.insert(np.cumsum(mspec.d), 0, 0.0)
+                        cumspec_c = np.pad(np.cumsum(cspec.d), (1,0))
+                        cumspec_m = np.pad(np.cumsum(mspec.d), (1,0))
                         if vspec is None:
                             cumspec_v = None
                         else:
@@ -672,26 +675,26 @@ class ThermalSourceModel(SourceModel):
                 tot_e_c = (cspec.d*emid).sum()
                 tot_e_m = (mspec.d*emid).sum()
 
-                cell_e_c = tot_e_c * cem
-                cell_e_m = tot_e_m * metalZ[ibegin:iend] * cem
+                cell_e_c = tot_e_c * cnm
+                cell_e_m = tot_e_m * metalZ[ibegin:iend] * cnm
                 cell_e = cell_e_c + cell_e_m
 
                 if vspec is not None:
-                    cell_e_v = np.zeros(cem.size)
+                    cell_e_v = np.zeros(cnm.size)
                     for j in range(self.num_var_elem):
                         tot_e_v = (vspec.d[j, :]*emid).sum()
-                        cell_e_v += tot_e_v * elemZ[j, ibegin:iend] * cem
+                        cell_e_v += tot_e_v * elemZ[j, ibegin:iend] * cnm
                     cell_e += cell_e_v
 
                 ret[idxs[ibegin:iend]] = cell_e
 
             elif mode == "spectrum":
 
-                spec += cem.sum()*cspec.d
-                spec += np.sum(metalZ[ibegin:iend]*cem)*mspec.d
+                spec += cnm.sum()*cspec.d
+                spec += np.sum(metalZ[ibegin:iend]*cnm)*mspec.d
                 if vspec is not None:
                     for j in range(self.num_var_elem):
-                        spec += np.sum(elemZ[j, ibegin:iend]*cem)*vspec.d[j, :]
+                        spec += np.sum(elemZ[j, ibegin:iend]*cnm)*vspec.d[j, :]
 
         if mode == "photons":
             active_cells = number_of_photons > 0
@@ -702,6 +705,22 @@ class ThermalSourceModel(SourceModel):
             return spec
         else:
             return np.resize(ret, orig_shape)
+
+
+class NEISourceModel(CIESourceModel):
+    def __init__(self, emin, emax, nchan, var_elem, temperature_field=None,
+                 emission_measure_field=None, h_fraction=None, kT_min=0.025,
+                 kT_max=64.0, n_kT=10000, kT_scale="linear", max_density=5.0e-25,
+                 method="invert_cdf", thermal_broad=True, model_root=None, 
+                 model_vers=None, nolines=False, abund_table="angr", prng=None):
+        super().__init__(emin, emax, nchan, 0.0, temperature_field=temperature_field,
+                         emission_measure_field=emission_measure_field, h_fraction=h_fraction,
+                         kT_min=kT_min, kT_max=kT_max, n_kT=n_kT, kT_scale=kT_scale,
+                         max_density=max_density, var_elem=var_elem, method=method,
+                         thermal_broad=thermal_broad, model_root=model_root, 
+                         model_vers=model_vers, nolines=nolines, abund_table=abund_table,
+                         prng=prng)
+        self.nei = True
 
 
 class PowerLawSourceModel(SourceModel):
