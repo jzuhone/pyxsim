@@ -83,6 +83,9 @@ class TableApecModel(ThermalSpectralModel):
         self.nchan = self.agen.nbins
         self.ebins = self.agen.ebins
         self.emid = self.agen.emid
+        self.var_elem_names = self.agen.var_elem_names
+        self.var_ion_names = self.agen.var_ion_names
+        self.atable = self.agen.atable
 
     def prepare_spectrum(self, zobs, kT_min, kT_max):
         """
