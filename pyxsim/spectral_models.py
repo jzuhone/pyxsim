@@ -9,7 +9,12 @@ from soxs.utils import parse_prng
 from yt.units.yt_array import YTArray, YTQuantity
 
 
-class TableApecModel(ApecGenerator):
+
+class ThermalSpectralModel:
+    pass 
+
+
+class TableApecModel(ThermalSpectralModel):
     r"""
     Initialize a thermal gas emission model from the AtomDB APEC tables
     available at http://www.atomdb.org. This code borrows heavily from Python
@@ -71,20 +76,22 @@ class TableApecModel(ApecGenerator):
                  model_root=None, model_vers=None, 
                  thermal_broad=True, nolines=False,
                  abund_table="angr", nei=False):
-        super(TableApecModel, self).__init__(emin, emax, nchan, var_elem=var_elem,
-                                             apec_root=model_root, apec_vers=model_vers, 
-                                             broadening=thermal_broad, nolines=nolines,
-                                             abund_table=abund_table, nei=nei)
-        self.nchan = self.nbins
+        self.agen = ApecGenerator(emin, emax, nchan, var_elem=var_elem,
+                                  apec_root=model_root, apec_vers=model_vers, 
+                                  broadening=thermal_broad, nolines=nolines,
+                                  abund_table=abund_table, nei=nei)
+        self.nchan = self.agen.nbins
+        self.ebins = self.agen.ebins
+        self.emid = self.agen.emid
 
     def prepare_spectrum(self, zobs, kT_min, kT_max):
         """
         Prepare the thermal model for execution given a redshift *zobs* for the spectrum.
         """
-        idx_min = min(np.searchsorted(self.Tvals, kT_min)-1, 0)
-        idx_max = max(np.searchsorted(self.Tvals, kT_max), self.nT-1)
+        idx_min = min(np.searchsorted(self.agen.Tvals, kT_min)-1, 0)
+        idx_max = max(np.searchsorted(self.agen.Tvals, kT_max), self.agen.nT-1)
         cosmic_spec, metal_spec, var_spec = \
-            self._get_table(list(range(idx_min, idx_max+1)), zobs, 0.0)
+            self.agen._get_table(list(range(idx_min, idx_max+1)), zobs, 0.0)
         self.cosmic_spec = YTArray(cosmic_spec, "cm**3/s")
         self.metal_spec = YTArray(metal_spec, "cm**3/s")
         if var_spec is None:
@@ -92,19 +99,30 @@ class TableApecModel(ApecGenerator):
         else:
             self.var_spec = YTArray(var_spec, "cm**3/s")
 
-    def get_spectrum(self, kT):
+    def write_spectral_table(self, filename, zobs, kT_min, kT_max, overwrite=False):
+        self.prepare_spectrum(zobs, kT_min, kT_max)
+        with h5py.File(filename, "w") as f:
+            f.attrs["zobs"] = zobs
+            f.attrs["kT_min"] = kT_min
+            f.attrs["kT_max"] = kT_max
+            f.attrs["var_elem"] = self.var_elem
+            f.create_dataset("cosmic_spec", data=self.cosmic_spec.value)
+            f.create_dataset("metal_spec", data=self.metal_spec.value)
+            f.create_dataset("var_spec", data=self.var_spec.value)
+
+    def get_spectrum(self, kT, nH=None):
         """
         Get the thermal emission spectrum given a temperature *kT* in keV. 
         """
-        tindex = np.searchsorted(self.Tvals, kT)-1
+        tindex = np.searchsorted(self.agen.Tvals, kT)-1
         var_spec = None
-        if tindex >= self.Tvals.shape[0]-1 or tindex < 0:
+        if tindex >= self.agen.Tvals.shape[0]-1 or tindex < 0:
             cosmic_spec = YTArray(np.zeros(self.nchan), "cm**3/s")
             metal_spec = cosmic_spec
             if self.var_spec is not None:
-                var_spec = YTArray(np.zeros((self.num_var_elem, self.nchan)), "cm**3/s")
+                var_spec = YTArray(np.zeros((self.agen.num_var_elem, self.nchan)), "cm**3/s")
         else:
-            dT = (kT-self.Tvals[tindex])/self.dTvals[tindex]
+            dT = (kT-self.agen.Tvals[tindex])/self.agen.dTvals[tindex]
             cspec_l = self.cosmic_spec[tindex, :]
             mspec_l = self.metal_spec[tindex, :]
             cspec_r = self.cosmic_spec[tindex+1, :]
@@ -139,9 +157,8 @@ class TableApecModel(ApecGenerator):
             A dictionary of elemental abundances to vary
             freely of the abund parameter. Default: None
         """
-        spec = super(TableApecModel, self).get_spectrum(temperature, metallicity, 
-                                                        redshift, norm, velocity=velocity,
-                                                        elem_abund=elem_abund)
+        spec = self.agen.get_spectrum(temperature, metallicity, redshift, norm, 
+                                      velocity=velocity, elem_abund=elem_abund)
         return YTArray(spec.flux*spec.de, "photons/s/cm**2")
 
 
