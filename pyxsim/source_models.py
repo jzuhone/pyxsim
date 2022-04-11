@@ -289,6 +289,7 @@ class AtableSourceModel(ThermalSourceModel):
 
 
 class CIESourceModel(ThermalSourceModel):
+    nei = False
     r"""
     Initialize a source model from a thermal spectrum.
 
@@ -396,7 +397,7 @@ class CIESourceModel(ThermalSourceModel):
                                              thermal_broad=thermal_broad,
                                              model_root=model_root,
                                              model_vers=model_vers,
-                                             nolines=nolines, nei=nei,
+                                             nolines=nolines, nei=self.nei,
                                              abund_table=abund_table)
         self.var_elem_keys = self.spectral_model.var_elem_names
         self.var_ion_keys = self.spectral_model.var_ion_names
@@ -411,7 +412,6 @@ class CIESourceModel(ThermalSourceModel):
         if h_fraction is None:
             h_fraction = solar_H_abund
         self.h_fraction = h_fraction
-        self.nei = False
 
     def setup_model(self, data_source, redshift, spectral_norm):
         if isinstance(data_source, Dataset):
@@ -709,6 +709,7 @@ class CIESourceModel(ThermalSourceModel):
 
 
 class NEISourceModel(CIESourceModel):
+    nei = True
     def __init__(self, emin, emax, nchan, var_elem, temperature_field=None,
                  emission_measure_field=None, h_fraction=None, kT_min=0.025,
                  kT_max=64.0, n_kT=10000, kT_scale="linear", max_density=5.0e-25,
@@ -721,7 +722,6 @@ class NEISourceModel(CIESourceModel):
                          thermal_broad=thermal_broad, model_root=model_root, 
                          model_vers=model_vers, nolines=nolines, abund_table=abund_table,
                          prng=prng)
-        self.nei = True
 
 
 class PowerLawSourceModel(SourceModel):
