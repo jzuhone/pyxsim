@@ -243,6 +243,7 @@ class ThermalSourceModel(SourceModel):
             var_elem_keys = list(var_elem.keys())
             self.num_var_elem = len(var_elem_keys)
         self.var_elem = var_elem
+        self.var_elem_keys = var_elem_keys
         if max_density is not None:
             if not isinstance(max_density, YTQuantity):
                 if isinstance(max_density, tuple):
@@ -391,7 +392,7 @@ class CIESourceModel(ThermalSourceModel):
         self.emin = parse_value(emin, "keV")
         self.emax = parse_value(emax, "keV")
         self.spectral_model = TableApecModel(emin, emax, nchan,
-                                             var_elem=var_elem_keys,
+                                             var_elem=self.var_elem_keys,
                                              thermal_broad=thermal_broad,
                                              model_root=model_root,
                                              model_vers=model_vers,
