@@ -364,7 +364,7 @@ class ThermalSourceModel(SourceModel):
             tot_spec += metalZ[ibegin:iend, np.newaxis] * mspec
             if vspec is not None:
                 for j in range(self.num_var_elem):
-                    tot_spec += elemZ[ibegin:iend, j, np.newaxis]*vspec[:, j, :]
+                    tot_spec += elemZ[ibegin:iend, j, np.newaxis]*vspec[j, :, :]
 
             if mode in ["photons", "photon_field"]:
 
