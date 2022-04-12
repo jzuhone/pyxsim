@@ -541,7 +541,7 @@ class CIESourceModel(ThermalSourceModel):
             n += bcount
         kT_idxs = np.unique(kT_idxs)
 
-        cell_norm = norm[idxs]*self.spectral_norm
+        cell_nrm = norm[idxs]*self.spectral_norm
 
         if isinstance(self.h_fraction, float):
             X_H = self.h_fraction
@@ -591,7 +591,7 @@ class CIESourceModel(ThermalSourceModel):
 
             kT = self.kT_bins[ikT] + 0.5*self.dkT[ikT]
 
-            cnm = cell_norm[ibegin:iend]
+            cnm = cell_nrm[ibegin:iend]
 
             cspec, mspec, vspec = self.spectral_model.get_spectrum(kT)
 
