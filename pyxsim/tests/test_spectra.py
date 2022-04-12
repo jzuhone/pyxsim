@@ -12,4 +12,4 @@ def test_apec():
 
     spec2 = amod.return_spectrum(6.0, 0.3, 0.2, 1.0e-14)
 
-    assert_allclose(spec, spec2.v)
+    assert_allclose(spec[1,:], spec2.v)

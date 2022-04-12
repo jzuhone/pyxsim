@@ -187,7 +187,7 @@ def test_vapec_beta_model():
     curdir = os.getcwd()
     os.chdir(tmpdir)
 
-    prng = 45
+    prng = 47
 
     ds = bms.ds
 
