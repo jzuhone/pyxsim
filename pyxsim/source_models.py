@@ -381,14 +381,14 @@ class ThermalSourceModel(SourceModel):
                     p = norm_factor[:,np.newaxis]*tot_spec
                     cp = np.insert(np.cumsum(p, axis=-1), 0, 0.0, axis=1)
                     ei = start_e
+                    randvec = self.prng.uniform(size=cell_n.sum())
+                    bn = 0
                     for icell in range(nck):
                         cn = cell_n[icell]
                         if cn == 0:
                             continue
                         if self.method == "invert_cdf":
-                            randvec = self.prng.uniform(size=cn)
-                            randvec.sort()
-                            cell_e = np.interp(randvec, cp[icell,:], ebins)
+                            cell_e = np.interp(randvec[bn:bn+cn].sort(), cp[icell,:], ebins)
                         elif self.method == "accept_reject":
                             eidxs = self.prng.choice(nchan, size=cn, p=p[icell,:])
                             cell_e = emid[eidxs]
@@ -397,6 +397,7 @@ class ThermalSourceModel(SourceModel):
                         if num_photons_max > energies.size:
                             energies.resize(num_photons_max, refcheck=False)
                         energies[ei:ei+cn] = cell_e
+                        bn += cn
                         ei += cn
 
                     start_e = end_e
