@@ -18,6 +18,7 @@ from yt.utilities.parallel_tools.parallel_analysis_interface import \
     parallel_objects, communication_system, parallel_capable
 from numbers import Number
 from scipy.stats import norm
+from more_itertools import chunked
 
 
 gx = np.linspace(-6, 6, 2400)
@@ -270,11 +271,168 @@ class ThermalSourceModel(SourceModel):
         self.dkT = np.diff(self.kT_bins)
 
     def make_spectrum(self, data_source):
+        self.setup_model(data_source, 0.0, 1.0)
         spec = np.zeros(self.spectral_model.emid.size)
         for chunk in data_source.chunks([], "io"):
             spec += self.process_data("spectrum", chunk)
         ebins = YTArray(self.spectral_model.ebins, "keV")
         return ebins, YTArray(spec, "photons/s")
+
+    def process_data(self, mode, chunk):
+
+        emid = self.spectral_model.emid
+        ebins = self.spectral_model.ebins
+        nchan = len(emid)
+
+        orig_shape = chunk[self.temperature_field].shape
+        if len(orig_shape) == 0:
+            orig_ncells = 0
+        else:
+            orig_ncells = np.prod(orig_shape)
+        if orig_ncells == 0:
+            return
+
+        ret = np.zeros(orig_ncells)
+
+        cut = True
+
+        if self.max_density is not None:
+            cut &= np.ravel(chunk[self.density_field]) < self.max_density
+        kT = np.ravel(
+            chunk[self.temperature_field].to_value("keV", "thermal"))
+        cut &= (kT >= self.kT_min) & (kT <= self.kT_max)
+
+        num_cells = cut.sum()
+
+        if mode == "photons":
+            if num_cells == 0:
+                self.pbar.update(orig_ncells)
+                return
+            else:
+                self.pbar.update(orig_ncells-num_cells)
+        elif num_cells == 0:
+            return np.zeros(orig_shape)
+
+        kT = np.ravel(kT[cut])
+        cell_nrm = np.ravel(
+            chunk[self.emission_measure_field].d[cut]*self.spectral_norm
+        )
+
+        if isinstance(self.h_fraction, float):
+            X_H = self.h_fraction
+        else:
+            X_H = np.ravel(chunk[self.h_fraction].d[cut])
+
+        if self.nei:
+            metalZ = np.zeros(num_cells)
+            elem_keys = self.var_ion_keys
+        else:
+            elem_keys = self.var_elem_keys
+            if isinstance(self.Zmet, float):
+                metalZ = self.Zmet*np.ones(num_cells)
+            else:
+                mZ = chunk[self.Zmet]
+                fac = self.Zconvert
+                if str(mZ.units) != "Zsun":
+                    fac /= X_H
+                metalZ = np.ravel(mZ.d[cut]*fac)
+
+        elemZ = None
+        if self.num_var_elem > 0:
+            elemZ = np.zeros((num_cells, self.num_var_elem))
+            for j, key in enumerate(elem_keys):
+                value = self.var_elem[key]
+                if isinstance(value, float):
+                    elemZ[:, j] = value
+                else:
+                    eZ = chunk[value]
+                    fac = self.mconvert[key]
+                    if str(eZ.units) != "Zsun":
+                        fac /= X_H
+                    elemZ[:, j] = np.ravel(eZ.d[cut]*fac)
+
+        num_photons_max = 10000000
+        number_of_photons = np.zeros(num_cells, dtype="int64")
+        energies = np.zeros(num_photons_max)
+
+        start_e = 0
+        end_e = 0
+
+        spec = np.zeros(nchan)
+        idxs = np.where(cut)[0]
+
+        for ck in chunked(range(num_cells), 100):
+
+            ibegin = ck[0]
+            iend = ck[-1]+1
+            nck = iend-ibegin
+            self.pbar.update(nck)
+
+            cspec, mspec, vspec = self.spectral_model.get_spectrum(kT[ibegin:iend])
+
+            tot_spec = cspec
+            tot_spec += metalZ[ibegin:iend, np.newaxis] * mspec
+            if vspec is not None:
+                for j in range(self.num_var_elem):
+                    tot_spec += elemZ[ibegin:iend, j, np.newaxis]*vspec[:, j, :]
+
+            if mode in ["photons", "photon_field"]:
+
+                cell_norm = tot_spec.sum(axis=-1)*cell_nrm[ibegin:iend]
+
+                if mode == "photons":
+
+                    cell_n = ensure_numpy_array(self.prng.poisson(lam=cell_norm))
+
+                    number_of_photons[ibegin:iend] = cell_n
+                    end_e += int(cell_n.sum())
+
+                    norm_factor = 1.0 / tot_spec.sum(axis=-1)
+                    p = norm_factor[:,np.newaxis]*tot_spec
+                    cp = np.insert(np.cumsum(p, axis=-1), 0, 0.0, axis=1)
+                    ei = start_e
+                    for icell in range(nck):
+                        cn = cell_n[icell]
+                        if cn == 0:
+                            continue
+                        if self.method == "invert_cdf":
+                            randvec = self.prng.uniform(size=cn)
+                            randvec.sort()
+                            cell_e = np.interp(randvec, cp[icell,:], ebins)
+                        elif self.method == "accept_reject":
+                            eidxs = self.prng.choice(nchan, size=cn, p=p[icell,:])
+                            cell_e = emid[eidxs]
+                        while ei+cn > num_photons_max:
+                            num_photons_max *= 2
+                        if num_photons_max > energies.size:
+                            energies.resize(num_photons_max, refcheck=False)
+                        energies[ei:ei+cn] = cell_e
+                        ei += cn
+
+                    start_e = end_e
+
+                elif mode == "photon_field":
+
+                    ret[idxs[ibegin:iend]] = cell_norm
+
+            elif mode == "energy_field":
+
+                ret[idxs[ibegin:iend]] = np.sum(
+                    tot_spec*emid, axis=-1)*cell_nrm[ibegin:iend]
+
+            elif mode == "spectrum":
+
+                spec += np.sum(tot_spec*cell_nrm[ibegin:iend,np.newaxis], axis=0)
+
+        if mode == "photons":
+            active_cells = number_of_photons > 0
+            idxs = idxs[active_cells]
+            ncells = idxs.size
+            return ncells, number_of_photons[active_cells], idxs, energies[:end_e].copy()
+        elif mode == "spectrum":
+            return spec
+        else:
+            return np.resize(ret, orig_shape)
 
 
 class AtableSourceModel(ThermalSourceModel):
@@ -488,6 +646,7 @@ class CIESourceModel(ThermalSourceModel):
         self.temperature_field = None
         self.pbar.close()
 
+    """
     def process_data(self, mode, chunk):
 
         emid = self.spectral_model.emid
@@ -706,6 +865,7 @@ class CIESourceModel(ThermalSourceModel):
             return spec
         else:
             return np.resize(ret, orig_shape)
+    """
 
 
 class NEISourceModel(CIESourceModel):
