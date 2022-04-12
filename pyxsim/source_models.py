@@ -233,8 +233,8 @@ metal_abund = {"angr": 0.0189,
 
 
 class ThermalSourceModel(SourceModel):
-    def __init__(self, kT_min=0.025, kT_max=64.0, n_kT=10000, kT_scale="linear", 
-                 var_elem=None, max_density=5.0e-25, method="invert_cdf", 
+    def __init__(self, kT_min=0.025, kT_max=64.0, var_elem=None, 
+                 max_density=5.0e-25, method="invert_cdf", 
                  abund_table="angr", prng=None):
         if var_elem is None:
             var_elem = {}
@@ -259,16 +259,6 @@ class ThermalSourceModel(SourceModel):
         self.prng = parse_prng(prng)
         self.kT_min = kT_min
         self.kT_max = kT_max
-        self.kT_scale = kT_scale
-        self.n_kT = n_kT
-        if self.kT_scale == "linear":
-            self.kT_bins = np.linspace(self.kT_min, self.kT_max,
-                                       num=self.n_kT+1)
-        elif self.kT_scale == "log":
-            self.kT_bins = np.logspace(np.log10(self.kT_min),
-                                       np.log10(self.kT_max),
-                                       num=self.n_kT+1)
-        self.dkT = np.diff(self.kT_bins)
 
     def make_spectrum(self, data_source):
         self.setup_model(data_source, 0.0, 1.0)
@@ -437,14 +427,15 @@ class ThermalSourceModel(SourceModel):
 
 class AtableSourceModel(ThermalSourceModel):
     def __init__(self, filename, temperature_field=None, norm_field=None, 
-                 h_fraction=None, kT_min=0.025, kT_max=64.0, n_kT=10000, 
-                 kT_scale="linear", max_density=5.0e-25, var_elem=None, 
-                 method="invert_cdf", abund_table="angr", prng=None):
-        super().__init__(kT_min=kT_min, kT_max=kT_max, n_kT=n_kT, kT_scale=kT_scale,
-                         var_elem=var_elem, max_density=max_density,
-                         method=method, abund_table=abund_table, prng=prng)
+                 h_fraction=None, kT_min=0.025, kT_max=64.0, max_density=5.0e-25, 
+                 var_elem=None, method="invert_cdf", abund_table="angr", prng=None):
+        super().__init__(kT_min=kT_min, kT_max=kT_max, var_elem=var_elem, 
+                         max_density=max_density, method=method, abund_table=abund_table, 
+                         prng=prng)
         self.spectral_model = XSpecAtableModel(filename)
-
+        self.temperature_field = temperature_field
+        self.norm_field = norm_field
+        self.h_fraction = h_fraction
 
 class CIESourceModel(ThermalSourceModel):
     nei = False
@@ -481,12 +472,6 @@ class CIESourceModel(ThermalSourceModel):
     kT_max : float, optional
         The default maximum temperature in keV to compute emission for.
         Default: 64.0
-    n_kT : integer, optional
-        The number of temperature bins to use when computing emission.
-        Default: 10000
-    kT_scale : string, optional
-        The scaling of the bins to use when computing emission, 
-        "linear" or "log". Default: "linear"
     max_density : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
         The maximum density of the cells or particles to use when generating 
         photons. If a float, the units are assumed to be g/cm**3. 
@@ -539,13 +524,12 @@ class CIESourceModel(ThermalSourceModel):
     """
     def __init__(self, emin, emax, nchan, Zmet, temperature_field=None, 
                  emission_measure_field=None, h_fraction=None, kT_min=0.025, 
-                 kT_max=64.0, n_kT=10000, kT_scale="linear", max_density=5.0e-25, 
-                 var_elem=None, method="invert_cdf", thermal_broad=True, 
-                 model_root=None, model_vers=None, nolines=False, abund_table="angr",
-                 prng=None):
-        super().__init__(kT_min=kT_min, kT_max=kT_max, n_kT=n_kT, kT_scale=kT_scale, 
-                         var_elem=var_elem, max_density=max_density,
-                         method=method, abund_table=abund_table, prng=prng)
+                 kT_max=64.0, max_density=5.0e-25, var_elem=None, method="invert_cdf", 
+                 thermal_broad=True, model_root=None, model_vers=None, nolines=False, 
+                 abund_table="angr", prng=None):
+        super().__init__(kT_min=kT_min, kT_max=kT_max, var_elem=var_elem,
+                         max_density=max_density, method=method, abund_table=abund_table, 
+                         prng=prng)
         self.temperature_field = temperature_field
         self.Zmet = Zmet
         self.emin = parse_value(emin, "keV")
@@ -872,16 +856,15 @@ class NEISourceModel(CIESourceModel):
     nei = True
     def __init__(self, emin, emax, nchan, var_elem, temperature_field=None,
                  emission_measure_field=None, h_fraction=None, kT_min=0.025,
-                 kT_max=64.0, n_kT=10000, kT_scale="linear", max_density=5.0e-25,
-                 method="invert_cdf", thermal_broad=True, model_root=None, 
-                 model_vers=None, nolines=False, abund_table="angr", prng=None):
+                 kT_max=64.0, max_density=5.0e-25, method="invert_cdf", 
+                 thermal_broad=True, model_root=None, model_vers=None, nolines=False, 
+                 abund_table="angr", prng=None):
         super().__init__(emin, emax, nchan, 0.0, temperature_field=temperature_field,
                          emission_measure_field=emission_measure_field, h_fraction=h_fraction,
-                         kT_min=kT_min, kT_max=kT_max, n_kT=n_kT, kT_scale=kT_scale,
-                         max_density=max_density, var_elem=var_elem, method=method,
-                         thermal_broad=thermal_broad, model_root=model_root, 
-                         model_vers=model_vers, nolines=nolines, abund_table=abund_table,
-                         prng=prng)
+                         kT_min=kT_min, kT_max=kT_max, max_density=max_density, 
+                         var_elem=var_elem, method=method, thermal_broad=thermal_broad, 
+                         model_root=model_root, model_vers=model_vers, nolines=nolines, 
+                         abund_table=abund_table, prng=prng)
 
 
 class PowerLawSourceModel(SourceModel):
