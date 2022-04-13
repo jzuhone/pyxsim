@@ -95,14 +95,18 @@ class TableApecModel(ThermalSpectralModel):
         """
         Prepare the thermal model for execution given a redshift *zobs* for the spectrum.
         """
-        idx_min = min(np.searchsorted(self.agen.Tvals, kT_min)-1, 0)
-        idx_max = max(np.searchsorted(self.agen.Tvals, kT_max), self.agen.nT-1)
+        idx_min = max(np.searchsorted(self.agen.Tvals, kT_min)-1, 0)
+        idx_max = min(np.searchsorted(self.agen.Tvals, kT_max), self.agen.nT-1)
+        idx_max = min(idx_max+1+idx_max % 2, self.agen.nT)
         cosmic_spec, metal_spec, var_spec = \
-            self.agen._get_table(list(range(idx_min, idx_max+1)), zobs, 0.0)
+            self.agen._get_table(list(range(idx_min, idx_max, 2)), zobs, 0.0)
+        self.Tvals = np.log10(self.agen.Tvals[idx_min:idx_max:2])
+        self.nT = self.Tvals.size
+        self.dTvals = np.diff(self.Tvals)
         self.cosmic_spec = cosmic_spec
         self.metal_spec = metal_spec
         self.var_spec = var_spec
-
+        
     def write_spectral_table(self, filename, zobs, kT_min, kT_max, overwrite=False):
         self.prepare_spectrum(zobs, kT_min, kT_max)
         with h5py.File(filename, "w") as f:
@@ -118,10 +122,10 @@ class TableApecModel(ThermalSpectralModel):
         """
         Get the thermal emission spectrum given a temperature *kT* in keV. 
         """
-        kT = np.atleast_1d(kT)
-        tindex = np.searchsorted(self.agen.Tvals, kT)-1
+        kT = np.log10(np.atleast_1d(kT))
+        tindex = np.searchsorted(self.Tvals, kT)-1
         var_spec = None
-        dT = (kT-self.agen.Tvals[tindex])/self.agen.dTvals[tindex]
+        dT = (kT-self.Tvals[tindex])/self.dTvals[tindex]
         cspec_l = self.cosmic_spec[tindex, :]
         mspec_l = self.metal_spec[tindex, :]
         cspec_r = self.cosmic_spec[tindex+1, :]
@@ -129,10 +133,10 @@ class TableApecModel(ThermalSpectralModel):
         cosmic_spec = (1.-dT)[:,np.newaxis]*cspec_l+dT[:,np.newaxis]*cspec_r
         metal_spec = (1.-dT)[:,np.newaxis]*mspec_l+dT[:,np.newaxis]*mspec_r
         if self.var_spec is not None:
-            vspec_l = self.var_spec[:, tindex, :]
-            vspec_r = self.var_spec[:, tindex+1, :]
-            var_spec = (1.-dT)[np.newaxis,:,np.newaxis]*vspec_l
-            var_spec += dT[np.newaxis,:,np.newaxis]*vspec_r
+            vspec_l = self.var_spec[tindex, :, :]
+            vspec_r = self.var_spec[tindex+1, :, :]
+            var_spec = (1.-dT)[:,np.newaxis,np.newaxis]*vspec_l
+            var_spec += dT[:,np.newaxis,np.newaxis]*vspec_r
         return cosmic_spec, metal_spec, var_spec
 
     def return_spectrum(self, temperature, metallicity, redshift, norm,

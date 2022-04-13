@@ -2,7 +2,6 @@
 Classes for specific source models
 """
 import numpy as np
-from yt.funcs import ensure_numpy_array
 from tqdm.auto import tqdm
 from pyxsim.utils import mylog
 from yt.data_objects.static_output import Dataset
@@ -340,7 +339,7 @@ class ThermalSourceModel(SourceModel):
                     if str(eZ.units) != "Zsun":
                         fac /= X_H
                     elemZ[:, j] = np.ravel(eZ.d[cut]*fac)
-
+        
         num_photons_max = 10000000
         number_of_photons = np.zeros(num_cells, dtype="int64")
         energies = np.zeros(num_photons_max)
@@ -356,39 +355,37 @@ class ThermalSourceModel(SourceModel):
             ibegin = ck[0]
             iend = ck[-1]+1
             nck = iend-ibegin
-            self.pbar.update(nck)
 
             cspec, mspec, vspec = self.spectral_model.get_spectrum(kT[ibegin:iend])
 
-            tot_spec = cspec
-            tot_spec += metalZ[ibegin:iend, np.newaxis] * mspec
-            if vspec is not None:
-                for j in range(self.num_var_elem):
-                    tot_spec += elemZ[ibegin:iend, j, np.newaxis]*vspec[j, :, :]
+            tot_spec = cspec + metalZ[ibegin:iend,np.newaxis]*mspec
+            if self.num_var_elem > 0:
+                tot_spec += np.sum(elemZ[ibegin:iend,:,np.newaxis]*vspec, axis=1)
 
             if mode in ["photons", "photon_field"]:
 
-                cell_norm = tot_spec.sum(axis=-1)*cell_nrm[ibegin:iend]
+                spec_sum = tot_spec.sum(axis=-1)
+                cell_norm = spec_sum*cell_nrm[ibegin:iend]
 
                 if mode == "photons":
 
-                    cell_n = ensure_numpy_array(self.prng.poisson(lam=cell_norm))
+                    cell_n = np.atleast_1d(self.prng.poisson(lam=cell_norm))
 
                     number_of_photons[ibegin:iend] = cell_n
                     end_e += int(cell_n.sum())
 
-                    norm_factor = 1.0 / tot_spec.sum(axis=-1)
+                    norm_factor = 1.0 / spec_sum
                     p = norm_factor[:,np.newaxis]*tot_spec
                     cp = np.insert(np.cumsum(p, axis=-1), 0, 0.0, axis=1)
                     ei = start_e
-                    randvec = self.prng.uniform(size=cell_n.sum())
-                    bn = 0
                     for icell in range(nck):
                         cn = cell_n[icell]
                         if cn == 0:
                             continue
                         if self.method == "invert_cdf":
-                            cell_e = np.interp(randvec[bn:bn+cn].sort(), cp[icell,:], ebins)
+                            randvec = self.prng.uniform(size=cn)
+                            randvec.sort()
+                            cell_e = np.interp(randvec, cp[icell,:], ebins)
                         elif self.method == "accept_reject":
                             eidxs = self.prng.choice(nchan, size=cn, p=p[icell,:])
                             cell_e = emid[eidxs]
@@ -397,9 +394,7 @@ class ThermalSourceModel(SourceModel):
                         if num_photons_max > energies.size:
                             energies.resize(num_photons_max, refcheck=False)
                         energies[ei:ei+cn] = cell_e
-                        bn += cn
                         ei += cn
-
                     start_e = end_e
 
                 elif mode == "photon_field":
@@ -415,6 +410,8 @@ class ThermalSourceModel(SourceModel):
 
                 spec += np.sum(tot_spec*cell_nrm[ibegin:iend,np.newaxis], axis=0)
 
+            self.pbar.update(nck)
+                        
         if mode == "photons":
             active_cells = number_of_photons > 0
             idxs = idxs[active_cells]
