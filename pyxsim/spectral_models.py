@@ -3,9 +3,10 @@ Photon emission and absoprtion models.
 """
 import numpy as np
 
-from soxs.spectra import ApecGenerator, \
+from soxs.apec import ApecGenerator, \
     get_wabs_absorb, get_tbabs_absorb
 from soxs.utils import parse_prng
+from pyxsim.utils import ensure_list
 from yt.units.yt_array import YTArray, YTQuantity
 from yt.units import keV
 import h5py
@@ -106,7 +107,7 @@ class TableApecModel(ThermalSpectralModel):
         self.cosmic_spec = cosmic_spec
         self.metal_spec = metal_spec
         self.var_spec = var_spec
-        
+
     def write_spectral_table(self, filename, zobs, kT_min, kT_max, overwrite=False):
         self.prepare_spectrum(zobs, kT_min, kT_max)
         with h5py.File(filename, "w") as f:
@@ -167,38 +168,81 @@ class TableApecModel(ThermalSpectralModel):
 
 
 class XSpecAtableModel(ThermalSpectralModel):
-    def __init__(self, tablefile, var_elem=None):
-        self.tablefile = tablefile
+    def __init__(self, tablefiles, emin, emax, var_elem=None):
+        self.tablefiles = ensure_list(tablefiles)
         self.var_elem = var_elem
-        self._handle = fits.open(self.tablefile, memmap=True)
-        self.ebins = np.append(self._handle["ENERGIES"].data["ENERG_LO"], 
-                               self._handle["ENERGIES"].data["ENERG_HI"][-1])
-        self.emid = 0.5*(self.ebins[1:]+self.ebins[:-1])
-        self.n_D = self._handle["PARAMETERS"].data["NUMBVALS"][0]
-        self.n_T = self._handle["PARAMETERS"].data["NUMBVALS"][1]
-        self.Dvals = self._handle["PARAMETERS"].data["VALUE"][0][:self.n_D]
-        self.Tvals = self._handle["PARAMETERS"].data["VALUE"][1][:self.n_T]
+        self.emin = emin
+        self.emax = emax
+        self.nfiles = len(self.tablefiles)
+        self.nvar_elem = 0
+        if self.var_elem is not None:
+            self.nvar_elem = len(var_elem)
+
+    def prepare_spectrum(self, zobs, kT_min, kT_max):
+        """
+        Prepare the thermal model for execution given a redshift *zobs* for the spectrum.
+        """
+        scale_factor = 1.0/(1.0+zobs)
+        with fits.open(self.tablefiles[0]) as f:
+            self.n_D = f["PARAMETERS"].data["NUMBVALS"][0]
+            self.Dvals = f["PARAMETERS"].data["VALUE"][0][:self.n_D]
+            self.n_T = f["PARAMETERS"].data["NUMBVALS"][1]
+            self.Tvals = f["PARAMETERS"].data["VALUE"][1][:n_T]
+            eidxs = f["ENERGIES"].data["ENERG_LO"] > self.emin
+            eidxs &= f["ENERGIES"].data["ENERG_HI"] < self.emax
+            self.ebins = np.append(f["ENERGIES"].data["ENERG_LO"][eidxs],
+                                   f["ENERGIES"].data["ENERG_HI"][eidxs][-1])
+            self.ebins *= scale_factor
+            #cosmic_spec, metal_spec, var_spec = \
+            #    self.agen._get_table(list(range(idx_min, idx_max, 2)), zobs, 0.0)
+        self.emid = 0.5 * (self.ebins[1:] + self.ebins[:-1])
         self.dDvals = np.diff(self.Dvals)
         self.dTvals = np.diff(self.Tvals)
+        self.metal_spec = None
+        self.var_spec = None
+        with fits.open(self.tablefiles[0]) as f:
+            self.cosmic_spec = f["SPECTRA"].data["INTPSPEC"][:,eidxs]
+        if self.nfiles > 1:
+            with fits.open(self.tablefiles[1]) as f:
+                self.metal_spec = f["SPECTRA"].data["INTPSPEC"][:,eidxs]
+        if self.nfiles > 2:
+            self.var_spec = np.zeros((self.n_T*self.n_D,self.nvar_elem,eidxs.sum()))
+            for i in range(2, self.nfiles):
+                with fits.open(self.tablefiles[i]) as f:
+                    self.var_spec[:,i,:] = f["SPECTRA"].data["INTPSPEC"][:, eidxs]
 
     def get_spectrum(self, kT, nH):
-        kT = np.asarray(kT)
         lkT = np.atleast_1d(np.log10(kT*K_per_keV))
         lnH = np.atleast_1d(np.log10(nH))
         tidxs = np.searchsorted(self.Tvals, lkT)-1
         didxs = np.searchsorted(self.Dvals, lnH)-1
         dT = (lkT - self.Tvals[tidxs]) / self.dTvals[tidxs]
         dn = (lnH - self.Dvals[didxs]) / self.dDvals[didxs]
-        spec_data = self._handle["SPECTRA"].data["INTPSPEC"]
         idx1 = np.ravel_multi_index((didxs+1,tidxs+1), (self.n_D, self.n_T))
         idx2 = np.ravel_multi_index((didxs+1,tidxs), (self.n_D, self.n_T))
         idx3 = np.ravel_multi_index((didxs,tidxs+1), (self.n_D, self.n_T))
         idx4 = np.ravel_multi_index((didxs,tidxs), (self.n_D, self.n_T))
-        spec = (dT*dn)[:,np.newaxis]*spec_data[idx1,:]
-        spec += ((1.0-dT)*dn)[:,np.newaxis]*spec_data[idx2,:]
-        spec += (dT*(1.0-dn))[:,np.newaxis]*spec_data[idx3,:]
-        spec += ((1.0-dT)*(1.0-dn))[:,np.newaxis]*spec_data[idx4,:]
-        return spec
+        dx1 = dT*dn
+        dx2 = dn-dx1
+        dx3 = dT-dx1
+        dx4 = 1.0+dx1-dT-dn
+        cspec = dx1[:,np.newaxis]*self.cosmic_spec[idx1,:]
+        cspec += dx2[:,np.newaxis]*self.cosmic_spec[idx2,:]
+        cspec += dx3[:,np.newaxis]*self.cosmic_spec[idx3,:]
+        cspec += dx4[:,np.newaxis]*self.cosmic_spec[idx4,:]
+        mspec = None
+        if self.metal_spec is not None:
+            mspec = dx1[:,np.newaxis]*self.metal_spec[idx1,:]
+            mspec += dx2[:,np.newaxis]*self.metal_spec[idx2,:]
+            mspec += dx3[:,np.newaxis]*self.metal_spec[idx3,:]
+            mspec += dx4[:,np.newaxis]*self.metal_spec[idx4,:]
+        vspec = None
+        if self.var_spec is not None:
+            vspec = dx1[:,np.newaxis,np.newaxis]*self.var_spec[idx1,:,:]
+            vspec += dx2[:,np.newaxis,np.newaxis]*self.var_spec[idx2,:,:]
+            vspec += dx3[:,np.newaxis,np.newaxis]*self.var_spec[idx3,:,:]
+            vspec += dx4[:,np.newaxis,np.newaxis]*self.var_spec[idx4,:,:]
+        return cspec, mspec, vspec
 
 
 class AbsorptionModel:

@@ -71,7 +71,7 @@ class SourceModel:
 
     def make_xray_fields(self, ds, redshift=0.0, dist=None, cosmology=None):
         r"""
-        
+
         Parameters
         ----------
         ds : `~yt.data_objects.static_output.Dataset`
@@ -232,9 +232,14 @@ metal_abund = {"angr": 0.0189,
 
 
 class ThermalSourceModel(SourceModel):
-    def __init__(self, kT_min=0.025, kT_max=64.0, var_elem=None, 
-                 max_density=5.0e-25, method="invert_cdf", 
-                 abund_table="angr", prng=None):
+    def __init__(self, spectral_model, emin, emax, Zmet, kT_min=0.025, kT_max=64.0, 
+                 var_elem=None, max_density=5.0e-25, method="invert_cdf", 
+                 abund_table="angr", prng=None, temperature_field=None,
+                 emission_measure_field=None, h_fraction=None):
+        self.spectral_model = spectral_model
+        self.emin = parse_value(emin, "keV")
+        self.emax = parse_value(emax, "keV")
+        self.Zmet = Zmet
         if var_elem is None:
             var_elem = {}
             var_elem_keys = None
@@ -250,6 +255,13 @@ class ThermalSourceModel(SourceModel):
                     max_density = YTQuantity(max_density[0], max_density[1])
                 else:
                     max_density = YTQuantity(max_density, "g/cm**3")
+        self.temperature_field = temperature_field
+        self.emission_measure_field = emission_measure_field
+        self.density_field = None  # Will be determined later
+        self.nh_field = None # Will be set by the subclass
+        if h_fraction is None:
+            h_fraction = solar_H_abund
+        self.h_fraction = h_fraction
         self.max_density = max_density
         self.tot_num_cells = 0  # Will be determined later
         self.ftype = "gas"
@@ -258,6 +270,83 @@ class ThermalSourceModel(SourceModel):
         self.prng = parse_prng(prng)
         self.kT_min = kT_min
         self.kT_max = kT_max
+        self.spectral_norm = None
+        self.redshift = None
+        self.pbar = None
+        self.Zconvert = 1.0
+        self.mconvert = {}
+
+    def setup_model(self, data_source, redshift, spectral_norm):
+        if isinstance(data_source, Dataset):
+            ds = data_source
+        else:
+            ds = data_source.ds
+        if self.emission_measure_field is None:
+            self.emission_measure_field = \
+                (self.ftype, 'emission_measure')
+        try:
+            ftype = ds._get_field_info(
+                self.emission_measure_field).name[0]
+        except YTFieldNotFound:
+            raise RuntimeError(f"The {self.emission_measure_field} field is not "
+                               "found. If you do not have species fields in "
+                               "your dataset, you may need to set "
+                               "default_species_fields='ionized' in the call "
+                               "to yt.load().")
+        self.ftype = ftype
+        self.redshift = redshift
+        if not self.nei and not isinstance(self.Zmet, float):
+            Z_units = str(ds._get_field_info(self.Zmet).units)
+            if Z_units in ["dimensionless", "", "code_metallicity"]:
+                Zsum = (self.atable*atomic_weights)[metal_elem].sum()
+                self.Zconvert = atomic_weights[1]/Zsum
+            elif Z_units == "Zsun":
+                self.Zconvert = 1.0
+            else:
+                raise RuntimeError(f"I don't understand metallicity "
+                                   f"units of {Z_units}!")
+        if self.num_var_elem > 0:
+            for key, value in self.var_elem.items():
+                if not isinstance(value, float):
+                    if "^" in key:
+                        elem = key.split("^")[0]
+                    else:
+                        elem = key
+                    n_elem = elem_names.index(elem)
+                    m_units = str(ds._get_field_info(value).units)
+                    if m_units in ["dimensionless", "", "code_metallicity"]:
+                        m = self.atable[n_elem]*atomic_weights[n_elem]
+                        self.mconvert[key] = atomic_weights[1]/m
+                    elif m_units == "Zsun":
+                        self.mconvert[key] = 1.0
+                    else:
+                        raise RuntimeError(f"I don't understand units of "
+                                           f"{m_units} for element {key}!")
+        self.density_field = (ftype, "density")
+        mylog.info(f"Using emission measure field "
+                   f"'{self.emission_measure_field}'.")
+        if self.temperature_field is None:
+            self.temperature_field = (ftype, 'temperature')
+        mylog.info(f"Using temperature field "
+                   f"'{self.temperature_field}'.")
+        if self.nh_field is not None:
+            mylog.info(f"Using nH field '{self.nh_field}'.")
+        self.spectral_model.prepare_spectrum(redshift, self.kT_min,
+                                             self.kT_max)
+        self.spectral_norm = spectral_norm
+        if isinstance(data_source, Dataset):
+            self.pbar = DummyProgressBar()
+        else:
+            citer = data_source.chunks([], "io")
+            num_cells = 0
+            for chunk in parallel_objects(citer):
+                num_cells += chunk[self.temperature_field].size
+            self.tot_num_cells = comm.mpi_allreduce(num_cells)
+            if parallel_capable:
+                self.pbar = ParallelProgressBar("Processing cells/particles ")
+            else:
+                self.pbar = tqdm(leave=True, total=self.tot_num_cells,
+                                 desc="Processing cells/particles ")
 
     def make_spectrum(self, data_source):
         self.setup_model(data_source, 0.0, 1.0)
@@ -312,6 +401,11 @@ class ThermalSourceModel(SourceModel):
         else:
             X_H = np.ravel(chunk[self.h_fraction].d[cut])
 
+        if self.nh_field is not None:
+            nH = np.ravel(chunk[self.nh_field].d[cut])
+        else:
+            nH = None
+
         if self.nei:
             metalZ = np.zeros(num_cells)
             elem_keys = self.var_ion_keys
@@ -339,7 +433,7 @@ class ThermalSourceModel(SourceModel):
                     if str(eZ.units) != "Zsun":
                         fac /= X_H
                     elemZ[:, j] = np.ravel(eZ.d[cut]*fac)
-        
+
         num_photons_max = 10000000
         number_of_photons = np.zeros(num_cells, dtype="int64")
         energies = np.zeros(num_photons_max)
@@ -356,9 +450,17 @@ class ThermalSourceModel(SourceModel):
             iend = ck[-1]+1
             nck = iend-ibegin
 
-            cspec, mspec, vspec = self.spectral_model.get_spectrum(kT[ibegin:iend])
+            if nH is None:
+                cnH = None
+            else:
+                cnH = nH[ibegin:iend]
 
-            tot_spec = cspec + metalZ[ibegin:iend,np.newaxis]*mspec
+            cspec, mspec, vspec = self.spectral_model.get_spectrum(kT[ibegin:iend],
+                                                                   nH=cnH)
+
+            tot_spec = cspec 
+            if mspec is not None:
+                tot_spec += metalZ[ibegin:iend,np.newaxis]*mspec
             if self.num_var_elem > 0:
                 tot_spec += np.sum(elemZ[ibegin:iend,:,np.newaxis]*vspec, axis=1)
 
@@ -411,7 +513,7 @@ class ThermalSourceModel(SourceModel):
                 spec += np.sum(tot_spec*cell_nrm[ibegin:iend,np.newaxis], axis=0)
 
             self.pbar.update(nck)
-                        
+
         if mode == "photons":
             active_cells = number_of_photons > 0
             idxs = idxs[active_cells]
@@ -422,18 +524,27 @@ class ThermalSourceModel(SourceModel):
         else:
             return np.resize(ret, orig_shape)
 
+    def cleanup_model(self):
+        self.emission_measure_field = None
+        self.temperature_field = None
+        self.h_fraction = None
+        self.pbar.close()
+
 
 class AtableSourceModel(ThermalSourceModel):
-    def __init__(self, filename, temperature_field=None, norm_field=None, 
-                 h_fraction=None, kT_min=0.025, kT_max=64.0, max_density=5.0e-25, 
-                 var_elem=None, method="invert_cdf", abund_table="angr", prng=None):
-        super().__init__(kT_min=kT_min, kT_max=kT_max, var_elem=var_elem, 
-                         max_density=max_density, method=method, abund_table=abund_table, 
-                         prng=prng)
-        self.spectral_model = XSpecAtableModel(filename)
-        self.temperature_field = temperature_field
-        self.norm_field = norm_field
-        self.h_fraction = h_fraction
+    nei = False
+
+    def __init__(self, filenames, emin, emax, Zmet, temperature_field=None, 
+                 emission_measure_field=None, nh_field=None, h_fraction=None, 
+                 kT_min=0.025, kT_max=64.0, max_density=5.0e-25, var_elem=None,
+                 method="invert_cdf", abund_table="angr", prng=None):
+        spectral_model = XSpecAtableModel(filenames, emin, emax, var_elem=var_elem)
+        super().__init__(spectral_model, emin, emax, Zmet, kT_min=kT_min, kT_max=kT_max, 
+                         var_elem=var_elem, max_density=max_density, method=method, 
+                         abund_table=abund_table, prng=prng, temperature_field=temperature_field, 
+                         h_fraction=h_fraction, emission_measure_field=emission_measure_field)
+        self.nh_field = nh_field
+
 
 class CIESourceModel(ThermalSourceModel):
     nei = False
@@ -517,337 +628,27 @@ class CIESourceModel(ThermalSourceModel):
 
     Examples
     --------
-    >>> source_model = ThermalSourceModel("apec", 0.1, 10.0, 10000, 
-    ...                                   ("gas", "metallicity"))
+    >>> source_model = CIESourceModel("apec", 0.1, 10.0, 10000,
+    ...                               ("gas", "metallicity"))
     """
-    def __init__(self, emin, emax, nchan, Zmet, temperature_field=None, 
-                 emission_measure_field=None, h_fraction=None, kT_min=0.025, 
-                 kT_max=64.0, max_density=5.0e-25, var_elem=None, method="invert_cdf", 
-                 thermal_broad=True, model_root=None, model_vers=None, nolines=False, 
+    def __init__(self, emin, emax, nchan, Zmet, temperature_field=None,
+                 emission_measure_field=None, h_fraction=None, kT_min=0.025,
+                 kT_max=64.0, max_density=5.0e-25, var_elem=None, method="invert_cdf",
+                 thermal_broad=True, model_root=None, model_vers=None, nolines=False,
                  abund_table="angr", prng=None):
-        super().__init__(kT_min=kT_min, kT_max=kT_max, var_elem=var_elem,
-                         max_density=max_density, method=method, abund_table=abund_table, 
-                         prng=prng)
-        self.temperature_field = temperature_field
-        self.Zmet = Zmet
-        self.emin = parse_value(emin, "keV")
-        self.emax = parse_value(emax, "keV")
-        self.spectral_model = TableApecModel(emin, emax, nchan,
-                                             var_elem=self.var_elem_keys,
-                                             thermal_broad=thermal_broad,
-                                             model_root=model_root,
-                                             model_vers=model_vers,
-                                             nolines=nolines, nei=self.nei,
-                                             abund_table=abund_table)
+        spectral_model = TableApecModel(emin, emax, nchan,
+                                        var_elem=self.var_elem_keys,
+                                        thermal_broad=thermal_broad,
+                                        model_root=model_root,
+                                        model_vers=model_vers,
+                                        nolines=nolines, nei=self.nei,
+                                        abund_table=abund_table)
+        super().__init__(spectral_model, emin, emax, Zmet, kT_min=kT_min, kT_max=kT_max, 
+                         var_elem=var_elem, max_density=max_density, method=method, 
+                         abund_table=abund_table, prng=prng)
         self.var_elem_keys = self.spectral_model.var_elem_names
         self.var_ion_keys = self.spectral_model.var_ion_names
-        self.spectral_norm = None
-        self.redshift = None
-        self.pbar = None
-        self.emission_measure_field = emission_measure_field
-        self.Zconvert = 1.0
         self.atable = self.spectral_model.atable
-        self.mconvert = {}
-        self.density_field = None  # Will be determined later
-        if h_fraction is None:
-            h_fraction = solar_H_abund
-        self.h_fraction = h_fraction
-
-    def setup_model(self, data_source, redshift, spectral_norm):
-        if isinstance(data_source, Dataset):
-            ds = data_source
-        else:
-            ds = data_source.ds
-        if self.emission_measure_field is None:
-            self.emission_measure_field = \
-                (self.ftype, 'emission_measure')
-        try:
-            ftype = ds._get_field_info(
-                self.emission_measure_field).name[0]
-        except YTFieldNotFound:
-            raise RuntimeError(f"The {self.emission_measure_field} field is not "
-                               "found. If you do not have species fields in "
-                               "your dataset, you may need to set "
-                               "default_species_fields='ionized' in the call "
-                               "to yt.load().")
-        self.ftype = ftype
-        self.redshift = redshift
-        if not self.nei and not isinstance(self.Zmet, float):
-            Z_units = str(ds._get_field_info(self.Zmet).units)
-            if Z_units in ["dimensionless", "", "code_metallicity"]:
-                Zsum = (self.atable*atomic_weights)[metal_elem].sum()
-                self.Zconvert = atomic_weights[1]/Zsum
-            elif Z_units == "Zsun":
-                self.Zconvert = 1.0
-            else:
-                raise RuntimeError(f"I don't understand metallicity "
-                                   f"units of {Z_units}!")
-        if self.num_var_elem > 0:
-            for key, value in self.var_elem.items():
-                if not isinstance(value, float):
-                    if "^" in key:
-                        elem = key.split("^")[0]
-                    else:
-                        elem = key
-                    n_elem = elem_names.index(elem)
-                    m_units = str(ds._get_field_info(value).units)
-                    if m_units in ["dimensionless", "", "code_metallicity"]:
-                        m = self.atable[n_elem]*atomic_weights[n_elem]
-                        self.mconvert[key] = atomic_weights[1]/m
-                    elif m_units == "Zsun":
-                        self.mconvert[key] = 1.0
-                    else:
-                        raise RuntimeError(f"I don't understand units of "
-                                           f"{m_units} for element {key}!")
-        self.density_field = (ftype, "density")
-        mylog.info(f"Using emission measure field "
-                   f"'{self.emission_measure_field}'.")
-        if self.temperature_field is None:
-            self.temperature_field = (ftype, 'temperature')
-        mylog.info(f"Using temperature field "
-                   f"'{self.temperature_field}'.")
-        self.spectral_model.prepare_spectrum(redshift, self.kT_min,
-                                             self.kT_max)
-        self.spectral_norm = spectral_norm
-        if isinstance(data_source, Dataset):
-            self.pbar = DummyProgressBar()
-        else:
-            citer = data_source.chunks([], "io")
-            num_cells = 0
-            for chunk in parallel_objects(citer):
-                num_cells += chunk[self.temperature_field].size
-            self.tot_num_cells = comm.mpi_allreduce(num_cells)
-            if parallel_capable:
-                self.pbar = ParallelProgressBar("Processing cells/particles ")
-            else:
-                self.pbar = tqdm(leave=True, total=self.tot_num_cells,
-                                 desc="Processing cells/particles ")
-
-    def cleanup_model(self):
-        self.emission_measure_field = None
-        self.temperature_field = None
-        self.pbar.close()
-
-    """
-    def process_data(self, mode, chunk):
-
-        emid = self.spectral_model.emid
-        ebins = self.spectral_model.ebins
-        nchan = len(emid)
-
-        orig_shape = chunk[self.temperature_field].shape
-        if len(orig_shape) == 0:
-            orig_ncells = 0
-        else:
-            orig_ncells = np.prod(orig_shape)
-        if orig_ncells == 0:
-            return
-
-        ret = np.zeros(orig_ncells)
-
-        if self.max_density is None:
-            dens_cut = 1
-        else:
-            dens_cut = chunk[self.density_field] < self.max_density
-        kT = np.atleast_1d(
-            chunk[self.temperature_field].to_value("keV", "thermal")).flat
-        norm = np.atleast_1d(chunk[self.emission_measure_field].d*dens_cut).flat
-
-        idxs = np.argsort(kT)
-
-        kT_sorted = kT[idxs]
-        idx_min = np.searchsorted(kT_sorted, self.kT_min)
-        idx_max = np.searchsorted(kT_sorted, self.kT_max)
-        idxs = idxs[idx_min:idx_max]
-        num_cells = len(idxs)
-
-        if mode == "photons":
-            if num_cells == 0:
-                self.pbar.update(orig_ncells)
-                return
-            else:
-                self.pbar.update(orig_ncells-num_cells)
-        elif num_cells == 0:
-            return np.zeros(orig_shape)
-
-        kT_idxs = np.digitize(kT[idxs], self.kT_bins)-1
-        bcounts = np.bincount(kT_idxs).astype("int")
-        bcounts = bcounts[bcounts > 0]
-        n = int(0)
-        bcell = []
-        ecell = []
-        for bcount in bcounts:
-            bcell.append(n)
-            ecell.append(n+bcount)
-            n += bcount
-        kT_idxs = np.unique(kT_idxs)
-
-        cell_nrm = norm[idxs]*self.spectral_norm
-
-        if isinstance(self.h_fraction, float):
-            X_H = self.h_fraction
-        else:
-            X_H = chunk[self.h_fraction].d[idxs]
-
-        if self.nei:
-            metalZ = np.zeros(num_cells)
-            elem_keys = self.var_ion_keys
-        else:
-            elem_keys = self.var_elem_keys
-            if isinstance(self.Zmet, float):
-                metalZ = self.Zmet*np.ones(num_cells)
-            else:
-                mZ = chunk[self.Zmet]
-                fac = self.Zconvert
-                if str(mZ.units) != "Zsun":
-                    fac /= X_H
-                metalZ = np.atleast_1d(mZ.d[idxs]*fac).flat
-
-        elemZ = None
-        if self.num_var_elem > 0:
-            elemZ = np.zeros((self.num_var_elem, num_cells))
-            for j, key in enumerate(elem_keys):
-                value = self.var_elem[key]
-                if isinstance(value, float):
-                    elemZ[j, :] = value
-                else:
-                    eZ = chunk[value]
-                    fac = self.mconvert[key]
-                    if str(eZ.units) != "Zsun":
-                        fac /= X_H
-                    elemZ[j, :] = np.atleast_1d(eZ.d[idxs]*fac).flat
-
-        num_photons_max = 10000000
-        number_of_photons = np.zeros(num_cells, dtype="int64")
-        energies = np.zeros(num_photons_max)
-
-        start_e = 0
-        end_e = 0
-
-        spec = np.zeros(nchan)
-
-        for ibegin, iend, bcount, ikT in zip(bcell, ecell, bcounts, kT_idxs):
-
-            self.pbar.update(bcount)
-
-            kT = self.kT_bins[ikT] + 0.5*self.dkT[ikT]
-
-            cnm = cell_nrm[ibegin:iend]
-
-            cspec, mspec, vspec = self.spectral_model.get_spectrum(kT)
-
-            if mode in ["photons", "photon_field"]:
-
-                tot_ph_c = cspec.d.sum()
-                tot_ph_m = mspec.d.sum()
-
-                cell_norm_c = tot_ph_c*cnm
-                cell_norm_m = tot_ph_m*metalZ[ibegin:iend]*cnm
-                cell_norm = cell_norm_c + cell_norm_m
-
-                if vspec is not None:
-                    cell_norm_v = np.zeros(cnm.size)
-                    for j in range(self.num_var_elem):
-                        tot_ph_v = vspec.d[j, :].sum()
-                        cell_norm_v += tot_ph_v*elemZ[j, ibegin:iend]*cnm
-                    cell_norm += cell_norm_v
-
-                if mode == "photons":
-
-                    cell_n = ensure_numpy_array(self.prng.poisson(lam=cell_norm))
-
-                    number_of_photons[ibegin:iend] = cell_n
-
-                    end_e += int(cell_n.sum())
-
-                    if self.method == "invert_cdf":
-                        cumspec_c = np.pad(np.cumsum(cspec.d), (1,0))
-                        cumspec_m = np.pad(np.cumsum(mspec.d), (1,0))
-                        if vspec is None:
-                            cumspec_v = None
-                        else:
-                            cumspec_v = np.zeros((self.num_var_elem, nchan+1))
-                            for j in range(self.num_var_elem):
-                                cumspec_v[j, 1:] = np.cumsum(vspec.d[j, :])
-
-                    ei = start_e
-                    for icell in range(ibegin, iend):
-                        cn = number_of_photons[icell]
-                        if cn == 0:
-                            continue
-                        # The rather verbose form of the few next statements is a
-                        # result of code optimization and shouldn't be changed
-                        # without checking for perfomance degradation.
-                        if self.method == "invert_cdf":
-                            cumspec = cumspec_c
-                            cumspec += metalZ[icell] * cumspec_m
-                            if cumspec_v is not None:
-                                for j in range(self.num_var_elem):
-                                    cumspec += elemZ[j, icell]*cumspec_v[j, :]
-                            norm_factor = 1.0 / cumspec[-1]
-                            cumspec *= norm_factor
-                            randvec = self.prng.uniform(size=cn)
-                            randvec.sort()
-                            cell_e = np.interp(randvec, cumspec, ebins)
-                        elif self.method == "accept_reject":
-                            tot_spec = cspec.d
-                            tot_spec += metalZ[icell] * mspec.d
-                            if vspec is not None:
-                                for j in range(self.num_var_elem):
-                                    tot_spec += elemZ[j, icell]*vspec.d[j, :]
-                            norm_factor = 1.0 / tot_spec.sum()
-                            tot_spec *= norm_factor
-                            eidxs = self.prng.choice(nchan, size=cn, p=tot_spec)
-                            cell_e = emid[eidxs]
-                        while ei+cn > num_photons_max:
-                            num_photons_max *= 2
-                        if num_photons_max > energies.size:
-                            energies.resize(num_photons_max, refcheck=False)
-                        energies[ei:ei+cn] = cell_e
-                        ei += cn
-
-                    start_e = end_e
-
-                elif mode == "photon_field":
-
-                    ret[idxs[ibegin:iend]] = cell_norm
-
-            elif mode == "energy_field":
-
-                tot_e_c = (cspec.d*emid).sum()
-                tot_e_m = (mspec.d*emid).sum()
-
-                cell_e_c = tot_e_c * cnm
-                cell_e_m = tot_e_m * metalZ[ibegin:iend] * cnm
-                cell_e = cell_e_c + cell_e_m
-
-                if vspec is not None:
-                    cell_e_v = np.zeros(cnm.size)
-                    for j in range(self.num_var_elem):
-                        tot_e_v = (vspec.d[j, :]*emid).sum()
-                        cell_e_v += tot_e_v * elemZ[j, ibegin:iend] * cnm
-                    cell_e += cell_e_v
-
-                ret[idxs[ibegin:iend]] = cell_e
-
-            elif mode == "spectrum":
-
-                spec += cnm.sum()*cspec.d
-                spec += np.sum(metalZ[ibegin:iend]*cnm)*mspec.d
-                if vspec is not None:
-                    for j in range(self.num_var_elem):
-                        spec += np.sum(elemZ[j, ibegin:iend]*cnm)*vspec.d[j, :]
-
-        if mode == "photons":
-            active_cells = number_of_photons > 0
-            idxs = idxs[active_cells]
-            ncells = idxs.size
-            return ncells, number_of_photons[active_cells], idxs, energies[:end_e].copy()
-        elif mode == "spectrum":
-            return spec
-        else:
-            return np.resize(ret, orig_shape)
-    """
 
 
 class NEISourceModel(CIESourceModel):
