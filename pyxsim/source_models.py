@@ -422,17 +422,17 @@ class ThermalSourceModel(SourceModel):
 
         elemZ = None
         if self.num_var_elem > 0:
-            elemZ = np.zeros((num_cells, self.num_var_elem))
+            elemZ = np.zeros((self.num_var_elem, num_cells))
             for j, key in enumerate(elem_keys):
                 value = self.var_elem[key]
                 if isinstance(value, float):
-                    elemZ[:, j] = value
+                    elemZ[j,:] = value
                 else:
                     eZ = chunk[value]
                     fac = self.mconvert[key]
                     if str(eZ.units) != "Zsun":
                         fac /= X_H
-                    elemZ[:, j] = np.ravel(eZ.d[cut]*fac)
+                    elemZ[j,:] = np.ravel(eZ.d[cut]*fac)
 
         num_photons_max = 10000000
         number_of_photons = np.zeros(num_cells, dtype="int64")
@@ -462,7 +462,7 @@ class ThermalSourceModel(SourceModel):
             if mspec is not None:
                 tot_spec += metalZ[ibegin:iend,np.newaxis]*mspec
             if self.num_var_elem > 0:
-                tot_spec += np.sum(elemZ[ibegin:iend,:,np.newaxis]*vspec, axis=1)
+                tot_spec += np.sum(elemZ[:,ibegin:iend,np.newaxis]*vspec, axis=1)
 
             if mode in ["photons", "photon_field"]:
 

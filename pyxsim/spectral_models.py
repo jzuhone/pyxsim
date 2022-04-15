@@ -134,10 +134,10 @@ class TableApecModel(ThermalSpectralModel):
         cosmic_spec = (1.-dT)[:,np.newaxis]*cspec_l+dT[:,np.newaxis]*cspec_r
         metal_spec = (1.-dT)[:,np.newaxis]*mspec_l+dT[:,np.newaxis]*mspec_r
         if self.var_spec is not None:
-            vspec_l = self.var_spec[tindex, :, :]
-            vspec_r = self.var_spec[tindex+1, :, :]
-            var_spec = (1.-dT)[:,np.newaxis,np.newaxis]*vspec_l
-            var_spec += dT[:,np.newaxis,np.newaxis]*vspec_r
+            vspec_l = self.var_spec[:, tindex, :]
+            vspec_r = self.var_spec[:, tindex+1, :]
+            var_spec = (1.-dT)[np.newaxis,:,np.newaxis]*vspec_l
+            var_spec += dT[np.newaxis,:,np.newaxis]*vspec_r
         return cosmic_spec, metal_spec, var_spec
 
     def return_spectrum(self, temperature, metallicity, redshift, norm,
@@ -193,8 +193,6 @@ class XSpecAtableModel(ThermalSpectralModel):
             self.ebins = np.append(f["ENERGIES"].data["ENERG_LO"][eidxs],
                                    f["ENERGIES"].data["ENERG_HI"][eidxs][-1])
             self.ebins *= scale_factor
-            #cosmic_spec, metal_spec, var_spec = \
-            #    self.agen._get_table(list(range(idx_min, idx_max, 2)), zobs, 0.0)
         self.emid = 0.5 * (self.ebins[1:] + self.ebins[:-1])
         self.dDvals = np.diff(self.Dvals)
         self.dTvals = np.diff(self.Tvals)
@@ -206,10 +204,10 @@ class XSpecAtableModel(ThermalSpectralModel):
             with fits.open(self.tablefiles[1]) as f:
                 self.metal_spec = f["SPECTRA"].data["INTPSPEC"][:,eidxs]
         if self.nfiles > 2:
-            self.var_spec = np.zeros((self.n_T*self.n_D,self.nvar_elem,eidxs.sum()))
+            self.var_spec = np.zeros((self.nvar_elem,self.n_T*self.n_D,eidxs.sum()))
             for i in range(2, self.nfiles):
                 with fits.open(self.tablefiles[i]) as f:
-                    self.var_spec[:,i,:] = f["SPECTRA"].data["INTPSPEC"][:, eidxs]
+                    self.var_spec[i,:,:] = f["SPECTRA"].data["INTPSPEC"][:, eidxs]
 
     def get_spectrum(self, kT, nH):
         lkT = np.atleast_1d(np.log10(kT*K_per_keV))
@@ -238,10 +236,10 @@ class XSpecAtableModel(ThermalSpectralModel):
             mspec += dx4[:,np.newaxis]*self.metal_spec[idx4,:]
         vspec = None
         if self.var_spec is not None:
-            vspec = dx1[:,np.newaxis,np.newaxis]*self.var_spec[idx1,:,:]
-            vspec += dx2[:,np.newaxis,np.newaxis]*self.var_spec[idx2,:,:]
-            vspec += dx3[:,np.newaxis,np.newaxis]*self.var_spec[idx3,:,:]
-            vspec += dx4[:,np.newaxis,np.newaxis]*self.var_spec[idx4,:,:]
+            vspec = dx1[np.newaxis,:,np.newaxis]*self.var_spec[:,idx1,:]
+            vspec += dx2[np.newaxis,:,np.newaxis]*self.var_spec[:,idx2,:]
+            vspec += dx3[np.newaxis,:,np.newaxis]*self.var_spec[:,idx3,:]
+            vspec += dx4[np.newaxis,:,np.newaxis]*self.var_spec[:,idx4,:]
         return cspec, mspec, vspec
 
 
