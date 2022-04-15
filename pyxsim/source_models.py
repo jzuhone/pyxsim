@@ -255,6 +255,10 @@ class ThermalSourceModel(SourceModel):
                     max_density = YTQuantity(max_density[0], max_density[1])
                 else:
                     max_density = YTQuantity(max_density, "g/cm**3")
+        if emission_measure_field is None:
+            emission_measure_field = ('gas', 'emission_measure')
+        if temperature_field is None:
+            temperature_field = ('gas', 'temperature')
         self.temperature_field = temperature_field
         self.emission_measure_field = emission_measure_field
         self.density_field = None  # Will be determined later
@@ -281,9 +285,6 @@ class ThermalSourceModel(SourceModel):
             ds = data_source
         else:
             ds = data_source.ds
-        if self.emission_measure_field is None:
-            self.emission_measure_field = \
-                (self.ftype, 'emission_measure')
         try:
             ftype = ds._get_field_info(
                 self.emission_measure_field).name[0]
@@ -325,8 +326,6 @@ class ThermalSourceModel(SourceModel):
         self.density_field = (ftype, "density")
         mylog.info(f"Using emission measure field "
                    f"'{self.emission_measure_field}'.")
-        if self.temperature_field is None:
-            self.temperature_field = (ftype, 'temperature')
         mylog.info(f"Using temperature field "
                    f"'{self.temperature_field}'.")
         if self.nh_field is not None:
@@ -379,7 +378,7 @@ class ThermalSourceModel(SourceModel):
         kT = np.ravel(
             chunk[self.temperature_field].to_value("keV", "thermal"))
         cut &= (kT >= self.kT_min) & (kT <= self.kT_max)
-
+        
         num_cells = cut.sum()
 
         if mode == "photons":
@@ -462,7 +461,7 @@ class ThermalSourceModel(SourceModel):
             if mspec is not None:
                 tot_spec += metalZ[ibegin:iend,np.newaxis]*mspec
             if self.num_var_elem > 0:
-                tot_spec += np.sum(elemZ[:,ibegin:iend,np.newaxis]*vspec, axis=1)
+                tot_spec += np.sum(elemZ[:,ibegin:iend,np.newaxis]*vspec, axis=0)
 
             if mode in ["photons", "photon_field"]:
 
@@ -525,9 +524,6 @@ class ThermalSourceModel(SourceModel):
             return np.resize(ret, orig_shape)
 
     def cleanup_model(self):
-        self.emission_measure_field = None
-        self.temperature_field = None
-        self.h_fraction = None
         self.pbar.close()
 
 
@@ -646,7 +642,8 @@ class CIESourceModel(ThermalSourceModel):
                                         abund_table=abund_table)
         super().__init__(spectral_model, emin, emax, Zmet, kT_min=kT_min, kT_max=kT_max, 
                          var_elem=var_elem, max_density=max_density, method=method, 
-                         abund_table=abund_table, prng=prng)
+                         abund_table=abund_table, prng=prng, temperature_field=temperature_field,
+                         emission_measure_field=emission_measure_field)
         self.var_elem_keys = self.spectral_model.var_elem_names
         self.var_ion_keys = self.spectral_model.var_ion_names
         self.atable = self.spectral_model.atable
