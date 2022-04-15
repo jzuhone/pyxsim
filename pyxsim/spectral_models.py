@@ -3,7 +3,8 @@ Photon emission and absoprtion models.
 """
 import numpy as np
 
-from soxs.apec import ApecGenerator, \
+from soxs.apec import ApecGenerator
+from soxs.spectra import \
     get_wabs_absorb, get_tbabs_absorb
 from soxs.utils import parse_prng
 from pyxsim.utils import ensure_list

@@ -636,8 +636,9 @@ class CIESourceModel(ThermalSourceModel):
                  kT_max=64.0, max_density=5.0e-25, var_elem=None, method="invert_cdf",
                  thermal_broad=True, model_root=None, model_vers=None, nolines=False,
                  abund_table="angr", prng=None):
+        var_elem_keys = list(var_elem.keys()) if var_elem is not None else None
         spectral_model = TableApecModel(emin, emax, nchan,
-                                        var_elem=self.var_elem_keys,
+                                        var_elem=var_elem_keys,
                                         thermal_broad=thermal_broad,
                                         model_root=model_root,
                                         model_vers=model_vers,
