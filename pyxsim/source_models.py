@@ -227,8 +227,9 @@ class SourceModel:
 
 metal_abund = {"angr": 0.0189,
                "aspl": 0.0134,
-               "wilm": 0.0134,
-               "lodd": 0.0133}
+               "wilm": 0.0120,
+               "feld": 0.0191,
+               "lodd": 0.0132}
 
 
 class ThermalSourceModel(SourceModel):
