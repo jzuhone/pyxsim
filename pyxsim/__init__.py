@@ -12,7 +12,8 @@ from pyxsim.source_models import \
    CIESourceModel, \
    NEISourceModel, \
    LineSourceModel, \
-   PowerLawSourceModel
+   PowerLawSourceModel, \
+   AtableSourceModel
 
 from pyxsim.spectral_models import \
     TableApecModel, \
