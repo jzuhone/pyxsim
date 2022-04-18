@@ -169,7 +169,7 @@ class TableApecModel(ThermalSpectralModel):
 
 
 class XSpecAtableModel(ThermalSpectralModel):
-    def __init__(self, tablefiles, emin, emax, var_elem=None):
+    def __init__(self, tablefiles, emin, emax, var_elem=None, scaling_factor=1.0):
         self.tablefiles = ensure_list(tablefiles)
         self.var_elem = var_elem
         self.emin = emin
@@ -178,6 +178,7 @@ class XSpecAtableModel(ThermalSpectralModel):
         self.nvar_elem = 0
         if self.var_elem is not None:
             self.nvar_elem = len(var_elem)
+        self.scaling_factor = scaling_factor
 
     def prepare_spectrum(self, zobs, kT_min, kT_max):
         """
@@ -189,27 +190,27 @@ class XSpecAtableModel(ThermalSpectralModel):
             self.Dvals = f["PARAMETERS"].data["VALUE"][0][:self.n_D]
             self.n_T = f["PARAMETERS"].data["NUMBVALS"][1]
             self.Tvals = f["PARAMETERS"].data["VALUE"][1][:n_T]
-            eidxs = f["ENERGIES"].data["ENERG_LO"] > self.emin
-            eidxs &= f["ENERGIES"].data["ENERG_HI"] < self.emax
+            eidxs = f["ENERGIES"].data["ENERG_LO"] > self.emin*scale_factor
+            eidxs &= f["ENERGIES"].data["ENERG_HI"] < self.emax*scale_factor
             self.ebins = np.append(f["ENERGIES"].data["ENERG_LO"][eidxs],
                                    f["ENERGIES"].data["ENERG_HI"][eidxs][-1])
-            self.ebins *= scale_factor
         self.emid = 0.5 * (self.ebins[1:] + self.ebins[:-1])
         self.dDvals = np.diff(self.Dvals)
         self.dTvals = np.diff(self.Tvals)
         self.metal_spec = None
         self.var_spec = None
         with fits.open(self.tablefiles[0]) as f:
-            self.cosmic_spec = f["SPECTRA"].data["INTPSPEC"][:,eidxs]
+            self.cosmic_spec = self.scaling_factor*f["SPECTRA"].data["INTPSPEC"][:,eidxs]
         if self.nfiles > 1:
             with fits.open(self.tablefiles[1]) as f:
-                self.metal_spec = f["SPECTRA"].data["INTPSPEC"][:,eidxs]
+                self.metal_spec = self.scaling_factor*f["SPECTRA"].data["INTPSPEC"][:,eidxs]
         if self.nfiles > 2:
             self.var_spec = np.zeros((self.nvar_elem,self.n_T*self.n_D,eidxs.sum()))
             for i in range(2, self.nfiles):
                 with fits.open(self.tablefiles[i]) as f:
                     self.var_spec[i,:,:] = f["SPECTRA"].data["INTPSPEC"][:, eidxs]
-
+            self.var_spec *= self.scaling_factor
+    
     def get_spectrum(self, kT, nH):
         lkT = np.atleast_1d(np.log10(kT*K_per_keV))
         lnH = np.atleast_1d(np.log10(nH))

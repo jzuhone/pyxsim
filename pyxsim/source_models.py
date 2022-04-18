@@ -530,11 +530,12 @@ class ThermalSourceModel(SourceModel):
 class AtableSourceModel(ThermalSourceModel):
     nei = False
 
-    def __init__(self, filenames, emin, emax, Zmet, temperature_field=None, 
-                 emission_measure_field=None, nh_field=None, h_fraction=None, 
-                 kT_min=0.025, kT_max=64.0, max_density=5.0e-25, var_elem=None,
-                 method="invert_cdf", abund_table="angr", prng=None):
-        spectral_model = XSpecAtableModel(filenames, emin, emax, var_elem=var_elem)
+    def __init__(self, filenames, emin, emax, Zmet, scaling_factor=1.0,
+                 temperature_field=None, emission_measure_field=None, nh_field=None, 
+                 h_fraction=None, kT_min=0.025, kT_max=64.0, max_density=5.0e-25, 
+                 var_elem=None, method="invert_cdf", abund_table="angr", prng=None):
+        spectral_model = XSpecAtableModel(filenames, emin, emax, var_elem=var_elem,
+                                          scaling_factor=scaling_factor)
         super().__init__(spectral_model, emin, emax, Zmet, kT_min=kT_min, kT_max=kT_max, 
                          var_elem=var_elem, max_density=max_density, method=method, 
                          abund_table=abund_table, prng=prng, temperature_field=temperature_field, 
