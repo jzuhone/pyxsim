@@ -18,7 +18,66 @@ K_per_keV = (1.0*keV).to_value("K", "thermal")
 
 
 class ThermalSpectralModel:
-    pass 
+
+    def get_spectrum(self, kT, nH=None):
+        if nH is None:
+            return self._get_spectrum_1d(kT),
+        else:
+            return self._get_spectrum_2d(kT, nH)
+                                
+    def _get_spectrum_1d(self, kT):
+        """
+        Get the thermal emission spectrum given a temperature *kT* in keV. 
+        """
+        kT = np.log10(np.atleast_1d(kT))
+        tindex = np.searchsorted(self.Tvals, kT)-1
+        var_spec = None
+        dT = (kT-self.Tvals[tindex])/self.dTvals[tindex]
+        cspec_l = self.cosmic_spec[tindex, :]
+        mspec_l = self.metal_spec[tindex, :]
+        cspec_r = self.cosmic_spec[tindex+1, :]
+        mspec_r = self.metal_spec[tindex+1, :]
+        cosmic_spec = (1.-dT)[:,np.newaxis]*cspec_l+dT[:,np.newaxis]*cspec_r
+        metal_spec = (1.-dT)[:,np.newaxis]*mspec_l+dT[:,np.newaxis]*mspec_r
+        if self.var_spec is not None:
+            vspec_l = self.var_spec[:, tindex, :]
+            vspec_r = self.var_spec[:, tindex+1, :]
+            var_spec = (1.-dT)[np.newaxis,:,np.newaxis]*vspec_l
+            var_spec += dT[np.newaxis,:,np.newaxis]*vspec_r
+        return cosmic_spec, metal_spec, var_spec
+
+    def _get_spectrum_2d(self, kT, nH):
+        lkT = np.atleast_1d(np.log10(kT*K_per_keV))
+        lnH = np.atleast_1d(np.log10(nH))
+        tidxs = np.searchsorted(self.Tvals, lkT)-1
+        didxs = np.searchsorted(self.Dvals, lnH)-1
+        dT = (lkT - self.Tvals[tidxs]) / self.dTvals[tidxs]
+        dn = (lnH - self.Dvals[didxs]) / self.dDvals[didxs]
+        idx1 = np.ravel_multi_index((didxs+1,tidxs+1), (self.n_D, self.n_T))
+        idx2 = np.ravel_multi_index((didxs+1,tidxs), (self.n_D, self.n_T))
+        idx3 = np.ravel_multi_index((didxs,tidxs+1), (self.n_D, self.n_T))
+        idx4 = np.ravel_multi_index((didxs,tidxs), (self.n_D, self.n_T))
+        dx1 = dT*dn
+        dx2 = dn-dx1
+        dx3 = dT-dx1
+        dx4 = 1.0+dx1-dT-dn
+        cspec = dx1[:,np.newaxis]*self.cosmic_spec[idx1,:]
+        cspec += dx2[:,np.newaxis]*self.cosmic_spec[idx2,:]
+        cspec += dx3[:,np.newaxis]*self.cosmic_spec[idx3,:]
+        cspec += dx4[:,np.newaxis]*self.cosmic_spec[idx4,:]
+        mspec = None
+        if self.metal_spec is not None:
+            mspec = dx1[:,np.newaxis]*self.metal_spec[idx1,:]
+            mspec += dx2[:,np.newaxis]*self.metal_spec[idx2,:]
+            mspec += dx3[:,np.newaxis]*self.metal_spec[idx3,:]
+            mspec += dx4[:,np.newaxis]*self.metal_spec[idx4,:]
+        vspec = None
+        if self.var_spec is not None:
+            vspec = dx1[np.newaxis,:,np.newaxis]*self.var_spec[:,idx1,:]
+            vspec += dx2[np.newaxis,:,np.newaxis]*self.var_spec[:,idx2,:]
+            vspec += dx3[np.newaxis,:,np.newaxis]*self.var_spec[:,idx3,:]
+            vspec += dx4[np.newaxis,:,np.newaxis]*self.var_spec[:,idx4,:]
+        return cspec, mspec, vspec
 
 
 class TableApecModel(ThermalSpectralModel):
@@ -121,27 +180,6 @@ class TableApecModel(ThermalSpectralModel):
             f.create_dataset("metal_spec", data=self.metal_spec)
             f.create_dataset("var_spec", data=self.var_spec)
 
-    def get_spectrum(self, kT, nH=None):
-        """
-        Get the thermal emission spectrum given a temperature *kT* in keV. 
-        """
-        kT = np.log10(np.atleast_1d(kT))
-        tindex = np.searchsorted(self.Tvals, kT)-1
-        var_spec = None
-        dT = (kT-self.Tvals[tindex])/self.dTvals[tindex]
-        cspec_l = self.cosmic_spec[tindex, :]
-        mspec_l = self.metal_spec[tindex, :]
-        cspec_r = self.cosmic_spec[tindex+1, :]
-        mspec_r = self.metal_spec[tindex+1, :]
-        cosmic_spec = (1.-dT)[:,np.newaxis]*cspec_l+dT[:,np.newaxis]*cspec_r
-        metal_spec = (1.-dT)[:,np.newaxis]*mspec_l+dT[:,np.newaxis]*mspec_r
-        if self.var_spec is not None:
-            vspec_l = self.var_spec[:, tindex, :]
-            vspec_r = self.var_spec[:, tindex+1, :]
-            var_spec = (1.-dT)[np.newaxis,:,np.newaxis]*vspec_l
-            var_spec += dT[np.newaxis,:,np.newaxis]*vspec_r
-        return cosmic_spec, metal_spec, var_spec
-
     def return_spectrum(self, temperature, metallicity, redshift, norm,
                         velocity=0.0, elem_abund=None):
         """
@@ -212,44 +250,6 @@ class XSpecAtableModel(ThermalSpectralModel):
             for i in range(2, self.nfiles):
                 with fits.open(self.tablefiles[i]) as f:
                     self.var_spec[i,:,:] = f["SPECTRA"].data["INTPSPEC"][:, eidxs]
-            self.var_spec *= self.scaling_factor/(self.emid*erg_per_keV)
-    
-    def get_spectrum(self, kT, nH):
-        nH = np.atleast_1d(nH)
-        lkT = np.atleast_1d(np.log10(kT*K_per_keV))
-        lnH = np.log10(nH)
-        tidxs = np.searchsorted(self.Tvals, lkT)-1
-        didxs = np.searchsorted(self.Dvals, lnH)-1
-        dT = (lkT - self.Tvals[tidxs]) / self.dTvals[tidxs]
-        dn = (lnH - self.Dvals[didxs]) / self.dDvals[didxs]
-        idx1 = np.ravel_multi_index((didxs+1,tidxs+1), (self.n_D, self.n_T))
-        idx2 = np.ravel_multi_index((didxs+1,tidxs), (self.n_D, self.n_T))
-        idx3 = np.ravel_multi_index((didxs,tidxs+1), (self.n_D, self.n_T))
-        idx4 = np.ravel_multi_index((didxs,tidxs), (self.n_D, self.n_T))
-        dx1 = dT*dn
-        dx2 = dn-dx1
-        dx3 = dT-dx1
-        dx4 = 1.0+dx1-dT-dn
-        cspec = dx1[:,np.newaxis]*self.cosmic_spec[idx1,:]
-        cspec += dx2[:,np.newaxis]*self.cosmic_spec[idx2,:]
-        cspec += dx3[:,np.newaxis]*self.cosmic_spec[idx3,:]
-        cspec += dx4[:,np.newaxis]*self.cosmic_spec[idx4,:]
-        cspec *= 4.0*np.pi/nH[:,np.newaxis]
-        mspec = None
-        if self.metal_spec is not None:
-            mspec = dx1[:,np.newaxis]*self.metal_spec[idx1,:]
-            mspec += dx2[:,np.newaxis]*self.metal_spec[idx2,:]
-            mspec += dx3[:,np.newaxis]*self.metal_spec[idx3,:]
-            mspec += dx4[:,np.newaxis]*self.metal_spec[idx4,:]
-            mspec *= 4.0*np.pi/nH[:,np.newaxis]
-        vspec = None
-        if self.var_spec is not None:
-            vspec = dx1[np.newaxis,:,np.newaxis]*self.var_spec[:,idx1,:]
-            vspec += dx2[np.newaxis,:,np.newaxis]*self.var_spec[:,idx2,:]
-            vspec += dx3[np.newaxis,:,np.newaxis]*self.var_spec[:,idx3,:]
-            vspec += dx4[np.newaxis,:,np.newaxis]*self.var_spec[:,idx4,:]
-            vspec *= 4.0*np.pi/nH[:,np.newaxis]
-        return cspec, mspec, vspec
 
 
 class AbsorptionModel:
