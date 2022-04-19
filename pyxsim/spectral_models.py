@@ -207,7 +207,8 @@ class TableApecModel(ThermalSpectralModel):
 
 
 class XSpecAtableModel(ThermalSpectralModel):
-    def __init__(self, tablefiles, emin, emax, var_elem=None, scaling_factor=1.0):
+    def __init__(self, tablefiles, emin, emax, var_elem=None, norm_factor=1.0,
+                 metal_column="INTPSPEC", var_column="INTPSPEC"):
         self.tablefiles = ensure_list(tablefiles)
         self.var_elem = var_elem
         self.emin = emin
@@ -216,7 +217,11 @@ class XSpecAtableModel(ThermalSpectralModel):
         self.nvar_elem = 0
         if self.var_elem is not None:
             self.nvar_elem = len(var_elem)
-        self.scaling_factor = scaling_factor
+        self.norm_factor = norm_factor
+        self.metal_column = metal_column
+        if isinstance(var_column, str):
+            var_column = [var_column]*self.nvar_elem
+        self.var_column = var_column
 
     def prepare_spectrum(self, zobs, kT_min, kT_max):
         """
@@ -241,17 +246,17 @@ class XSpecAtableModel(ThermalSpectralModel):
         self.var_spec = None
         with fits.open(self.tablefiles[0]) as f:
             self.cosmic_spec = f["SPECTRA"].data["INTPSPEC"][:,eidxs]
-            self.cosmic_spec *= self.scaling_factor*scale_factor
+            self.cosmic_spec *= self.norm_factor*scale_factor
         if self.nfiles > 1:
             with fits.open(self.tablefiles[1]) as f:
-                self.metal_spec = f["SPECTRA"].data["INTPSPEC"][:,eidxs]
-                self.metal_spec *= self.scaling_factor*scale_factor
+                self.metal_spec = f["SPECTRA"].data[self.metal_column][:,eidxs]
+                self.metal_spec *= self.norm_factor*scale_factor
         if self.nfiles > 2:
             self.var_spec = np.zeros((self.nvar_elem,self.n_T*self.n_D,eidxs.sum()))
-            for i in range(2, self.nfiles):
-                with fits.open(self.tablefiles[i]) as f:
-                    self.var_spec[i,:,:] = f["SPECTRA"].data["INTPSPEC"][:, eidxs]
-            self.var_spec *= self.scaling_factor*scale_factor
+            for i in range(self.nvar_elem):
+                with fits.open(self.tablefiles[i+2]) as f:
+                    self.var_spec[i,:,:] = f["SPECTRA"].data[self.var_column[i]][:, eidxs]
+            self.var_spec *= self.norm_factor*scale_factor
 
 
 class AbsorptionModel:

@@ -233,6 +233,7 @@ metal_abund = {"angr": 0.0189,
 
 
 class ThermalSourceModel(SourceModel):
+    _fix_norm = False
     def __init__(self, spectral_model, emin, emax, Zmet, kT_min=0.025, kT_max=64.0, 
                  var_elem=None, max_density=5.0e-25, method="invert_cdf", 
                  abund_table="angr", prng=None, temperature_field=None,
@@ -408,6 +409,8 @@ class ThermalSourceModel(SourceModel):
 
         if self.nh_field is not None:
             nH = np.ravel(chunk[self.nh_field].d[cut])
+            if self._fix_norm:
+                cell_nrm /= nH
         else:
             nH = None
 
@@ -511,7 +514,7 @@ class ThermalSourceModel(SourceModel):
             elif mode == "energy_field":
 
                 ret[idxs[ibegin:iend]] = np.sum(
-                    tot_spec*emid, axis=-1)*cell_nrm[ibegin:iend]
+                    tot_spec*self.emid, axis=-1)*cell_nrm[ibegin:iend]
 
             elif mode == "spectrum":
 
@@ -537,22 +540,35 @@ class ThermalSourceModel(SourceModel):
 
 
 class AtableSourceModel(ThermalSourceModel):
-    nei = False
-
-    def __init__(self, filenames, emin, emax, Zmet, scaling_factor=1.0,
-                 temperature_field=None, emission_measure_field=None, nh_field=None, 
+    def __init__(self, filenames, emin, emax, Zmet, norm_factor=1.0,
+                 metal_column="INTPSPEC", var_column="INTPSPEC",
+                 temperature_field=None, emission_measure_field=None,
                  h_fraction=None, kT_min=0.025, kT_max=64.0, max_density=5.0e-25, 
                  var_elem=None, method="invert_cdf", abund_table="angr", prng=None):
         spectral_model = XSpecAtableModel(filenames, emin, emax, var_elem=var_elem,
-                                          scaling_factor=scaling_factor)
+                                          norm_factor=norm_factor,
+                                          metal_column=metal_column, var_column=var_column)
         super().__init__(spectral_model, emin, emax, Zmet, kT_min=kT_min, kT_max=kT_max, 
                          var_elem=var_elem, max_density=max_density, method=method, 
                          abund_table=abund_table, prng=prng, temperature_field=temperature_field, 
                          h_fraction=h_fraction, emission_measure_field=emission_measure_field)
-        self.nh_field = nh_field
 
 
-class CIESourceModel(ThermalSourceModel):
+class IGMSourceModel(AtableSourceModel):
+    nei = False
+    _fix_norm = True
+    def __init__(self, filenames, emin, emax, Zmet, norm_factor=1.0,
+                 temperature_field=None, emission_measure_field=None,
+                 h_fraction=None, kT_min=0.025, kT_max=64.0, max_density=5.0e-25,
+                 var_elem=None, method="invert_cdf", abund_table="feld", prng=None):
+        norm_factor *= 5.50964e-19
+        super().__init__(filenames, emin, emax, Zmet, norm_factor=norm_factor, kT_min=kT_min,
+                         kT_max=kT_max, var_elem=var_elem, max_density=max_density, method=method,
+                         abund_table=abund_table, prng=prng, temperature_field=temperature_field,
+                         h_fraction=h_fraction, emission_measure_field=emission_measure_field)
+
+
+class ApecSourceModel(ThermalSourceModel):
     nei = False
     r"""
     Initialize a source model from a thermal spectrum.
@@ -634,8 +650,8 @@ class CIESourceModel(ThermalSourceModel):
 
     Examples
     --------
-    >>> source_model = CIESourceModel("apec", 0.1, 10.0, 10000,
-    ...                               ("gas", "metallicity"))
+    >>> source_model = ApecSourceModel("apec", 0.1, 10.0, 10000,
+    ...                                ("gas", "metallicity"))
     """
     def __init__(self, emin, emax, nchan, Zmet, temperature_field=None,
                  emission_measure_field=None, h_fraction=None, kT_min=0.025,
@@ -653,13 +669,13 @@ class CIESourceModel(ThermalSourceModel):
         super().__init__(spectral_model, emin, emax, Zmet, kT_min=kT_min, kT_max=kT_max, 
                          var_elem=var_elem, max_density=max_density, method=method, 
                          abund_table=abund_table, prng=prng, temperature_field=temperature_field,
-                         emission_measure_field=emission_measure_field)
+                         emission_measure_field=emission_measure_field, h_fraction=h_fraction)
         self.var_elem_keys = self.spectral_model.var_elem_names
         self.var_ion_keys = self.spectral_model.var_ion_names
         self.atable = self.spectral_model.atable
 
 
-class NEISourceModel(CIESourceModel):
+class ApecNEISourceModel(ApecSourceModel):
     nei = True
     def __init__(self, emin, emax, nchan, var_elem, temperature_field=None,
                  emission_measure_field=None, h_fraction=None, kT_min=0.025,

@@ -9,11 +9,12 @@ from pyxsim.photon_list import \
 
 from pyxsim.source_models import \
    SourceModel, \
-   CIESourceModel, \
-   NEISourceModel, \
+   ApecSourceModel, \
+   ApecNEISourceModel, \
    LineSourceModel, \
    PowerLawSourceModel, \
-   AtableSourceModel
+   AtableSourceModel, \
+   IGMSourceModel
 
 from pyxsim.spectral_models import \
     TableApecModel, \
