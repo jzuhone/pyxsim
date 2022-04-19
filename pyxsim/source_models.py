@@ -280,6 +280,15 @@ class ThermalSourceModel(SourceModel):
         self.pbar = None
         self.Zconvert = 1.0
         self.mconvert = {}
+        self.ebins = self.spectral_model.ebins
+        self.de = self.spectral_model.de
+        self.emid = self.spectral_model.emid
+        if np.isclose(self.de, self.de[0]).all():
+            self._binscale = "linear"
+        else:
+            self._binscale = "log"
+        self.bin_edges = np.log10(self.ebins) if self._binscale == "log" else self.ebins
+        self.nchan = self.emid.size
 
     def setup_model(self, data_source, redshift, spectral_norm):
         if isinstance(data_source, Dataset):
@@ -358,10 +367,6 @@ class ThermalSourceModel(SourceModel):
 
     def process_data(self, mode, chunk):
 
-        emid = self.spectral_model.emid
-        ebins = self.spectral_model.ebins
-        nchan = len(emid)
-
         orig_shape = chunk[self.temperature_field].shape
         if len(orig_shape) == 0:
             orig_ncells = 0
@@ -379,7 +384,7 @@ class ThermalSourceModel(SourceModel):
         kT = np.ravel(
             chunk[self.temperature_field].to_value("keV", "thermal"))
         cut &= (kT >= self.kT_min) & (kT <= self.kT_max)
-        
+
         num_cells = cut.sum()
 
         if mode == "photons":
@@ -441,7 +446,7 @@ class ThermalSourceModel(SourceModel):
         start_e = 0
         end_e = 0
 
-        spec = np.zeros(nchan)
+        spec = np.zeros(self.nchan)
         idxs = np.where(cut)[0]
 
         for ck in chunked(range(num_cells), 100):
@@ -487,10 +492,10 @@ class ThermalSourceModel(SourceModel):
                         if self.method == "invert_cdf":
                             randvec = self.prng.uniform(size=cn)
                             randvec.sort()
-                            cell_e = np.interp(randvec, cp[icell,:], ebins)
+                            cell_e = np.interp(randvec, cp[icell,:], self.bin_edges)
                         elif self.method == "accept_reject":
-                            eidxs = self.prng.choice(nchan, size=cn, p=p[icell,:])
-                            cell_e = emid[eidxs]
+                            eidxs = self.prng.choice(self.nchan, size=cn, p=p[icell,:])
+                            cell_e = self.emid[eidxs]
                         while ei+cn > num_photons_max:
                             num_photons_max *= 2
                         if num_photons_max > energies.size:
@@ -518,7 +523,10 @@ class ThermalSourceModel(SourceModel):
             active_cells = number_of_photons > 0
             idxs = idxs[active_cells]
             ncells = idxs.size
-            return ncells, number_of_photons[active_cells], idxs, energies[:end_e].copy()
+            ee = energies[:end_e].copy()
+            if self._binscale == "log":
+                ee = 10**ee
+            return ncells, number_of_photons[active_cells], idxs, ee
         elif mode == "spectrum":
             return spec
         else:
