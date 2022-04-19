@@ -6,7 +6,6 @@ import numpy as np
 from soxs.apec import ApecGenerator
 from soxs.spectra import \
     get_wabs_absorb, get_tbabs_absorb
-from soxs.constants import erg_per_keV
 from soxs.utils import parse_prng
 from pyxsim.utils import ensure_list
 from yt.units.yt_array import YTArray, YTQuantity
@@ -21,15 +20,15 @@ class ThermalSpectralModel:
 
     def get_spectrum(self, kT, nH=None):
         if nH is None:
-            return self._get_spectrum_1d(kT),
+            return self._get_spectrum_1d(kT)
         else:
             return self._get_spectrum_2d(kT, nH)
-                                
+
     def _get_spectrum_1d(self, kT):
         """
         Get the thermal emission spectrum given a temperature *kT* in keV. 
         """
-        kT = np.log10(np.atleast_1d(kT))
+        kT = np.atleast_1d(kT)
         tindex = np.searchsorted(self.Tvals, kT)-1
         var_spec = None
         dT = (kT-self.Tvals[tindex])/self.dTvals[tindex]
@@ -152,6 +151,7 @@ class TableApecModel(ThermalSpectralModel):
         self.var_elem_names = self.agen.var_elem_names
         self.var_ion_names = self.agen.var_ion_names
         self.atable = self.agen.atable
+        self.de = np.diff(self.ebins)
 
     def prepare_spectrum(self, zobs, kT_min, kT_max):
         """
@@ -159,10 +159,9 @@ class TableApecModel(ThermalSpectralModel):
         """
         idx_min = max(np.searchsorted(self.agen.Tvals, kT_min)-1, 0)
         idx_max = min(np.searchsorted(self.agen.Tvals, kT_max), self.agen.nT-1)
-        idx_max = min(idx_max+1+idx_max % 2, self.agen.nT)
         cosmic_spec, metal_spec, var_spec = \
-            self.agen._get_table(list(range(idx_min, idx_max, 2)), zobs, 0.0)
-        self.Tvals = np.log10(self.agen.Tvals[idx_min:idx_max:2])
+            self.agen._get_table(list(range(idx_min, idx_max)), zobs, 0.0)
+        self.Tvals = self.agen.Tvals[idx_min:idx_max]
         self.nT = self.Tvals.size
         self.dTvals = np.diff(self.Tvals)
         self.cosmic_spec = cosmic_spec
@@ -229,27 +228,30 @@ class XSpecAtableModel(ThermalSpectralModel):
             self.Dvals = f["PARAMETERS"].data["VALUE"][0][:self.n_D]
             self.n_T = f["PARAMETERS"].data["NUMBVALS"][1]
             self.Tvals = f["PARAMETERS"].data["VALUE"][1][:self.n_T]
-            eidxs = f["ENERGIES"].data["ENERG_LO"] > self.emin*scale_factor
-            eidxs &= f["ENERGIES"].data["ENERG_HI"] < self.emax*scale_factor
-            self.ebins = np.append(f["ENERGIES"].data["ENERG_LO"][eidxs],
-                                   f["ENERGIES"].data["ENERG_HI"][eidxs][-1])
+            elo = f["ENERGIES"].data["ENERG_LO"]*scale_factor
+            ehi = f["ENERGIES"].data["ENERG_HI"]*scale_factor
+        eidxs = elo > self.emin
+        eidxs &= ehi < self.emax
+        self.ebins = np.append(elo[eidxs], ehi[eidxs][-1])
         self.emid = 0.5 * (self.ebins[1:] + self.ebins[:-1])
+        self.de = np.diff(self.ebins)
         self.dDvals = np.diff(self.Dvals)
         self.dTvals = np.diff(self.Tvals)
         self.metal_spec = None
         self.var_spec = None
         with fits.open(self.tablefiles[0]) as f:
             self.cosmic_spec = f["SPECTRA"].data["INTPSPEC"][:,eidxs]
-            self.cosmic_spec *= self.scaling_factor/(self.emid*erg_per_keV)
+            self.cosmic_spec *= self.scaling_factor*scale_factor
         if self.nfiles > 1:
             with fits.open(self.tablefiles[1]) as f:
                 self.metal_spec = f["SPECTRA"].data["INTPSPEC"][:,eidxs]
-                self.metal_spec *= self.scaling_factor/(self.emid*erg_per_keV)
+                self.metal_spec *= self.scaling_factor*scale_factor
         if self.nfiles > 2:
             self.var_spec = np.zeros((self.nvar_elem,self.n_T*self.n_D,eidxs.sum()))
             for i in range(2, self.nfiles):
                 with fits.open(self.tablefiles[i]) as f:
                     self.var_spec[i,:,:] = f["SPECTRA"].data["INTPSPEC"][:, eidxs]
+            self.var_spec *= self.scaling_factor*scale_factor
 
 
 class AbsorptionModel:
