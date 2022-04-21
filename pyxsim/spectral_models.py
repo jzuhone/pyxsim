@@ -61,10 +61,12 @@ class ThermalSpectralModel:
         dx2 = dn-dx1
         dx3 = dT-dx1
         dx4 = 1.0+dx1-dT-dn
-        cspec = dx1[:,np.newaxis]*self.cosmic_spec[idx1,:]
-        cspec += dx2[:,np.newaxis]*self.cosmic_spec[idx2,:]
-        cspec += dx3[:,np.newaxis]*self.cosmic_spec[idx3,:]
-        cspec += dx4[:,np.newaxis]*self.cosmic_spec[idx4,:]
+        cspec = None
+        if self.cosmic_spec is not None:
+            cspec = dx1[:,np.newaxis]*self.cosmic_spec[idx1,:]
+            cspec += dx2[:,np.newaxis]*self.cosmic_spec[idx2,:]
+            cspec += dx3[:,np.newaxis]*self.cosmic_spec[idx3,:]
+            cspec += dx4[:,np.newaxis]*self.cosmic_spec[idx4,:]
         mspec = None
         if self.metal_spec is not None:
             mspec = dx1[:,np.newaxis]*self.metal_spec[idx1,:]
@@ -223,7 +225,12 @@ class XSpecAtableModel(ThermalSpectralModel):
         if isinstance(var_column, str):
             var_column = [var_column]*self.nvar_elem
         self.var_column = var_column
-        with fits.open(self.tablefiles[0]) as f:
+        self.first_file = None
+        for file in self.tablefiles:
+            if file is not None:
+                self.first_file = file
+                break
+        with fits.open(self.first_file) as f:
             self.n_D = f["PARAMETERS"].data["NUMBVALS"][0]
             self.Dvals = f["PARAMETERS"].data["VALUE"][0][:self.n_D]
             self.n_T = f["PARAMETERS"].data["NUMBVALS"][1]
@@ -236,7 +243,7 @@ class XSpecAtableModel(ThermalSpectralModel):
         Prepare the thermal model for execution given a redshift *zobs* for the spectrum.
         """
         scale_factor = 1.0/(1.0+zobs)
-        with fits.open(self.tablefiles[0]) as f:
+        with fits.open(self.first_file) as f:
             elo = f["ENERGIES"].data["ENERG_LO"]*scale_factor
             ehi = f["ENERGIES"].data["ENERG_HI"]*scale_factor
         eidxs = elo > self.emin
@@ -244,11 +251,13 @@ class XSpecAtableModel(ThermalSpectralModel):
         self.ebins = np.append(elo[eidxs], ehi[eidxs][-1])
         self.emid = 0.5 * (self.ebins[1:] + self.ebins[:-1])
         self.de = np.diff(self.ebins)
+        self.cosmic_spec = None
         self.metal_spec = None
         self.var_spec = None
-        with fits.open(self.tablefiles[0]) as f:
-            self.cosmic_spec = f["SPECTRA"].data["INTPSPEC"][:,eidxs]
-            self.cosmic_spec *= self.norm_factor*scale_factor
+        if self.tablefiles[0] is not None:
+            with fits.open(self.tablefiles[0]) as f:
+                self.cosmic_spec = f["SPECTRA"].data["INTPSPEC"][:,eidxs]
+                self.cosmic_spec *= self.norm_factor*scale_factor
         if self.nfiles > 1:
             with fits.open(self.tablefiles[1]) as f:
                 self.metal_spec = f["SPECTRA"].data[self.metal_column][:,eidxs]

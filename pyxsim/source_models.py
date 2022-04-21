@@ -474,7 +474,9 @@ class ThermalSourceModel(SourceModel):
             cspec, mspec, vspec = self.spectral_model.get_spectrum(kT[ibegin:iend],
                                                                    nH=cnH)
 
-            tot_spec = cspec 
+            tot_spec = np.zeros((nck,self.nchan))
+            if cspec is not None:
+                tot_spec += cspec
             if mspec is not None:
                 tot_spec += metalZ[ibegin:iend,np.newaxis]*mspec
             if self.num_var_elem > 0:
