@@ -8,10 +8,11 @@ from yt.data_objects.static_output import Dataset
 from yt.units.yt_array import YTQuantity, YTArray
 from yt.utilities.physical_constants import clight
 from yt.utilities.cosmology import Cosmology
-from pyxsim.spectral_models import TableApecModel, XSpecAtableModel
+from pyxsim.spectral_models import TableApecModel, XSpecAtableModel, K_per_keV
 from pyxsim.utils import parse_value, isunitful
 from soxs.utils import parse_prng
-from soxs.constants import elem_names, atomic_weights, metal_elem
+from soxs.constants import elem_names, atomic_weights, metal_elem, \
+    abund_tables
 from yt.utilities.exceptions import YTFieldNotFound
 from yt.utilities.parallel_tools.parallel_analysis_interface import \
     parallel_objects, communication_system, parallel_capable
@@ -237,7 +238,8 @@ class ThermalSourceModel(SourceModel):
     def __init__(self, spectral_model, emin, emax, Zmet, kT_min=0.025, kT_max=64.0, 
                  var_elem=None, max_density=5.0e-25, method="invert_cdf", 
                  abund_table="angr", prng=None, temperature_field=None,
-                 emission_measure_field=None, h_fraction=None):
+                 emission_measure_field=None, h_fraction=None, nH_min=None,
+                 nH_max=None):
         self.spectral_model = spectral_model
         self.emin = parse_value(emin, "keV")
         self.emax = parse_value(emax, "keV")
@@ -276,20 +278,14 @@ class ThermalSourceModel(SourceModel):
         self.prng = parse_prng(prng)
         self.kT_min = kT_min
         self.kT_max = kT_max
+        self.nH_min = nH_min
+        self.nH_max = nH_max
         self.spectral_norm = None
         self.redshift = None
         self.pbar = None
         self.Zconvert = 1.0
         self.mconvert = {}
-        self.ebins = self.spectral_model.ebins
-        self.de = self.spectral_model.de
-        self.emid = self.spectral_model.emid
-        if np.isclose(self.de, self.de[0]).all():
-            self._binscale = "linear"
-        else:
-            self._binscale = "log"
-        self.bin_edges = np.log10(self.ebins) if self._binscale == "log" else self.ebins
-        self.nchan = self.emid.size
+        self.atable = abund_tables[abund_table].copy()
 
     def setup_model(self, data_source, redshift, spectral_norm):
         if isinstance(data_source, Dataset):
@@ -343,6 +339,15 @@ class ThermalSourceModel(SourceModel):
             mylog.info(f"Using nH field '{self.nh_field}'.")
         self.spectral_model.prepare_spectrum(redshift, self.kT_min,
                                              self.kT_max)
+        self.ebins = self.spectral_model.ebins
+        self.de = self.spectral_model.de
+        self.emid = self.spectral_model.emid
+        if np.isclose(self.de, self.de[0]).all():
+            self._binscale = "linear"
+        else:
+            self._binscale = "log"
+        self.bin_edges = np.log10(self.ebins) if self._binscale == "log" else self.ebins
+        self.nchan = self.emid.size
         self.spectral_norm = spectral_norm
         if isinstance(data_source, Dataset):
             self.pbar = DummyProgressBar()
@@ -385,6 +390,11 @@ class ThermalSourceModel(SourceModel):
         kT = np.ravel(
             chunk[self.temperature_field].to_value("keV", "thermal"))
         cut &= (kT >= self.kT_min) & (kT <= self.kT_max)
+        if self.nh_field is not None:
+            nH = np.ravel(chunk[self.nh_field].d)
+            cut &= (nH >= self.nH_min) & (nH <= self.nH_max)
+        else:
+            nH = None
 
         num_cells = cut.sum()
 
@@ -407,12 +417,10 @@ class ThermalSourceModel(SourceModel):
         else:
             X_H = np.ravel(chunk[self.h_fraction].d[cut])
 
-        if self.nh_field is not None:
-            nH = np.ravel(chunk[self.nh_field].d[cut])
+        if nH is not None:
+            nH = np.ravel(nH[cut])
             if self._fix_norm:
                 cell_nrm /= nH
-        else:
-            nH = None
 
         if self.nei:
             metalZ = np.zeros(num_cells)
@@ -543,29 +551,38 @@ class AtableSourceModel(ThermalSourceModel):
     def __init__(self, filenames, emin, emax, Zmet, norm_factor=1.0,
                  metal_column="INTPSPEC", var_column="INTPSPEC",
                  temperature_field=None, emission_measure_field=None,
-                 h_fraction=None, kT_min=0.025, kT_max=64.0, max_density=5.0e-25, 
+                 h_fraction=None, kT_min=None, kT_max=None, max_density=5.0e-25,
                  var_elem=None, method="invert_cdf", abund_table="angr", prng=None):
         spectral_model = XSpecAtableModel(filenames, emin, emax, var_elem=var_elem,
                                           norm_factor=norm_factor,
                                           metal_column=metal_column, var_column=var_column)
+        if kT_min is None:
+            kT_min = 10**spectral_model.Tvals[0]/K_per_keV
+        if kT_max is None:
+            kT_max = 10**spectral_model.Tvals[-1]/K_per_keV
+        if hasattr(spectral_model, "Dvals"):
+            nH_min = 10**spectral_model.Dvals[0]
+            nH_max = 10**spectral_model.Dvals[-1]
         super().__init__(spectral_model, emin, emax, Zmet, kT_min=kT_min, kT_max=kT_max, 
-                         var_elem=var_elem, max_density=max_density, method=method, 
-                         abund_table=abund_table, prng=prng, temperature_field=temperature_field, 
-                         h_fraction=h_fraction, emission_measure_field=emission_measure_field)
+                         var_elem=var_elem, max_density=max_density, method=method, nH_min=nH_min,
+                         nH_max=nH_max, abund_table=abund_table, prng=prng,
+                         temperature_field=temperature_field, h_fraction=h_fraction,
+                         emission_measure_field=emission_measure_field)
 
 
 class IGMSourceModel(AtableSourceModel):
     nei = False
     _fix_norm = True
-    def __init__(self, filenames, emin, emax, Zmet, norm_factor=1.0,
+    def __init__(self, filenames, emin, emax, Zmet, nh_field, norm_factor=1.0,
                  temperature_field=None, emission_measure_field=None,
-                 h_fraction=None, kT_min=0.025, kT_max=64.0, max_density=5.0e-25,
+                 h_fraction=None, kT_min=None, kT_max=None, max_density=5.0e-25,
                  var_elem=None, method="invert_cdf", abund_table="feld", prng=None):
         norm_factor *= 5.50964e-19
         super().__init__(filenames, emin, emax, Zmet, norm_factor=norm_factor, kT_min=kT_min,
                          kT_max=kT_max, var_elem=var_elem, max_density=max_density, method=method,
                          abund_table=abund_table, prng=prng, temperature_field=temperature_field,
                          h_fraction=h_fraction, emission_measure_field=emission_measure_field)
+        self.nh_field = nh_field
 
 
 class ApecSourceModel(ThermalSourceModel):
@@ -672,7 +689,6 @@ class ApecSourceModel(ThermalSourceModel):
                          emission_measure_field=emission_measure_field, h_fraction=h_fraction)
         self.var_elem_keys = self.spectral_model.var_elem_names
         self.var_ion_keys = self.spectral_model.var_ion_names
-        self.atable = self.spectral_model.atable
 
 
 class ApecNEISourceModel(ApecSourceModel):

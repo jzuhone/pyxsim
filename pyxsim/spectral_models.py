@@ -13,6 +13,7 @@ from yt.units import keV
 import h5py
 from astropy.io import fits
 
+
 K_per_keV = (1.0*keV).to_value("K", "thermal")
 
 
@@ -222,6 +223,13 @@ class XSpecAtableModel(ThermalSpectralModel):
         if isinstance(var_column, str):
             var_column = [var_column]*self.nvar_elem
         self.var_column = var_column
+        with fits.open(self.tablefiles[0]) as f:
+            self.n_D = f["PARAMETERS"].data["NUMBVALS"][0]
+            self.Dvals = f["PARAMETERS"].data["VALUE"][0][:self.n_D]
+            self.n_T = f["PARAMETERS"].data["NUMBVALS"][1]
+            self.Tvals = f["PARAMETERS"].data["VALUE"][1][:self.n_T]
+        self.dDvals = np.diff(self.Dvals)
+        self.dTvals = np.diff(self.Tvals)
 
     def prepare_spectrum(self, zobs, kT_min, kT_max):
         """
@@ -229,10 +237,6 @@ class XSpecAtableModel(ThermalSpectralModel):
         """
         scale_factor = 1.0/(1.0+zobs)
         with fits.open(self.tablefiles[0]) as f:
-            self.n_D = f["PARAMETERS"].data["NUMBVALS"][0]
-            self.Dvals = f["PARAMETERS"].data["VALUE"][0][:self.n_D]
-            self.n_T = f["PARAMETERS"].data["NUMBVALS"][1]
-            self.Tvals = f["PARAMETERS"].data["VALUE"][1][:self.n_T]
             elo = f["ENERGIES"].data["ENERG_LO"]*scale_factor
             ehi = f["ENERGIES"].data["ENERG_HI"]*scale_factor
         eidxs = elo > self.emin
@@ -240,8 +244,6 @@ class XSpecAtableModel(ThermalSpectralModel):
         self.ebins = np.append(elo[eidxs], ehi[eidxs][-1])
         self.emid = 0.5 * (self.ebins[1:] + self.ebins[:-1])
         self.de = np.diff(self.ebins)
-        self.dDvals = np.diff(self.Dvals)
-        self.dTvals = np.diff(self.Tvals)
         self.metal_spec = None
         self.var_spec = None
         with fits.open(self.tablefiles[0]) as f:
