@@ -550,13 +550,13 @@ class ThermalSourceModel(SourceModel):
 
 
 class AtableSourceModel(ThermalSourceModel):
-    def __init__(self, filenames, emin, emax, Zmet, norm_factor=1.0,
+    def __init__(self, filenames, emin, emax, Zmet, norm_factors=None,
                  metal_column="INTPSPEC", var_column="INTPSPEC",
                  temperature_field=None, emission_measure_field=None,
                  h_fraction=None, kT_min=None, kT_max=None, max_density=5.0e-25,
                  var_elem=None, method="invert_cdf", abund_table="angr", prng=None):
         spectral_model = XSpecAtableModel(filenames, emin, emax, var_elem=var_elem,
-                                          norm_factor=norm_factor,
+                                          norm_factors=norm_factors,
                                           metal_column=metal_column, var_column=var_column)
         if kT_min is None:
             kT_min = 10**spectral_model.Tvals[0]/K_per_keV
@@ -575,12 +575,32 @@ class AtableSourceModel(ThermalSourceModel):
 class IGMSourceModel(AtableSourceModel):
     nei = False
     _fix_norm = True
-    def __init__(self, filenames, emin, emax, Zmet, nh_field, norm_factor=1.0,
-                 temperature_field=None, emission_measure_field=None,
+    def __init__(self, emin, emax, Zmet, nh_field, resonant_scattering=False,
+                 cxb_factor=1.0, temperature_field=None, emission_measure_field=None,
                  h_fraction=None, kT_min=None, kT_max=None, max_density=5.0e-25,
                  var_elem=None, method="invert_cdf", abund_table="feld", prng=None):
-        norm_factor *= 5.50964e-19
-        super().__init__(filenames, emin, emax, Zmet, norm_factor=norm_factor, kT_min=kT_min,
+        if resonant_scattering:
+            filenames = [
+                ("igm_v2ph_nome.fits",),
+                ("igm_v2ph_mxx.fits", "igm_v2sc_mxx.fits"),
+                ("igm_v2ph_ox.fits", "igm_v2sc_ox.fits"),
+                ("igm_v2ph_ne.fits", "igm_v2sc_ne.fits"),
+                ("igm_v2ph_si.fits", "igm_v2sc_si.fits"),
+                ("igm_v2ph_su.fits", "igm_v2sc_su.fits"),
+                ("igm_v2ph_fe.fits", "igm_v2sc_fe.fits")
+            ]
+        else:
+            filenames = [
+                ("igm_v2ph_nome.fits",),
+                ("igm_v2ph_mxx.fits",),
+                ("igm_v2ph_ox.fits",),
+                ("igm_v2ph_ne.fits",),
+                ("igm_v2ph_si.fits",),
+                ("igm_v2ph_su.fits",),
+                ("igm_v2ph_fe.fits",)
+            ]
+        norm_factors = 5.50964e-19*np.array([1.0, cxb_factor])
+        super().__init__(filenames, emin, emax, Zmet, norm_factors=norm_factors, kT_min=kT_min,
                          kT_max=kT_max, var_elem=var_elem, max_density=max_density, method=method,
                          abund_table=abund_table, prng=prng, temperature_field=temperature_field,
                          h_fraction=h_fraction, emission_measure_field=emission_measure_field)

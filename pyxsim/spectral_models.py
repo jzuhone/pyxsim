@@ -6,7 +6,7 @@ import numpy as np
 from soxs.apec import ApecGenerator
 from soxs.spectra import \
     get_wabs_absorb, get_tbabs_absorb
-from soxs.utils import parse_prng
+from soxs.utils import parse_prng, mylog
 from pyxsim.utils import ensure_list
 from yt.units.yt_array import YTArray, YTQuantity
 from yt.units import keV
@@ -210,25 +210,42 @@ class TableApecModel(ThermalSpectralModel):
 
 
 class XSpecAtableModel(ThermalSpectralModel):
-    def __init__(self, tablefiles, emin, emax, var_elem=None, norm_factor=1.0,
-                 metal_column="INTPSPEC", var_column="INTPSPEC"):
-        self.tablefiles = ensure_list(tablefiles)
+    def __init__(self, tablefiles, emin, emax, var_elem=None, 
+                 norm_factors=None, metal_column="INTPSPEC", var_column="INTPSPEC"):
+        self.tablefiles = []
+        self.max_tables = 0
+        if isinstance(tablefiles, str):
+            self.tablefiles.append((tablefiles,))
+            self.max_tables = 1
+        elif isinstance(tablefiles, tuple):
+            self.tablefiles.append(tablefiles)
+            self.max_tables = len(tablefiles)
+        else:
+            for file in tablefiles:
+                if isinstance(file, str):
+                    self.tablefiles.append((file,))
+                    self.max_tables = max(self.max_tables, 1)
+                else:
+                    self.tablefiles.append(file)
+                    self.max_tables = max(self.max_tables, len(file))
         self.var_elem = var_elem
         self.emin = emin
         self.emax = emax
-        self.nfiles = len(self.tablefiles)
+        self.nlist = len(self.tablefiles)
         self.nvar_elem = 0
         if self.var_elem is not None:
             self.nvar_elem = len(var_elem)
-        self.norm_factor = norm_factor
+        if norm_factors is None:
+            norm_factors = np.ones(self.max_tables)
+        self.norm_factors = norm_factors
         self.metal_column = metal_column
         if isinstance(var_column, str):
             var_column = [var_column]*self.nvar_elem
         self.var_column = var_column
         self.first_file = None
         for file in self.tablefiles:
-            if file is not None:
-                self.first_file = file
+            if file[0] is not None:
+                self.first_file = file[0]
                 break
         with fits.open(self.first_file) as f:
             self.n_D = f["PARAMETERS"].data["NUMBVALS"][0]
@@ -248,26 +265,33 @@ class XSpecAtableModel(ThermalSpectralModel):
             ehi = f["ENERGIES"].data["ENERG_HI"]*scale_factor
         eidxs = elo > self.emin
         eidxs &= ehi < self.emax
+        self.ne = eidxs.sum()
         self.ebins = np.append(elo[eidxs], ehi[eidxs][-1])
         self.emid = 0.5 * (self.ebins[1:] + self.ebins[:-1])
         self.de = np.diff(self.ebins)
-        self.cosmic_spec = None
+        self.cosmic_spec = np.zeros((self.n_T*self.n_D, self.ne))
         self.metal_spec = None
         self.var_spec = None
-        if self.tablefiles[0] is not None:
-            with fits.open(self.tablefiles[0]) as f:
-                self.cosmic_spec = f["SPECTRA"].data["INTPSPEC"][:,eidxs]
-                self.cosmic_spec *= self.norm_factor*scale_factor
-        if self.nfiles > 1:
-            with fits.open(self.tablefiles[1]) as f:
-                self.metal_spec = f["SPECTRA"].data[self.metal_column][:,eidxs]
-                self.metal_spec *= self.norm_factor*scale_factor
-        if self.nfiles > 2:
+        for j, file in enumerate(self.tablefiles[0]):
+            mylog.debug(f"Opening {file}.")
+            with fits.open(file) as f:
+                self.cosmic_spec += f["SPECTRA"].data["INTPSPEC"][:,eidxs]*self.norm_factors[j]
+        self.cosmic_spec *= scale_factor
+        if self.nlist > 1:
+            self.metal_spec = np.zeros((self.n_T*self.n_D, self.ne))
+            for j, file in enumerate(self.tablefiles[1]):
+                mylog.debug(f"Opening {file}.")
+                with fits.open(file) as f:
+                    self.metal_spec += f["SPECTRA"].data[self.metal_column][:,eidxs]*self.norm_factors[j]
+            self.metal_spec *= scale_factor
+        if self.nlist > 2:
             self.var_spec = np.zeros((self.nvar_elem,self.n_T*self.n_D,eidxs.sum()))
             for i in range(self.nvar_elem):
-                with fits.open(self.tablefiles[i+2]) as f:
-                    self.var_spec[i,:,:] = f["SPECTRA"].data[self.var_column[i]][:, eidxs]
-            self.var_spec *= self.norm_factor*scale_factor
+                for j, file in enumerate(self.tablefiles[i+2]):
+                    mylog.debug(f"Opening {file}.")
+                    with fits.open(file) as f:
+                        self.var_spec[i,:,:] += f["SPECTRA"].data[self.var_column[i]][:, eidxs]*self.norm_factors[j]
+            self.var_spec *= scale_factor
 
 
 class AbsorptionModel:
