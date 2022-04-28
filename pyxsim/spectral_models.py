@@ -7,7 +7,6 @@ from soxs.apec import ApecGenerator
 from soxs.spectra import \
     get_wabs_absorb, get_tbabs_absorb
 from soxs.utils import parse_prng, mylog
-from pyxsim.utils import ensure_list
 from yt.units.yt_array import YTArray, YTQuantity
 from yt.units import keV
 import h5py
@@ -161,7 +160,7 @@ class TableApecModel(ThermalSpectralModel):
         Prepare the thermal model for execution given a redshift *zobs* for the spectrum.
         """
         idx_min = max(np.searchsorted(self.agen.Tvals, kT_min)-1, 0)
-        idx_max = min(np.searchsorted(self.agen.Tvals, kT_max), self.agen.nT-1)
+        idx_max = min(np.searchsorted(self.agen.Tvals, kT_max)+1, self.agen.nT-1)
         cosmic_spec, metal_spec, var_spec = \
             self.agen._get_table(list(range(idx_min, idx_max)), zobs, 0.0)
         self.Tvals = self.agen.Tvals[idx_min:idx_max]
