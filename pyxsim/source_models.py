@@ -585,26 +585,33 @@ class IGMSourceModel(AtableSourceModel):
                  cxb_factor=1.0, temperature_field=None, emission_measure_field=None,
                  h_fraction=None, kT_min=None, kT_max=None, max_density=5.0e-25,
                  var_elem=None, method="invert_cdf", abund_table="feld", prng=None):
+        filenames = [
+            ("igm_v2ph_nome.fits",)
+        ]
         if resonant_scattering:
-            filenames = [
-                ("igm_v2ph_nome.fits",),
-                ("igm_v2ph_mxx.fits", "igm_v2sc_mxx.fits"),
-                ("igm_v2ph_ox.fits", "igm_v2sc_ox.fits"),
-                ("igm_v2ph_ne.fits", "igm_v2sc_ne.fits"),
-                ("igm_v2ph_si.fits", "igm_v2sc_si.fits"),
-                ("igm_v2ph_su.fits", "igm_v2sc_su.fits"),
-                ("igm_v2ph_fe.fits", "igm_v2sc_fe.fits")
-            ]
+            if var_elem:
+                filenames += [
+                    ("igm_v2ph_mxx.fits", "igm_v2sc_mxx.fits"),
+                    ("igm_v2ph_ox.fits", "igm_v2sc_ox.fits"),
+                    ("igm_v2ph_ne.fits", "igm_v2sc_ne.fits"),
+                    ("igm_v2ph_si.fits", "igm_v2sc_si.fits"),
+                    ("igm_v2ph_su.fits", "igm_v2sc_su.fits"),
+                    ("igm_v2ph_fe.fits", "igm_v2sc_fe.fits")
+                ]
+            else:
+                filenames.append(("igm_v2ph_me.fits", "igm_v2sc_me.fits"))
         else:
-            filenames = [
-                ("igm_v2ph_nome.fits",),
-                ("igm_v2ph_mxx.fits",),
-                ("igm_v2ph_ox.fits",),
-                ("igm_v2ph_ne.fits",),
-                ("igm_v2ph_si.fits",),
-                ("igm_v2ph_su.fits",),
-                ("igm_v2ph_fe.fits",)
-            ]
+            if var_elem:
+                filenames += [
+                    ("igm_v2ph_mxx.fits",),
+                    ("igm_v2ph_ox.fits",),
+                    ("igm_v2ph_ne.fits",),
+                    ("igm_v2ph_si.fits",),
+                    ("igm_v2ph_su.fits",),
+                    ("igm_v2ph_fe.fits",)
+                ]
+            else:
+                filenames.append(("igm_v2ph_me.fits",))
         norm_factors = 5.50964e-19*np.array([1.0, cxb_factor])
         super().__init__(filenames, emin, emax, Zmet, norm_factors=norm_factors, kT_min=kT_min,
                          kT_max=kT_max, var_elem=var_elem, max_density=max_density, method=method,
