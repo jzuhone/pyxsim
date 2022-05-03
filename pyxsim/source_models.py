@@ -379,7 +379,10 @@ class ThermalSourceModel(SourceModel):
         else:
             orig_ncells = np.prod(orig_shape)
         if orig_ncells == 0:
-            return np.array([])
+            if mode == "photons":
+                return
+            else:
+                return np.array([])
 
         ret = np.zeros(orig_ncells)
 
@@ -565,6 +568,9 @@ class AtableSourceModel(ThermalSourceModel):
         if hasattr(spectral_model, "Dvals"):
             nH_min = 10**spectral_model.Dvals[0]
             nH_max = 10**spectral_model.Dvals[-1]
+        else:
+            nH_min = None
+            nH_max = None
         super().__init__(spectral_model, emin, emax, Zmet, kT_min=kT_min, kT_max=kT_max, 
                          var_elem=var_elem, max_density=max_density, method=method, nH_min=nH_min,
                          nH_max=nH_max, abund_table=abund_table, prng=prng,
