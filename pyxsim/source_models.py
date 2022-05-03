@@ -379,7 +379,7 @@ class ThermalSourceModel(SourceModel):
         else:
             orig_ncells = np.prod(orig_shape)
         if orig_ncells == 0:
-            return
+            return np.array([])
 
         ret = np.zeros(orig_ncells)
 
