@@ -13,12 +13,10 @@ from pyxsim.source_models import \
    ApecNEISourceModel, \
    LineSourceModel, \
    PowerLawSourceModel, \
-   AtableSourceModel, \
    IGMSourceModel
 
 from pyxsim.spectral_models import \
     TableApecModel, \
-    TBabsModel, WabsModel, \
-    XSpecAtableModel    
+    TBabsModel, WabsModel
 
 from pyxsim.utils import merge_files

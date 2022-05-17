@@ -12,74 +12,14 @@ from yt.units import keV
 import h5py
 from astropy.io import fits
 from pyxsim.utils import mylog
+from scipy.interpolate import interp1d
 
 
 K_per_keV = (1.0*keV).to_value("K", "thermal")
 
 
 class ThermalSpectralModel:
-
-    def get_spectrum(self, kT, nH=None):
-        if nH is None:
-            return self._get_spectrum_1d(kT)
-        else:
-            return self._get_spectrum_2d(kT, nH)
-
-    def _get_spectrum_1d(self, kT):
-        """
-        Get the thermal emission spectrum given a temperature *kT* in keV. 
-        """
-        kT = np.atleast_1d(kT)
-        tindex = np.searchsorted(self.Tvals, kT)-1
-        var_spec = None
-        dT = (kT-self.Tvals[tindex])/self.dTvals[tindex]
-        cspec_l = self.cosmic_spec[tindex, :]
-        mspec_l = self.metal_spec[tindex, :]
-        cspec_r = self.cosmic_spec[tindex+1, :]
-        mspec_r = self.metal_spec[tindex+1, :]
-        cosmic_spec = (1.-dT)[:,np.newaxis]*cspec_l+dT[:,np.newaxis]*cspec_r
-        metal_spec = (1.-dT)[:,np.newaxis]*mspec_l+dT[:,np.newaxis]*mspec_r
-        if self.var_spec is not None:
-            vspec_l = self.var_spec[:, tindex, :]
-            vspec_r = self.var_spec[:, tindex+1, :]
-            var_spec = (1.-dT)[np.newaxis,:,np.newaxis]*vspec_l
-            var_spec += dT[np.newaxis,:,np.newaxis]*vspec_r
-        return cosmic_spec, metal_spec, var_spec
-
-    def _get_spectrum_2d(self, kT, nH):
-        lkT = np.atleast_1d(np.log10(kT*K_per_keV))
-        lnH = np.atleast_1d(np.log10(nH))
-        tidxs = np.searchsorted(self.Tvals, lkT)-1
-        didxs = np.searchsorted(self.Dvals, lnH)-1
-        dT = (lkT - self.Tvals[tidxs]) / self.dTvals[tidxs]
-        dn = (lnH - self.Dvals[didxs]) / self.dDvals[didxs]
-        idx1 = np.ravel_multi_index((didxs+1,tidxs+1), (self.n_D, self.n_T))
-        idx2 = np.ravel_multi_index((didxs+1,tidxs), (self.n_D, self.n_T))
-        idx3 = np.ravel_multi_index((didxs,tidxs+1), (self.n_D, self.n_T))
-        idx4 = np.ravel_multi_index((didxs,tidxs), (self.n_D, self.n_T))
-        dx1 = dT*dn
-        dx2 = dn-dx1
-        dx3 = dT-dx1
-        dx4 = 1.0+dx1-dT-dn
-        cspec = None
-        if self.cosmic_spec is not None:
-            cspec = dx1[:,np.newaxis]*self.cosmic_spec[idx1,:]
-            cspec += dx2[:,np.newaxis]*self.cosmic_spec[idx2,:]
-            cspec += dx3[:,np.newaxis]*self.cosmic_spec[idx3,:]
-            cspec += dx4[:,np.newaxis]*self.cosmic_spec[idx4,:]
-        mspec = None
-        if self.metal_spec is not None:
-            mspec = dx1[:,np.newaxis]*self.metal_spec[idx1,:]
-            mspec += dx2[:,np.newaxis]*self.metal_spec[idx2,:]
-            mspec += dx3[:,np.newaxis]*self.metal_spec[idx3,:]
-            mspec += dx4[:,np.newaxis]*self.metal_spec[idx4,:]
-        vspec = None
-        if self.var_spec is not None:
-            vspec = dx1[np.newaxis,:,np.newaxis]*self.var_spec[:,idx1,:]
-            vspec += dx2[np.newaxis,:,np.newaxis]*self.var_spec[:,idx2,:]
-            vspec += dx3[np.newaxis,:,np.newaxis]*self.var_spec[:,idx3,:]
-            vspec += dx4[np.newaxis,:,np.newaxis]*self.var_spec[:,idx4,:]
-        return cspec, mspec, vspec
+    pass
 
 
 class TableApecModel(ThermalSpectralModel):
@@ -140,14 +80,14 @@ class TableApecModel(ThermalSpectralModel):
     >>> apec_model = TableApecModel(0.05, 50.0, 1000, apec_vers="3.0.3",
     ...                             thermal_broad=False)
     """
-    def __init__(self, emin, emax, nchan, var_elem=None,
+    def __init__(self, emin, emax, nchan, binscale="linear", var_elem=None,
                  model_root=None, model_vers=None, 
                  thermal_broad=True, nolines=False,
                  abund_table="angr", nei=False):
-        self.agen = ApecGenerator(emin, emax, nchan, var_elem=var_elem,
-                                  apec_root=model_root, apec_vers=model_vers, 
-                                  broadening=thermal_broad, nolines=nolines,
-                                  abund_table=abund_table, nei=nei)
+        self.agen = ApecGenerator(emin, emax, nchan, binscale=binscale, 
+                                  var_elem=var_elem, apec_root=model_root, 
+                                  apec_vers=model_vers, broadening=thermal_broad, 
+                                  nolines=nolines, abund_table=abund_table, nei=nei)
         self.nchan = self.agen.nbins
         self.ebins = self.agen.ebins
         self.emid = self.agen.emid
@@ -170,6 +110,27 @@ class TableApecModel(ThermalSpectralModel):
         self.cosmic_spec = cosmic_spec
         self.metal_spec = metal_spec
         self.var_spec = var_spec
+        self.cf = interp1d(self.Tvals, self.cosmic_spec, axis=0, fill_value=0.0,
+                           assume_sorted=True, copy=False)
+        self.mf = interp1d(self.Tvals, self.metal_spec, axis=0, fill_value=0.0,
+                           assume_sorted=True, copy=False)
+        if var_spec is not None:
+            self.vf = interp1d(self.Tvals, self.var_spec, axis=1, fill_value=0.0,
+                               assume_sorted=True, copy=False)
+        else:
+            self.vf = None
+
+    def get_spectrum(self, kT):
+        """
+        Get the thermal emission spectrum given a temperature *kT* in keV. 
+        """
+        kT = np.atleast_1d(kT)
+        var_spec = None
+        cosmic_spec = self.cf(kT)
+        metal_spec = self.mf(kT)
+        if self.var_spec is not None:
+            var_spec = self.vf(kT)
+        return cosmic_spec, metal_spec, var_spec
 
     def write_spectral_table(self, filename, zobs, kT_min, kT_max, overwrite=False):
         self.prepare_spectrum(zobs, kT_min, kT_max)
@@ -209,89 +170,123 @@ class TableApecModel(ThermalSpectralModel):
         return YTArray(spec.flux*spec.de, "photons/s/cm**2")
 
 
-class XSpecAtableModel(ThermalSpectralModel):
-    def __init__(self, tablefiles, emin, emax, var_elem=None, 
-                 norm_factors=None, metal_column="INTPSPEC", var_column="INTPSPEC"):
-        self.tablefiles = []
-        self.max_tables = 0
-        if isinstance(tablefiles, str):
-            self.tablefiles.append((tablefiles,))
-            self.max_tables = 1
-        elif isinstance(tablefiles, tuple):
-            self.tablefiles.append(tablefiles)
-            self.max_tables = len(tablefiles)
+class IGMSpectralModel(ThermalSpectralModel):
+    def __init__(self, emin, emax, nchan, resonant_scattering=False, cxb_factor=1.0, 
+                 var_elem=None, apec_root=None, apec_vers=None):
+        self.cosmic_table = "igm_v2ph_nome.fits"
+        if resonant_scattering:
+            if var_elem:
+                self.metal_tables = [("igm_v2ph_mxx.fits", "igm_v2sc_mxx.fits")]
+                self.var_tables = [
+                    ("igm_v2ph_ox.fits", "igm_v2sc_ox.fits"),
+                    ("igm_v2ph_ne.fits", "igm_v2sc_ne.fits"),
+                    ("igm_v2ph_si.fits", "igm_v2sc_si.fits"),
+                    ("igm_v2ph_su.fits", "igm_v2sc_su.fits"),
+                    ("igm_v2ph_fe.fits", "igm_v2sc_fe.fits")
+                ]
+            else:
+                self.metal_tables = [("igm_v2ph_me.fits", "igm_v2sc_me.fits")]
         else:
-            for file in tablefiles:
-                if isinstance(file, str):
-                    self.tablefiles.append((file,))
-                    self.max_tables = max(self.max_tables, 1)
-                else:
-                    self.tablefiles.append(file)
-                    self.max_tables = max(self.max_tables, len(file))
+            if var_elem:
+                self.metal_tables = [("igm_v2ph_mxx.fits",)]
+                self.var_tables = [
+                    ("igm_v2ph_ox.fits",),
+                    ("igm_v2ph_ne.fits",),
+                    ("igm_v2ph_si.fits",),
+                    ("igm_v2ph_su.fits",),
+                    ("igm_v2ph_fe.fits",)
+                ]
+            else:
+                self.metal_tables = [("igm_v2ph_me.fits",)]
+        self.cxb_factor = cxb_factor
+        self.max_tables = 2 if resonant_scattering else 1
         self.var_elem = var_elem
         self.emin = emin
         self.emax = emax
-        self.nlist = len(self.tablefiles)
         self.nvar_elem = 0
         if self.var_elem is not None:
             self.nvar_elem = len(var_elem)
-        if norm_factors is None:
-            norm_factors = np.ones(self.max_tables)
-        self.norm_factors = norm_factors
-        self.metal_column = metal_column
-        if isinstance(var_column, str):
-            var_column = [var_column]*self.nvar_elem
-        self.var_column = var_column
-        self.first_file = None
-        for file in self.tablefiles:
-            if file[0] is not None:
-                self.first_file = file[0]
-                break
-        with fits.open(self.first_file) as f:
+        with fits.open(self.cosmic_table) as f:
             self.n_D = f["PARAMETERS"].data["NUMBVALS"][0]
             self.Dvals = f["PARAMETERS"].data["VALUE"][0][:self.n_D]
             self.n_T = f["PARAMETERS"].data["NUMBVALS"][1]
             self.Tvals = f["PARAMETERS"].data["VALUE"][1][:self.n_T]
         self.dDvals = np.diff(self.Dvals)
         self.dTvals = np.diff(self.Tvals)
+        self.max_table_kT = 10**self.Tvals[-1] / K_per_keV
 
     def prepare_spectrum(self, zobs, kT_min, kT_max):
         """
         Prepare the thermal model for execution given a redshift *zobs* for the spectrum.
         """
+        norm_fac = 5.50964e-19*np.array([1.0, self.cxb_factor])
         scale_factor = 1.0/(1.0+zobs)
-        with fits.open(self.first_file) as f:
+        with fits.open(self.cosmic_table) as f:
             elo = f["ENERGIES"].data["ENERG_LO"]*scale_factor
             ehi = f["ENERGIES"].data["ENERG_HI"]*scale_factor
         eidxs = elo > self.emin
         eidxs &= ehi < self.emax
         self.ne = eidxs.sum()
         self.ebins = np.append(elo[eidxs], ehi[eidxs][-1])
-        self.emid = 0.5 * (self.ebins[1:] + self.ebins[:-1])
+        self.apec_model = TableApecModel(self.ebins[0], self.ebins[-1], self.ebins.size-1, 
+                                         binscale="log", var_elem=self.var_elem, 
+                                         abund_table="feld")
+        self.emid = 0.5*(self.ebins[1:]+self.ebins[:-1])
         self.de = np.diff(self.ebins)
         self.cosmic_spec = np.zeros((self.n_T*self.n_D, self.ne))
-        self.metal_spec = None
+        self.metal_spec = np.zeros((self.n_T*self.n_D, self.ne))
         self.var_spec = None
-        for j, file in enumerate(self.tablefiles[0]):
+        mylog.debug(f"Opening {self.cosmic_table}.")
+        with fits.open(self.cosmic_table) as f:
+            self.cosmic_spec = f["SPECTRA"].data["INTPSPEC"][:,eidxs]*norm_fac[0]
+        self.cosmic_spec *= scale_factor
+        self.metal_spec = np.zeros((self.n_T*self.n_D, self.ne))
+        for j, file in enumerate(self.metal_tables):
             mylog.debug(f"Opening {file}.")
             with fits.open(file) as f:
-                self.cosmic_spec += f["SPECTRA"].data["INTPSPEC"][:,eidxs]*self.norm_factors[j]
-        self.cosmic_spec *= scale_factor
-        if self.nlist > 1:
-            self.metal_spec = np.zeros((self.n_T*self.n_D, self.ne))
-            for j, file in enumerate(self.tablefiles[1]):
-                mylog.debug(f"Opening {file}.")
-                with fits.open(file) as f:
-                    self.metal_spec += f["SPECTRA"].data[self.metal_column][:,eidxs]*self.norm_factors[j]
-            self.metal_spec *= scale_factor
-        if self.nlist > 2:
+                self.metal_spec += f["SPECTRA"].data["INTPSPEC"][:,eidxs]*norm_fac[j]
+        self.metal_spec *= scale_factor
+        if self.nvar_elem > 0:
             self.var_spec = np.zeros((self.nvar_elem,self.n_T*self.n_D,eidxs.sum()))
             for i in range(self.nvar_elem):
-                for j, file in enumerate(self.tablefiles[i+2]):
+                for j, file in enumerate(self.var_tables):
                     mylog.debug(f"Opening {file}.")
                     with fits.open(file) as f:
-                        self.var_spec[i,:,:] += f["SPECTRA"].data[self.var_column[i]][:, eidxs]*self.norm_factors[j]
+                        self.var_spec[i,:,:] += f["SPECTRA"].data["INTPSPEC"][:, eidxs]*norm_fac[j]
             self.var_spec *= scale_factor
+        self.apec_model.prepare_spectrum(zobs, self.max_table_kT, kT_max)
+
+    def get_spectrum(self, kT, nH):
+        lkT = np.atleast_1d(np.log10(kT*K_per_keV))
+        lnH = np.atleast_1d(np.log10(nH))
+        tidxs = np.searchsorted(self.Tvals, lkT)-1
+        didxs = np.searchsorted(self.Dvals, lnH)-1
+        dT = (lkT - self.Tvals[tidxs]) / self.dTvals[tidxs]
+        dn = (lnH - self.Dvals[didxs]) / self.dDvals[didxs]
+        idx1 = np.ravel_multi_index((didxs+1,tidxs+1), (self.n_D, self.n_T))
+        idx2 = np.ravel_multi_index((didxs+1,tidxs), (self.n_D, self.n_T))
+        idx3 = np.ravel_multi_index((didxs,tidxs+1), (self.n_D, self.n_T))
+        idx4 = np.ravel_multi_index((didxs,tidxs), (self.n_D, self.n_T))
+        dx1 = dT*dn
+        dx2 = dn-dx1
+        dx3 = dT-dx1
+        dx4 = 1.0+dx1-dT-dn
+        cspec = dx1[:,np.newaxis]*self.cosmic_spec[idx1,:]
+        cspec += dx2[:,np.newaxis]*self.cosmic_spec[idx2,:]
+        cspec += dx3[:,np.newaxis]*self.cosmic_spec[idx3,:]
+        cspec += dx4[:,np.newaxis]*self.cosmic_spec[idx4,:]
+        mspec = dx1[:,np.newaxis]*self.metal_spec[idx1,:]
+        mspec += dx2[:,np.newaxis]*self.metal_spec[idx2,:]
+        mspec += dx3[:,np.newaxis]*self.metal_spec[idx3,:]
+        mspec += dx4[:,np.newaxis]*self.metal_spec[idx4,:]
+        if self.var_spec is not None:
+            vspec = dx1[np.newaxis,:,np.newaxis]*self.var_spec[:,idx1,:]
+            vspec += dx2[np.newaxis,:,np.newaxis]*self.var_spec[:,idx2,:]
+            vspec += dx3[np.newaxis,:,np.newaxis]*self.var_spec[:,idx3,:]
+            vspec += dx4[np.newaxis,:,np.newaxis]*self.var_spec[:,idx4,:]
+        else:
+            vspec = None
+        return cspec, mspec, vspec
 
 
 class AbsorptionModel:
