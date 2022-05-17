@@ -6,11 +6,12 @@ import numpy as np
 from soxs.apec import ApecGenerator
 from soxs.spectra import \
     get_wabs_absorb, get_tbabs_absorb
-from soxs.utils import parse_prng, mylog
+from soxs.utils import parse_prng
 from yt.units.yt_array import YTArray, YTQuantity
 from yt.units import keV
 import h5py
 from astropy.io import fits
+from pyxsim.utils import mylog
 
 
 K_per_keV = (1.0*keV).to_value("K", "thermal")
