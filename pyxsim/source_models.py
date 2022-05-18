@@ -18,7 +18,6 @@ from yt.utilities.parallel_tools.parallel_analysis_interface import \
     parallel_objects, communication_system, parallel_capable
 from numbers import Number
 from scipy.stats import norm
-from more_itertools import chunked
 
 
 gx = np.linspace(-6, 6, 2400)
@@ -489,7 +488,7 @@ class ThermalSourceModel(SourceModel):
                         fac /= X_H
                     elemZ[j,:] = np.ravel(eZ.d[cut]*fac)
 
-        if observer == "internal" and mode == "photons":
+        if self.observer == "internal" and mode == "photons":
             pos = np.array([np.ravel(chunk[self.p_fields[i]].d[cut]) 
                             for i in range(3)])
             r2 = self.compute_radius(pos)

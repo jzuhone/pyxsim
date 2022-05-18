@@ -4,7 +4,7 @@ Classes for generating lists of photons
 import numpy as np
 from yt.funcs import get_pbar
 from pyxsim.lib.sky_functions import pixel_to_cel, \
-    scatter_events, doppler_shift
+    scatter_events, doppler_shift, scatter_events_allsky
 from yt.utilities.physical_constants import clight
 from yt.utilities.cosmology import Cosmology
 from yt.utilities.orientation import Orientation

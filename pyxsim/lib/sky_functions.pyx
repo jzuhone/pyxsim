@@ -186,6 +186,7 @@ def scatter_events_allsky(prng, kernel, data_type, int num_det,
     cdef np.ndarray[np.float64_t, ndim=1] ra, dec
     cdef np.int64_t i, j, k, xax, yax, n
     cdef np.float64_t xx, yy, zz
+    cdef np.float64_t PI = np.pi
 
     k = 0
     n = 0

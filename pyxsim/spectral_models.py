@@ -184,8 +184,10 @@ class IGMSpectralModel(ThermalSpectralModel):
                                          binscale="log", var_elem=self.var_elem,
                                          abund_table="feld")
         cosmic_spec, metal_spec, var_spec = self.igen._get_table(self.ne, eidxs, zobs)
-        self.cosmic_spec = cosmic_spec
-        self.metal_spec = metal_spec
+        self.cosmic_spec = 1.0e-14*cosmic_spec
+        self.metal_spec = 1.0e-14*metal_spec
+        if var_spec is not None:
+            var_spec *= 1.0e-14
         self.var_spec = var_spec
         self.apec_model.prepare_spectrum(zobs, self.max_table_kT, kT_max)
 
