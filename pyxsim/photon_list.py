@@ -89,7 +89,8 @@ def find_object_bounds(data_source):
 def make_photons(photon_prefix, data_source, redshift, area,
                  exp_time, source_model, point_sources=False,
                  parameters=None, center=None, dist=None,
-                 cosmology=None, velocity_fields=None):
+                 cosmology=None, velocity_fields=None,
+                 observer="external"):
     r"""
     Write a photon list dataset to disk from a yt data source and assuming a
     source model for the photons. The redshift, collecting area, exposure time,
@@ -176,19 +177,21 @@ def make_photons(photon_prefix, data_source, redshift, area,
             cosmo = Cosmology()
     else:
         cosmo = cosmology
-    if dist is None:
-        if redshift <= 0.0:
-            msg = "If redshift <= 0.0, you must specify a distance to the " \
-                  "source using the 'dist' argument!"
-            mylog.error(msg)
-            raise ValueError(msg)
-        D_A = cosmo.angular_diameter_distance(0.0, redshift).to("Mpc")
-    else:
-        D_A = parse_value(dist, "kpc")
-        if redshift > 0.0:
-            mylog.warning("Redshift must be zero for nearby sources. "
-                          "Resetting redshift to 0.0.")
-            redshift = 0.0
+
+    if observer == "external":
+        if dist is None:
+            if redshift <= 0.0:
+                msg = "If redshift <= 0.0, you must specify a distance to the " \
+                      "source using the 'dist' argument!"
+                mylog.error(msg)
+                raise ValueError(msg)
+            D_A = cosmo.angular_diameter_distance(0.0, redshift).to("Mpc")
+        else:
+            D_A = parse_value(dist, "kpc")
+            if redshift > 0.0:
+                mylog.warning("Redshift must be zero for nearby sources. "
+                              "Resetting redshift to 0.0.")
+                redshift = 0.0
 
     if isinstance(center, str):
         if center == "center" or center == "c":
@@ -216,22 +219,27 @@ def make_photons(photon_prefix, data_source, redshift, area,
     parameters["fid_exp_time"] = parse_value(exp_time, "s")
     parameters["fid_area"] = parse_value(area, "cm**2")
     parameters["fid_redshift"] = redshift
-    parameters["fid_d_a"] = D_A
+    parameters["observer"] = observer
     parameters["hubble"] = cosmo.hubble_constant
     parameters["omega_matter"] = cosmo.omega_matter
     parameters["omega_lambda"] = cosmo.omega_lambda
     parameters["center"].convert_to_units("kpc")
 
-    if redshift > 0.0:
-        mylog.info(f"Cosmology: h = {cosmo.hubble_constant}, "
-                   f"omega_matter = {cosmo.omega_matter}, "
-                   f"omega_lambda = {cosmo.omega_lambda}")
-    else:
-        mylog.info(f"Observing local source at distance {D_A}.")
+    if observer == "external":
+        if redshift > 0.0:
+            mylog.info(f"Cosmology: h = {cosmo.hubble_constant}, "
+                       f"omega_matter = {cosmo.omega_matter}, "
+                       f"omega_lambda = {cosmo.omega_lambda}")
+        else:
+            mylog.info(f"Observing local source at distance {D_A}.")
+        parameters["fid_d_a"] = D_A
 
     local_exp_time = parameters["fid_exp_time"].v/comm.size
     D_A = parameters["fid_d_a"].to_value("cm")
-    dist_fac = 1.0/(4.*np.pi*D_A*D_A*(1.+redshift)**2)
+    dist_fac = 1.0/(4.*np.pi)
+    if observer == "external":
+        dist_fac /= D_A*D_A*(1.+redshift)**2
+
     spectral_norm = parameters["fid_area"].v*local_exp_time*dist_fac
 
     source_model.setup_model(data_source, redshift, spectral_norm)

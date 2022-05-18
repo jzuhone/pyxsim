@@ -164,3 +164,71 @@ def pixel_to_cel(np.ndarray[np.float64_t, ndim=1] xsky,
 
         xsky[i] *= 180.0/PI
         ysky[i] *= 180.0/PI
+
+
+@cython.cdivision(True)
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def scatter_events_allsky(normal, prng, kernel, data_type,
+                   int num_det,
+                   np.ndarray[np.uint8_t, cast=True] det,
+                   np.ndarray[np.int64_t, ndim=1] n_ph,
+                   np.ndarray[np.float64_t, ndim=1] x,
+                   np.ndarray[np.float64_t, ndim=1] y,
+                   np.ndarray[np.float64_t, ndim=1] z,
+                   np.ndarray[np.float64_t, ndim=1] dx,
+                   np.ndarray[np.float64_t, ndim=1] x_hat,
+                   np.ndarray[np.float64_t, ndim=1] y_hat):
+    cdef np.int64_t num_cells = dx.shape[0]
+    cdef np.ndarray[np.float64_t, ndim=1] xsky, ysky, zsky
+    cdef np.ndarray[np.float64_t, ndim=1] ra, dec
+    cdef np.int64_t i, j, k, xax, yax, n
+    cdef np.float64_t xx, yy
+
+    k = 0
+    n = 0
+
+    ra = np.zeros(num_det)
+    dec = np.zeros(num_det)
+    
+    if data_type == "cells":
+        xsky, ysky, zsky = prng.uniform(low=-0.5, high=0.5,
+                                        size=(3, num_det))
+        for i in range(num_cells):
+            for j in range(n_ph[i]):
+                if det[n]:
+                    xsky[k] = xsky[k] * dx[i] + x[i]
+                    ysky[k] = ysky[k] * dx[i] + y[i]
+                    zsky[k] = zsky[k] * dx[i] + z[i]
+                    xx = (xsky[k] * x_hat[0] + ysky[k] * x_hat[1] +
+                          zsky[k] * x_hat[2])
+                    yy = (xsky[k] * y_hat[0] + ysky[k] * y_hat[1] +
+                          zsky[k] * y_hat[2])
+	            zz = (xsky[k] * z_hat[0] + ysky[k] * z_hat[1] +
+                          zsky[k] * z_hat[2])
+                    ra[k] = xx
+                    dec[k] = yy
+                    k += 1
+                n += 1
+    elif data_type == "particles":
+        if kernel == "gaussian":
+            xsky = prng.normal(loc=0.0, scale=1.0, size=num_det)
+            ysky = prng.normal(loc=0.0, scale=1.0, size=num_det)
+	    zsky = prng.normal(loc=0.0, scale=1.0, size=num_det)
+        elif kernel == "top_hat":
+            r = prng.uniform(low=0.0, high=1.0, size=num_det)
+            theta = 2.0 * np.pi * prng.uniform(low=0.0, high=1.0, size=num_det)
+            xsky = r * np.cos(theta)
+            ysky = r * np.sin(theta)
+        for i in range(num_cells):
+            for j in range(n_ph[i]):
+                if det[n]:
+                    xsky[k] = xsky[k] * dx[i] + x[i] * x_hat[0] + \
+                              y[i] * x_hat[1] + z[i] * x_hat[2]
+                    ysky[k] = ysky[k] * dx[i] + x[i] * y_hat[0] + \
+                              y[i] * y_hat[1] + z[i] * y_hat[2]
+	            zsky[k] = zsky[k] * dx[i]
+                    k += 1
+                n += 1
+
+    return xsky, ysky
