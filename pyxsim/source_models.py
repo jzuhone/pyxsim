@@ -311,7 +311,7 @@ class ThermalSourceModel(SourceModel):
         self.Zconvert = 1.0
         self.mconvert = {}
         self.atable = abund_tables[abund_table].copy()
-        self.kT_switch = 1.0e33
+        self.kT_switch = 1.0e-33
 
     def setup_model(self, data_source, redshift, spectral_norm):
         if isinstance(data_source, Dataset):
