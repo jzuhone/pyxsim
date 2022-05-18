@@ -132,17 +132,6 @@ class TableApecModel(ThermalSpectralModel):
             var_spec = self.vf(kT)
         return cosmic_spec, metal_spec, var_spec
 
-    def write_spectral_table(self, filename, zobs, kT_min, kT_max, overwrite=False):
-        self.prepare_spectrum(zobs, kT_min, kT_max)
-        with h5py.File(filename, "w") as f:
-            f.attrs["zobs"] = zobs
-            f.attrs["kT_min"] = kT_min
-            f.attrs["kT_max"] = kT_max
-            f.attrs["var_elem"] = self.var_elem
-            f.create_dataset("cosmic_spec", data=self.cosmic_spec)
-            f.create_dataset("metal_spec", data=self.metal_spec)
-            f.create_dataset("var_spec", data=self.var_spec)
-
     def return_spectrum(self, temperature, metallicity, redshift, norm,
                         velocity=0.0, elem_abund=None):
         """
