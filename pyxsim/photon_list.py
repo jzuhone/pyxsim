@@ -192,7 +192,13 @@ def make_photons(photon_prefix, data_source, redshift, area,
                 mylog.warning("Redshift must be zero for nearby sources. "
                               "Resetting redshift to 0.0.")
                 redshift = 0.0
-
+    else:
+        D_A = parse_value(0.0, "kpc")
+        if redshift > 0.0:
+            mylog.warning("Redshift must be zero for internal observers. "
+                          "Resetting redshift to 0.0.")
+            redshift = 0.0
+        
     if isinstance(center, str):
         if center == "center" or center == "c":
             parameters["center"] = ds.domain_center
@@ -224,6 +230,7 @@ def make_photons(photon_prefix, data_source, redshift, area,
     parameters["omega_matter"] = cosmo.omega_matter
     parameters["omega_lambda"] = cosmo.omega_lambda
     parameters["center"].convert_to_units("kpc")
+    parameters["fid_d_a"] = D_A
 
     if observer == "external":
         if redshift > 0.0:
@@ -232,7 +239,8 @@ def make_photons(photon_prefix, data_source, redshift, area,
                        f"omega_lambda = {cosmo.omega_lambda}")
         else:
             mylog.info(f"Observing local source at distance {D_A}.")
-        parameters["fid_d_a"] = D_A
+    else:
+        mylog.info("The observer is internal to the source.")
 
     local_exp_time = parameters["fid_exp_time"].v/comm.size
     D_A = parameters["fid_d_a"].to_value("cm")
@@ -260,6 +268,9 @@ def make_photons(photon_prefix, data_source, redshift, area,
     le, re = find_object_bounds(data_source)
     c = parameters["center"].to_value("kpc")
 
+    source_model.set_pv(p_fields, v_fields, le, re, dw, c, ds.periodicity,
+                        observer)
+
     f = h5py.File(photon_file, "w")
 
     # Parameters
@@ -273,6 +284,7 @@ def make_photons(photon_prefix, data_source, redshift, area,
     p.create_dataset("omega_lambda", data=parameters["omega_lambda"])
     p.create_dataset("fid_d_a", data=float(parameters["fid_d_a"]))
     p.create_dataset("data_type", data=parameters["data_type"])
+    p.create_dataset("observer", data=parameters["observer"])
 
     n_cells = 0
     n_photons = 0
@@ -487,6 +499,14 @@ def project_photons(photon_prefix, event_prefix, normal, sky_center,
     p = f["parameters"]
 
     data_type = p["data_type"].asstr()[()]
+    if "observer" in p:
+        observer = p["observer"].asstr()[()]
+    else:
+        observer = "external"
+        
+    if observer == "internal" and isinstance(normal, str):
+        raise RuntimeError("Must specify a vector for 'normal' if you are "
+                           "doing an 'internal' observation!")
 
     if sigma_pos is not None and data_type == "particles":
         raise RuntimeError("The 'smooth_positions' argument should "
@@ -510,6 +530,7 @@ def project_photons(photon_prefix, event_prefix, normal, sky_center,
         pe.create_dataset("exp_time", data=float(p["fid_exp_time"][()]))
         pe.create_dataset("area", data=float(p["fid_area"][()]))
         pe.create_dataset("sky_center", data=sky_center)
+        pe.create_dataset("observer", data=observer)
 
         event_fields = ["xsky", "ysky", "eobs"]
 
@@ -542,14 +563,28 @@ def project_photons(photon_prefix, event_prefix, normal, sky_center,
             end_e = start_e + n_ph.sum()
             eobs = d["energy"][start_e:end_e]
 
+            if observer == "internal":
+                r_vec = np.array([d["x"][start_c:end_c],
+                                  d["y"][start_c:end_c],
+                                  d["z"][start_c:end_c]])
+                r = np.sqrt(np.sum(r_vec**2, axis=0))
+            else:
+                r_vec = None
+                r = None
+
             if not no_shifting:
-                if isinstance(normal, str):
-                    shift = d[f"v{normal}"][start_c:end_c]*scale_shift
+                if observer == "internal":
+                    shift = (d["vx"][start_c:end_c] * r_vec[0,:]/r +
+                             d["vy"][start_c:end_c] * r_vec[1,:]/r +
+                             d["vz"][start_c:end_c] * r_vec[2,:]/r)
                 else:
-                    shift = (d["vx"][start_c:end_c]*z_hat[0] +
-                             d["vy"][start_c:end_c]*z_hat[1] +
-                             d["vz"][start_c:end_c]*z_hat[2])*scale_shift
-                doppler_shift(shift, n_ph, eobs)
+                    if isinstance(normal, str):
+                        shift = d[f"v{normal}"][start_c:end_c]
+                    else:
+                        shift = (d["vx"][start_c:end_c]*z_hat[0] +
+                                 d["vy"][start_c:end_c]*z_hat[1] +
+                                 d["vz"][start_c:end_c]*z_hat[2])
+                doppler_shift(shift*scale_shift, n_ph, eobs)
 
             if absorb_model is None:
                 det = np.ones(eobs.size, dtype='bool')
@@ -560,23 +595,34 @@ def project_photons(photon_prefix, event_prefix, normal, sky_center,
 
             if num_det > 0:
 
-                xsky, ysky = scatter_events(norm, prng, kernel, 
-                                            data_type, num_det, det, n_ph,
-                                            d["x"][start_c:end_c],
-                                            d["y"][start_c:end_c],
-                                            d["z"][start_c:end_c],
-                                            dx, x_hat, y_hat)
+                if observer == "external":
+                    
+                    xsky, ysky = scatter_events(norm, prng, kernel, 
+                                                data_type, num_det, det, n_ph,
+                                                d["x"][start_c:end_c],
+                                                d["y"][start_c:end_c],
+                                                d["z"][start_c:end_c],
+                                                dx, x_hat, y_hat)
+    
+                    if data_type == "cells" and sigma_pos is not None:
+                        sigma = sigma_pos*np.repeat(dx, n_ph)[det]
+                        xsky += sigma*prng.normal(loc=0.0, scale=1.0, size=num_det)
+                        ysky += sigma*prng.normal(loc=0.0, scale=1.0, size=num_det)
+    
+                    xsky /= D_A
+                    ysky /= D_A
+    
+                    pixel_to_cel(xsky, ysky, sky_center)
 
-                if data_type == "cells" and sigma_pos is not None:
-                    sigma = sigma_pos*np.repeat(dx, n_ph)[det]
-                    xsky += sigma*prng.normal(loc=0.0, scale=1.0, size=num_det)
-                    ysky += sigma*prng.normal(loc=0.0, scale=1.0, size=num_det)
-
-                xsky /= D_A
-                ysky /= D_A
-
-                pixel_to_cel(xsky, ysky, sky_center)
-
+                elif observer == "internal":
+                    
+                    xsky, ysky = scatter_events_allsky(prng, kernel,
+                                                       data_type, num_det, det, n_ph,
+                                                       d["x"][start_c:end_c],
+                                                       d["y"][start_c:end_c],
+                                                       d["z"][start_c:end_c],
+                                                       dx, x_hat, y_hat, z_hat)
+                    
                 if e_size < n_events + num_det:
                     while n_events + num_det > e_size:
                         e_size *= 2

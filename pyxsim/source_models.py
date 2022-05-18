@@ -67,7 +67,27 @@ class SourceModel:
         self.spectral_norm = spectral_norm
         self.redshift = redshift
 
-    def cleanup_model(self):
+    def set_pv(self, p_fields, v_fields, le, re, dw, c, periodicity,
+               observer):
+        self.p_fields = p_fields
+        self.v_fields = v_fields
+        self.le = le
+        self.re = re
+        self.dw = dw
+        self.c = c
+        self.periodicity = periodicity
+        self.observer = observer
+        
+    def compute_radius(self, pos):
+        for i in range(3):
+            if ds.periodicity[i]:
+                tfl = pos[i] < le[i]
+                tfr = pos[i] > re[i]
+                pos[tfl] += dw[i]
+                pos[tfr] -= dw[i]
+        return np.sum((pos-c)**2, axis=0)
+
+    def cleanup_model(self):    
         pass
 
     def make_xray_fields(self, ds, redshift=0.0, dist=None, cosmology=None):
@@ -468,6 +488,12 @@ class ThermalSourceModel(SourceModel):
                     if str(eZ.units) != "Zsun":
                         fac /= X_H
                     elemZ[j,:] = np.ravel(eZ.d[cut]*fac)
+
+        if observer == "internal" and mode == "photons":
+            pos = np.array([np.ravel(chunk[self.p_fields[i]].d[cut]) 
+                            for i in range(3)])
+            r2 = self.compute_radius(pos)
+            cell_nrm /= r2
 
         num_photons_max = 10000000
         number_of_photons = np.zeros(num_cells, dtype="int64")
