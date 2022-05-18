@@ -578,8 +578,7 @@ class IGMSourceModel(ThermalSourceModel):
     def __init__(self, emin, emax, Zmet, nh_field, resonant_scattering=False,
                  cxb_factor=1.0, temperature_field=None, emission_measure_field=None,
                  h_fraction=None, kT_max=64.0, n_kT=10000, kT_scale='linear',
-                 max_density=5.0e-25, var_elem=None, method="invert_cdf", abund_table="feld",
-                 prng=None):
+                 max_density=5.0e-25, var_elem=None, method="invert_cdf", prng=None):
         spectral_model = IGMSpectralModel(emin, emax, resonant_scattering=resonant_scattering,
                                           cxb_factor=cxb_factor, var_elem=var_elem)
         kT_min = 10**spectral_model.Tvals[0]/K_per_keV
@@ -588,7 +587,7 @@ class IGMSourceModel(ThermalSourceModel):
         super().__init__(spectral_model, emin, emax, Zmet, kT_min=kT_min, kT_max=kT_max,
                          n_kT=n_kT, kT_scale=kT_scale, nH_min=nH_min, nH_max=nH_max,
                          var_elem=var_elem, max_density=max_density, method=method, 
-                         abund_table=abund_table, prng=prng, temperature_field=temperature_field, 
+                         abund_table="feld", prng=prng, temperature_field=temperature_field, 
                          h_fraction=h_fraction, emission_measure_field=emission_measure_field)
         self.nh_field = nh_field
         self.kT_switch = self.spectral_model.max_table_kT
@@ -597,7 +596,8 @@ class IGMSourceModel(ThermalSourceModel):
 class ApecSourceModel(ThermalSourceModel):
     _nei = False
     r"""
-    Initialize a source model from a thermal spectrum.
+    Initialize a source model from a thermal spectrum, using the
+    APEC tables from https://www.atomdb.org.
 
     Parameters
     ----------
@@ -652,7 +652,7 @@ class ApecSourceModel(ThermalSourceModel):
         a default location known to pyXSIM is used. 
     model_vers : string, optional
         The version identifier string for the model files, e.g.
-        "2.0.2". Default depends on the model used.
+        "2.0.2". Default is "3.0.9".
     nolines : boolean, optional
         Turn off lines entirely for generating emission.
         Default: False
@@ -669,6 +669,7 @@ class ApecSourceModel(ThermalSourceModel):
         "wilm" : from Wilms, Allen & McCray (2000, ApJ 542, 914 
         except for elements not listed which are given zero abundance)
         "lodd" : from Lodders, K (2003, ApJ 591, 1220)
+        "feld" : from Feldman U. (Physica Scripta, 46, 202)
     prng : integer or :class:`~numpy.random.RandomState` object 
         A pseudo-random number generator. Typically will only be specified
         if you have a reason to generate the same set of random numbers, 
@@ -676,10 +677,10 @@ class ApecSourceModel(ThermalSourceModel):
 
     Examples
     --------
-    >>> source_model = ApecSourceModel("apec", 0.1, 10.0, 10000,
+    >>> source_model = ApecSourceModel(0.1, 10.0, 10000,
     ...                                ("gas", "metallicity"))
     """
-    def __init__(self, emin, emax, nchan, Zmet, temperature_field=None,
+    def __init__(self, emin, emax, nchan, Zmet, binscale="linear", temperature_field=None,
                  emission_measure_field=None, h_fraction=None, kT_min=0.025,
                  kT_max=64.0, n_kT=10000, kT_scale="linear", max_density=5.0e-25, 
                  var_elem=None, method="invert_cdf", thermal_broad=True, 
@@ -687,6 +688,7 @@ class ApecSourceModel(ThermalSourceModel):
                  abund_table="angr", prng=None):
         var_elem_keys = list(var_elem.keys()) if var_elem is not None else None
         spectral_model = TableApecModel(emin, emax, nchan,
+                                        binscale=binscale,
                                         var_elem=var_elem_keys,
                                         thermal_broad=thermal_broad,
                                         model_root=model_root,
@@ -704,12 +706,109 @@ class ApecSourceModel(ThermalSourceModel):
 
 class ApecNEISourceModel(ApecSourceModel):
     _nei = True
-    def __init__(self, emin, emax, nchan, var_elem, temperature_field=None,
+    r"""
+    Initialize a source model from a thermal spectrum, using the
+    APEC NEI tables from https://www.atomdb.org. Note that for this
+    class a set of specific element fields must be supplied. This should
+    really only be used with simulation data which include the appropriate
+    NEI calculations.
+
+    Parameters
+    ----------
+    emin : float
+        The minimum energy for the spectrum in keV.
+    emax : float
+        The maximum energy for the spectrum in keV.
+    nchan : integer
+        The number of channels in the spectrum.
+    var_elem : dictionary, optional
+        Elements that should be allowed to vary freely from the single abundance
+        parameter. Each dictionary value, specified by the abundance symbol, 
+        corresponds to the abundance of that symbol. If a float, it is understood
+        to be constant and in solar units. If a string or tuple of strings, it is
+        assumed to be a spatially varying field.
+    temperature_field : string or (ftype, fname) tuple, optional
+        The yt temperature field to use for the thermal modeling. Must have
+        units of Kelvin. If not specified, the default temperature field for
+        the dataset will be used.
+    emission_measure_field : string or (ftype, fname) tuple, optional
+        The yt emission measure field to use for the thermal modeling. Must
+        have units of cm^-3. If not specified, the default emission measure
+        field for the dataset will be used or derived.
+    h_fraction : float, string, or tuple of strings, optional
+        The hydrogen mass fraction. If a float, assumes a constant mass 
+        fraction of hydrogen throughout. If a string or tuple of strings, 
+        is taken to be the name of the hydrogen fraction field. Default: 0.74
+    kT_min : float, optional
+        The default minimum temperature in keV to compute emission for.
+        Default: 0.025
+    kT_max : float, optional
+        The default maximum temperature in keV to compute emission for.
+        Default: 64.0
+    max_density : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
+        The maximum density of the cells or particles to use when generating 
+        photons. If a float, the units are assumed to be g/cm**3. 
+        Default: 5e-25 g/cm**3.
+    method : string, optional
+        The method used to generate the photon energies from the spectrum:
+        "invert_cdf": Invert the cumulative distribution function of the spectrum.
+        "accept_reject": Acceptance-rejection method using the spectrum. 
+        The first method should be sufficient for most cases.
+    thermal_broad : boolean, optional
+        Whether or not the spectral lines should be thermally
+        broadened. Default: True
+    model_root : string, optional
+        The directory root where the model files are stored. If not provided,
+        a default location known to pyXSIM is used. 
+    model_vers : string, optional
+        The version identifier string for the model files, e.g.
+        "2.0.2". Default is "3.0.9".
+    nolines : boolean, optional
+        Turn off lines entirely for generating emission.
+        Default: False
+    abund_table : string or array_like, optional
+        The abundance table to be used for solar abundances. 
+        Either a string corresponding to a built-in table or an array
+        of 30 floats corresponding to the abundances of each element
+        relative to the abundance of H. Default is "angr".
+        Built-in options are:
+        "angr" : from Anders E. & Grevesse N. (1989, Geochimica et 
+        Cosmochimica Acta 53, 197)
+        "aspl" : from Asplund M., Grevesse N., Sauval A.J. & Scott 
+        P. (2009, ARAA, 47, 481)
+        "wilm" : from Wilms, Allen & McCray (2000, ApJ 542, 914 
+        except for elements not listed which are given zero abundance)
+        "lodd" : from Lodders, K (2003, ApJ 591, 1220)
+        "feld" : from Feldman U. (Physica Scripta, 46, 202)
+    prng : integer or :class:`~numpy.random.RandomState` object 
+        A pseudo-random number generator. Typically will only be specified
+        if you have a reason to generate the same set of random numbers, 
+        such as for a test. Default is to use the :mod:`numpy.random` module.
+
+    Examples
+    --------
+    >>> var_elem = {"H^1": ("flash", "h   "),
+    >>>             "He^0": ("flash", "he  "),
+    >>>             "He^1": ("flash", "he1 "),
+    >>>             "He^2": ("flash", "he2 "),
+    >>>             "O^0": ("flash", "o   "),
+    >>>             "O^1": ("flash", "o1  "),
+    >>>             "O^2": ("flash", "o2  "),
+    >>>             "O^3": ("flash", "o3  "),
+    >>>             "O^4": ("flash", "o4  "),
+    >>>             "O^5": ("flash", "o5  "),
+    >>>             "O^6": ("flash", "o6  "),
+    >>>             "O^7": ("flash", "o7  "),
+    >>>             "O^8": ("flash", "o8  ")
+    >>>            }
+    >>> source_model = ApecNEISourceModel(0.1, 10.0, 10000, var_elem)
+    """
+    def __init__(self, emin, emax, nchan, var_elem, binscale="linear", temperature_field=None,
                  emission_measure_field=None, h_fraction=None, kT_min=0.025,
                  kT_max=64.0, n_kT=10000, kT_scale="linear", max_density=5.0e-25,
                  method="invert_cdf", thermal_broad=True, model_root=None, 
                  model_vers=None, nolines=False, abund_table="angr", prng=None):
-        super().__init__(emin, emax, nchan, 0.0, temperature_field=temperature_field,
+        super().__init__(emin, emax, nchan, 0.0, binscale=binscale, temperature_field=temperature_field,
                          emission_measure_field=emission_measure_field, h_fraction=h_fraction,
                          kT_min=kT_min, kT_max=kT_max, n_kT=n_kT, kT_scale=kT_scale, 
                          max_density=max_density, var_elem=var_elem, method=method, 
@@ -782,7 +881,7 @@ class PowerLawSourceModel(SourceModel):
         ebins = YTArray(ebins, "keV")
         return ebins, YTArray(spec, "photons/s")
 
-    def process_data(self, mode, chunk, emid=None):
+    def process_data(self, mode, chunk, observer="external", emid=None):
 
         num_cells = len(chunk[self.emission_field])
 
