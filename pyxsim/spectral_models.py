@@ -171,12 +171,12 @@ class TableApecModel(ThermalSpectralModel):
 
 
 class IGMSpectralModel(ThermalSpectralModel):
-    def __init__(self, emin, emax, nchan, resonant_scattering=False, cxb_factor=1.0, 
-                 var_elem=None, apec_root=None, apec_vers=None):
+    def __init__(self, emin, emax, resonant_scattering=False, cxb_factor=1.0,
+                 var_elem=None):
         self.cosmic_table = "igm_v2ph_nome.fits"
         if resonant_scattering:
             if var_elem:
-                self.metal_tables = [("igm_v2ph_mxx.fits", "igm_v2sc_mxx.fits")]
+                self.metal_tables = ("igm_v2ph_mxx.fits", "igm_v2sc_mxx.fits")
                 self.var_tables = [
                     ("igm_v2ph_ox.fits", "igm_v2sc_ox.fits"),
                     ("igm_v2ph_ne.fits", "igm_v2sc_ne.fits"),
@@ -185,10 +185,10 @@ class IGMSpectralModel(ThermalSpectralModel):
                     ("igm_v2ph_fe.fits", "igm_v2sc_fe.fits")
                 ]
             else:
-                self.metal_tables = [("igm_v2ph_me.fits", "igm_v2sc_me.fits")]
+                self.metal_tables = ("igm_v2ph_me.fits", "igm_v2sc_me.fits")
         else:
             if var_elem:
-                self.metal_tables = [("igm_v2ph_mxx.fits",)]
+                self.metal_tables = ("igm_v2ph_mxx.fits",)
                 self.var_tables = [
                     ("igm_v2ph_ox.fits",),
                     ("igm_v2ph_ne.fits",),
@@ -197,7 +197,7 @@ class IGMSpectralModel(ThermalSpectralModel):
                     ("igm_v2ph_fe.fits",)
                 ]
             else:
-                self.metal_tables = [("igm_v2ph_me.fits",)]
+                self.metal_tables = ("igm_v2ph_me.fits",)
         self.cxb_factor = cxb_factor
         self.max_tables = 2 if resonant_scattering else 1
         self.var_elem = var_elem
@@ -241,17 +241,17 @@ class IGMSpectralModel(ThermalSpectralModel):
             self.cosmic_spec = f["SPECTRA"].data["INTPSPEC"][:,eidxs]*norm_fac[0]
         self.cosmic_spec *= scale_factor
         self.metal_spec = np.zeros((self.n_T*self.n_D, self.ne))
-        for j, file in enumerate(self.metal_tables):
-            mylog.debug(f"Opening {file}.")
-            with fits.open(file) as f:
+        for j, mfile in enumerate(self.metal_tables):
+            mylog.info(f"Opening {mfile}.")
+            with fits.open(mfile) as f:
                 self.metal_spec += f["SPECTRA"].data["INTPSPEC"][:,eidxs]*norm_fac[j]
         self.metal_spec *= scale_factor
         if self.nvar_elem > 0:
             self.var_spec = np.zeros((self.nvar_elem,self.n_T*self.n_D,eidxs.sum()))
             for i in range(self.nvar_elem):
-                for j, file in enumerate(self.var_tables):
-                    mylog.debug(f"Opening {file}.")
-                    with fits.open(file) as f:
+                for j, vfile in enumerate(self.var_tables):
+                    mylog.debug(f"Opening {vfile}.")
+                    with fits.open(vfile) as f:
                         self.var_spec[i,:,:] += f["SPECTRA"].data["INTPSPEC"][:, eidxs]*norm_fac[j]
             self.var_spec *= scale_factor
         self.apec_model.prepare_spectrum(zobs, self.max_table_kT, kT_max)

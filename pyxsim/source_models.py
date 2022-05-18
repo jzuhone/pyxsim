@@ -438,13 +438,8 @@ class ThermalSourceModel(SourceModel):
         else:
             X_H = np.ravel(chunk[self.h_fraction].d[cut])
 
-        norm_factor = 1.0
         if nH is not None:
             nH = np.ravel(nH[cut])
-            norm_factor = 1.0/nH
-            norm_factor[kT > self.kT_switch] = 1.0
-
-        cell_nrm *= norm_factor
 
         if self._nei:
             metalZ = np.zeros(num_cells)
@@ -492,10 +487,13 @@ class ThermalSourceModel(SourceModel):
             if nck == 0:
                 continue
 
+            cnm = cell_nrm[bin_idxs]
+            
             if self._photoionization:
-                if kT_mid < self.kT_switch:
-                    cspec, mspec, vspec = self.spectral_model.get_spectrum(kT_mid,
-                                                                           nH=nH[bin_idxs])
+                if kT_mid <= self.kT_switch:
+                    nHi = nH[bin_idxs]
+                    cspec, mspec, vspec = self.spectral_model.get_spectrum(kT_mid, nH=nHi)
+                    cnm /= nHi
                 else:
                     cspec, mspec, vspec = self.spectral_model.apec_model.get_spectrum(kT_mid)
             else:
@@ -510,7 +508,7 @@ class ThermalSourceModel(SourceModel):
             if mode in ["photons", "photon_field"]:
 
                 spec_sum = tot_spec.sum(axis=-1)
-                cell_norm = spec_sum*cell_nrm[bin_idxs]
+                cell_norm = spec_sum*cnm
 
                 if mode == "photons":
 
@@ -548,12 +546,11 @@ class ThermalSourceModel(SourceModel):
 
             elif mode == "energy_field":
 
-                ret[idxs[bin_idxs]] = np.sum(
-                    tot_spec*self.emid, axis=-1)*cell_nrm[bin_idxs]
+                ret[idxs[bin_idxs]] = np.sum(tot_spec*self.emid, axis=-1)*cnm
 
             elif mode == "spectrum":
 
-                spec += np.sum(tot_spec*cell_nrm[bin_idxs,np.newaxis], axis=0)
+                spec += np.sum(tot_spec*cnm, axis=0)
 
             self.pbar.update(nck)
 
@@ -578,16 +575,14 @@ class IGMSourceModel(ThermalSourceModel):
     _nei = False
     _photoionization = True
 
-    def __init__(self, emin, emax, nchan, Zmet, nh_field, resonant_scattering=False,
+    def __init__(self, emin, emax, Zmet, nh_field, resonant_scattering=False,
                  cxb_factor=1.0, temperature_field=None, emission_measure_field=None,
-                 h_fraction=None, kT_min=None, kT_max=64.0, n_kT=10000, kT_scale='linear',
-                 max_density=5.0e-25,  var_elem=None, method="invert_cdf", abund_table="feld",
+                 h_fraction=None, kT_max=64.0, n_kT=10000, kT_scale='linear',
+                 max_density=5.0e-25, var_elem=None, method="invert_cdf", abund_table="feld",
                  prng=None):
-        spectral_model = IGMSpectralModel(emin, emax, nchan,
-                                          resonant_scattering=resonant_scattering,
+        spectral_model = IGMSpectralModel(emin, emax, resonant_scattering=resonant_scattering,
                                           cxb_factor=cxb_factor, var_elem=var_elem)
-        if kT_min is None:
-            kT_min = 10**spectral_model.Tvals[0]/K_per_keV
+        kT_min = 10**spectral_model.Tvals[0]/K_per_keV
         nH_min = 10**spectral_model.Dvals[0]
         nH_max = 10**spectral_model.Dvals[-1]
         super().__init__(spectral_model, emin, emax, Zmet, kT_min=kT_min, kT_max=kT_max,
