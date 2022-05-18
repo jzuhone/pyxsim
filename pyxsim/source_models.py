@@ -517,7 +517,7 @@ class ThermalSourceModel(SourceModel):
             if self._photoionization:
                 if kT_mid <= self.kT_switch:
                     nHi = nH[bin_idxs]
-                    cspec, mspec, vspec = self.spectral_model.get_spectrum(kT_mid, nH=nHi)
+                    cspec, mspec, vspec = self.spectral_model.get_spectrum(kT[bin_idxs], nH=nHi)
                     cnm /= nHi
                 else:
                     cspec, mspec, vspec = self.spectral_model.apec_model.get_spectrum(kT_mid)
