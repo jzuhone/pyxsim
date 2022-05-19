@@ -10,9 +10,6 @@ from soxs.spectra import \
 from soxs.utils import parse_prng
 from yt.units.yt_array import YTArray, YTQuantity
 from yt.units import keV
-import h5py
-from astropy.io import fits
-from pyxsim.utils import mylog
 from scipy.interpolate import interp1d
 
 
@@ -168,7 +165,9 @@ class IGMSpectralModel(ThermalSpectralModel):
                                  cxb_factor=cxb_factor, use_var_elem=use_var_elem)
         self.var_elem = var_elem
         self.nvar_elem = self.igen.nvar_elem
+        self.min_table_kT = 10**self.igen.Tvals[0] / K_per_keV
         self.max_table_kT = 10**self.igen.Tvals[-1] / K_per_keV
+        self.min_table_nH = 10**self.igen.Dvals[0]
         self.max_table_nH = 10**self.igen.Dvals[-1]
         self.Tvals = self.igen.Tvals
         self.Dvals = self.igen.Dvals
@@ -191,30 +190,36 @@ class IGMSpectralModel(ThermalSpectralModel):
         if var_spec is not None:
             var_spec *= 1.0e-14
         self.var_spec = var_spec
-        self.apec_model.prepare_spectrum(zobs, self.max_table_kT, kT_max)
+        self.apec_model.prepare_spectrum(zobs, kT_min, kT_max)
 
     def get_spectrum(self, kT, nH, kT_mid):
-        use_apec = (kT > self.max_table_kT) | (nH > self.max_table_nH)
+        kT = np.atleast_1d(kT)
+        nH = np.atleast_1d(nH)
+        use_igm = (kT >= self.min_table_kT) & (kT <= self.max_table_kT)
+        use_igm &= (nH >= self.min_table_nH) & (nH <= self.max_table_nH)
+        use_apec = ~use_igm
         cspec = np.zeros((kT.size, self.ne))
         mspec = np.zeros((kT.size, self.ne))
+        if self.var_spec is not None:
+            vspec = np.zeros((self.nvar_elem, kT.size, self.ne))
+        else:
+            vspec = None
         n_apec = use_apec.sum()
-        n_igm = kT.size - n_apec
+        n_igm = use_igm.sum()
         if n_igm > 0:
-            c1, m1, v1 = self._get_spectrum_2d(kT[~use_apec], nH[~use_apec])
-            cspec[~use_apec, :] = c1/nH[~use_apec,np.newaxis]
-            mspec[~use_apec, :] = m1/nH[~use_apec,np.newaxis]
+            nHi = nH[use_igm]
+            c1, m1, v1 = self._get_spectrum_2d(kT[use_igm], nHi)
+            cspec[use_igm, :] = c1/nHi[:,np.newaxis]
+            mspec[use_igm, :] = m1/nHi[:,np.newaxis]
             if self.var_spec is not None:
-                vspec[:,~use_apec,:] = v1/nH[~use_apec,np.newaxis,np.newaxis]
+                vspec[:,use_igm,:] = v1/nHi[:,np.newaxis,np.newaxis]
         if n_apec > 0:
-            c2, m2, v2 = self._get_spectrum_1d(kT_mid)
+            c2, m2, v2 = self.apec_model.get_spectrum(kT_mid)
             cspec[use_apec, :] = c2
             mspec[use_apec, :] = m2
             if self.var_spec is not None:
                 vspec[:,use_apec,:] = v2
         return cspec, mspec, vspec
-
-    def _get_spectrum_1d(self, kT):
-        cspec, mspec, vspec = self.apec_model.get_spectrum(kT_mid)
         
     def _get_spectrum_2d(self, kT, nH):
         lkT = np.atleast_1d(np.log10(kT*K_per_keV))

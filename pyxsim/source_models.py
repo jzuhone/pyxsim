@@ -310,7 +310,6 @@ class ThermalSourceModel(SourceModel):
         self.Zconvert = 1.0
         self.mconvert = {}
         self.atable = abund_tables[abund_table].copy()
-        self.kT_switch = 1.0e-33
 
     def setup_model(self, data_source, redshift, spectral_norm):
         if isinstance(data_source, Dataset):
@@ -428,8 +427,7 @@ class ThermalSourceModel(SourceModel):
             chunk[self.temperature_field].to_value("keV", "thermal"))
         cut &= (kT >= self.kT_min) & (kT <= self.kT_max)
         if self.nh_field is not None:
-            nH = np.ravel(chunk[self.nh_field].d)
-            cut &= nH >= self.nH_min #) & (nH <= self.nH_max)
+            nH = np.ravel(chunk[self.nh_field].d[cut])
         else:
             nH = None
 
@@ -448,6 +446,8 @@ class ThermalSourceModel(SourceModel):
 
         kT_idxs = np.digitize(kT, self.kT_bins)-1
 
+        print(kT_idxs.min(), kT_idxs.max())
+
         cell_nrm = np.ravel(
             chunk[self.emission_measure_field].d[cut]*self.spectral_norm
         )
@@ -456,9 +456,6 @@ class ThermalSourceModel(SourceModel):
             X_H = self.h_fraction
         else:
             X_H = np.ravel(chunk[self.h_fraction].d[cut])
-
-        if nH is not None:
-            nH = np.ravel(nH[cut])
 
         if self._nei:
             metalZ = np.zeros(num_cells)
@@ -530,6 +527,7 @@ class ThermalSourceModel(SourceModel):
             if mode in ["photons", "photon_field"]:
 
                 spec_sum = tot_spec.sum(axis=-1)
+                                
                 cell_norm = spec_sum*cnm
 
                 if mode == "photons":
@@ -603,7 +601,7 @@ class IGMSourceModel(ThermalSourceModel):
                  max_density=5.0e-25, var_elem=None, method="invert_cdf", prng=None):
         spectral_model = IGMSpectralModel(emin, emax, resonant_scattering=resonant_scattering,
                                           cxb_factor=cxb_factor, var_elem=var_elem)
-        kT_min = 10**spectral_model.Tvals[0]/K_per_keV
+        kT_min = 1.0e5/K_per_keV
         nH_min = 10**spectral_model.Dvals[0]
         nH_max = 10**spectral_model.Dvals[-1]
         super().__init__(spectral_model, emin, emax, Zmet, kT_min=kT_min, kT_max=kT_max,
@@ -612,7 +610,6 @@ class IGMSourceModel(ThermalSourceModel):
                          abund_table="feld", prng=prng, temperature_field=temperature_field, 
                          h_fraction=h_fraction, emission_measure_field=emission_measure_field)
         self.nh_field = nh_field
-        self.kT_switch = self.spectral_model.max_table_kT
 
 
 class ApecSourceModel(ThermalSourceModel):
