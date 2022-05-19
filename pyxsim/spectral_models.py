@@ -167,7 +167,9 @@ class IGMSpectralModel(ThermalSpectralModel):
         self.igen = IGMGenerator(emin, emax, resonant_scattering=resonant_scattering,
                                  cxb_factor=cxb_factor, use_var_elem=use_var_elem)
         self.var_elem = var_elem
+        self.nvar_elem = self.igen.nvar_elem
         self.max_table_kT = 10**self.igen.Tvals[-1] / K_per_keV
+        self.max_table_nH = 10**self.igen.Dvals[-1]
         self.Tvals = self.igen.Tvals
         self.Dvals = self.igen.Dvals
         self.dTvals = self.igen.dTvals
@@ -191,7 +193,30 @@ class IGMSpectralModel(ThermalSpectralModel):
         self.var_spec = var_spec
         self.apec_model.prepare_spectrum(zobs, self.max_table_kT, kT_max)
 
-    def get_spectrum(self, kT, nH):
+    def get_spectrum(self, kT, nH, kT_mid):
+        use_apec = (kT > self.max_table_kT) | (nH > self.max_table_nH)
+        cspec = np.zeros((kT.size, self.ne))
+        mspec = np.zeros((kT.size, self.ne))
+        n_apec = use_apec.sum()
+        n_igm = kT.size - n_apec
+        if n_igm > 0:
+            c1, m1, v1 = self._get_spectrum_2d(kT[~use_apec], nH[~use_apec])
+            cspec[~use_apec, :] = c1/nH[~use_apec,np.newaxis]
+            mspec[~use_apec, :] = m1/nH[~use_apec,np.newaxis]
+            if self.var_spec is not None:
+                vspec[:,~use_apec,:] = v1/nH[~use_apec,np.newaxis,np.newaxis]
+        if n_apec > 0:
+            c2, m2, v2 = self._get_spectrum_1d(kT_mid)
+            cspec[use_apec, :] = c2
+            mspec[use_apec, :] = m2
+            if self.var_spec is not None:
+                vspec[:,use_apec,:] = v2
+        return cspec, mspec, vspec
+
+    def _get_spectrum_1d(self, kT):
+        cspec, mspec, vspec = self.apec_model.get_spectrum(kT_mid)
+        
+    def _get_spectrum_2d(self, kT, nH):
         lkT = np.atleast_1d(np.log10(kT*K_per_keV))
         lnH = np.atleast_1d(np.log10(nH))
         tidxs = np.searchsorted(self.Tvals, lkT)-1

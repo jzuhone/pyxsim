@@ -404,7 +404,7 @@ class ThermalSourceModel(SourceModel):
             spec += self.process_data("spectrum", chunk)
         ebins = YTArray(self.spectral_model.ebins, "keV")
         return ebins, YTArray(spec, "photons/s")
-
+    
     def process_data(self, mode, chunk):
 
         orig_shape = chunk[self.temperature_field].shape
@@ -429,7 +429,7 @@ class ThermalSourceModel(SourceModel):
         cut &= (kT >= self.kT_min) & (kT <= self.kT_max)
         if self.nh_field is not None:
             nH = np.ravel(chunk[self.nh_field].d)
-            cut &= (nH >= self.nH_min) & (nH <= self.nH_max)
+            cut &= nH >= self.nH_min #) & (nH <= self.nH_max)
         else:
             nH = None
 
@@ -515,12 +515,9 @@ class ThermalSourceModel(SourceModel):
             cnm = cell_nrm[bin_idxs]
             
             if self._photoionization:
-                if kT_mid <= self.kT_switch:
-                    nHi = nH[bin_idxs]
-                    cspec, mspec, vspec = self.spectral_model.get_spectrum(kT[bin_idxs], nH=nHi)
-                    cnm /= nHi
-                else:
-                    cspec, mspec, vspec = self.spectral_model.apec_model.get_spectrum(kT_mid)
+                nHi = nH[bin_idxs]
+                kTi = kT[bin_idxs]
+                cspec, mspec, vspec = self.spectral_model.get_spectrum(kTi, nHi, kT_mid)
             else:
                 cspec, mspec, vspec = self.spectral_model.get_spectrum(kT_mid)
 
