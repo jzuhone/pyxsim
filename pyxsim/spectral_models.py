@@ -192,7 +192,7 @@ class IGMSpectralModel(ThermalSpectralModel):
         self.var_spec = var_spec
         self.apec_model.prepare_spectrum(zobs, kT_min, kT_max)
 
-    def get_spectrum(self, kT, nH, kT_mid):
+    def get_spectrum(self, kT, nH):
         kT = np.atleast_1d(kT)
         nH = np.atleast_1d(nH)
         use_igm = (kT >= self.min_table_kT) & (kT <= self.max_table_kT)
@@ -214,7 +214,7 @@ class IGMSpectralModel(ThermalSpectralModel):
             if self.var_spec is not None:
                 vspec[:,use_igm,:] = v1/nHi[:,np.newaxis,np.newaxis]
         if n_apec > 0:
-            c2, m2, v2 = self.apec_model.get_spectrum(kT_mid)
+            c2, m2, v2 = self.apec_model.get_spectrum(kT[use_apec])
             cspec[use_apec, :] = c2
             mspec[use_apec, :] = m2
             if self.var_spec is not None:
