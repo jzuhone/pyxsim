@@ -79,12 +79,12 @@ class SourceModel:
         
     def compute_radius(self, pos):
         for i in range(3):
-            if ds.periodicity[i]:
-                tfl = pos[i] < le[i]
-                tfr = pos[i] > re[i]
-                pos[tfl] += dw[i]
-                pos[tfr] -= dw[i]
-        return np.sum((pos-c)**2, axis=0)
+            if self.periodicity[i]:
+                tfl = pos[i] < self.le[i]
+                tfr = pos[i] > self.re[i]
+                pos[:,tfl] += self.dw[i]
+                pos[:,tfr] -= self.dw[i]
+        return np.sum((pos-self.c[:,np.newaxis])**2, axis=0)
 
     def cleanup_model(self):    
         pass
