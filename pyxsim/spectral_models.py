@@ -212,7 +212,7 @@ class IGMSpectralModel(ThermalSpectralModel):
             cspec[use_igm, :] = c1/nHi[:,np.newaxis]
             mspec[use_igm, :] = m1/nHi[:,np.newaxis]
             if self.var_spec is not None:
-                vspec[:,use_igm,:] = v1/nHi[:,np.newaxis,np.newaxis]
+                vspec[:,use_igm,:] = v1/nHi[np.newaxis,:,np.newaxis]
         if n_apec > 0:
             c2, m2, v2 = self.apec_model.get_spectrum(kT[use_apec])
             cspec[use_apec, :] = c2
