@@ -380,75 +380,10 @@ def make_photons(photon_prefix, data_source, redshift, area,
     return all_nphotons, all_ncells
 
 
-def project_photons(photon_prefix, event_prefix, normal, sky_center,
-                    absorb_model=None, nH=None, no_shifting=False,
-                    north_vector=None, sigma_pos=None,
-                    kernel="top_hat", prng=None):
-    r"""
-    Projects photons onto an image plane given a line of sight, and
-    stores them in an HDF5 dataset which contains an event list.
-
-    Parameters
-    ----------
-    photon_prefix : string
-        The prefix of the filename(s) containing the photon list. If run in
-        serial, the filename will be "{photon_prefix}.h5", if run in
-        parallel, the filenames will be "{photon_prefix}.{mpi_rank}.h5".
-    event_prefix : string
-        The prefix of the filename(s) which will be written to contain the
-        event list. If run in serial, the filename will be "{event_prefix}.h5",
-        if run in parallel, the filename will be "{event_prefix}.{mpi_rank}.h5".
-    normal : character or array-like
-        Normal vector to the plane of projection. If "x", "y", or "z", will
-        assume to be along that axis (and will probably be faster). Otherwise,
-        should be an off-axis normal vector, e.g [1.0, 2.0, -3.0]
-    sky_center : array-like
-        Center RA, Dec of the events in degrees.
-    absorb_model : string or :class:`~pyxsim.spectral_models.AbsorptionModel`
-        A model for foreground galactic absorption, to simulate the
-        absorption of events before being detected. This cannot be applied
-        here if you already did this step previously in the creation of the
-        :class:`~pyxsim.photon_list.PhotonList` instance. Known options for
-        strings are "wabs" and "tbabs".
-    nH : float, optional
-        The foreground column density in units of 10^22 cm^{-2}. Only used
-        if absorption is applied.
-    no_shifting : boolean, optional
-        If set, the photon energies will not be Doppler shifted.
-    north_vector : a sequence of floats
-        A vector defining the "up" direction. This option sets the
-        orientation of the plane of projection. If not set, an arbitrary
-        grid-aligned north_vector is chosen. Ignored in the case where a
-        particular axis (e.g., "x", "y", or "z") is explicitly specified.
-    sigma_pos : float, optional
-        Apply a gaussian smoothing operation to the sky positions of the
-        events. This may be useful when the binned events appear blocky due
-        to their uniform distribution within simulation cells. However, this
-        will move the events away from their originating position on the
-        sky, and so may distort surface brightness profiles and/or spectra.
-        Should probably only be used for visualization purposes. Supply a
-        float here to smooth with a standard deviation with this fraction
-        of the cell size. Default: None
-    kernel : string, optional
-        The kernel used when smoothing positions of X-rays originating from
-        SPH particles, "gaussian" or "top_hat". Default: "top_hat".
-    prng : integer or :class:`~numpy.random.RandomState` object 
-        A pseudo-random number generator. Typically will only be specified
-        if you have a reason to generate the same set of random numbers,
-        such as for a test. Default is to use the :mod:`numpy.random`
-        module.
-
-    Returns
-    -------
-    A integer for the number of events created
-
-    Examples
-    --------
-    >>> L = np.array([0.1,-0.2,0.3])
-    >>> n_events = pyxsim.project_photons("my_photons.h5", "my_events.h5", L,
-    ...                                   [30., 45.], absorb_model='tbabs',
-    ...                                   nH=0.04)
-    """
+def _project_photons(obs, photon_prefix, event_prefix, normal,
+                     sky_center, absorb_model=None, nH=None,
+                     no_shifting=False, north_vector=None,
+                     sigma_pos=None, kernel="top_hat", prng=None):
     from yt.funcs import ensure_numpy_array
     prng = parse_prng(prng)
 
@@ -502,7 +437,12 @@ def project_photons(photon_prefix, event_prefix, normal, sky_center,
         observer = p["observer"].asstr()[()]
     else:
         observer = "external"
-        
+    if obs != observer:
+        which_func = {"external": "",
+                      "internal": "_allsky"}
+        raise RuntimeError(f"The function 'project_photons{which_func['obs']}' "
+                           f"does not work with '{observer}' photon lists!")
+
     if observer == "internal" and isinstance(normal, str):
         raise RuntimeError("Must specify a vector for 'normal' if you are "
                            "doing an 'internal' observation!")
@@ -653,7 +593,131 @@ def project_photons(photon_prefix, event_prefix, normal, sky_center,
     return all_nevents
 
 
+def project_photons(photon_prefix, event_prefix, normal, sky_center,
+                    absorb_model=None, nH=None, no_shifting=False,
+                    north_vector=None, sigma_pos=None,
+                    kernel="top_hat", prng=None):
+    r"""
+    Projects photons onto an image plane given a line of sight, and
+    stores them in an HDF5 dataset which contains an event list.
+
+    Parameters
+    ----------
+    photon_prefix : string
+        The prefix of the filename(s) containing the photon list. If run in
+        serial, the filename will be "{photon_prefix}.h5", if run in
+        parallel, the filenames will be "{photon_prefix}.{mpi_rank}.h5".
+    event_prefix : string
+        The prefix of the filename(s) which will be written to contain the
+        event list. If run in serial, the filename will be "{event_prefix}.h5",
+        if run in parallel, the filename will be "{event_prefix}.{mpi_rank}.h5".
+    normal : character or array-like
+        Normal vector to the plane of projection. If "x", "y", or "z", will
+        assume to be along that axis (and will probably be faster). Otherwise,
+        should be an off-axis normal vector, e.g [1.0, 2.0, -3.0]
+    sky_center : array-like
+        Center RA, Dec of the events in degrees.
+    absorb_model : string or :class:`~pyxsim.spectral_models.AbsorptionModel`
+        A model for foreground galactic absorption, to simulate the
+        absorption of events before being detected. This cannot be applied
+        here if you already did this step previously in the creation of the
+        :class:`~pyxsim.photon_list.PhotonList` instance. Known options for
+        strings are "wabs" and "tbabs".
+    nH : float, optional
+        The foreground column density in units of 10^22 cm^{-2}. Only used
+        if absorption is applied.
+    no_shifting : boolean, optional
+        If set, the photon energies will not be Doppler shifted.
+    north_vector : a sequence of floats
+        A vector defining the "up" direction. This option sets the
+        orientation of the plane of projection. If not set, an arbitrary
+        grid-aligned north_vector is chosen. Ignored in the case where a
+        particular axis (e.g., "x", "y", or "z") is explicitly specified.
+    sigma_pos : float, optional
+        Apply a gaussian smoothing operation to the sky positions of the
+        events. This may be useful when the binned events appear blocky due
+        to their uniform distribution within simulation cells. However, this
+        will move the events away from their originating position on the
+        sky, and so may distort surface brightness profiles and/or spectra.
+        Should probably only be used for visualization purposes. Supply a
+        float here to smooth with a standard deviation with this fraction
+        of the cell size. Default: None
+    kernel : string, optional
+        The kernel used when smoothing positions of X-rays originating from
+        SPH particles, "gaussian" or "top_hat". Default: "top_hat".
+    prng : integer or :class:`~numpy.random.RandomState` object
+        A pseudo-random number generator. Typically will only be specified
+        if you have a reason to generate the same set of random numbers,
+        such as for a test. Default is to use the :mod:`numpy.random`
+        module.
+
+    Returns
+    -------
+    A integer for the number of events created
+
+    Examples
+    --------
+    >>> L = np.array([0.1,-0.2,0.3])
+    >>> n_events = pyxsim.project_photons("my_photons.h5", "my_events.h5", L,
+    ...                                   [30., 45.], absorb_model='tbabs',
+    ...                                   nH=0.04)
+    """
+    return _project_photons("external", photon_prefix, event_prefix, normal,
+                            sky_center, absorb_model=absorb_model, nH=nH,
+                            no_shifting=no_shifting, north_vector=north_vector,
+                            sigma_pos=sigma_pos, kernel=kernel, prng=prng)
+
+
 def project_photons_allsky(photon_prefix, event_prefix, normal,
-                           no_shifting=False, kernel="top_hat", prng=None):
-    return project_photons(photon_prefix, event_prefix, normal, [0.0, 0.0],
-                           no_shifting=no_shifting, kernel=kernel, prng=prng)
+                           absorb_model=None, nH=None, no_shifting=False,
+                           kernel="top_hat", prng=None):
+    r"""
+    Projects photons onto the sky sphere given a normal vector, and
+    stores them in an HDF5 dataset which contains an event list.
+
+    Parameters
+    ----------
+    photon_prefix : string
+        The prefix of the filename(s) containing the photon list. If run in
+        serial, the filename will be "{photon_prefix}.h5", if run in
+        parallel, the filenames will be "{photon_prefix}.{mpi_rank}.h5".
+    event_prefix : string
+        The prefix of the filename(s) which will be written to contain the
+        event list. If run in serial, the filename will be "{event_prefix}.h5",
+        if run in parallel, the filename will be "{event_prefix}.{mpi_rank}.h5".
+    normal : character or array-like
+        Normal vector to the plane of projection. If "x", "y", or "z", will
+        assume to be along that axis (and will probably be faster). Otherwise,
+        should be an off-axis normal vector, e.g [1.0, 2.0, -3.0]
+    absorb_model : string or :class:`~pyxsim.spectral_models.AbsorptionModel`
+        A model for foreground galactic absorption, to simulate the
+        absorption of events before being detected. This cannot be applied
+        here if you already did this step previously in the creation of the
+        :class:`~pyxsim.photon_list.PhotonList` instance. Known options for
+        strings are "wabs" and "tbabs".
+    nH : float, optional
+        The foreground column density in units of 10^22 cm^{-2}. Only used
+        if absorption is applied.
+    no_shifting : boolean, optional
+        If set, the photon energies will not be Doppler shifted.
+    kernel : string, optional
+        The kernel used when smoothing positions of X-rays originating from
+        SPH particles, "gaussian" or "top_hat". Default: "top_hat".
+    prng : integer or :class:`~numpy.random.RandomState` object
+        A pseudo-random number generator. Typically will only be specified
+        if you have a reason to generate the same set of random numbers,
+        such as for a test. Default is to use the :mod:`numpy.random`
+        module.
+
+    Returns
+    -------
+    A integer for the number of events created
+
+    Examples
+    --------
+    >>> L = np.array([0.1,-0.2,0.3])
+    >>> n_events = pyxsim.project_photons_allsky("my_photons.h5", "my_events.h5", L)
+    """
+    return _project_photons("internal", photon_prefix, event_prefix, normal,
+                            [0.0, 0.0], absorb_model=absorb_model, nH=nH,
+                            no_shifting=no_shifting, kernel=kernel, prng=prng)
