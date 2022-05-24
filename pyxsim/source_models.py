@@ -525,7 +525,7 @@ class ThermalSourceModel(SourceModel):
                     end_e += int(cell_n.sum())
 
                     norm_factor = 1.0 / spec_sum
-                    p = norm_factor[:,np.newaxis]*tot_spec
+                    p = norm_factor[:, np.newaxis]*tot_spec
                     cp = np.insert(np.cumsum(p, axis=-1), 0, 0.0, axis=1)
                     ei = start_e
                     for icell in range(nck):

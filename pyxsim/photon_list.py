@@ -149,8 +149,7 @@ def make_photons(photon_prefix, data_source, redshift, area,
 
     Examples
     --------
-    >>> thermal_model = pyxsim.ThermalSourceModel("apec",  0.1, 10.0,
-    ...                                           1000, Zmet=0.3)
+    >>> thermal_model = pyxsim.ApecSourceModel(0.1, 10.0, 1000, 0.3)
     >>> redshift = 0.05
     >>> area = 6000.0 # assumed here in cm**2
     >>> time = 2.0e5 # assumed here in seconds
