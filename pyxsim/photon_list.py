@@ -559,24 +559,23 @@ def project_photons(photon_prefix, event_prefix, normal, sky_center,
             end_c = min(start_c + cell_chunk, n_cells)
 
             n_ph = d["num_photons"][start_c:end_c]
+            x = d["x"][start_c:end_c]
+            y = d["y"][start_c:end_c]
+            z = d["z"][start_c:end_c]
             dx = d["dx"][start_c:end_c]
             end_e = start_e + n_ph.sum()
             eobs = d["energy"][start_e:end_e]
 
             if observer == "internal":
-                r_vec = np.array([d["x"][start_c:end_c],
-                                  d["y"][start_c:end_c],
-                                  d["z"][start_c:end_c]])
-                r = np.sqrt(np.sum(r_vec**2, axis=0))
+                r = np.sqrt(x*x+y*y+z*z)
             else:
-                r_vec = None
                 r = None
 
             if not no_shifting:
                 if observer == "internal":
-                    shift = (d["vx"][start_c:end_c] * r_vec[0,:]/r +
-                             d["vy"][start_c:end_c] * r_vec[1,:]/r +
-                             d["vz"][start_c:end_c] * r_vec[2,:]/r)
+                    shift = -(d["vx"][start_c:end_c] * x +
+                              d["vy"][start_c:end_c] * y +
+                              d["vz"][start_c:end_c] * z ) / r
                 else:
                     if isinstance(normal, str):
                         shift = d[f"v{normal}"][start_c:end_c]
@@ -599,10 +598,7 @@ def project_photons(photon_prefix, event_prefix, normal, sky_center,
                     
                     xsky, ysky = scatter_events(norm, prng, kernel, 
                                                 data_type, num_det, det, n_ph,
-                                                d["x"][start_c:end_c],
-                                                d["y"][start_c:end_c],
-                                                d["z"][start_c:end_c],
-                                                dx, x_hat, y_hat)
+                                                x, y, z, dx, x_hat, y_hat)
     
                     if data_type == "cells" and sigma_pos is not None:
                         sigma = sigma_pos*np.repeat(dx, n_ph)[det]
@@ -615,14 +611,13 @@ def project_photons(photon_prefix, event_prefix, normal, sky_center,
                     pixel_to_cel(xsky, ysky, sky_center)
 
                 elif observer == "internal":
-                    
-                    xsky, ysky = scatter_events_allsky(prng, kernel,
-                                                       data_type, num_det, det, n_ph,
+
+                    xsky, ysky = scatter_events_allsky(num_det, det, n_ph,
                                                        d["x"][start_c:end_c],
                                                        d["y"][start_c:end_c],
                                                        d["z"][start_c:end_c],
-                                                       dx, x_hat, y_hat, z_hat)
-                    
+                                                       x_hat, y_hat, z_hat)
+
                 if e_size < n_events + num_det:
                     while n_events + num_det > e_size:
                         e_size *= 2
@@ -657,3 +652,9 @@ def project_photons(photon_prefix, event_prefix, normal, sky_center,
     mylog.info(f"Detected {all_nevents} events.")
 
     return all_nevents
+
+
+def project_photons_allsky(photon_prefix, event_prefix, normal,
+                           no_shifting=False, kernel="top_hat", prng=None):
+    return project_photons(photon_prefix, event_prefix, normal, [0.0, 0.0],
+                           no_shifting=no_shifting, kernel=kernel, prng=prng)

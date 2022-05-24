@@ -45,6 +45,7 @@ class EventList:
                     for field in p:
                         self.parameters[field] = p[field][()]
         self.tot_num_events = np.sum(self.num_events)
+        self.observer = self.parameters["observer"]
 
     def write_fits_file(self, fitsfile, fov, nx, overwrite=False):
         """

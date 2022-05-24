@@ -29,6 +29,8 @@ solar_H_abund = 0.74
 
 sqrt_two = np.sqrt(2.)
 
+cm2_per_kpc2 = YTQuantity(1.0, "kpc**2").to_value("cm**2")
+
 
 class ParallelProgressBar:
     def __init__(self, title):
@@ -84,7 +86,7 @@ class SourceModel:
                 tfr = pos[i] > self.re[i]
                 pos[:,tfl] += self.dw[i]
                 pos[:,tfr] -= self.dw[i]
-        return np.sum((pos-self.c[:,np.newaxis])**2, axis=0)
+        return np.sum((pos-self.c[:,np.newaxis])**2, axis=0)*cm2_per_kpc2
 
     def cleanup_model(self):    
         pass
@@ -472,7 +474,7 @@ class ThermalSourceModel(SourceModel):
                     elemZ[j,:] = np.ravel(eZ.d[cut]*fac)
 
         if self.observer == "internal" and mode == "photons":
-            pos = np.array([np.ravel(chunk[self.p_fields[i]].d[cut]) 
+            pos = np.array([np.ravel(chunk[self.p_fields[i]].to_value("kpc")[cut])
                             for i in range(3)])
             r2 = self.compute_radius(pos)
             cell_nrm /= r2
@@ -902,6 +904,12 @@ class PowerLawSourceModel(SourceModel):
 
                 norm *= self.spectral_norm*self.scale_factor
 
+                if self.observer == "internal":
+                    pos = np.array([np.ravel(chunk[self.p_fields[i]].to_value("kpc"))
+                                    for i in range(3)])
+                    r2 = self.compute_radius(pos)
+                    norm /= r2
+
                 number_of_photons = self.prng.poisson(lam=norm)
 
                 energies = np.zeros(number_of_photons.sum())
@@ -1019,6 +1027,12 @@ class LineSourceModel(SourceModel):
         if mode == "photons":
 
             F = chunk[self.emission_field]*self.spectral_norm*self.scale_factor
+            if self.observer == "internal":
+                pos = np.array([np.ravel(chunk[self.p_fields[i]].to_value("kpc"))
+                                for i in range(3)])
+                r2 = self.compute_radius(pos)
+                F /= r2
+
             number_of_photons = self.prng.poisson(lam=F.in_cgs().d)
 
             energies = self.e0*np.ones(number_of_photons.sum())

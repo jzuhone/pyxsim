@@ -1,11 +1,12 @@
-__version__ = "3.0.1"
+__version__ = "4.0-dev"
 
 from pyxsim.event_list import \
     EventList
 
 from pyxsim.photon_list import \
     make_photons, \
-    project_photons
+    project_photons, \
+    project_photons_allsky
 
 from pyxsim.source_models import \
    SourceModel, \
