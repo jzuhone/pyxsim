@@ -551,10 +551,8 @@ def _project_photons(obs, photon_prefix, event_prefix, normal,
 
                 elif observer == "internal":
 
-                    xsky, ysky = scatter_events_allsky(num_det, det, n_ph,
-                                                       d["x"][start_c:end_c],
-                                                       d["y"][start_c:end_c],
-                                                       d["z"][start_c:end_c],
+                    xsky, ysky = scatter_events_allsky(data_type, kernel, prng, num_det,
+                                                       det, n_ph, x, y, z, dx,
                                                        x_hat, y_hat, z_hat)
 
                 if e_size < n_events + num_det:
