@@ -223,6 +223,8 @@ def scatter_events_allsky(data_type, kernel, prng, int num_det,
                       zsky[k] * z_hat[2])
                 rr = sqrt(xx * xx + yy * yy + zz * zz)
                 lon[k] = atan2(yy, xx)
+                if lon[k] < 0.0:
+                    lon[k] += 2.0*PI
                 lat[k] = 0.5*PI - acos(zz/rr)
                 lon[k] *= 180.0 / PI
                 lat[k] *= 180.0 / PI
