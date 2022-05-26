@@ -20,4 +20,5 @@ from pyxsim.spectral_models import \
     TableApecModel, \
     TBabsModel, WabsModel
 
-from pyxsim.utils import merge_files
+from pyxsim.utils import merge_files, \
+    compute_elem_mass_fraction

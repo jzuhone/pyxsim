@@ -3,6 +3,9 @@ from astropy.units import Quantity
 import logging
 from more_itertools import always_iterable
 import numpy as np
+from soxs.constants import elem_names, \
+    atomic_weights, abund_tables
+
 
 pyxsimLogger = logging.getLogger("pyxsim")
 
@@ -146,3 +149,15 @@ def merge_files(input_files, output_file, overwrite=False,
 
     f_out.close()
 
+
+def compute_elem_mass_fraction(elem, abund_table="angr"):
+    if isinstance(elem, str):
+        elem = elem_names.index(elem)
+    atable = abund_tables[abund_table]
+    mZ = (atomic_weights[3:]*atable[3:]).sum()
+    mE = atomic_weights[elem]/atable[elem]
+    return mE/mZ
+
+
+def compute_H_abund(abund_table):
+    return atomic_weights[1]/(atomic_weights*abund_tables[abund_table]).sum()

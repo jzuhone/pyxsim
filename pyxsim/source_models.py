@@ -9,7 +9,7 @@ from yt.units.yt_array import YTQuantity, YTArray
 from yt.utilities.physical_constants import clight
 from yt.utilities.cosmology import Cosmology
 from pyxsim.spectral_models import TableApecModel, IGMSpectralModel, K_per_keV
-from pyxsim.utils import parse_value, isunitful
+from pyxsim.utils import parse_value, isunitful, compute_H_abund
 from soxs.utils import parse_prng
 from soxs.constants import elem_names, atomic_weights, metal_elem, \
     abund_tables
@@ -24,8 +24,6 @@ gx = np.linspace(-6, 6, 2400)
 gcdf = norm.cdf(gx)
 
 comm = communication_system.communicators[-1]
-
-solar_H_abund = 0.74
 
 sqrt_two = np.sqrt(2.)
 
@@ -247,13 +245,6 @@ class SourceModel:
         return xray_fields
 
 
-metal_abund = {"angr": 0.0189,
-               "aspl": 0.0134,
-               "wilm": 0.0120,
-               "feld": 0.0191,
-               "lodd": 0.0132}
-
-
 class ThermalSourceModel(SourceModel):
     _photoionization = False
     _nei = False
@@ -291,9 +282,6 @@ class ThermalSourceModel(SourceModel):
         self.emission_measure_field = emission_measure_field
         self.density_field = None  # Will be determined later
         self.nh_field = None # Will be set by the subclass
-        if h_fraction is None:
-            h_fraction = solar_H_abund
-        self.h_fraction = h_fraction
         self.max_density = max_density
         self.tot_num_cells = 0  # Will be determined later
         self.ftype = "gas"
@@ -310,6 +298,9 @@ class ThermalSourceModel(SourceModel):
         self.Zconvert = 1.0
         self.mconvert = {}
         self.atable = abund_tables[abund_table].copy()
+        if h_fraction is None:
+            h_fraction = compute_H_abund(abund_table)
+        self.h_fraction = h_fraction
 
     def setup_model(self, data_source, redshift, spectral_norm):
         if isinstance(data_source, Dataset):
