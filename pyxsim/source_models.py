@@ -574,7 +574,7 @@ class IGMSourceModel(ThermalSourceModel):
     _photoionization = True
 
     def __init__(self, emin, emax, Zmet, nh_field, resonant_scattering=False,
-                 cxb_factor=1.0, temperature_field=None, emission_measure_field=None,
+                 cxb_factor=0.5, temperature_field=None, emission_measure_field=None,
                  h_fraction=None, kT_max=64.0, max_density=5.0e-25, var_elem=None,
                  method="invert_cdf", prng=None):
         spectral_model = IGMSpectralModel(emin, emax, resonant_scattering=resonant_scattering,

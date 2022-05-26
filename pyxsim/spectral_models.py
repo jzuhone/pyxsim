@@ -158,7 +158,7 @@ class TableApecModel(ThermalSpectralModel):
 
 
 class IGMSpectralModel(ThermalSpectralModel):
-    def __init__(self, emin, emax, resonant_scattering=False, cxb_factor=1.0,
+    def __init__(self, emin, emax, resonant_scattering=False, cxb_factor=0.5,
                  var_elem=None):
         use_var_elem = var_elem is not None
         self.igen = IGMGenerator(emin, emax, resonant_scattering=resonant_scattering,
