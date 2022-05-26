@@ -155,7 +155,7 @@ def compute_elem_mass_fraction(elem, abund_table="angr"):
         elem = elem_names.index(elem)
     atable = abund_tables[abund_table]
     mZ = (atomic_weights[3:]*atable[3:]).sum()
-    mE = atomic_weights[elem]/atable[elem]
+    mE = atomic_weights[elem]*atable[elem]
     return mE/mZ
 
 
