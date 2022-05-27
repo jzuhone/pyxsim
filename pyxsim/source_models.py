@@ -574,11 +574,16 @@ class IGMSourceModel(ThermalSourceModel):
     _photoionization = True
 
     def __init__(self, emin, emax, Zmet, nh_field, resonant_scattering=False,
-                 cxb_factor=0.5, temperature_field=None, emission_measure_field=None,
-                 h_fraction=None, kT_max=64.0, max_density=5.0e-25, var_elem=None,
-                 method="invert_cdf", prng=None):
+                 cxb_factor=0.5, var_elem_option=None, temperature_field=None, 
+                 emission_measure_field=None, h_fraction=None, kT_max=64.0, 
+                 max_density=5.0e-25, var_elem=None, method="invert_cdf", prng=None):
+        if var_elem_option is not None:
+            if var_elem is None:
+                raise RuntimeError(f"'var_elem_option' = {var_elem_option}, "
+                                   f"so 'var_elem' cannot be None!")
         spectral_model = IGMSpectralModel(emin, emax, resonant_scattering=resonant_scattering,
-                                          cxb_factor=cxb_factor, var_elem=var_elem)
+                                          cxb_factor=cxb_factor, var_elem_option=var_elem_option,
+                                          var_elem=list(var_elem.keys()))
         kT_min = 5.0e4/K_per_keV
         nH_min = 10**spectral_model.Dvals[0]
         nH_max = 10**spectral_model.Dvals[-1]

@@ -159,10 +159,16 @@ class TableApecModel(ThermalSpectralModel):
 
 class IGMSpectralModel(ThermalSpectralModel):
     def __init__(self, emin, emax, resonant_scattering=False, cxb_factor=0.5,
-                 var_elem=None):
-        use_var_elem = var_elem is not None
+                 var_elem_option=None, var_elem=None):
         self.igen = IGMGenerator(emin, emax, resonant_scattering=resonant_scattering,
-                                 cxb_factor=cxb_factor, use_var_elem=use_var_elem)
+                                 cxb_factor=cxb_factor, var_elem_option=var_elem_option)
+        if set(var_elem.keys()) != set(self.igen.var_elem):
+            raise RuntimeError("The supplied set of abundances does not match "
+                               "what is available for 'var_elem_option = "
+                               f"{self.igen.var_elem_option}!"
+                               "Free elements: %s\nAbundances: %s" % (set(var_elem.keys()),
+                                                                      set(self.igen.var_elem)))
+
         self.var_elem = var_elem
         self.nvar_elem = self.igen.nvar_elem
         self.min_table_kT = 10**self.igen.Tvals[0] / K_per_keV
