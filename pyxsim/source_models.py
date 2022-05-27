@@ -573,6 +573,83 @@ class IGMSourceModel(ThermalSourceModel):
     _nei = False
     _photoionization = True
 
+    r"""
+    A source model for a thermal plasma including photoionization and 
+    resonant scattering from the CXB based on Khabibullin & Churazov 2019
+    (https://ui.adsabs.harvard.edu/abs/2019MNRAS.482.4972K/) and Churazov 
+    et al. 2001 (https://ui.adsabs.harvard.edu/abs/2001MNRAS.323...93C/).
+
+    For temperatures higher than kT ~ 1.09 keV, APEC is used to compute the
+    spectrum. 
+    
+    Assumes the abundance tables from Feldman 1992.
+
+    Table data and README files can be found at
+    https://wwwmpa.mpa-garching.mpg.de/~ildar/igm/v2x/.
+
+    Parameters
+    ----------
+    emin : float, (value, unit) tuple, or :class:`~astropy.units.Quantity`
+        The minimum energy for the spectral model.
+    emax : float, (value, unit) tuple, or :class:`~astropy.units.Quantity`
+        The maximum energy for the spectral model.
+    Zmet : float, string, or tuple of strings
+        The metallicity. If a float, assumes a constant metallicity throughout
+        in solar units. If a string or tuple of strings, is taken to be the 
+        name of the metallicity field.
+    nh_field : string or (ftype, fname) tuple
+        The yt hydrogen nuclei density field (meaning all hydrogen, ionized or not) 
+        to use for the model. Must have units of cm**-3. 
+    resonant_scattering : boolean, optional
+        Whether or not to include the effects of resonant scattering
+        from CXB photons. Default: False
+    cxb_factor : float, optional
+        The fraction of the CXB photons that are resonant scattered to enhance
+        the lines. Default: 0.5
+    var_elem_option: integer, optional
+        An integer to choose between options for variable elements, which are:
+        1: specify abundances of O, Ne, and Fe separately from other metals
+        2: specify abundances of O, Ne, Mg, Si, S, and Fe separately from other
+           metals
+        Default: None, which means no metal abundances can be specified
+        separately.
+    temperature_field : string or (ftype, fname) tuple, optional
+        The yt temperature field to use for the thermal modeling. Must have
+        units of Kelvin. If not specified, the default temperature field for
+        the dataset will be used.
+    emission_measure_field : string or (ftype, fname) tuple, optional
+        The yt emission measure field to use for the thermal modeling. Must
+        have units of cm^-3. If not specified, the default emission measure
+        field for the dataset will be used or derived.
+    h_fraction : float, string, or tuple of strings, optional
+        The hydrogen mass fraction. If a float, assumes a constant mass 
+        fraction of hydrogen throughout. If a string or tuple of strings, 
+        is taken to be the name of the hydrogen fraction field. Defaults to
+        the appropriate value for the Feldman abundance tables.
+    kT_max : float, optional
+        The default maximum temperature in keV to compute emission for.
+        Default: 64.0
+    max_density : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
+        The maximum density of the cells or particles to use when generating 
+        photons. If a float, the units are assumed to be g/cm**3. 
+        Default: 5e-25 g/cm**3.
+    var_elem : dictionary, optional
+        Elements that should be allowed to vary freely from the single abundance
+        parameter. Each dictionary value, specified by the abundance symbol, 
+        corresponds to the abundance of that symbol. If a float, it is understood
+        to be constant and in solar units. If a string or tuple of strings, it is
+        assumed to be a spatially varying field. Must match what is specified by
+        var_elem_option. Default: None
+    method : string, optional
+        The method used to generate the photon energies from the spectrum:
+        "invert_cdf": Invert the cumulative distribution function of the spectrum.
+        "accept_reject": Acceptance-rejection method using the spectrum. 
+        The first method should be sufficient for most cases.
+    prng : integer or :class:`~numpy.random.RandomState` object 
+        A pseudo-random number generator. Typically will only be specified
+        if you have a reason to generate the same set of random numbers, 
+        such as for a test. Default is to use the :mod:`numpy.random` module.
+    """
     def __init__(self, emin, emax, Zmet, nh_field, resonant_scattering=False,
                  cxb_factor=0.5, var_elem_option=None, temperature_field=None, 
                  emission_measure_field=None, h_fraction=None, kT_max=64.0, 
@@ -597,6 +674,7 @@ class IGMSourceModel(ThermalSourceModel):
 
 class ApecSourceModel(ThermalSourceModel):
     _nei = False
+
     r"""
     Initialize a source model from a thermal spectrum, using the
     APEC tables from https://www.atomdb.org.
@@ -671,7 +749,7 @@ class ApecSourceModel(ThermalSourceModel):
         "wilm" : from Wilms, Allen & McCray (2000, ApJ 542, 914 
         except for elements not listed which are given zero abundance)
         "lodd" : from Lodders, K (2003, ApJ 591, 1220)
-        "feld" : from Feldman U. (Physica Scripta, 46, 202)
+        "feld" : from Feldman U. (1992, Physica Scripta, 46, 202)
     prng : integer or :class:`~numpy.random.RandomState` object 
         A pseudo-random number generator. Typically will only be specified
         if you have a reason to generate the same set of random numbers, 

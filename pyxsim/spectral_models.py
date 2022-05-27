@@ -158,6 +158,44 @@ class TableApecModel(ThermalSpectralModel):
 
 
 class IGMSpectralModel(ThermalSpectralModel):
+    r"""
+    A spectral model for a thermal plasma including photoionization and 
+    resonant scattering from the CXB based on Khabibullin & Churazov 2019
+    (https://ui.adsabs.harvard.edu/abs/2019MNRAS.482.4972K/) and Churazov 
+    et al. 2001 (https://ui.adsabs.harvard.edu/abs/2001MNRAS.323...93C/).
+     
+    For temperatures higher than kT ~ 1.09 keV, APEC is used to compute the
+    spectrum. 
+ 
+    Assumes the abundance tables from Feldman 1992.
+
+    Table data and README files can be found at
+    https://wwwmpa.mpa-garching.mpg.de/~ildar/igm/v2x/.
+
+    Parameters
+    ----------
+    emin : float, (value, unit) tuple, or :class:`~astropy.units.Quantity`
+        The minimum energy for the spectral model.
+    emax : float, (value, unit) tuple, or :class:`~astropy.units.Quantity`
+        The maximum energy for the spectral model.
+    resonant_scattering : boolean, optional
+        Whether or not to include the effects of resonant scattering
+        from CXB photons. Default: False
+    cxb_factor : float, optional
+        The fraction of the CXB photons that are resonant scattered to enhance
+        the lines. Default: 0.5
+    var_elem_option: integer, optional
+        An integer to choose between options for variable elements, which are:
+        1: specify abundances of O, Ne, and Fe separately from other metals
+        2: specify abundances of O, Ne, Mg, Si, S, and Fe separately from other
+           metals
+        Default: None, which means no metal abundances can be specified
+        separately.
+    var_elem : list of strings, optional
+        The names of elements to allow to vary freely
+        from the single abundance parameter. Default:
+        None
+    """
     def __init__(self, emin, emax, resonant_scattering=False, cxb_factor=0.5,
                  var_elem_option=None, var_elem=None):
         self.igen = IGMGenerator(emin, emax, resonant_scattering=resonant_scattering,
