@@ -658,9 +658,10 @@ class IGMSourceModel(ThermalSourceModel):
             if var_elem is None:
                 raise RuntimeError(f"'var_elem_option' = {var_elem_option}, "
                                    f"so 'var_elem' cannot be None!")
+        var_elem_keys = list(var_elem.keys()) if var_elem else None
         spectral_model = IGMSpectralModel(emin, emax, resonant_scattering=resonant_scattering,
                                           cxb_factor=cxb_factor, var_elem_option=var_elem_option,
-                                          var_elem=list(var_elem.keys()))
+                                          var_elem=var_elem_keys)
         kT_min = 5.0e4/K_per_keV
         nH_min = 10**spectral_model.Dvals[0]
         nH_max = 10**spectral_model.Dvals[-1]
@@ -768,7 +769,7 @@ class CIESourceModel(ThermalSourceModel):
                  kT_max=64.0, max_density=5.0e-25, var_elem=None, method="invert_cdf",
                  thermal_broad=True, model_root=None, model_vers=None, nolines=False,
                  abund_table="angr", prng=None):
-        var_elem_keys = list(var_elem.keys()) if var_elem is not None else None
+        var_elem_keys = list(var_elem.keys()) if var_elem else None
         spectral_model = TableCIEModel(model, emin, emax, nchan,
                                        binscale=binscale,
                                        var_elem=var_elem_keys,
