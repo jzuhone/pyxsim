@@ -203,7 +203,7 @@ class IGMSpectralModel(ThermalSpectralModel):
                  var_elem_option=None, var_elem=None):
         self.igen = IGMGenerator(emin, emax, resonant_scattering=resonant_scattering,
                                  cxb_factor=cxb_factor, var_elem_option=var_elem_option)
-        if set(var_elem.keys()) != set(self.igen.var_elem):
+        if set(var_elem) != set(self.igen.var_elem):
             raise RuntimeError("The supplied set of abundances does not match "
                                "what is available for 'var_elem_option = "
                                f"{self.igen.var_elem_option}!\n"
