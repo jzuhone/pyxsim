@@ -10,7 +10,7 @@ from yt.utilities.cosmology import Cosmology
 from yt.utilities.orientation import Orientation
 from yt.utilities.parallel_tools.parallel_analysis_interface import \
     communication_system
-from yt.units.yt_array import YTArray
+from unyt.array import unyt_array
 import h5py
 from pyxsim.spectral_models import absorb_models
 from pyxsim.utils import parse_value, mylog
@@ -90,7 +90,7 @@ def make_photons(photon_prefix, data_source, redshift, area,
                  exp_time, source_model, point_sources=False,
                  parameters=None, center=None, dist=None,
                  cosmology=None, velocity_fields=None,
-                 observer="external"):
+                 bulk_velocity=None, observer="external"):
     r"""
     Write a photon list dataset to disk from a yt data source and assuming a
     source model for the photons. The redshift, collecting area, exposure time,
@@ -141,6 +141,10 @@ def make_photons(photon_prefix, data_source, redshift, area,
         following will be assumed:
         ['velocity_x', 'velocity_y', 'velocity_z'] for grid datasets
         ['particle_velocity_x', 'particle_velocity_y', 'particle_velocity_z'] for particle datasets
+    bulk_velocity : array-like, optional
+        A 3-element array or list specifying the local velocity frame of
+        reference. If not a :class:`~yt.units.yt_array.YTArray`, it is assumed
+        to have units of km/s. Default: [0.0, 0.0, 0.0] km/s.
 
     Returns
     -------
@@ -203,7 +207,7 @@ def make_photons(photon_prefix, data_source, redshift, area,
             parameters["center"] = ds.domain_center
         elif center == "max" or center == "m":
             parameters["center"] = ds.find_max("density")[-1]
-    elif isinstance(center, YTArray):
+    elif isinstance(center, unyt_array):
         parameters["center"] = center.in_units("code_length")
     elif isinstance(center, tuple):
         if center[0] == "min":
@@ -220,6 +224,13 @@ def make_photons(photon_prefix, data_source, redshift, area,
                                         data_source.right_edge)
         else:
             parameters["center"] = data_source.get_field_parameter("center")
+
+    if bulk_velocity is None:
+        bulk_velocity = ds.arr([0.0]*3, "km/s")
+    elif isinstance(bulk_velocity, unyt_array):
+        bulk_velocity = bulk_velocity.to("km/s")
+    elif isinstance(bulk_velocity, (list, np.ndarray)):
+        bulk_velocity = ds.arr(bulk_velocity, "km/s")
 
     parameters["fid_exp_time"] = parse_value(exp_time, "s")
     parameters["fid_area"] = parse_value(area, "cm**2")
@@ -341,7 +352,8 @@ def make_photons(photon_prefix, data_source, redshift, area,
                 vel = chunk[v_fields[i]][idxs].to_value("km/s")
                 # Coordinates are centered
                 d[ax][c_offset:c_offset+chunk_nc] = pos-c[i]
-                d[f"v{ax}"][c_offset:c_offset+chunk_nc] = vel
+                # Velocities have the bulk velocity subtracted off
+                d[f"v{ax}"][c_offset:c_offset+chunk_nc] = vel-bulk_velocity[i]
 
             d["num_photons"][c_offset:c_offset+chunk_nc] = number_of_photons
             d["energy"][p_offset:p_offset+chunk_nph] = energies
