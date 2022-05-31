@@ -1,10 +1,10 @@
-from pyxsim import TableApecModel
+from pyxsim import TableCIEModel
 from numpy.testing import assert_allclose
 
 
 def test_apec():
 
-    amod = TableApecModel(0.1, 10.0, 10000, thermal_broad=True)
+    amod = TableCIEModel("apec", 0.1, 10.0, 10000, thermal_broad=True)
     amod.prepare_spectrum(0.2, 1, 10)
 
     acspec, amspec, _ = amod.get_spectrum(6.0)

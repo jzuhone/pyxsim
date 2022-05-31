@@ -3,8 +3,8 @@ Photon emission and absoprtion models.
 """
 import numpy as np
 
-from soxs.apec import ApecGenerator
-from soxs.igm import IGMGenerator
+from soxs.cie import CIEGenerator
+from soxs.pion import IGMGenerator
 from soxs.spectra import \
     get_wabs_absorb, get_tbabs_absorb
 from soxs.utils import parse_prng
@@ -20,7 +20,7 @@ class ThermalSpectralModel:
     pass
 
 
-class TableApecModel(ThermalSpectralModel):
+class TableCIEModel(ThermalSpectralModel):
     r"""
     Initialize a thermal gas emission model from the AtomDB APEC tables
     available at http://www.atomdb.org. This code borrows heavily from Python
@@ -38,6 +38,9 @@ class TableApecModel(ThermalSpectralModel):
         is thermally broadening lines, it is recommended that 
         this value result in an energy resolution per channel
         of roughly 1 eV.
+    binscale : string, optional
+        The scale of the energy binning: "linear" or "log". 
+        Default: "linear"
     var_elem : list of strings, optional
         The names of elements to allow to vary freely
         from the single abundance parameter. Default:
@@ -75,34 +78,34 @@ class TableApecModel(ThermalSpectralModel):
 
     Examples
     --------
-    >>> apec_model = TableApecModel(0.05, 50.0, 1000, apec_vers="3.0.3",
-    ...                             thermal_broad=False)
+    >>> apec_model = TableCIEModel("apec", 0.05, 50.0, 1000, model_vers="3.0.3",
+    ...                            thermal_broad=False)
     """
-    def __init__(self, emin, emax, nchan, binscale="linear", var_elem=None,
+    def __init__(self, model, emin, emax, nchan, binscale="linear", var_elem=None,
                  model_root=None, model_vers=None, 
                  thermal_broad=True, nolines=False,
                  abund_table="angr", nei=False):
-        self.agen = ApecGenerator(emin, emax, nchan, binscale=binscale, 
-                                  var_elem=var_elem, apec_root=model_root, 
-                                  apec_vers=model_vers, broadening=thermal_broad, 
-                                  nolines=nolines, abund_table=abund_table, nei=nei)
-        self.nchan = self.agen.nbins
-        self.ebins = self.agen.ebins
-        self.emid = self.agen.emid
-        self.var_elem_names = self.agen.var_elem_names
-        self.var_ion_names = self.agen.var_ion_names
-        self.atable = self.agen.atable
+        self.cgen = CIEGenerator(model, emin, emax, nchan, binscale=binscale, 
+                                 var_elem=var_elem, model_root=model_root, 
+                                 model_vers=model_vers, broadening=thermal_broad, 
+                                 nolines=nolines, abund_table=abund_table, nei=nei)
+        self.nchan = self.cgen.nbins
+        self.ebins = self.cgen.ebins
+        self.emid = self.cgen.emid
+        self.var_elem_names = self.cgen.var_elem_names
+        self.var_ion_names = self.cgen.var_ion_names
+        self.atable = self.cgen.atable
         self.de = np.diff(self.ebins)
 
     def prepare_spectrum(self, zobs, kT_min, kT_max):
         """
         Prepare the thermal model for execution given a redshift *zobs* for the spectrum.
         """
-        idx_min = max(np.searchsorted(self.agen.Tvals, kT_min)-1, 0)
-        idx_max = min(np.searchsorted(self.agen.Tvals, kT_max)+1, self.agen.nT-1)
+        idx_min = max(np.searchsorted(self.cgen.Tvals, kT_min)-1, 0)
+        idx_max = min(np.searchsorted(self.cgen.Tvals, kT_max)+1, self.cgen.nT-1)
         cosmic_spec, metal_spec, var_spec = \
-            self.agen._get_table(list(range(idx_min, idx_max)), zobs, 0.0)
-        self.Tvals = self.agen.Tvals[idx_min:idx_max]
+            self.cgen._get_table(list(range(idx_min, idx_max)), zobs, 0.0)
+        self.Tvals = self.cgen.Tvals[idx_min:idx_max]
         self.nT = self.Tvals.size
         self.dTvals = np.diff(self.Tvals)
         self.cosmic_spec = cosmic_spec
@@ -152,7 +155,7 @@ class TableApecModel(ThermalSpectralModel):
             A dictionary of elemental abundances to vary
             freely of the abund parameter. Default: None
         """
-        spec = self.agen.get_spectrum(temperature, metallicity, redshift, norm, 
+        spec = self.cgen.get_spectrum(temperature, metallicity, redshift, norm, 
                                       velocity=velocity, elem_abund=elem_abund)
         return YTArray(spec.flux*spec.de, "photons/s/cm**2")
 
@@ -203,7 +206,7 @@ class IGMSpectralModel(ThermalSpectralModel):
         if set(var_elem.keys()) != set(self.igen.var_elem):
             raise RuntimeError("The supplied set of abundances does not match "
                                "what is available for 'var_elem_option = "
-                               f"{self.igen.var_elem_option}!"
+                               f"{self.igen.var_elem_option}!\n"
                                "Free elements: %s\nAbundances: %s" % (set(var_elem.keys()),
                                                                       set(self.igen.var_elem)))
 
@@ -225,9 +228,9 @@ class IGMSpectralModel(ThermalSpectralModel):
         Prepare the thermal model for execution given a redshift *zobs* for the spectrum.
         """
         eidxs, self.ne, self.ebins, self.emid, self.de = self.igen._get_energies(zobs)
-        self.apec_model = TableApecModel(self.ebins[0], self.ebins[-1], self.ne,
-                                         binscale="log", var_elem=self.var_elem,
-                                         abund_table="feld")
+        self.apec_model = TableCIEModel("apec", self.ebins[0], self.ebins[-1], self.ne,
+                                        binscale="log", var_elem=self.var_elem,
+                                        abund_table="feld")
         cosmic_spec, metal_spec, var_spec = self.igen._get_table(self.ne, eidxs, zobs)
         self.cosmic_spec = 1.0e-14*cosmic_spec
         self.metal_spec = 1.0e-14*metal_spec

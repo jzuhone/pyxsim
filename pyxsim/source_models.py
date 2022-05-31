@@ -8,7 +8,7 @@ from yt.data_objects.static_output import Dataset
 from yt.units.yt_array import YTQuantity, YTArray
 from yt.utilities.physical_constants import clight
 from yt.utilities.cosmology import Cosmology
-from pyxsim.spectral_models import TableApecModel, IGMSpectralModel, K_per_keV
+from pyxsim.spectral_models import TableCIEModel, IGMSpectralModel, K_per_keV
 from pyxsim.utils import parse_value, isunitful, compute_H_abund
 from soxs.utils import parse_prng
 from soxs.constants import elem_names, atomic_weights, metal_elem, \
@@ -672,9 +672,9 @@ class IGMSourceModel(ThermalSourceModel):
         self.nh_field = nh_field
 
 
-class ApecSourceModel(ThermalSourceModel):
+class CIESourceModel(ThermalSourceModel):
     _nei = False
-
+    _photoionization = False
     r"""
     Initialize a source model from a thermal spectrum, using the
     APEC tables from https://www.atomdb.org.
@@ -691,6 +691,9 @@ class ApecSourceModel(ThermalSourceModel):
         The metallicity. If a float, assumes a constant metallicity throughout
         in solar units. If a string or tuple of strings, is taken to be the 
         name of the metallicity field.
+    binscale : string, optional
+        The scale of the energy binning: "linear" or "log". 
+        Default: "linear"
     temperature_field : string or (ftype, fname) tuple, optional
         The yt temperature field to use for the thermal modeling. Must have
         units of Kelvin. If not specified, the default temperature field for
@@ -760,20 +763,20 @@ class ApecSourceModel(ThermalSourceModel):
     >>> source_model = ApecSourceModel(0.1, 10.0, 10000,
     ...                                ("gas", "metallicity"))
     """
-    def __init__(self, emin, emax, nchan, Zmet, binscale="linear", temperature_field=None,
+    def __init__(self, model, emin, emax, nchan, Zmet, binscale="linear", temperature_field=None,
                  emission_measure_field=None, h_fraction=None, kT_min=0.025,
                  kT_max=64.0, max_density=5.0e-25, var_elem=None, method="invert_cdf",
                  thermal_broad=True, model_root=None, model_vers=None, nolines=False,
                  abund_table="angr", prng=None):
         var_elem_keys = list(var_elem.keys()) if var_elem is not None else None
-        spectral_model = TableApecModel(emin, emax, nchan,
-                                        binscale=binscale,
-                                        var_elem=var_elem_keys,
-                                        thermal_broad=thermal_broad,
-                                        model_root=model_root,
-                                        model_vers=model_vers,
-                                        nolines=nolines, nei=self._nei,
-                                        abund_table=abund_table)
+        spectral_model = TableCIEModel(model, emin, emax, nchan,
+                                       binscale=binscale,
+                                       var_elem=var_elem_keys,
+                                       thermal_broad=thermal_broad,
+                                       model_root=model_root,
+                                       model_vers=model_vers,
+                                       nolines=nolines, nei=self._nei,
+                                       abund_table=abund_table)
         super().__init__(spectral_model, emin, emax, Zmet, kT_min=kT_min, kT_max=kT_max, 
                          var_elem=var_elem, max_density=max_density, method=method,
                          abund_table=abund_table, prng=prng, temperature_field=temperature_field,
@@ -782,7 +785,7 @@ class ApecSourceModel(ThermalSourceModel):
         self.var_ion_keys = self.spectral_model.var_ion_names
 
 
-class ApecNEISourceModel(ApecSourceModel):
+class NEISourceModel(CIESourceModel):
     _nei = True
     r"""
     Initialize a source model from a thermal spectrum, using the
@@ -799,12 +802,14 @@ class ApecNEISourceModel(ApecSourceModel):
         The maximum energy for the spectrum in keV.
     nchan : integer
         The number of channels in the spectrum.
-    var_elem : dictionary, optional
-        Elements that should be allowed to vary freely from the single abundance
-        parameter. Each dictionary value, specified by the abundance symbol, 
-        corresponds to the abundance of that symbol. If a float, it is understood
-        to be constant and in solar units. If a string or tuple of strings, it is
-        assumed to be a spatially varying field.
+    var_elem : dictionary
+        Abundances of elements. Each dictionary value, specified by the abundance 
+        symbol, corresponds to the abundance of that symbol. If a float, it is 
+        understood to be constant and in solar units. If a string or tuple of 
+        strings, it is assumed to be a spatially varying field.
+    binscale : string, optional
+        The scale of the energy binning: "linear" or "log". 
+        Default: "linear"
     temperature_field : string or (ftype, fname) tuple, optional
         The yt temperature field to use for the thermal modeling. Must have
         units of Kelvin. If not specified, the default temperature field for
