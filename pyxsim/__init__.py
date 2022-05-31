@@ -1,4 +1,5 @@
-__version__ = "4.0-dev"
+from setuptools_scm import get_version
+__version__ = get_version(root='..', relative_to=__file__)
 
 from pyxsim.event_list import \
     EventList

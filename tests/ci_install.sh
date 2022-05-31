@@ -29,7 +29,7 @@ PYVER=`python --version`
 
 conda config --add channels https://conda.anaconda.org/sherpa
 conda install --yes numpy pytest pip h5py astropy nose cython scipy yt
-conda install --yes -c jzuhone soxs
+conda install --yes -c jzuhone soxs==4.0b0
 
 if [[ ${mode} == "testing" ]]; then
   # install sherpa for testing
