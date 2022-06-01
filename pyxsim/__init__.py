@@ -1,5 +1,11 @@
-from setuptools_scm import get_version
-__version__ = get_version(root='..', relative_to=__file__)
+from importlib.metadata import version, PackageNotFoundError
+
+try:
+    __version__ = version("pyxsim")
+except PackageNotFoundError:
+    # package is not installed
+    pass
+
 
 from pyxsim.event_list import \
     EventList

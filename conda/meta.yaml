@@ -19,7 +19,7 @@ requirements:
     - h5py
     - astropy
     - yt>=4.0.1
-    - soxs==4.0b0
+    - soxs==4.0b1
     - scipy
     - tqdm
 
