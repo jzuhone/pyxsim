@@ -353,7 +353,7 @@ def make_photons(photon_prefix, data_source, redshift, area,
                 # Coordinates are centered
                 d[ax][c_offset:c_offset+chunk_nc] = pos-c[i]
                 # Velocities have the bulk velocity subtracted off
-                d[f"v{ax}"][c_offset:c_offset+chunk_nc] = vel-bulk_velocity[i]
+                d[f"v{ax}"][c_offset:c_offset+chunk_nc] = vel-bulk_velocity.v[i]
 
             d["num_photons"][c_offset:c_offset+chunk_nc] = number_of_photons
             d["energy"][p_offset:p_offset+chunk_nph] = energies
