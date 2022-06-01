@@ -208,7 +208,7 @@ class IGMSpectralModel(ThermalSpectralModel):
                 raise RuntimeError("The supplied set of abundances does not match "
                                    "what is available for 'var_elem_option = "
                                    f"{self.igen.var_elem_option}!\n"
-                                   "Free elements: %s\nAbundances: %s" % (set(var_elem.keys()),
+                                   "Free elements: %s\nAbundances: %s" % (set(var_elem),
                                                                           set(self.igen.var_elem)))
 
         self.var_elem = var_elem
