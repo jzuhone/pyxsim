@@ -247,7 +247,7 @@ class SourceModel:
 
 
 class ThermalSourceModel(SourceModel):
-    _photoionization = False
+    _density_dependence = False
     _nei = False
 
     def __init__(self, spectral_model, emin, emax, Zmet, kT_min=0.025, kT_max=64.0, 
@@ -491,7 +491,7 @@ class ThermalSourceModel(SourceModel):
 
             kTi = kT[ibegin:iend]
             
-            if self._photoionization:
+            if self._density_dependence:
                 nHi = nH[ibegin:iend]
                 cspec, mspec, vspec = self.spectral_model.get_spectrum(kTi, nHi)
             else:
@@ -572,7 +572,7 @@ class ThermalSourceModel(SourceModel):
 
 class IGMSourceModel(ThermalSourceModel):
     _nei = False
-    _photoionization = True
+    _density_dependence = True
 
     r"""
     A source model for a thermal plasma including photoionization and 
@@ -676,7 +676,7 @@ class IGMSourceModel(ThermalSourceModel):
 
 class CIESourceModel(ThermalSourceModel):
     _nei = False
-    _photoionization = False
+    _density_dependence = False
     r"""
     Initialize a source model from a thermal spectrum, using the
     APEC tables from https://www.atomdb.org.
