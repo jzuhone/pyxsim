@@ -58,6 +58,7 @@ class SourceModel:
         self.spectral_norm = None
         self.redshift = None
         self.prng = parse_prng(prng)
+        self.observer = "external"
 
     def process_data(self, mode, chunk):
         pass
