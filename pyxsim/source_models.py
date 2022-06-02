@@ -60,7 +60,7 @@ class SourceModel:
         self.prng = parse_prng(prng)
         self.observer = "external"
 
-    def process_data(self, mode, chunk):
+    def process_data(self, mode, chunk, elim=None):
         pass
 
     def setup_model(self, data_source, redshift, spectral_norm):
@@ -77,7 +77,7 @@ class SourceModel:
         self.c = c
         self.periodicity = periodicity
         self.observer = observer
-        
+
     def compute_radius(self, pos):
         for i in range(3):
             if self.periodicity[i]:
@@ -87,10 +87,10 @@ class SourceModel:
                 pos[:,tfr] -= self.dw[i]
         return np.sum((pos-self.c[:,np.newaxis])**2, axis=0)*cm2_per_kpc2
 
-    def cleanup_model(self):    
+    def cleanup_model(self):
         pass
 
-    def make_xray_fields(self, ds, redshift=0.0, dist=None, cosmology=None):
+    def make_xray_fields(self, ds, emin, emax, redshift=0.0, dist=None, cosmology=None):
         r"""
 
         Parameters
@@ -117,36 +117,23 @@ class SourceModel:
 
         ftype = self.ftype
 
-        def _emissivity_field(field, data):
-            ret = data.ds.arr(self.process_data("energy_field", data), "keV/s")
-            return ret*data[ftype, "density"]/data[ftype, "mass"]
-
-        if hasattr(self, "emin"):
-            emiss_name = (
-                ftype, f"xray_emissivity_{self.emin.value}_{self.emax.value}_keV"
-            )
-            emiss_dname = rf"\epsilon_{{X}} ({self.emin.value}-{self.emax.value} keV)"
-        else:
-            emiss_name = (
-                ftype, f"xray_emissivity_{self.e0.value}_keV"
-            )
-            emiss_dname = rf"\epsilon_{{X}} ({self.e0.value} keV)"
-
-        ds.add_field(
-            emiss_name,
-            function=_emissivity_field,
-            display_name=emiss_dname,
-            sampling_type="local",
-            units="erg/cm**3/s",
+        emiss_name = (
+            ftype, f"xray_emissivity_{emin}_{emax}_keV"
         )
-
-        def _luminosity_field(field, data):
-            return data.ds.arr(self.process_data("energy_field", data), "keV/s")
+        emiss_dname = rf"\epsilon_{{X}} ({emin}-{emax} keV)"
 
         lum_name = (
             ftype, emiss_name[1].replace("emissivity", "luminosity")
         )
         lum_dname = emiss_dname.replace("\epsilon", "\rm{{L}}")
+
+        phot_emiss_name = (
+            ftype, emiss_name[1].replace("emissivity", "photon_emissivity")
+        )
+
+        def _luminosity_field(field, data):
+            return data.ds.arr(
+                self.process_data("energy_field", data, elim=[emin, emax]), "keV/s")
 
         ds.add_field(
             lum_name,
@@ -156,14 +143,22 @@ class SourceModel:
             units="erg/s",
         )
 
+        def _emissivity_field(field, data):
+            ret = data[lum_name]
+            return ret*data[ftype, "density"]/data[ftype, "mass"]
+
+        ds.add_field(
+            emiss_name,
+            function=_emissivity_field,
+            display_name=emiss_dname,
+            sampling_type="local",
+            units="erg/cm**3/s",
+        )
+
         def _photon_emissivity_field(field, data):
-            ret = data.ds.arr(self.process_data("photon_field", data),
+            ret = data.ds.arr(self.process_data("photon_field", data, elim=[emin, emax]),
                               "photons/s")
             return ret * data[ftype, "density"] / data[ftype, "mass"]
-
-        phot_emiss_name = (
-            ftype, emiss_name[1].replace("emissivity", "photon_emissivity")
-        )
 
         ds.add_field(
             phot_emiss_name,
@@ -208,12 +203,20 @@ class SourceModel:
                     "rad**-2",
                     )
 
+            emin_src = emin*(1.0+redshift)
+            emax_src = emax*(1.0+redshift)
+
             ei_name = (
                 ftype, emiss_name[1].replace("emissivity", "intensity")
             )
             ei_dname = emiss_dname.replace(r"\epsilon", "I")
+
             def _intensity_field(field, data):
-                I = dist_fac * data[emiss_name]
+                ret = data.ds.arr(self.process_data("energy_field",
+                                                    data, 
+                                                    elim=[emin_src, emax_src]), "keV/s")
+                idV = data[ftype, "density"] / data[ftype, "mass"]
+                I = dist_fac * ret * idV
                 return I.in_units("erg/cm**3/s/arcsec**2")
 
             ds.add_field(
@@ -230,7 +233,11 @@ class SourceModel:
             i_dname = emiss_dname.replace(r"\epsilon", "I")
 
             def _photon_intensity_field(field, data):
-                I = (1.0 + redshift) * dist_fac * data[phot_emiss_name]
+                ret = data.ds.arr(self.process_data("photon_field",
+                                                    data,
+                                                    elim=[emin_src, emax_src]), "photons/s")
+                idV = data[ftype, "density"] / data[ftype, "mass"]
+                I = (1.0 + redshift) * dist_fac * ret * idV
                 return I.in_units("photons/cm**3/s/arcsec**2")
 
             ds.add_field(
@@ -382,14 +389,18 @@ class ThermalSourceModel(SourceModel):
 
     def make_spectrum(self, data_source):
         self.setup_model(data_source, 0.0, 1.0)
-        spec = np.zeros(self.spectral_model.emid.size)
+        spec = np.zeros(self.emid.size)
         for chunk in data_source.chunks([], "io"):
             spec += self.process_data("spectrum", chunk)
-        ebins = YTArray(self.spectral_model.ebins, "keV")
+        ebins = YTArray(self.ebins, "keV")
         return ebins, YTArray(spec, "photons/s")
     
-    def process_data(self, mode, chunk):
+    def process_data(self, mode, chunk, elim=None):
 
+        if elim is not None:
+            eidxs = (ebins[:-1] > elim[0]) & (ebins[1:] < elim[1])
+        else:
+            eidxs = ...
         orig_shape = chunk[self.temperature_field].shape
         if len(orig_shape) == 0:
             orig_ncells = 0
@@ -502,11 +513,14 @@ class ThermalSourceModel(SourceModel):
             tot_spec += metalZ[ibegin:iend, np.newaxis]*mspec
             if self.num_var_elem > 0:
                 tot_spec += np.sum(elemZ[:,ibegin:iend,np.newaxis]*vspec, axis=0)
-
+    
             if mode in ["photons", "photon_field"]:
 
-                spec_sum = tot_spec.sum(axis=-1)
-                                
+                if mode == "photon_field":
+                    spec_sum = tot_spec[eidxs].sum(axis=-1)
+                else:
+                    spec_sum = tot_spec.sum(axis=-1)
+
                 cell_norm = spec_sum*cnm
 
                 if mode == "photons":
@@ -545,11 +559,12 @@ class ThermalSourceModel(SourceModel):
 
             elif mode == "energy_field":
 
-                ret[idxs[ibegin:iend]] = np.sum(tot_spec*self.emid, axis=-1)*cnm
+                ret[idxs[ibegin:iend]] = np.sum(tot_spec[eidxs]*self.emid[eidxs], 
+                                                axis=-1)*cnm
 
             elif mode == "spectrum":
 
-                spec += np.sum(tot_spec*cnm, axis=0)
+                spec += np.sum(tot_spec*cnm[:,np.newaxis], axis=0)
 
             self.pbar.update(nck)
 
@@ -964,7 +979,8 @@ class PowerLawSourceModel(SourceModel):
         ebins = YTArray(ebins, "keV")
         return ebins, YTArray(spec, "photons/s")
 
-    def process_data(self, mode, chunk, observer="external", emid=None):
+    def process_data(self, mode, chunk, observer="external", elim=None,
+                     emid=None):
 
         num_cells = len(chunk[self.emission_field])
 
@@ -973,10 +989,17 @@ class PowerLawSourceModel(SourceModel):
         else:
             alpha = chunk[self.alpha].v
 
+        if mode in ["photons", "spectrum"]:
+            ei = self.emin.v
+            ef = self.emax.v
+        else:
+            ei = elim[0]
+            ef = elim[1]
+
         if mode in ["photons", "photon_field"]:
 
-            norm_fac = self.emax.v**(1.-alpha) - self.emin.v**(1.-alpha)
-            norm_fac[alpha == 1] = np.log(self.emax.v / self.emin.v)
+            norm_fac = ef**(1.-alpha) - ei**(1.-alpha)
+            norm_fac[alpha == 1] = np.log(ef / ei)
             norm_fac *= self.e0.v**alpha
             norm = norm_fac * chunk[self.emission_field].v
             norm[alpha != 1] /= (1.-alpha[alpha != 1])
@@ -1002,9 +1025,9 @@ class PowerLawSourceModel(SourceModel):
                         end_e = start_e+number_of_photons[i]
                         u = self.prng.uniform(size=number_of_photons[i])
                         if alpha[i] == 1:
-                            e = self.emin.v*(self.emax.v/self.emin.v)**u
+                            e = ei*(ef/ei)**u
                         else:
-                            e = self.emin.v**(1.-alpha[i]) + u*norm_fac[i]
+                            e = ei**(1.-alpha[i]) + u*norm_fac[i]
                             e **= 1./(1.-alpha[i])
                         energies[start_e:end_e] = e * self.scale_factor
                         start_e = end_e
@@ -1020,7 +1043,7 @@ class PowerLawSourceModel(SourceModel):
 
         elif mode == "energy_field":
 
-            norm_fac = self.emax.v**(2.-alpha) - self.emin.v**(2.-alpha)
+            norm_fac = ef**(2.-alpha) - ei**(2.-alpha)
             norm_fac *= self.e0.v ** alpha / (2. - alpha)
 
             return norm_fac * chunk[self.emission_field].v
@@ -1101,13 +1124,15 @@ class LineSourceModel(SourceModel):
         ebins = YTArray(ebins, "keV")
         return ebins, YTArray(spec, "photons/s")
 
-    def process_data(self, mode, chunk, ebins=None):
+    def process_data(self, mode, chunk, ebins=None, elim=None):
 
         num_cells = len(chunk[self.emission_field])
 
+        norm_field = chunk[self.emission_field]
+
         if mode == "photons":
 
-            F = chunk[self.emission_field]*self.spectral_norm*self.scale_factor
+            F = norm_field*self.spectral_norm*self.scale_factor
             if self.observer == "internal":
                 pos = np.array([np.ravel(chunk[self.p_fields[i]].to_value("kpc"))
                                 for i in range(3)])
@@ -1140,13 +1165,27 @@ class LineSourceModel(SourceModel):
 
             return ncells, number_of_photons[active_cells], active_cells, energies
 
-        elif mode == "photon_field":
+        elif mode in ["photon_field", "energy_field"]:
 
-            return chunk[self.emission_field]
+            xlo = elim[0]-self.e0.value
+            xhi = elim[1]-self.e0.value
+            if self.sigma is None:
+                if (xlo < 0) & (xhi > 0.0):
+                    fac = 1.0
+                else:
+                    fac = 0.0
+                if mode == "energy_field":
+                    fac *= self.e0
+            else:
+                if isinstance(self.sigma, YTQuantity):
+                    sigma = self.sigma.value
+                else:
+                    sigma = (chunk[self.sigma] * self.e0 / clight).to_value("keV")
+                fac = norm.cdf(xhi/sigma)-norm.cdf(xlo/sigma)
+                if mode == "energy_field":
+                    fac = sigma*(np.exp(-0.5*xhi*xhi)-np.exp(-0.5*xlo*xlo))/np.sqrt(2.0*np.pi)-self.e0.value*fac
 
-        elif mode == "energy_field":
-
-            return self.e0*chunk[self.emission_field]
+            return fac*norm_field
 
         elif mode == "spectrum":
 
@@ -1155,17 +1194,17 @@ class LineSourceModel(SourceModel):
             if isinstance(self.sigma, YTQuantity):
                 xtmp = de/self.sigma.value
                 ret = np.interp(xtmp, gx, gcdf)
-                spec = chunk[self.emission_field].d.sum()*(ret[1:]-ret[:-1])
+                spec = norm_field.d.sum()*(ret[1:]-ret[:-1])
             elif self.sigma is not None:
                 spec = np.zeros(ebins.size-1)
                 sigma = (chunk[self.sigma]*self.e0/clight).to_value("keV")
                 for i in range(num_cells):
                     xtmp = de/sigma[i]
                     ret = np.interp(xtmp, gx, gcdf)
-                    spec += chunk[self.emission_field].d[i]*(ret[1:]-ret[:-1])
+                    spec += norm_field.d[i]*(ret[1:]-ret[:-1])
             else:
                 spec = np.zeros(ebins.size-1)
                 idx = np.searchsorted(ebins, self.e0.value)
-                spec[idx] = chunk[self.emission_field].d.sum()
+                spec[idx] = norm_field.d.sum()  
 
-            return spec
+            return spec 
