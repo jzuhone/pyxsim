@@ -693,11 +693,13 @@ class CIESourceModel(ThermalSourceModel):
     _nei = False
     _density_dependence = False
     r"""
-    Initialize a source model from a thermal spectrum, using the
-    APEC tables from https://www.atomdb.org.
+    Initialize a source model from a CIE spectrum, using either
+    the APEC or SPEX models.
 
     Parameters
     ----------
+    model : string
+        Which spectral emission model to use. Accepts either "apec" or "spex".
     emin : float
         The minimum energy for the spectrum in keV.
     emax : float
@@ -777,8 +779,8 @@ class CIESourceModel(ThermalSourceModel):
 
     Examples
     --------
-    >>> source_model = ApecSourceModel(0.1, 10.0, 10000,
-    ...                                ("gas", "metallicity"))
+    >>> source_model = CIESourceModel("apec", 0.1, 10.0, 10000,
+    ...                               ("gas", "metallicity"))
     """
     def __init__(self, model, emin, emax, nchan, Zmet, binscale="linear", temperature_field=None,
                  emission_measure_field=None, h_fraction=None, kT_min=0.025,
@@ -907,7 +909,8 @@ class NEISourceModel(CIESourceModel):
                  emission_measure_field=None, h_fraction=None, kT_min=0.025,
                  kT_max=64.0, max_density=5.0e-25, method="invert_cdf", thermal_broad=True,
                  model_root=None, model_vers=None, nolines=False, abund_table="angr", prng=None):
-        super().__init__(emin, emax, nchan, 0.0, binscale=binscale, temperature_field=temperature_field,
+        super().__init__("apec", emin, emax, nchan, 0.0, binscale=binscale, 
+                         temperature_field=temperature_field, 
                          emission_measure_field=emission_measure_field, h_fraction=h_fraction,
                          kT_min=kT_min, kT_max=kT_max, max_density=max_density, var_elem=var_elem,
                          method=method, thermal_broad=thermal_broad, model_root=model_root, 

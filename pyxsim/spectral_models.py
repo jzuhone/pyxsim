@@ -3,17 +3,13 @@ Photon emission and absoprtion models.
 """
 import numpy as np
 
-from soxs.cie import CIEGenerator
-from soxs.pion import IGMGenerator
+from soxs.thermal_spectra import CIEGenerator, IGMGenerator
 from soxs.spectra import \
     get_wabs_absorb, get_tbabs_absorb
+from soxs.constants import K_per_keV
 from soxs.utils import parse_prng
 from yt.units.yt_array import YTArray, YTQuantity
-from yt.units import keV
 from scipy.interpolate import interp1d
-
-
-K_per_keV = (1.0*keV).to_value("K", "thermal")
 
 
 class ThermalSpectralModel:
@@ -166,7 +162,7 @@ class IGMSpectralModel(ThermalSpectralModel):
     resonant scattering from the CXB based on Khabibullin & Churazov 2019
     (https://ui.adsabs.harvard.edu/abs/2019MNRAS.482.4972K/) and Churazov 
     et al. 2001 (https://ui.adsabs.harvard.edu/abs/2001MNRAS.323...93C/).
-     
+
     For temperatures higher than kT ~ 1.09 keV, APEC is used to compute the
     spectrum. 
  
