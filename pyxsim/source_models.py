@@ -1186,7 +1186,7 @@ class LineSourceModel(SourceModel):
                     sigma = (chunk[self.sigma] * self.e0 / clight).to_value("keV")
                 fac = norm.cdf(xhi/sigma)-norm.cdf(xlo/sigma)
                 if mode == "energy_field":
-                    fac = sigma*(np.exp(-0.5*xhi*xhi)-np.exp(-0.5*xlo*xlo))/np.sqrt(2.0*np.pi)-self.e0.value*fac
+                    fac = self.e0.value*fac-sigma*(np.exp(-0.5*xhi*xhi)-np.exp(-0.5*xlo*xlo))/np.sqrt(2.0*np.pi)
 
             return fac*norm_field
 
@@ -1208,6 +1208,6 @@ class LineSourceModel(SourceModel):
             else:
                 spec = np.zeros(ebins.size-1)
                 idx = np.searchsorted(ebins, self.e0.value)
-                spec[idx] = norm_field.d.sum()  
+                spec[idx] = norm_field.d.sum()
 
-            return spec 
+            return spec
