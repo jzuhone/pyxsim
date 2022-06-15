@@ -257,11 +257,11 @@ class ThermalSourceModel(SourceModel):
     _density_dependence = False
     _nei = False
 
-    def __init__(self, spectral_model, emin, emax, Zmet, kT_min=0.025, kT_max=64.0, 
-                 var_elem=None, max_density=5.0e-25, method="invert_cdf",
-                 abund_table="angr", prng=None, temperature_field=None,
-                 emission_measure_field=None, h_fraction=None, nH_min=None,
-                 nH_max=None):
+    def __init__(self, spectral_model, emin, emax, Zmet, binscale="linear",
+                 kT_min=0.025, kT_max=64.0, var_elem=None, max_density=5.0e-25, 
+                 method="invert_cdf", abund_table="angr", prng=None, 
+                 temperature_field=None, emission_measure_field=None, 
+                 h_fraction=None, nH_min=None, nH_max=None):
         super().__init__(prng=prng)
         self.spectral_model = spectral_model
         self.emin = parse_value(emin, "keV")
@@ -293,6 +293,7 @@ class ThermalSourceModel(SourceModel):
         self.max_density = max_density
         self.tot_num_cells = 0  # Will be determined later
         self.ftype = "gas"
+        self.binscale = binscale
         self.abund_table = abund_table
         self.method = method
         self.prng = parse_prng(prng)
@@ -365,11 +366,7 @@ class ThermalSourceModel(SourceModel):
         self.ebins = self.spectral_model.ebins
         self.de = self.spectral_model.de
         self.emid = self.spectral_model.emid
-        if np.isclose(self.de, self.de[0]).all():
-            self._binscale = "linear"
-        else:
-            self._binscale = "log"
-        self.bin_edges = np.log10(self.ebins) if self._binscale == "log" else self.ebins
+        self.bin_edges = np.log10(self.ebins) if self.binscale == "log" else self.ebins
         self.nchan = self.emid.size
         self.spectral_norm = spectral_norm
 
@@ -573,7 +570,7 @@ class ThermalSourceModel(SourceModel):
             idxs = idxs[active_cells]
             ncells = idxs.size
             ee = energies[:end_e].copy()
-            if self._binscale == "log":
+            if self.binscale == "log":
                 ee = 10**ee
             return ncells, number_of_photons[active_cells], idxs, ee
         elif mode == "spectrum":
@@ -796,8 +793,8 @@ class CIESourceModel(ThermalSourceModel):
                                        model_vers=model_vers,
                                        nolines=nolines, nei=self._nei,
                                        abund_table=abund_table)
-        super().__init__(spectral_model, emin, emax, Zmet, kT_min=kT_min, kT_max=kT_max, 
-                         var_elem=var_elem, max_density=max_density, method=method,
+        super().__init__(spectral_model, emin, emax, Zmet, binscale=binscale, kT_min=kT_min, 
+                         kT_max=kT_max, var_elem=var_elem, max_density=max_density, method=method,
                          abund_table=abund_table, prng=prng, temperature_field=temperature_field,
                          emission_measure_field=emission_measure_field, h_fraction=h_fraction)
         self.var_elem_keys = self.spectral_model.var_elem_names
