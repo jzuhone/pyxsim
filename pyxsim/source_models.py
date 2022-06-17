@@ -516,7 +516,7 @@ class ThermalSourceModel(SourceModel):
             if mode in ["photons", "photon_field"]:
 
                 if mode == "photon_field":
-                    spec_sum = tot_spec[eidxs].sum(axis=-1)
+                    spec_sum = tot_spec[:,eidxs].sum(axis=-1)
                 else:
                     spec_sum = tot_spec.sum(axis=-1)
 
@@ -558,7 +558,7 @@ class ThermalSourceModel(SourceModel):
 
             elif mode == "energy_field":
 
-                ret[idxs[ibegin:iend]] = np.sum(tot_spec[eidxs]*self.emid[eidxs], 
+                ret[idxs[ibegin:iend]] = np.sum(tot_spec[:,eidxs]*self.emid[eidxs],
                                                 axis=-1)*cnm
 
             elif mode == "spectrum":
