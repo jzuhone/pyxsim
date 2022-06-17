@@ -393,11 +393,11 @@ class ThermalSourceModel(SourceModel):
             spec += self.process_data("spectrum", chunk)
         ebins = YTArray(self.ebins, "keV")
         return ebins, YTArray(spec, "photons/s")
-    
+
     def process_data(self, mode, chunk, elim=None):
 
         if elim is not None:
-            eidxs = (ebins[:-1] > elim[0]) & (ebins[1:] < elim[1])
+            eidxs = (self.ebins[:-1] > elim[0]) & (self.ebins[1:] < elim[1])
         else:
             eidxs = ...
         orig_shape = chunk[self.temperature_field].shape
@@ -500,7 +500,7 @@ class ThermalSourceModel(SourceModel):
             cnm = cell_nrm[ibegin:iend]
 
             kTi = kT[ibegin:iend]
-            
+
             if self._density_dependence:
                 nHi = nH[ibegin:iend]
                 cspec, mspec, vspec = self.spectral_model.get_spectrum(kTi, nHi)
@@ -512,7 +512,7 @@ class ThermalSourceModel(SourceModel):
             tot_spec += metalZ[ibegin:iend, np.newaxis]*mspec
             if self.num_var_elem > 0:
                 tot_spec += np.sum(elemZ[:,ibegin:iend,np.newaxis]*vspec, axis=0)
-    
+
             if mode in ["photons", "photon_field"]:
 
                 if mode == "photon_field":
@@ -596,7 +596,7 @@ class IGMSourceModel(ThermalSourceModel):
 
     For temperatures higher than kT ~ 1.09 keV, APEC is used to compute the
     spectrum. 
-    
+
     Assumes the abundance tables from Feldman 1992.
 
     Table data and README files can be found at
