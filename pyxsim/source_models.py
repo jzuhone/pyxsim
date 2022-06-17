@@ -299,6 +299,8 @@ class ThermalSourceModel(SourceModel):
         self.prng = parse_prng(prng)
         self.kT_min = kT_min
         self.kT_max = kT_max
+        mylog.info(f"kT_min = {kT_min} keV")
+        mylog.info(f"kT_max = {kT_max} keV")
         self.nH_min = nH_min
         self.nH_max = nH_max
         self.spectral_norm = None
