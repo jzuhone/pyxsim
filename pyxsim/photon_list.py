@@ -546,6 +546,9 @@ def _project_photons(obs, photon_prefix, event_prefix, normal,
             if num_det > 0:
 
                 if observer == "external":
+
+                    if data_type == "particles":
+                        dx *= 0.5
                     
                     xsky, ysky = scatter_events(norm, prng, kernel, 
                                                 data_type, num_det, det, n_ph,
