@@ -8,7 +8,8 @@ from yt.data_objects.static_output import Dataset
 from yt.units.yt_array import YTQuantity, YTArray
 from yt.utilities.physical_constants import clight
 from yt.utilities.cosmology import Cosmology
-from pyxsim.spectral_models import TableCIEModel, IGMSpectralModel, K_per_keV
+from pyxsim.spectral_models import TableCIEModel, IGMSpectralModel, \
+    CloudyCIESpectralModel, MekalSpectralModel
 from pyxsim.utils import parse_value, isunitful, compute_H_abund
 from soxs.utils import parse_prng
 from soxs.constants import elem_names, atomic_weights, metal_elem, \
@@ -369,7 +370,7 @@ class ThermalSourceModel(SourceModel):
         self.de = self.spectral_model.de
         self.emid = self.spectral_model.emid
         self.bin_edges = np.log10(self.ebins) if self.binscale == "log" else self.ebins
-        self.nchan = self.emid.size
+        self.nbins = self.emid.size
         self.spectral_norm = spectral_norm
 
         if isinstance(data_source, Dataset):
@@ -488,7 +489,7 @@ class ThermalSourceModel(SourceModel):
         start_e = 0
         end_e = 0
 
-        spec = np.zeros(self.nchan)
+        spec = np.zeros(self.nbins)
         idxs = np.where(cut)[0]
 
         for ck in chunked(range(num_cells), 100):
@@ -507,7 +508,7 @@ class ThermalSourceModel(SourceModel):
             else:
                 cspec, mspec, vspec = self.spectral_model.get_spectrum(kTi)
 
-            tot_spec = np.zeros((nck, self.nchan))
+            tot_spec = np.zeros((nck, self.nbins))
             tot_spec += cspec
             tot_spec += metalZ[ibegin:iend, np.newaxis]*mspec
             if self.num_var_elem > 0:
@@ -516,7 +517,7 @@ class ThermalSourceModel(SourceModel):
             if mode in ["photons", "photon_field"]:
 
                 if mode == "photon_field":
-                    spec_sum = tot_spec[:,eidxs].sum(axis=-1)
+                    spec_sum = tot_spec[:, eidxs].sum(axis=-1)
                 else:
                     spec_sum = tot_spec.sum(axis=-1)
 
@@ -542,7 +543,7 @@ class ThermalSourceModel(SourceModel):
                             randvec.sort()
                             cell_e = np.interp(randvec, cp[icell,:], self.bin_edges)
                         elif self.method == "accept_reject":
-                            eidxs = self.prng.choice(self.nchan, size=cn, p=p[icell,:])
+                            eidxs = self.prng.choice(self.nbins, size=cn, p=p[icell,:])
                             cell_e = self.emid[eidxs]
                         while ei+cn > num_photons_max:
                             num_photons_max *= 2
@@ -558,7 +559,7 @@ class ThermalSourceModel(SourceModel):
 
             elif mode == "energy_field":
 
-                ret[idxs[ibegin:iend]] = np.sum(tot_spec[:,eidxs]*self.emid[eidxs],
+                ret[idxs[ibegin:iend]] = np.sum(tot_spec[:, eidxs]*self.emid[eidxs],
                                                 axis=-1)*cnm
 
             elif mode == "spectrum":
@@ -641,6 +642,9 @@ class IGMSourceModel(ThermalSourceModel):
         fraction of hydrogen throughout. If a string or tuple of strings, 
         is taken to be the name of the hydrogen fraction field. Defaults to
         the appropriate value for the Feldman abundance tables.
+    kT_min : float, optional
+        The default minimum temperature in keV to compute emission for.
+        Default: 0.00431
     kT_max : float, optional
         The default maximum temperature in keV to compute emission for.
         Default: 64.0
@@ -665,19 +669,19 @@ class IGMSourceModel(ThermalSourceModel):
         if you have a reason to generate the same set of random numbers, 
         such as for a test. Default is to use the :mod:`numpy.random` module.
     """
-    def __init__(self, emin, emax, Zmet, nh_field, resonant_scattering=False,
-                 cxb_factor=0.5, var_elem_option=None, temperature_field=None, 
-                 emission_measure_field=None, h_fraction=None, kT_max=64.0, 
-                 max_density=5.0e-25, var_elem=None, method="invert_cdf", prng=None):
+    def __init__(self, emin, emax, nbins, Zmet, nh_field, resonant_scattering=False,
+                 cxb_factor=0.5, var_elem_option=None, temperature_field=None,
+                 emission_measure_field=None, h_fraction=None, kT_min=0.00431,
+                 kT_max=64.0, max_density=5.0e-25, var_elem=None, method="invert_cdf",
+                 prng=None):
         if var_elem_option is not None:
             if var_elem is None:
                 raise RuntimeError(f"'var_elem_option' = {var_elem_option}, "
                                    f"so 'var_elem' cannot be None!")
         var_elem_keys = list(var_elem.keys()) if var_elem else None
-        spectral_model = IGMSpectralModel(emin, emax, resonant_scattering=resonant_scattering,
+        spectral_model = IGMSpectralModel(emin, emax, nbins, resonant_scattering=resonant_scattering,
                                           cxb_factor=cxb_factor, var_elem_option=var_elem_option,
                                           var_elem=var_elem_keys)
-        kT_min = 5.0e4/K_per_keV
         nH_min = 10**spectral_model.Dvals[0]
         nH_max = 10**spectral_model.Dvals[-1]
         super().__init__(spectral_model, emin, emax, Zmet, kT_min=kT_min, kT_max=kT_max,
@@ -698,12 +702,13 @@ class CIESourceModel(ThermalSourceModel):
     Parameters
     ----------
     model : string
-        Which spectral emission model to use. Accepts either "apec" or "spex".
+        Which spectral emission model to use. Accepts either "apec", "spex",
+        "mekal", or "cloudy".
     emin : float
         The minimum energy for the spectrum in keV.
     emax : float
         The maximum energy for the spectrum in keV.
-    nchan : integer
+    nbins : integer
         The number of channels in the spectrum.
     Zmet : float, string, or tuple of strings
         The metallicity. If a float, assumes a constant metallicity throughout
@@ -753,7 +758,8 @@ class CIESourceModel(ThermalSourceModel):
         a default location known to pyXSIM is used. 
     model_vers : string, optional
         The version identifier string for the model files, e.g.
-        "2.0.2". Default is "3.0.9".
+        "2.0.2", if supported by the model. Currently only supported by 
+         "apec" and "spex". Default depends on the model being used.  
     nolines : boolean, optional
         Turn off lines entirely for generating emission.
         Default: False
@@ -781,20 +787,28 @@ class CIESourceModel(ThermalSourceModel):
     >>> source_model = CIESourceModel("apec", 0.1, 10.0, 10000,
     ...                               ("gas", "metallicity"))
     """
-    def __init__(self, model, emin, emax, nchan, Zmet, binscale="linear", temperature_field=None,
+    def __init__(self, model, emin, emax, nbins, Zmet, binscale="linear", temperature_field=None,
                  emission_measure_field=None, h_fraction=None, kT_min=0.025,
                  kT_max=64.0, max_density=5.0e-25, var_elem=None, method="invert_cdf",
                  thermal_broad=True, model_root=None, model_vers=None, nolines=False,
                  abund_table="angr", prng=None):
         var_elem_keys = list(var_elem.keys()) if var_elem else None
-        spectral_model = TableCIEModel(model, emin, emax, nchan,
-                                       binscale=binscale,
-                                       var_elem=var_elem_keys,
-                                       thermal_broad=thermal_broad,
-                                       model_root=model_root,
-                                       model_vers=model_vers,
-                                       nolines=nolines, nei=self._nei,
-                                       abund_table=abund_table)
+        if model in ["apec", "spex"]:
+            spectral_model = TableCIEModel(model, emin, emax, nbins,
+                                           binscale=binscale,
+                                           var_elem=var_elem_keys,
+                                           thermal_broad=thermal_broad,
+                                           model_root=model_root,
+                                           model_vers=model_vers,
+                                           nolines=nolines, nei=self._nei,
+                                           abund_table=abund_table)
+        elif model == "mekal":
+            spectral_model = MekalSpectralModel(emin, emax, var_elem=var_elem_keys)
+        elif model == "cloudy":
+            if var_elem_keys is not None:
+                mylog.warning("Variable elements are currently not supported for the "
+                              "'cloudy' option for 'CIESourceModel', so ignoring them.")
+            spectral_model = CloudyCIESpectralModel(emin, emax)
         super().__init__(spectral_model, emin, emax, Zmet, binscale=binscale, kT_min=kT_min, 
                          kT_max=kT_max, var_elem=var_elem, max_density=max_density, method=method,
                          abund_table=abund_table, prng=prng, temperature_field=temperature_field,
@@ -818,7 +832,7 @@ class NEISourceModel(CIESourceModel):
         The minimum energy for the spectrum in keV.
     emax : float
         The maximum energy for the spectrum in keV.
-    nchan : integer
+    nbins : integer
         The number of channels in the spectrum.
     var_elem : dictionary
         Abundances of elements. Each dictionary value, specified by the abundance 
@@ -904,11 +918,11 @@ class NEISourceModel(CIESourceModel):
     >>>            }
     >>> source_model = ApecNEISourceModel(0.1, 10.0, 10000, var_elem)
     """
-    def __init__(self, emin, emax, nchan, var_elem, binscale="linear", temperature_field=None,
+    def __init__(self, emin, emax, nbins, var_elem, binscale="linear", temperature_field=None,
                  emission_measure_field=None, h_fraction=None, kT_min=0.025,
                  kT_max=64.0, max_density=5.0e-25, method="invert_cdf", thermal_broad=True,
                  model_root=None, model_vers=None, nolines=False, abund_table="angr", prng=None):
-        super().__init__("apec", emin, emax, nchan, 0.0, binscale=binscale, 
+        super().__init__("apec", emin, emax, nbins, 0.0, binscale=binscale, 
                          temperature_field=temperature_field, 
                          emission_measure_field=emission_measure_field, h_fraction=h_fraction,
                          kT_min=kT_min, kT_max=kT_max, max_density=max_density, var_elem=var_elem,

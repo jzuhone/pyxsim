@@ -3,11 +3,12 @@ Photon emission and absoprtion models.
 """
 import numpy as np
 
-from soxs.thermal_spectra import CIEGenerator, IGMGenerator
+from soxs.thermal_spectra import CIEGenerator, IGMGenerator, \
+    MekalGenerator, CloudyCIEGenerator
 from soxs.spectra import \
     get_wabs_absorb, get_tbabs_absorb
 from soxs.constants import K_per_keV
-from soxs.utils import parse_prng
+from soxs.utils import parse_prng, regrid_spectrum
 from yt.units.yt_array import YTArray, YTQuantity
 from scipy.interpolate import interp1d
 
@@ -29,11 +30,11 @@ class TableCIEModel(ThermalSpectralModel):
         The minimum energy for the spectral model.
     emax : float
         The maximum energy for the spectral model.
-    nchan : integer
-        The number of channels in the spectral model. If one
+    nbins : integer
+        The number of bins in the spectral model. If one
         is thermally broadening lines, it is recommended that 
         this value result in an energy resolution per channel
-        of roughly 1 eV.
+        of roughly 1 eV or smaller.
     binscale : string, optional
         The scale of the energy binning: "linear" or "log". 
         Default: "linear"
@@ -46,7 +47,7 @@ class TableCIEModel(ThermalSpectralModel):
         not provided, the default SOXS-provided files are used.
     model_vers : string, optional
         The version identifier string for the APEC files, e.g.
-        "3.0.3". Default: 3.0.8
+        "3.0.3". Default: 3.0.9
     thermal_broad : boolean, optional
         Whether or not the spectral lines should be thermally
         broadened. Default: True
@@ -77,15 +78,15 @@ class TableCIEModel(ThermalSpectralModel):
     >>> apec_model = TableCIEModel("apec", 0.05, 50.0, 1000, model_vers="3.0.3",
     ...                            thermal_broad=False)
     """
-    def __init__(self, model, emin, emax, nchan, binscale="linear", var_elem=None,
+    def __init__(self, model, emin, emax, nbins, binscale="linear", var_elem=None,
                  model_root=None, model_vers=None, 
                  thermal_broad=True, nolines=False,
                  abund_table="angr", nei=False):
-        self.cgen = CIEGenerator(model, emin, emax, nchan, binscale=binscale, 
+        self.cgen = CIEGenerator(model, emin, emax, nbins, binscale=binscale, 
                                  var_elem=var_elem, model_root=model_root, 
                                  model_vers=model_vers, broadening=thermal_broad, 
                                  nolines=nolines, abund_table=abund_table, nei=nei)
-        self.nchan = self.cgen.nbins
+        self.nbins = self.cgen.nbins
         self.ebins = self.cgen.ebins
         self.emid = self.cgen.emid
         self.var_elem_names = self.cgen.var_elem_names
@@ -156,6 +157,49 @@ class TableCIEModel(ThermalSpectralModel):
         return YTArray(spec.flux*spec.de, "photons/s/cm**2")
 
 
+class Atable1DSpectralModel(ThermalSpectralModel):
+    def __init__(self, sgen):
+        self.sgen = sgen
+        self.nbins = self.sgen.nbins
+        self.ebins = self.sgen.ebins
+        self.emid = self.sgen.emid
+        self.var_elem_names = self.sgen.var_elem
+        self.atable = self.sgen.atable
+        self.de = self.sgen.de
+
+    def prepare_spectrum(self, zobs, kT_min, kT_max):
+        eidxs, ne, ebins, emid, de = self.sgen._get_energies(zobs)
+        cosmic_spec, metal_spec, var_spec = self.sgen._get_table(ne, eidxs, zobs)
+        self.cosmic_spec = 1.0e-14*regrid_spectrum(self.ebins, ebins, cosmic_spec)
+        self.metal_spec = 1.0e-14*regrid_spectrum(self.ebins, ebins, metal_spec)
+        if var_spec is not None:
+            var_spec = 1.0e-14*regrid_spectrum(self.ebins, ebins, var_spec)
+        self.var_spec = var_spec
+        self.cf = interp1d(self.sgen.Tvals, self.cosmic_spec, axis=0, fill_value=0.0,
+                           assume_sorted=True, copy=False)
+        self.mf = interp1d(self.sgen.Tvals, self.metal_spec, axis=0, fill_value=0.0,
+                           assume_sorted=True, copy=False)
+        if var_spec is not None:
+            self.vf = interp1d(self.sgen.Tvals, self.var_spec, axis=1, fill_value=0.0,
+                               assume_sorted=True, copy=False)
+        else:
+            self.vf = None
+
+
+class MekalSpectralModel(Atable1DSpectralModel):
+    def __init__(self, emin, emax, nbins, binscale="linear", var_elem=None,
+                 abund_table="angr"):
+        mgen = MekalGenerator(emin, emax, nbins, binscale=binscale,
+                              var_elem=var_elem, abund_table=abund_table)
+        super().__init__(mgen)
+
+
+class CloudyCIESpectralModel(Atable1DSpectralModel):
+    def __init__(self, emin, emax, nbins, binscale="linear"):
+        cgen = CloudyCIEGenerator(emin, emax, nbins, binscale=binscale)
+        super().__init__(cgen)
+
+
 class IGMSpectralModel(ThermalSpectralModel):
     r"""
     A spectral model for a thermal plasma including photoionization and 
@@ -195,10 +239,11 @@ class IGMSpectralModel(ThermalSpectralModel):
         from the single abundance parameter. Default:
         None
     """
-    def __init__(self, emin, emax, resonant_scattering=False, cxb_factor=0.5,
-                 var_elem_option=None, var_elem=None):
-        self.igen = IGMGenerator(emin, emax, resonant_scattering=resonant_scattering,
-                                 cxb_factor=cxb_factor, var_elem_option=var_elem_option)
+    def __init__(self, emin, emax, nbins, binscale="linear", resonant_scattering=False, 
+                 cxb_factor=0.5, var_elem_option=None, var_elem=None):
+        self.igen = IGMGenerator(emin, emax, nbins, resonant_scattering=resonant_scattering,
+                                 cxb_factor=cxb_factor, binscale=binscale, 
+                                 var_elem_option=var_elem_option)
         if var_elem is not None:
             if set(var_elem) != set(self.igen.var_elem):
                 raise RuntimeError("The supplied set of abundances does not match "
@@ -206,7 +251,10 @@ class IGMSpectralModel(ThermalSpectralModel):
                                    f"{self.igen.var_elem_option}!\n"
                                    "Free elements: %s\nAbundances: %s" % (set(var_elem),
                                                                           set(self.igen.var_elem)))
-
+        self.ebins = self.igen.ebins
+        self.emid = self.igen.emid
+        self.de = self.igen.de
+        self.nbins = nbins
         self.var_elem = var_elem
         self.nvar_elem = self.igen.nvar_elem
         self.min_table_kT = 10**self.igen.Tvals[0] / K_per_keV
@@ -224,15 +272,15 @@ class IGMSpectralModel(ThermalSpectralModel):
         """
         Prepare the thermal model for execution given a redshift *zobs* for the spectrum.
         """
-        eidxs, self.ne, self.ebins, self.emid, self.de = self.igen._get_energies(zobs)
-        self.apec_model = TableCIEModel("apec", self.ebins[0], self.ebins[-1], self.ne,
-                                        binscale="log", var_elem=self.var_elem,
+        eidxs, ne, ebins, emid, de = self.igen._get_energies(zobs)
+        self.apec_model = TableCIEModel("apec", self.ebins[0], self.ebins[-1], self.nbins,
+                                        binscale=self.igen.binscale, var_elem=self.var_elem,
                                         abund_table="feld")
-        cosmic_spec, metal_spec, var_spec = self.igen._get_table(self.ne, eidxs, zobs)
-        self.cosmic_spec = 1.0e-14*cosmic_spec
-        self.metal_spec = 1.0e-14*metal_spec
+        cosmic_spec, metal_spec, var_spec = self.igen._get_table(ne, eidxs, zobs)
+        self.cosmic_spec = 1.0e-14*regrid_spectrum(self.ebins, ebins, cosmic_spec)
+        self.metal_spec = 1.0e-14*regrid_spectrum(self.ebins, ebins, metal_spec)
         if var_spec is not None:
-            var_spec *= 1.0e-14
+            var_spec = 1.0e-14*regrid_spectrum(self.ebins, ebins, var_spec)
         self.var_spec = var_spec
         self.apec_model.prepare_spectrum(zobs, kT_min, kT_max)
 
@@ -242,10 +290,10 @@ class IGMSpectralModel(ThermalSpectralModel):
         use_igm = (kT >= self.min_table_kT) & (kT <= self.max_table_kT)
         use_igm &= (nH >= self.min_table_nH) & (nH <= self.max_table_nH)
         use_apec = ~use_igm
-        cspec = np.zeros((kT.size, self.ne))
-        mspec = np.zeros((kT.size, self.ne))
+        cspec = np.zeros((kT.size, self.nbins))
+        mspec = np.zeros((kT.size, self.nbins))
         if self.var_spec is not None:
-            vspec = np.zeros((self.nvar_elem, kT.size, self.ne))
+            vspec = np.zeros((self.nvar_elem, kT.size, self.nbins))
         else:
             vspec = None
         n_apec = use_apec.sum()
@@ -264,7 +312,7 @@ class IGMSpectralModel(ThermalSpectralModel):
             if self.var_spec is not None:
                 vspec[:,use_apec,:] = v2
         return cspec, mspec, vspec
-        
+
     def _get_spectrum_2d(self, kT, nH):
         lkT = np.atleast_1d(np.log10(kT*K_per_keV))
         lnH = np.atleast_1d(np.log10(nH))
