@@ -14,6 +14,7 @@ from pyxsim.utils import parse_value, isunitful, compute_H_abund
 from soxs.utils import parse_prng
 from soxs.constants import elem_names, atomic_weights, metal_elem, \
     abund_tables
+from soxs.spectra import Spectrum, CountRateSpectrum
 from yt.utilities.exceptions import YTFieldNotFound
 from yt.utilities.parallel_tools.parallel_analysis_interface import \
     parallel_objects, communication_system, parallel_capable
@@ -91,6 +92,48 @@ class SourceModel:
     def cleanup_model(self):
         pass
 
+    def _make_dist_fac(self, ds, redshift, dist, cosmology):
+        if dist is None:
+            if cosmology is None:
+                if hasattr(ds, "cosmology"):
+                    cosmology = ds.cosmology
+                else:
+                    cosmology = Cosmology()
+            D_L = cosmology.luminosity_distance(0.0, redshift)
+            angular_scale = 1.0 / cosmology.angular_scale(0.0, redshift)
+            dist_fac = ds.quan(
+                1.0 / (4.0 * np.pi * D_L * D_L * angular_scale * angular_scale).v,
+                "rad**-2",
+            )
+        else:
+            redshift = 0.0  # Only for local sources!
+            try:
+                # normal behaviour, if dist is a YTQuantity
+                dist = ds.quan(dist.value, dist.units)
+            except AttributeError as e:
+                try:
+                    dist = ds.quan(*dist)
+                except (RuntimeError, TypeError):
+                    raise TypeError(
+                        "dist should be a YTQuantity or a (value, unit) tuple!"
+                    ) from e
+
+            angular_scale = dist / ds.quan(1.0, "radian")
+            dist_fac = ds.quan(
+                1.0 / (4.0 * np.pi * dist * dist * angular_scale * angular_scale).v,
+                "rad**-2",
+            )
+        return dist_fac, redshift
+
+    def _make_spectrum(self, ds, ebins, spec, redshift, dist, cosmology):
+        if redshift > 0.0 or dist is not None:
+            dist_fac, redshift = self._make_dist_fac(ds, redshift, dist, cosmology)
+            spec *= (1.0+redshift)*dist_fac
+            spec_class = Spectrum
+        else:
+            spec_class = CountRateSpectrum
+        return spec_class(ebins, spec)
+
     def make_xray_fields(self, ds, emin, emax, redshift=0.0, dist=None, cosmology=None):
         r"""
 
@@ -105,7 +148,6 @@ class SourceModel:
             optionally supplied instead of it being determined from the
             *redshift* and given *cosmology*. If units are not specified, it is
             assumed to be in kpc. To use this, the redshift must be set to zero.
-
         cosmology
 
         Returns
@@ -173,36 +215,7 @@ class SourceModel:
 
         if redshift > 0.0 or dist is not None:
 
-            if dist is None:
-                if cosmology is None:
-                    if hasattr(ds, "cosmology"):
-                        cosmology = ds.cosmology
-                    else:
-                        cosmology = Cosmology()
-                D_L = cosmology.luminosity_distance(0.0, redshift)
-                angular_scale = 1.0 / cosmology.angular_scale(0.0, redshift)
-                dist_fac = ds.quan(
-                    1.0 / (4.0 * np.pi * D_L * D_L * angular_scale * angular_scale).v,
-                    "rad**-2",
-                    )
-            else:
-                redshift = 0.0  # Only for local sources!
-                try:
-                    # normal behaviour, if dist is a YTQuantity
-                    dist = ds.quan(dist.value, dist.units)
-                except AttributeError as e:
-                    try:
-                        dist = ds.quan(*dist)
-                    except (RuntimeError, TypeError):
-                        raise TypeError(
-                            "dist should be a YTQuantity or a (value, unit) tuple!"
-                        ) from e
-
-                angular_scale = dist / ds.quan(1.0, "radian")
-                dist_fac = ds.quan(
-                    1.0 / (4.0 * np.pi * dist * dist * angular_scale * angular_scale).v,
-                    "rad**-2",
-                    )
+            dist_fac, redshift = self._make_dist_fac(ds, redshift, dist, cosmology)
 
             emin_src = emin*(1.0+redshift)
             emax_src = emax*(1.0+redshift)
@@ -387,13 +400,13 @@ class ThermalSourceModel(SourceModel):
                 self.pbar = tqdm(leave=True, total=self.tot_num_cells,
                                  desc="Processing cells/particles ")
 
-    def make_spectrum(self, data_source):
-        self.setup_model(data_source, 0.0, 1.0)
+    def make_spectrum(self, data_source, redshift=0.0, dist=None, cosmology=None):
+        self.setup_model(data_source, redshift, 1.0)
         spec = np.zeros(self.emid.size)
         for chunk in data_source.chunks([], "io"):
             spec += self.process_data("spectrum", chunk)
-        ebins = YTArray(self.ebins, "keV")
-        return ebins, YTArray(spec, "photons/s")
+        return self._make_spectrum(data_source.ds, self.ebins, spec, 
+                                   redshift, dist, cosmology)
 
     def process_data(self, mode, chunk, elim=None):
 
@@ -986,17 +999,17 @@ class PowerLawSourceModel(SourceModel):
         self.scale_factor = 1.0 / (1.0 + self.redshift)
         self.ftype = ds._get_field_info(self.emission_field).name[0]
 
-    def make_spectrum(self, data_source, emin, emax, nbins):
+    def make_spectrum(self, data_source, emin, emax, nbins, redshift=0.0,
+                      dist=None, cosmology=None):
         ebins = np.linspace(emin, emax, nbins+1)
-        emid = 0.5*(ebins[1:]+ebins[:-1])
         spec = np.zeros(nbins)
         for chunk in data_source.chunks([], "io"):
-            spec += self.process_data("spectrum", chunk, emid=emid)
-        ebins = YTArray(ebins, "keV")
-        return ebins, YTArray(spec, "photons/s")
+            spec += self.process_data("spectrum", chunk, ebins=ebins)
+        return self._make_spectrum(data_source.ds, ebins, spec,
+                                   redshift, dist, cosmology)
 
     def process_data(self, mode, chunk, observer="external", elim=None,
-                     emid=None):
+                     ebins=None):
 
         num_cells = len(chunk[self.emission_field])
 
@@ -1066,6 +1079,7 @@ class PowerLawSourceModel(SourceModel):
 
         elif mode == "spectrum":
 
+            emid = 0.5*(ebins[1:]+ebins[:-1])
             return chunk[self.emission_field].v.sum()*(emid/self.e0.v)**(-alpha)
 
 
@@ -1132,13 +1146,14 @@ class LineSourceModel(SourceModel):
         self.scale_factor = 1.0 / (1.0 + self.redshift)
         self.ftype = ds._get_field_info(self.emission_field).name[0]
 
-    def make_spectrum(self, data_source, emin, emax, nbins):
+    def make_spectrum(self, data_source, emin, emax, nbins, redshift=0.0,
+                      dist=None, cosmology=None):
         ebins = np.linspace(emin, emax, nbins+1)
         spec = np.zeros(nbins)
         for chunk in data_source.chunks([], "io"):
             spec += self.process_data("spectrum", chunk, ebins=ebins)
-        ebins = YTArray(ebins, "keV")
-        return ebins, YTArray(spec, "photons/s")
+        return self._make_spectrum(data_source.ds, ebins, spec,
+                                   redshift, dist, cosmology)
 
     def process_data(self, mode, chunk, ebins=None, elim=None):
 
