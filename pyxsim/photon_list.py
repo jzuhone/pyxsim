@@ -394,7 +394,7 @@ def make_photons(photon_prefix, data_source, redshift, area,
 
 def _project_photons(obs, photon_prefix, event_prefix, normal,
                      sky_center, absorb_model=None, nH=None,
-                     no_shifting=False, north_vector=None,
+                     no_shifting=False, north_vector=None, flat_sky=False,
                      sigma_pos=None, kernel="top_hat", prng=None):
     from yt.funcs import ensure_numpy_array
     prng = parse_prng(prng)
@@ -561,8 +561,12 @@ def _project_photons(obs, photon_prefix, event_prefix, normal,
     
                     xsky /= D_A
                     ysky /= D_A
-    
-                    pixel_to_cel(xsky, ysky, sky_center)
+
+                    if flat_sky:
+                        xsky = sky_center[0]-np.rad2deg(xsky)
+                        ysky = sky_center[1]+np.rad2deg(ysky)
+                    else:
+                        pixel_to_cel(xsky, ysky, sky_center)
 
                 elif observer == "internal":
 
@@ -608,7 +612,7 @@ def _project_photons(obs, photon_prefix, event_prefix, normal,
 
 def project_photons(photon_prefix, event_prefix, normal, sky_center,
                     absorb_model=None, nH=None, no_shifting=False,
-                    north_vector=None, sigma_pos=None,
+                    north_vector=None, sigma_pos=None, flat_sky=False,
                     kernel="top_hat", prng=None):
     r"""
     Projects photons onto an image plane given a line of sight, and
@@ -655,6 +659,9 @@ def project_photons(photon_prefix, event_prefix, normal, sky_center,
         Should probably only be used for visualization purposes. Supply a
         float here to smooth with a standard deviation with this fraction
         of the cell size. Default: None
+    flat_sky : boolean, optional
+        If set, we assume that the sky is "flat" and RA, Dec positions are
+        computed using simple linear offsets
     kernel : string, optional
         The kernel used when smoothing positions of X-rays originating from
         SPH particles, "gaussian" or "top_hat". Default: "top_hat".
@@ -678,7 +685,7 @@ def project_photons(photon_prefix, event_prefix, normal, sky_center,
     return _project_photons("external", photon_prefix, event_prefix, normal,
                             sky_center, absorb_model=absorb_model, nH=nH,
                             no_shifting=no_shifting, north_vector=north_vector,
-                            sigma_pos=sigma_pos, kernel=kernel, prng=prng)
+                            sigma_pos=sigma_pos, flat_sky=flat_sky, kernel=kernel, prng=prng)
 
 
 def project_photons_allsky(photon_prefix, event_prefix, normal,
