@@ -244,7 +244,7 @@ class IGMSpectralModel(ThermalSpectralModel):
                  cxb_factor=0.5, var_elem_option=None, var_elem=None):
         self.igen = IGMGenerator(emin, emax, nbins, binscale=binscale,
                                  resonant_scattering=resonant_scattering,
-                                 cxb_factor=cxb_factor, binscale=binscale, 
+                                 cxb_factor=cxb_factor,
                                  var_elem_option=var_elem_option)
         if var_elem is not None:
             if set(var_elem) != set(self.igen.var_elem):
