@@ -166,7 +166,8 @@ class Atable1DSpectralModel(ThermalSpectralModel):
         self.var_elem_names = self.sgen.var_elem
         self.atable = self.sgen.atable
         self.de = self.sgen.de
-
+        self.binscale = self.sgen.binscale
+        
     def prepare_spectrum(self, zobs, kT_min, kT_max):
         eidxs, ne, ebins, emid, de = self.sgen._get_energies(zobs)
         cosmic_spec, metal_spec, var_spec = self.sgen._get_table(ne, eidxs, zobs)
@@ -241,7 +242,8 @@ class IGMSpectralModel(ThermalSpectralModel):
     """
     def __init__(self, emin, emax, nbins, binscale="linear", resonant_scattering=False, 
                  cxb_factor=0.5, var_elem_option=None, var_elem=None):
-        self.igen = IGMGenerator(emin, emax, nbins, resonant_scattering=resonant_scattering,
+        self.igen = IGMGenerator(emin, emax, nbins, binscale=binscale,
+                                 resonant_scattering=resonant_scattering,
                                  cxb_factor=cxb_factor, binscale=binscale, 
                                  var_elem_option=var_elem_option)
         if var_elem is not None:
@@ -267,15 +269,15 @@ class IGMSpectralModel(ThermalSpectralModel):
         self.dDvals = self.igen.dDvals
         self.n_T = self.igen.n_T
         self.n_D = self.igen.n_D
-
+        self.binscale = self.igen.binscale
+        self.apec_model = TableCIEModel("apec", emin, emax, nbins, binscale=self.igen.binscale,
+                                        var_elem=self.var_elem, abund_table="feld")
+        
     def prepare_spectrum(self, zobs, kT_min, kT_max):
         """
         Prepare the thermal model for execution given a redshift *zobs* for the spectrum.
         """
         eidxs, ne, ebins, emid, de = self.igen._get_energies(zobs)
-        self.apec_model = TableCIEModel("apec", self.ebins[0], self.ebins[-1], self.nbins,
-                                        binscale=self.igen.binscale, var_elem=self.var_elem,
-                                        abund_table="feld")
         cosmic_spec, metal_spec, var_spec = self.igen._get_table(ne, eidxs, zobs)
         self.cosmic_spec = 1.0e-14*regrid_spectrum(self.ebins, ebins, cosmic_spec)
         self.metal_spec = 1.0e-14*regrid_spectrum(self.ebins, ebins, metal_spec)

@@ -682,23 +682,24 @@ class IGMSourceModel(ThermalSourceModel):
         if you have a reason to generate the same set of random numbers, 
         such as for a test. Default is to use the :mod:`numpy.random` module.
     """
-    def __init__(self, emin, emax, nbins, Zmet, nh_field, resonant_scattering=False,
-                 cxb_factor=0.5, var_elem_option=None, temperature_field=None,
-                 emission_measure_field=None, h_fraction=None, kT_min=0.00431,
-                 kT_max=64.0, max_density=5.0e-25, var_elem=None, method="invert_cdf",
-                 prng=None):
+    def __init__(self, emin, emax, nbins, Zmet, nh_field, binscale="linear",
+                 resonant_scattering=False, cxb_factor=0.5, var_elem_option=None,
+                 temperature_field=None, emission_measure_field=None, h_fraction=None,
+                 kT_min=0.00431, kT_max=64.0, max_density=5.0e-25, var_elem=None,
+                 method="invert_cdf", prng=None):
         if var_elem_option is not None:
             if var_elem is None:
                 raise RuntimeError(f"'var_elem_option' = {var_elem_option}, "
                                    f"so 'var_elem' cannot be None!")
         var_elem_keys = list(var_elem.keys()) if var_elem else None
-        spectral_model = IGMSpectralModel(emin, emax, nbins, resonant_scattering=resonant_scattering,
+        spectral_model = IGMSpectralModel(emin, emax, nbins, binscale=binscale,
+                                          resonant_scattering=resonant_scattering,
                                           cxb_factor=cxb_factor, var_elem_option=var_elem_option,
                                           var_elem=var_elem_keys)
         nH_min = 10**spectral_model.Dvals[0]
         nH_max = 10**spectral_model.Dvals[-1]
-        super().__init__(spectral_model, emin, emax, Zmet, kT_min=kT_min, kT_max=kT_max,
-                         nH_min=nH_min, nH_max=nH_max, var_elem=var_elem,
+        super().__init__(spectral_model, emin, emax, Zmet, binscale=binscale, kT_min=kT_min,
+                         kT_max=kT_max, nH_min=nH_min, nH_max=nH_max, var_elem=var_elem,
                          max_density=max_density, method=method, abund_table="feld", prng=prng,
                          temperature_field=temperature_field, h_fraction=h_fraction,
                          emission_measure_field=emission_measure_field)
@@ -816,12 +817,12 @@ class CIESourceModel(ThermalSourceModel):
                                            nolines=nolines, nei=self._nei,
                                            abund_table=abund_table)
         elif model == "mekal":
-            spectral_model = MekalSpectralModel(emin, emax, var_elem=var_elem_keys)
+            spectral_model = MekalSpectralModel(emin, emax, nbins, binscale=binscale, var_elem=var_elem_keys)
         elif model == "cloudy":
             if var_elem_keys is not None:
                 mylog.warning("Variable elements are currently not supported for the "
                               "'cloudy' option for 'CIESourceModel', so ignoring them.")
-            spectral_model = CloudyCIESpectralModel(emin, emax)
+            spectral_model = CloudyCIESpectralModel(emin, emax, nbins, binscale=binscale)
         super().__init__(spectral_model, emin, emax, Zmet, binscale=binscale, kT_min=kT_min, 
                          kT_max=kT_max, var_elem=var_elem, max_density=max_density, method=method,
                          abund_table=abund_table, prng=prng, temperature_field=temperature_field,
