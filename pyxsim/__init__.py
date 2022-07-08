@@ -23,9 +23,5 @@ from pyxsim.source_models import \
    PowerLawSourceModel, \
    IGMSourceModel
 
-from pyxsim.spectral_models import \
-    TableCIEModel, \
-    TBabsModel, WabsModel
-
 from pyxsim.utils import merge_files, \
     compute_elem_mass_fraction
