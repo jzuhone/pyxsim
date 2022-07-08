@@ -5,7 +5,7 @@ import numpy as np
 from tqdm.auto import tqdm
 from pyxsim.utils import mylog
 from yt.data_objects.static_output import Dataset
-from yt.units.yt_array import YTQuantity, YTArray
+from yt.units.yt_array import YTQuantity
 from yt.utilities.physical_constants import clight
 from yt.utilities.cosmology import Cosmology
 from pyxsim.spectral_models import TableCIEModel, IGMSpectralModel, \
@@ -271,7 +271,7 @@ class ThermalSourceModel(SourceModel):
     _density_dependence = False
     _nei = False
 
-    def __init__(self, spectral_model, emin, emax, Zmet, binscale="linear",
+    def __init__(self, spectral_model, emin, emax, nbins, Zmet, binscale="linear",
                  kT_min=0.025, kT_max=64.0, var_elem=None, max_density=5.0e-25, 
                  method="invert_cdf", abund_table="angr", prng=None, 
                  temperature_field=None, emission_measure_field=None, 
@@ -280,6 +280,7 @@ class ThermalSourceModel(SourceModel):
         self.spectral_model = spectral_model
         self.emin = parse_value(emin, "keV")
         self.emax = parse_value(emax, "keV")
+        self.nbins = nbins
         self.Zmet = Zmet
         if var_elem is None:
             var_elem = {}
@@ -402,7 +403,7 @@ class ThermalSourceModel(SourceModel):
 
     def make_spectrum(self, data_source, redshift=0.0, dist=None, cosmology=None):
         self.setup_model(data_source, redshift, 1.0)
-        spec = np.zeros(self.emid.size)
+        spec = np.zeros(self.nbins)
         for chunk in data_source.chunks([], "io"):
             spec += self.process_data("spectrum", chunk)
         return self._make_spectrum(data_source.ds, self.ebins, spec, 
@@ -622,6 +623,11 @@ class IGMSourceModel(ThermalSourceModel):
         The minimum energy for the spectral model.
     emax : float, (value, unit) tuple, or :class:`~astropy.units.Quantity`
         The maximum energy for the spectral model.
+    nbins : integer
+        The number of bins in the spectral model. If one
+        is thermally broadening lines, it is recommended that 
+        this value result in an energy resolution per channel
+        of roughly 1 eV or smaller.
     Zmet : float, string, or tuple of strings
         The metallicity. If a float, assumes a constant metallicity throughout
         in solar units. If a string or tuple of strings, is taken to be the 
@@ -698,7 +704,7 @@ class IGMSourceModel(ThermalSourceModel):
                                           var_elem=var_elem_keys)
         nH_min = 10**spectral_model.Dvals[0]
         nH_max = 10**spectral_model.Dvals[-1]
-        super().__init__(spectral_model, emin, emax, Zmet, binscale=binscale, kT_min=kT_min,
+        super().__init__(spectral_model, emin, emax, nbins, Zmet, binscale=binscale, kT_min=kT_min,
                          kT_max=kT_max, nH_min=nH_min, nH_max=nH_max, var_elem=var_elem,
                          max_density=max_density, method=method, abund_table="feld", prng=prng,
                          temperature_field=temperature_field, h_fraction=h_fraction,
@@ -711,7 +717,7 @@ class CIESourceModel(ThermalSourceModel):
     _density_dependence = False
     r"""
     Initialize a source model from a CIE spectrum, using either
-    the APEC or SPEX models.
+    the APEC, SPEX, MeKaL, or Cloudy models.
 
     Parameters
     ----------
@@ -742,7 +748,8 @@ class CIESourceModel(ThermalSourceModel):
     h_fraction : float, string, or tuple of strings, optional
         The hydrogen mass fraction. If a float, assumes a constant mass 
         fraction of hydrogen throughout. If a string or tuple of strings, 
-        is taken to be the name of the hydrogen fraction field. Default: 0.74
+        is taken to be the name of the hydrogen fraction field. Default is
+        whatever value is appropriate for the chosen abundance tables.
     kT_min : float, optional
         The default minimum temperature in keV to compute emission for.
         Default: 0.025
@@ -758,7 +765,8 @@ class CIESourceModel(ThermalSourceModel):
         parameter. Each dictionary value, specified by the abundance symbol, 
         corresponds to the abundance of that symbol. If a float, it is understood
         to be constant and in solar units. If a string or tuple of strings, it is
-        assumed to be a spatially varying field. Default: None
+        assumed to be a spatially varying field. Not yet available for "cloudy". 
+        Default: None
     method : string, optional
         The method used to generate the photon energies from the spectrum:
         "invert_cdf": Invert the cumulative distribution function of the spectrum.
@@ -766,22 +774,23 @@ class CIESourceModel(ThermalSourceModel):
         The first method should be sufficient for most cases.
     thermal_broad : boolean, optional
         Whether or not the spectral lines should be thermally
-        broadened. Default: True
+        broadened. Only available for "apec" or "spex". Default: True
     model_root : string, optional
         The directory root where the model files are stored. If not provided,
-        a default location known to pyXSIM is used. 
+        a default location known to pyXSIM is used.
     model_vers : string, optional
         The version identifier string for the model files, e.g.
-        "2.0.2", if supported by the model. Currently only supported by 
-         "apec" and "spex". Default depends on the model being used.  
+        "2.0.2", if supported by the model. Currently only supported by
+         "apec" and "spex". Default depends on the model being used.
     nolines : boolean, optional
-        Turn off lines entirely for generating emission.
-        Default: False
+        Turn off lines entirely for generating emission. Only available
+        for "apec" or "spex". Default: False
     abund_table : string or array_like, optional
         The abundance table to be used for solar abundances. 
         Either a string corresponding to a built-in table or an array
         of 30 floats corresponding to the abundances of each element
-        relative to the abundance of H. Default is "angr".
+        relative to the abundance of H. Not yet available for "cloudy".
+        Default is "angr".
         Built-in options are:
         "angr" : from Anders E. & Grevesse N. (1989, Geochimica et 
         Cosmochimica Acta 53, 197)
@@ -823,7 +832,7 @@ class CIESourceModel(ThermalSourceModel):
                 mylog.warning("Variable elements are currently not supported for the "
                               "'cloudy' option for 'CIESourceModel', so ignoring them.")
             spectral_model = CloudyCIESpectralModel(emin, emax, nbins, binscale=binscale)
-        super().__init__(spectral_model, emin, emax, Zmet, binscale=binscale, kT_min=kT_min, 
+        super().__init__(spectral_model, emin, emax, nbins, Zmet, binscale=binscale, kT_min=kT_min, 
                          kT_max=kT_max, var_elem=var_elem, max_density=max_density, method=method,
                          abund_table=abund_table, prng=prng, temperature_field=temperature_field,
                          emission_measure_field=emission_measure_field, h_fraction=h_fraction)
@@ -867,7 +876,8 @@ class NEISourceModel(CIESourceModel):
     h_fraction : float, string, or tuple of strings, optional
         The hydrogen mass fraction. If a float, assumes a constant mass 
         fraction of hydrogen throughout. If a string or tuple of strings, 
-        is taken to be the name of the hydrogen fraction field. Default: 0.74
+        is taken to be the name of the hydrogen fraction field. Default is
+        whatever value is appropriate for the chosen abundance tables.
     kT_min : float, optional
         The default minimum temperature in keV to compute emission for.
         Default: 0.025
@@ -888,7 +898,7 @@ class NEISourceModel(CIESourceModel):
         broadened. Default: True
     model_root : string, optional
         The directory root where the model files are stored. If not provided,
-        a default location known to pyXSIM is used. 
+        a default location known to pyXSIM is used.
     model_vers : string, optional
         The version identifier string for the model files, e.g.
         "2.0.2". Default is "3.0.9".

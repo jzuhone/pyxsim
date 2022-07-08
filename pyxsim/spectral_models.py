@@ -167,7 +167,7 @@ class Atable1DSpectralModel(ThermalSpectralModel):
         self.atable = self.sgen.atable
         self.de = self.sgen.de
         self.binscale = self.sgen.binscale
-        
+
     def prepare_spectrum(self, zobs, kT_min, kT_max):
         eidxs, ne, ebins, emid, de = self.sgen._get_energies(zobs)
         cosmic_spec, metal_spec, var_spec = self.sgen._get_table(ne, eidxs, zobs)
@@ -222,6 +222,8 @@ class IGMSpectralModel(ThermalSpectralModel):
         The minimum energy for the spectral model.
     emax : float, (value, unit) tuple, or :class:`~astropy.units.Quantity`
         The maximum energy for the spectral model.
+    nbins : integer
+        The number of bins in the spectral model.
     resonant_scattering : boolean, optional
         Whether or not to include the effects of resonant scattering
         from CXB photons. Default: False
@@ -272,7 +274,7 @@ class IGMSpectralModel(ThermalSpectralModel):
         self.binscale = self.igen.binscale
         self.apec_model = TableCIEModel("apec", emin, emax, nbins, binscale=self.igen.binscale,
                                         var_elem=self.var_elem, abund_table="feld")
-        
+
     def prepare_spectrum(self, zobs, kT_min, kT_max):
         """
         Prepare the thermal model for execution given a redshift *zobs* for the spectrum.
