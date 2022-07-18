@@ -193,12 +193,15 @@ class MekalSpectralModel(Atable1DSpectralModel):
         mgen = MekalGenerator(emin, emax, nbins, binscale=binscale,
                               var_elem=var_elem, abund_table=abund_table)
         super().__init__(mgen)
+        self.var_ion_names = []
 
 
 class CloudyCIESpectralModel(Atable1DSpectralModel):
-    def __init__(self, emin, emax, nbins, binscale="linear"):
-        cgen = CloudyCIEGenerator(emin, emax, nbins, binscale=binscale)
+    def __init__(self, emin, emax, nbins, binscale="linear", var_elem_option=None):
+        cgen = CloudyCIEGenerator(emin, emax, nbins, binscale=binscale,
+                                  var_elem_option=var_elem_option)
         super().__init__(cgen)
+        self.var_ion_names = []
 
 
 class IGMSpectralModel(ThermalSpectralModel):
@@ -208,8 +211,8 @@ class IGMSpectralModel(ThermalSpectralModel):
     (https://ui.adsabs.harvard.edu/abs/2019MNRAS.482.4972K/) and Churazov 
     et al. 2001 (https://ui.adsabs.harvard.edu/abs/2001MNRAS.323...93C/).
 
-    For temperatures higher than kT ~ 1.09 keV, APEC is used to compute the
-    spectrum. 
+    For temperatures higher than kT ~ 1.09 keV, a Cloudy-based CIE model 
+    is used to compute the spectrum. 
  
     Assumes the abundance tables from Feldman 1992.
 
@@ -272,8 +275,8 @@ class IGMSpectralModel(ThermalSpectralModel):
         self.n_T = self.igen.n_T
         self.n_D = self.igen.n_D
         self.binscale = self.igen.binscale
-        self.apec_model = TableCIEModel("apec", emin, emax, nbins, binscale=self.igen.binscale,
-                                        var_elem=self.var_elem, abund_table="feld")
+        self.cie_model = CloudyCIESpectralModel(emin, emax, nbins, binscale=self.binscale, 
+                                                var_elem_option=self.var_elem_option)
 
     def prepare_spectrum(self, zobs, kT_min, kT_max):
         """
@@ -286,21 +289,21 @@ class IGMSpectralModel(ThermalSpectralModel):
         if var_spec is not None:
             var_spec = 1.0e-14*regrid_spectrum(self.ebins, ebins, var_spec)
         self.var_spec = var_spec
-        self.apec_model.prepare_spectrum(zobs, kT_min, kT_max)
+        self.cie_model.prepare_spectrum(zobs, kT_min, kT_max)
 
     def get_spectrum(self, kT, nH):
         kT = np.atleast_1d(kT)
         nH = np.atleast_1d(nH)
         use_igm = (kT >= self.min_table_kT) & (kT <= self.max_table_kT)
         use_igm &= (nH >= self.min_table_nH) & (nH <= self.max_table_nH)
-        use_apec = ~use_igm
+        use_cie = ~use_igm
         cspec = np.zeros((kT.size, self.nbins))
         mspec = np.zeros((kT.size, self.nbins))
         if self.var_spec is not None:
             vspec = np.zeros((self.nvar_elem, kT.size, self.nbins))
         else:
             vspec = None
-        n_apec = use_apec.sum()
+        n_cie = use_cie.sum()
         n_igm = use_igm.sum()
         if n_igm > 0:
             nHi = nH[use_igm]
@@ -309,12 +312,12 @@ class IGMSpectralModel(ThermalSpectralModel):
             mspec[use_igm, :] = m1/nHi[:,np.newaxis]
             if self.var_spec is not None:
                 vspec[:,use_igm,:] = v1/nHi[np.newaxis,:,np.newaxis]
-        if n_apec > 0:
-            c2, m2, v2 = self.apec_model.get_spectrum(kT[use_apec])
-            cspec[use_apec, :] = c2
-            mspec[use_apec, :] = m2
+        if n_cie > 0:
+            c2, m2, v2 = self.cie_model.get_spectrum(kT[use_cie])
+            cspec[use_cie, :] = c2
+            mspec[use_cie, :] = m2
             if self.var_spec is not None:
-                vspec[:,use_apec,:] = v2
+                vspec[:,use_cie,:] = v2
         return cspec, mspec, vspec
 
     def _get_spectrum_2d(self, kT, nH):

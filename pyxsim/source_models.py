@@ -609,8 +609,8 @@ class IGMSourceModel(ThermalSourceModel):
     (https://ui.adsabs.harvard.edu/abs/2019MNRAS.482.4972K/) and Churazov 
     et al. 2001 (https://ui.adsabs.harvard.edu/abs/2001MNRAS.323...93C/).
 
-    For temperatures higher than kT ~ 1.09 keV, APEC is used to compute the
-    spectrum. 
+    For temperatures higher than kT ~ 1.09 keV, a Cloudy-based CIE model
+    is used to compute the spectrum. 
 
     Assumes the abundance tables from Feldman 1992.
 
@@ -814,7 +814,14 @@ class CIESourceModel(ThermalSourceModel):
                  emission_measure_field=None, h_fraction=None, kT_min=0.025,
                  kT_max=64.0, max_density=5.0e-25, var_elem=None, method="invert_cdf",
                  thermal_broad=True, model_root=None, model_vers=None, nolines=False,
-                 abund_table="angr", prng=None):
+                 abund_table="angr", var_elem_option=None, prng=None):
+        if var_elem_option is not None:
+            if model != "cloudy":
+                raise RuntimeError("'var_elem_option' only works with the 'cloudy' "
+                                   "model!")
+            if var_elem is None:
+                raise RuntimeError(f"'var_elem_option' = {var_elem_option}, "
+                                   f"so 'var_elem' cannot be None!")
         var_elem_keys = list(var_elem.keys()) if var_elem else None
         if model in ["apec", "spex"]:
             spectral_model = TableCIEModel(model, emin, emax, nbins,
@@ -826,12 +833,15 @@ class CIESourceModel(ThermalSourceModel):
                                            nolines=nolines, nei=self._nei,
                                            abund_table=abund_table)
         elif model == "mekal":
-            spectral_model = MekalSpectralModel(emin, emax, nbins, binscale=binscale, var_elem=var_elem_keys)
+            spectral_model = MekalSpectralModel(emin, emax, nbins, binscale=binscale, 
+                                                var_elem=var_elem_keys)
         elif model == "cloudy":
-            if var_elem_keys is not None:
-                mylog.warning("Variable elements are currently not supported for the "
-                              "'cloudy' option for 'CIESourceModel', so ignoring them.")
-            spectral_model = CloudyCIESpectralModel(emin, emax, nbins, binscale=binscale)
+            if abund_table != "feld":
+                mylog.warning("For the 'cloudy' model, the only available abundance table is "
+                              "'feld', so using that one.")
+                abund_table = "feld"
+            spectral_model = CloudyCIESpectralModel(emin, emax, nbins, binscale=binscale,
+                                                    var_elem_option=var_elem_option)
         super().__init__(spectral_model, emin, emax, nbins, Zmet, binscale=binscale, kT_min=kT_min, 
                          kT_max=kT_max, var_elem=var_elem, max_density=max_density, method=method,
                          abund_table=abund_table, prng=prng, temperature_field=temperature_field,
