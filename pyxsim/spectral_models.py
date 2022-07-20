@@ -186,6 +186,18 @@ class Atable1DSpectralModel(ThermalSpectralModel):
         else:
             self.vf = None
 
+    def get_spectrum(self, kT):
+        """
+        Get the thermal emission spectrum given a temperature *kT* in keV.
+        """
+        lkT = np.atleast_1d(np.log10(kT*K_per_keV))
+        var_spec = None
+        cosmic_spec = self.cf(lkT)
+        metal_spec = self.mf(lkT)
+        if self.var_spec is not None:
+            var_spec = self.vf(lkT)
+        return cosmic_spec, metal_spec, var_spec
+
 
 class MekalSpectralModel(Atable1DSpectralModel):
     def __init__(self, emin, emax, nbins, binscale="linear", var_elem=None,
@@ -275,6 +287,7 @@ class IGMSpectralModel(ThermalSpectralModel):
         self.n_T = self.igen.n_T
         self.n_D = self.igen.n_D
         self.binscale = self.igen.binscale
+        self.var_elem_option = var_elem_option
         self.cie_model = CloudyCIESpectralModel(emin, emax, nbins, binscale=self.binscale, 
                                                 var_elem_option=self.var_elem_option)
 
