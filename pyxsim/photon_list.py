@@ -9,7 +9,7 @@ from yt.utilities.physical_constants import clight
 from yt.utilities.cosmology import Cosmology
 from yt.utilities.orientation import Orientation
 from yt.utilities.parallel_tools.parallel_analysis_interface import \
-    communication_system
+    communication_system, parallel_objects
 from unyt.array import unyt_array
 import h5py
 from pyxsim.spectral_models import absorb_models
@@ -252,7 +252,7 @@ def make_photons(photon_prefix, data_source, redshift, area,
     else:
         mylog.info("The observer is internal to the source.")
 
-    local_exp_time = parameters["fid_exp_time"].v/comm.size
+    local_exp_time = parameters["fid_exp_time"].v
     D_A = parameters["fid_d_a"].to_value("cm")
     dist_fac = 1.0/(4.*np.pi)
     if observer == "external":
@@ -316,7 +316,7 @@ def make_photons(photon_prefix, data_source, redshift, area,
 
     f.flush()
 
-    for chunk in data_source.chunks([], "io"):
+    for chunk in parallel_objects(data_source.chunks([], "io")):
 
         chunk_data = source_model.process_data("photons", chunk)
 
