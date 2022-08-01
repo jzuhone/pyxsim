@@ -646,6 +646,8 @@ class IGMSourceModel(ThermalSourceModel):
         1: specify abundances of O, Ne, and Fe separately from other metals
         2: specify abundances of O, Ne, Mg, Si, S, and Fe separately from other
            metals
+        3: specify abundances of C, N, O, Ne, Mg, Si, S, Ca, and Fe separately 
+           from other metals
         Default: None, which means no metal abundances can be specified
         separately.
     temperature_field : string or (ftype, fname) tuple, optional
@@ -789,8 +791,8 @@ class CIESourceModel(ThermalSourceModel):
         The abundance table to be used for solar abundances. 
         Either a string corresponding to a built-in table or an array
         of 30 floats corresponding to the abundances of each element
-        relative to the abundance of H. Not yet available for "cloudy".
-        Default is "angr".
+        relative to the abundance of H. Not yet available for the "cloudy", 
+        CIE model, which always uses "feld". Otherwise, default is "angr".
         Built-in options are:
         "angr" : from Anders E. & Grevesse N. (1989, Geochimica et 
         Cosmochimica Acta 53, 197)
@@ -800,6 +802,16 @@ class CIESourceModel(ThermalSourceModel):
         except for elements not listed which are given zero abundance)
         "lodd" : from Lodders, K (2003, ApJ 591, 1220)
         "feld" : from Feldman U. (1992, Physica Scripta, 46, 202)
+    var_elem_option: integer, optional
+        If using the "cloudy" CIE model, an integer to choose between options 
+        for variable elements, which are:
+        1: specify abundances of O, Ne, and Fe separately from other metals
+        2: specify abundances of O, Ne, Mg, Si, S, and Fe separately from other
+           metals
+        3: specify abundances of C, N, O, Ne, Mg, Si, S, Ca, and Fe separately 
+           from other metals
+        Default: None, which means no metal abundances can be specified
+        separately.
     prng : integer or :class:`~numpy.random.RandomState` object 
         A pseudo-random number generator. Typically will only be specified
         if you have a reason to generate the same set of random numbers, 
