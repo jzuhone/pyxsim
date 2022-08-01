@@ -30,6 +30,7 @@ def doppler_shift(np.ndarray[np.float64_t, ndim=1] shift,
             eobs[k] = eobs[k] * shft
             k += 1
 
+
 @cython.cdivision(True)
 @cython.boundscheck(False)
 @cython.wraparound(False)
@@ -42,15 +43,18 @@ def scatter_events(normal, prng, kernel, data_type,
                    np.ndarray[np.float64_t, ndim=1] z,
                    np.ndarray[np.float64_t, ndim=1] dx,
                    np.ndarray[np.float64_t, ndim=1] x_hat,
-                   np.ndarray[np.float64_t, ndim=1] y_hat):
+                   np.ndarray[np.float64_t, ndim=1] y_hat,
+                   np.ndarray[np.float64_t, ndim=1] z_hat):
 
     cdef np.int64_t num_cells = dx.shape[0]
     cdef np.ndarray[np.float64_t, ndim=1] xsky, ysky, zsky, r, theta
-    cdef np.int64_t i, j, k, xax, yax, n
+    cdef np.int64_t i, j, k, xax, yax, zax, n
     cdef np.float64_t xx, yy
 
     k = 0
     n = 0
+
+    los = np.zeros(num_det)
 
     if isinstance(normal, int):
 
@@ -63,7 +67,7 @@ def scatter_events(normal, prng, kernel, data_type,
         elif normal == 2:
             xax = 0
             yax = 1
-    
+
         if data_type == "cells":
             xsky = prng.uniform(low=-0.5, high=0.5, size=num_det)
             ysky = prng.uniform(low=-0.5, high=0.5, size=num_det)
@@ -85,12 +89,15 @@ def scatter_events(normal, prng, kernel, data_type,
                     if normal == 0:
                         xsky[k] += y[i]
                         ysky[k] += z[i]
+                        los[k] = x[i]
                     elif normal == 1:
                         xsky[k] += z[i]
                         ysky[k] += x[i]
+                        los[k] = y[i]
                     elif normal == 2:
                         xsky[k] += x[i]
                         ysky[k] += y[i]
+                        los[k] = z[i]
                     k += 1
                 n += 1
 
@@ -111,6 +118,7 @@ def scatter_events(normal, prng, kernel, data_type,
                               zsky[k]*y_hat[2])
                         xsky[k] = xx
                         ysky[k] = yy
+                        los[k] = x[i]*z_hat[0]+y[i]*z_hat[1]+z[i]*z_hat[2]
                         k += 1
                     n += 1
         elif data_type  == "particles":
@@ -129,10 +137,11 @@ def scatter_events(normal, prng, kernel, data_type,
                             y[i]*x_hat[1] + z[i]*x_hat[2]
                         ysky[k] = ysky[k]*dx[i] + x[i]*y_hat[0] + \
                             y[i]*y_hat[1] + z[i]*y_hat[2]
+                        los[k] = x[i]*z_hat[0]+y[i]*z_hat[1]+z[i]*z_hat[2]
                         k += 1
                     n += 1
     
-    return xsky, ysky
+    return xsky, ysky, los
 
 
 @cython.cdivision(True)
@@ -191,6 +200,7 @@ def scatter_events_allsky(data_type, kernel, prng, int num_det,
 
     lat = np.zeros(num_det)
     lon = np.zeros(num_det)
+    los = np.zeros(num_det)
 
     if data_type == "cells":
         xsky, ysky, zsky = prng.uniform(low=-0.5, high=0.5,
@@ -228,7 +238,8 @@ def scatter_events_allsky(data_type, kernel, prng, int num_det,
                 lat[k] = 0.5*PI - acos(zz/rr)
                 lon[k] *= 180.0 / PI
                 lat[k] *= 180.0 / PI
+                los[k] = rr
                 k += 1
             n += 1
 
-    return lon, lat
+    return lon, lat, los

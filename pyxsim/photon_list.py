@@ -395,7 +395,9 @@ def make_photons(photon_prefix, data_source, redshift, area,
 def _project_photons(obs, photon_prefix, event_prefix, normal,
                      sky_center, absorb_model=None, nH=None,
                      no_shifting=False, north_vector=None, flat_sky=False,
-                     sigma_pos=None, kernel="top_hat", prng=None):
+                     sigma_pos=None, kernel="top_hat", save_los=False,
+                     prng=None):
+
     from yt.funcs import ensure_numpy_array
     prng = parse_prng(prng)
 
@@ -484,6 +486,8 @@ def _project_photons(obs, photon_prefix, event_prefix, normal,
         pe.create_dataset("observer", data=observer)
 
         event_fields = ["xsky", "ysky", "eobs"]
+        if save_los:
+            event_fields.append("los")
 
         n_events = 0
         e_offset = 0
@@ -550,9 +554,9 @@ def _project_photons(obs, photon_prefix, event_prefix, normal,
                     if data_type == "particles":
                         dx *= 0.5
                     
-                    xsky, ysky = scatter_events(norm, prng, kernel, 
-                                                data_type, num_det, det, n_ph,
-                                                x, y, z, dx, x_hat, y_hat)
+                    xsky, ysky, los = scatter_events(norm, prng, kernel,
+                                                     data_type, num_det, det, n_ph,
+                                                     x, y, z, dx, x_hat, y_hat, z_hat)
     
                     if data_type == "cells" and sigma_pos is not None:
                         sigma = sigma_pos*np.repeat(dx, n_ph)[det]
@@ -570,9 +574,9 @@ def _project_photons(obs, photon_prefix, event_prefix, normal,
 
                 elif observer == "internal":
 
-                    xsky, ysky = scatter_events_allsky(data_type, kernel, prng, num_det,
-                                                       det, n_ph, x, y, z, dx,
-                                                       x_hat, y_hat, z_hat)
+                    xsky, ysky, los = scatter_events_allsky(data_type, kernel, prng, num_det,
+                                                            det, n_ph, x, y, z, dx,
+                                                            x_hat, y_hat, z_hat)
 
                 if e_size < n_events + num_det:
                     while n_events + num_det > e_size:
@@ -583,6 +587,8 @@ def _project_photons(obs, photon_prefix, event_prefix, normal,
                 de["xsky"][e_offset:e_offset+num_det] = xsky
                 de["ysky"][e_offset:e_offset+num_det] = ysky
                 de["eobs"][e_offset:e_offset+num_det] = eobs[det]
+                if save_los:
+                    de["los"][e_offset:e_offset+num_det] = los
 
                 n_events += num_det
                 e_offset = n_events
@@ -613,7 +619,7 @@ def _project_photons(obs, photon_prefix, event_prefix, normal,
 def project_photons(photon_prefix, event_prefix, normal, sky_center,
                     absorb_model=None, nH=None, no_shifting=False,
                     north_vector=None, sigma_pos=None, flat_sky=False,
-                    kernel="top_hat", prng=None):
+                    kernel="top_hat", save_los=False, prng=None):
     r"""
     Projects photons onto an image plane given a line of sight, and
     stores them in an HDF5 dataset which contains an event list.
@@ -665,6 +671,9 @@ def project_photons(photon_prefix, event_prefix, normal, sky_center,
     kernel : string, optional
         The kernel used when smoothing positions of X-rays originating from
         SPH particles, "gaussian" or "top_hat". Default: "top_hat".
+    save_los : boolean, optional
+        If True, save the line-of-sight positions along the projection axis in
+        units of kpc to the events file. Default: False
     prng : integer or :class:`~numpy.random.RandomState` object
         A pseudo-random number generator. Typically will only be specified
         if you have a reason to generate the same set of random numbers,
@@ -685,12 +694,13 @@ def project_photons(photon_prefix, event_prefix, normal, sky_center,
     return _project_photons("external", photon_prefix, event_prefix, normal,
                             sky_center, absorb_model=absorb_model, nH=nH,
                             no_shifting=no_shifting, north_vector=north_vector,
-                            sigma_pos=sigma_pos, flat_sky=flat_sky, kernel=kernel, prng=prng)
+                            sigma_pos=sigma_pos, flat_sky=flat_sky, kernel=kernel,
+                            save_los=save_los, prng=prng)
 
 
 def project_photons_allsky(photon_prefix, event_prefix, normal,
                            absorb_model=None, nH=None, no_shifting=False,
-                           kernel="top_hat", prng=None):
+                           kernel="top_hat", save_los=False, prng=None):
     r"""
     Projects photons onto the sky sphere given a normal vector, and
     stores them in an HDF5 dataset which contains an event list.
@@ -723,6 +733,9 @@ def project_photons_allsky(photon_prefix, event_prefix, normal,
     kernel : string, optional
         The kernel used when smoothing positions of X-rays originating from
         SPH particles, "gaussian" or "top_hat". Default: "top_hat".
+    save_los : boolean, optional
+        If True, save the line-of-sight radii in units of kpc to the events
+        file. Default: False
     prng : integer or :class:`~numpy.random.RandomState` object
         A pseudo-random number generator. Typically will only be specified
         if you have a reason to generate the same set of random numbers,
@@ -740,4 +753,5 @@ def project_photons_allsky(photon_prefix, event_prefix, normal,
     """
     return _project_photons("internal", photon_prefix, event_prefix, normal,
                             [0.0, 0.0], absorb_model=absorb_model, nH=nH,
-                            no_shifting=no_shifting, kernel=kernel, prng=prng)
+                            no_shifting=no_shifting, kernel=kernel, save_los=save_los,
+                            prng=prng)
