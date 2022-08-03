@@ -24,4 +24,5 @@ from pyxsim.source_models import \
    IGMSourceModel
 
 from pyxsim.utils import merge_files, \
-    compute_elem_mass_fraction
+    compute_elem_mass_fraction, \
+    create_metal_fields

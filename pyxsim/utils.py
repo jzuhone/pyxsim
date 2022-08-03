@@ -159,5 +159,38 @@ def compute_elem_mass_fraction(elem, abund_table="angr"):
     return mE/mZ
 
 
+def create_metal_fields(ds, metallicity_field, elements, abund_table):
+    """
+    Create a set of metal abundance fields based on an abundance table
+    for a dataset that does not have them. An overall metallicity field
+    is required to scale the individual abundances by.
+    
+    Parameters
+    ----------
+    ds : :class:`~yt.data_objects.static_output.Dataset`
+        The dataset object for which this field will be created.
+    metallicity_field : 2-tuple of strings
+        The metallicity field of the dataset.
+    elements : string or list of strings
+        The element or elements to make fields for.
+    abund_table : string
+        The abundance table to use when computing the fields for the
+        individual elements.
+    """
+    elements = ensure_list(elements)
+    def make_metal_field(elem):
+        fac = compute_elem_mass_fraction(elem, abund_table=abund_table)
+        def _metal_field(field, data):
+            return fac*data[metallicity_field].to("dimensionless")
+        return _metal_field
+    mfields = []
+    for elem in elements:
+        func = make_metal_field(elem)
+        mfield = (metallicity_field[0], f"{elem}_fraction")
+        ds.add_field(mfield, func, sampling_type="local", units="")
+        mfields.append(mfield)
+    return mfields
+
+
 def compute_H_abund(abund_table):
     return atomic_weights[1]/(atomic_weights*abund_tables[abund_table]).sum()
