@@ -393,7 +393,7 @@ def make_photons(photon_prefix, data_source, redshift, area,
 
 
 def _project_photons(obs, photon_prefix, event_prefix, normal,
-                     sky_center, absorb_model=None, nH=None,
+                     sky_center, absorb_model=None, nH=None, abund_table="angr",
                      no_shifting=False, north_vector=None, flat_sky=False,
                      sigma_pos=None, kernel="top_hat", save_los=False,
                      prng=None):
@@ -437,7 +437,7 @@ def _project_photons(obs, photon_prefix, event_prefix, normal,
         if nH is None:
             raise RuntimeError("You specified an absorption model, but didn't "
                                "specify a value for nH!")
-        absorb_model = absorb_model(nH)
+        absorb_model = absorb_model(nH, abund_table=abund_table)
         if comm.rank == 0:
             mylog.info(f"Foreground galactic absorption: using the "
                        f"{absorb_model._name} model and nH = {nH}.")
@@ -617,9 +617,10 @@ def _project_photons(obs, photon_prefix, event_prefix, normal,
 
 
 def project_photons(photon_prefix, event_prefix, normal, sky_center,
-                    absorb_model=None, nH=None, no_shifting=False,
-                    north_vector=None, sigma_pos=None, flat_sky=False,
-                    kernel="top_hat", save_los=False, prng=None):
+                    absorb_model=None, nH=None, abund_table="angr",
+                    no_shifting=False, north_vector=None, 
+                    sigma_pos=None, flat_sky=False, kernel="top_hat", 
+                    save_los=False, prng=None):
     r"""
     Projects photons onto an image plane given a line of sight, and
     stores them in an HDF5 dataset which contains an event list.
@@ -649,6 +650,20 @@ def project_photons(photon_prefix, event_prefix, normal, sky_center,
     nH : float, optional
         The foreground column density in units of 10^22 cm^{-2}. Only used
         if absorption is applied.
+    abund_table : string 
+        The abundance table to be used for abundances in the 
+        absorption model (only used for TBabs). Default is set in the SOXS
+        configuration file, the default for which is "angr".
+        Built-in options are:
+        "angr" : from Anders E. & Grevesse N. (1989, Geochimica et 
+        Cosmochimica Acta 53, 197)
+        "aspl" : from Asplund M., Grevesse N., Sauval A.J. & Scott 
+        P. (2009, ARAA, 47, 481)
+        "feld" : from Feldman U. (1992, Physica Scripta, 46, 202)
+        "wilm" : from Wilms, Allen & McCray (2000, ApJ 542, 914 
+        except for elements not listed which are given zero abundance)
+        "lodd" : from Lodders, K (2003, ApJ 591, 1220)
+        "cl17.03" : the default abundance table in Cloudy 17.03
     no_shifting : boolean, optional
         If set, the photon energies will not be Doppler shifted.
     north_vector : a sequence of floats
@@ -693,14 +708,16 @@ def project_photons(photon_prefix, event_prefix, normal, sky_center,
     """
     return _project_photons("external", photon_prefix, event_prefix, normal,
                             sky_center, absorb_model=absorb_model, nH=nH,
-                            no_shifting=no_shifting, north_vector=north_vector,
-                            sigma_pos=sigma_pos, flat_sky=flat_sky, kernel=kernel,
-                            save_los=save_los, prng=prng)
+                            abund_table=abund_table, no_shifting=no_shifting, 
+                            north_vector=north_vector, sigma_pos=sigma_pos, 
+                            flat_sky=flat_sky, kernel=kernel, save_los=save_los, 
+                            prng=prng)
 
 
 def project_photons_allsky(photon_prefix, event_prefix, normal,
-                           absorb_model=None, nH=None, no_shifting=False,
-                           kernel="top_hat", save_los=False, prng=None):
+                           absorb_model=None, nH=None, abund_table="angr",
+                           no_shifting=False, kernel="top_hat", save_los=False, 
+                           prng=None):
     r"""
     Projects photons onto the sky sphere given a normal vector, and
     stores them in an HDF5 dataset which contains an event list.
@@ -728,6 +745,20 @@ def project_photons_allsky(photon_prefix, event_prefix, normal,
     nH : float, optional
         The foreground column density in units of 10^22 cm^{-2}. Only used
         if absorption is applied.
+    abund_table : string 
+        The abundance table to be used for abundances in the 
+        absorption model (only used for TBabs). Default is set in the SOXS
+        configuration file, the default for which is "angr".
+        Built-in options are:
+        "angr" : from Anders E. & Grevesse N. (1989, Geochimica et 
+        Cosmochimica Acta 53, 197)
+        "aspl" : from Asplund M., Grevesse N., Sauval A.J. & Scott 
+        P. (2009, ARAA, 47, 481)
+        "feld" : from Feldman U. (1992, Physica Scripta, 46, 202)
+        "wilm" : from Wilms, Allen & McCray (2000, ApJ 542, 914 
+        except for elements not listed which are given zero abundance)
+        "lodd" : from Lodders, K (2003, ApJ 591, 1220)
+        "cl17.03" : the default abundance table in Cloudy 17.03
     no_shifting : boolean, optional
         If set, the photon energies will not be Doppler shifted.
     kernel : string, optional
@@ -752,6 +783,6 @@ def project_photons_allsky(photon_prefix, event_prefix, normal,
     >>> n_events = pyxsim.project_photons_allsky("my_photons.h5", "my_events.h5", L)
     """
     return _project_photons("internal", photon_prefix, event_prefix, normal,
-                            [0.0, 0.0], absorb_model=absorb_model, nH=nH,
-                            no_shifting=no_shifting, kernel=kernel, save_los=save_los,
-                            prng=prng)
+                            [0.0, 0.0], absorb_model=absorb_model, nH=nH, 
+                            abund_table=abund_table, no_shifting=no_shifting, 
+                            kernel=kernel, save_los=save_los, prng=prng)

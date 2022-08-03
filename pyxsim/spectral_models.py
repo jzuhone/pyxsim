@@ -420,12 +420,13 @@ class TBabsModel(AbsorptionModel):
     """
     _name = "tbabs"
 
-    def __init__(self, nH):
+    def __init__(self, nH, abund_table="angr"):
         self.nH = YTQuantity(nH, "1.0e22*cm**-2")
+        self.abund_table = abund_table
 
     def get_absorb(self, e):
         e = np.array(e)
-        return get_tbabs_absorb(e, self.nH.v)
+        return get_tbabs_absorb(e, self.nH.v, abund_table=self.abund_table)
 
 
 class WabsModel(AbsorptionModel):
@@ -444,8 +445,9 @@ class WabsModel(AbsorptionModel):
     """
     _name = "wabs"
 
-    def __init__(self, nH):
+    def __init__(self, nH, abund_table="angr"):
         self.nH = YTQuantity(nH, "1.0e22*cm**-2")
+        self.abund_table = abund_table
 
     def get_absorb(self, e):
         e = np.array(e)
