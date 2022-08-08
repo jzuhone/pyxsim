@@ -231,6 +231,7 @@ def make_photons(photon_prefix, data_source, redshift, area,
         bulk_velocity = bulk_velocity.to("km/s")
     elif isinstance(bulk_velocity, (list, np.ndarray)):
         bulk_velocity = ds.arr(bulk_velocity, "km/s")
+    parameters["bulk_velocity"] = bulk_velocity
 
     parameters["fid_exp_time"] = parse_value(exp_time, "s")
     parameters["fid_area"] = parse_value(area, "cm**2")
@@ -295,6 +296,8 @@ def make_photons(photon_prefix, data_source, redshift, area,
     p.create_dataset("fid_d_a", data=float(parameters["fid_d_a"]))
     p.create_dataset("data_type", data=parameters["data_type"])
     p.create_dataset("observer", data=parameters["observer"])
+    p.create_dataset("center", data=parameters["center"].d)
+    p.create_dataset("bulk_velocity", data=parameters["bulk_velocity"].d)
 
     n_cells = 0
     n_photons = 0
@@ -484,6 +487,8 @@ def _project_photons(obs, photon_prefix, event_prefix, normal,
         pe.create_dataset("area", data=float(p["fid_area"][()]))
         pe.create_dataset("sky_center", data=sky_center)
         pe.create_dataset("observer", data=observer)
+        pe.create_dataset("no_shifting", data=int(no_shifting))
+        pe.create_dataset("normal", data=normal)
 
         event_fields = ["xsky", "ysky", "eobs"]
         if save_los:
