@@ -3,6 +3,24 @@
 ChangeLog
 =========
 
+Version 4.0
+-----------
+
+* Non-PHOX modes, spectra and fields
+* New thermal spectral models
+* Iterate over chunks in thermal models
+* Parallelize over chunks
+* Varying H_fraction in thermal models
+* New abundance tables Feldman and Cloudy
+* Logspaced energy bins
+* An option to add a ``bulk_velocity`` parameter 
+* Internal observers
+* No default max_density for thermal models
+* Create metal fields that do not exist based on abundance tables
+* Option for flat-sky projection of coordinates
+* Option to store l.o.s. coordinates
+* Change abundance table for tbabs
+
 Version 3.0.1
 -------------
 
