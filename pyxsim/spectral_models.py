@@ -14,7 +14,52 @@ from scipy.interpolate import interp1d
 
 
 class ThermalSpectralModel:
-    pass
+    _logT = False
+
+    def _Tconv(self, kT):
+        if self._logT:
+            return np.log10(kT * K_per_keV)
+        else:
+            return kT
+
+    def get_spectrum(self, kT):
+        """
+        Get the thermal emission spectrum given a temperature *kT* in keV. 
+        """
+        kT = np.atleast_1d(self._Tconv(kT))
+        var_spec = None
+        cosmic_spec = self.cf(kT)
+        metal_spec = self.mf(kT)
+        if self.var_spec is not None:
+            var_spec = self.vf(kT)
+        return cosmic_spec, metal_spec, var_spec
+
+    def make_fluxf(self, emin, emax, energy=False):
+        eidxs = (self.ebins[:-1] > emin) & (self.ebins[1:] < emax)
+        emid = self.emid[eidxs]
+        if energy:
+            cosmic_flux = (self.cosmic_spec[:,eidxs]*emid).sum(axis=-1)
+            metal_flux = (self.metal_spec[:,eidxs]*emid).sum(axis=-1)
+        else:
+            cosmic_flux = self.cosmic_spec[:,eidxs].sum(axis=-1)
+            metal_flux = self.metal_spec[:,eidxs].sum(axis=-1)
+        cf = interp1d(self.Tvals, cosmic_flux, fill_value=0.0,
+                      assume_sorted=True, copy=False)
+        mf = interp1d(self.Tvals, metal_flux, fill_value=0.0,
+                      assume_sorted=True, copy=False)
+        if self.var_spec is not None:
+            if energy:
+                var_flux = (self.var_spec[:, :, eidxs]*emid).sum(axis=-1)
+            else:
+                var_flux = self.var_spec[:,:,eidxs].sum(axis=-1)
+            vf = interp1d(self.Tvals, var_flux, axis=1, fill_value=0.0,
+                          assume_sorted=True, copy=False)
+        else:
+            vf = lambda kT: None
+        def _fluxf(kT):
+            kT = self._Tconv(kT)
+            return cf(kT), mf(kT), vf(kT)
+        return _fluxf
 
 
 class TableCIEModel(ThermalSpectralModel):
@@ -118,46 +163,9 @@ class TableCIEModel(ThermalSpectralModel):
         else:
             self.vf = None
 
-    def get_spectrum(self, kT):
-        """
-        Get the thermal emission spectrum given a temperature *kT* in keV. 
-        """
-        kT = np.atleast_1d(kT)
-        var_spec = None
-        cosmic_spec = self.cf(kT)
-        metal_spec = self.mf(kT)
-        if self.var_spec is not None:
-            var_spec = self.vf(kT)
-        return cosmic_spec, metal_spec, var_spec
-
-    def return_spectrum(self, temperature, metallicity, redshift, norm,
-                        velocity=0.0, elem_abund=None):
-        """
-        Given the properties of a thermal plasma, return a spectrum.
-
-        Parameters
-        ----------
-        temperature : float
-            The temperature of the plasma in keV.
-        metallicity : float
-            The metallicity of the plasma in solar units.
-        redshift : float
-            The redshift of the plasma.
-        norm : float
-            The normalization of the model, in the standard Xspec units of
-            1.0e-14*EM/(4*pi*(1+z)**2*D_A**2).
-        velocity : float, optional
-            Velocity broadening parameter in km/s. Default: 0.0
-        elem_abund : dict of element name, float pairs
-            A dictionary of elemental abundances to vary
-            freely of the abund parameter. Default: None
-        """
-        spec = self.cgen.get_spectrum(temperature, metallicity, redshift, norm, 
-                                      velocity=velocity, elem_abund=elem_abund)
-        return YTArray(spec.flux*spec.de, "photons/s/cm**2")
-
 
 class Atable1DSpectralModel(ThermalSpectralModel):
+    _logT = True
     def __init__(self, sgen):
         self.sgen = sgen
         self.nbins = self.sgen.nbins
@@ -167,6 +175,7 @@ class Atable1DSpectralModel(ThermalSpectralModel):
         self.atable = self.sgen.atable
         self.de = self.sgen.de
         self.binscale = self.sgen.binscale
+        self.Tvals = self.sgen.Tvals
 
     def prepare_spectrum(self, zobs, kT_min, kT_max):
         eidxs, ne, ebins, emid, de = self.sgen._get_energies(zobs)
@@ -176,27 +185,15 @@ class Atable1DSpectralModel(ThermalSpectralModel):
         if var_spec is not None:
             var_spec = 1.0e-14*regrid_spectrum(self.ebins, ebins, var_spec)
         self.var_spec = var_spec
-        self.cf = interp1d(self.sgen.Tvals, self.cosmic_spec, axis=0, fill_value=0.0,
+        self.cf = interp1d(self.Tvals, self.cosmic_spec, axis=0, fill_value=0.0,
                            assume_sorted=True, copy=False)
-        self.mf = interp1d(self.sgen.Tvals, self.metal_spec, axis=0, fill_value=0.0,
+        self.mf = interp1d(self.Tvals, self.metal_spec, axis=0, fill_value=0.0,
                            assume_sorted=True, copy=False)
         if var_spec is not None:
-            self.vf = interp1d(self.sgen.Tvals, self.var_spec, axis=1, fill_value=0.0,
+            self.vf = interp1d(self.Tvals, self.var_spec, axis=1, fill_value=0.0,
                                assume_sorted=True, copy=False)
         else:
             self.vf = None
-
-    def get_spectrum(self, kT):
-        """
-        Get the thermal emission spectrum given a temperature *kT* in keV.
-        """
-        lkT = np.atleast_1d(np.log10(kT*K_per_keV))
-        var_spec = None
-        cosmic_spec = self.cf(lkT)
-        metal_spec = self.mf(lkT)
-        if self.var_spec is not None:
-            var_spec = self.vf(lkT)
-        return cosmic_spec, metal_spec, var_spec
 
 
 class MekalSpectralModel(Atable1DSpectralModel):
@@ -217,6 +214,7 @@ class CloudyCIESpectralModel(Atable1DSpectralModel):
 
 
 class IGMSpectralModel(ThermalSpectralModel):
+    _logT = True
     r"""
     A spectral model for a thermal plasma including photoionization and 
     resonant scattering from the CXB based on Khabibullin & Churazov 2019
@@ -364,6 +362,80 @@ class IGMSpectralModel(ThermalSpectralModel):
         else:
             vspec = None
         return cspec, mspec, vspec
+
+    def make_fluxf(self, emin, emax, energy=False):
+        eidxs = (self.ebins[:-1] > emin) & (self.ebins[1:] < emax)
+        emid = self.emid[eidxs]
+        if energy:
+            cosmic_flux = (self.cosmic_spec[:,eidxs]*emid).sum(axis=-1)
+            metal_flux = (self.metal_spec[:,eidxs]*emid).sum(axis=-1)
+        else:
+            cosmic_flux = self.cosmic_spec[:,eidxs].sum(axis=-1)
+            metal_flux = self.metal_spec[:,eidxs].sum(axis=-1)
+        if self.var_spec is not None:
+            if energy:
+                var_flux = (self.var_spec[:, :, eidxs]*emid).sum(axis=-1)
+            else:
+                var_flux = self.var_spec[:,:,eidxs].sum(axis=-1)
+        else:
+            var_flux = None
+        cie_fluxf = self.cie_model.make_fluxf(emin, emax, energy=energy)
+        def _fluxf(kT, nH):
+            kT = np.atleast_1d(kT)
+            nH = np.atleast_1d(nH)
+            use_igm = (kT >= self.min_table_kT) & (kT <= self.max_table_kT)
+            use_igm &= (nH >= self.min_table_nH) & (nH <= self.max_table_nH)
+            use_cie = ~use_igm
+            cflux = np.zeros(kT.size)
+            mflux = np.zeros(kT.size)
+            if self.var_spec is not None:
+                vflux = np.zeros((self.nvar_elem, kT.size))
+            else:
+                vflux = None
+            n_cie = use_cie.sum()
+            n_igm = use_igm.sum()
+            if n_igm > 0:
+                nHi = nH[use_igm]
+                c1, m1, v1 = self._get_flux_2d(kT[use_igm], nHi, cosmic_flux,
+                                               metal_flux, var_flux)
+                cflux[use_igm] = c1/nHi
+                mflux[use_igm] = m1/nHi
+                if self.var_spec is not None:
+                    vflux[:,use_igm] = v1/nHi[np.newaxis,:]
+            if n_cie > 0:
+                c2, m2, v2 = cie_fluxf(kT[use_cie])
+                cflux[use_cie] = c2
+                mflux[use_cie] = m2
+                if self.var_spec is not None:
+                    vflux[:,use_cie] = v2
+            return cflux, mflux, vflux
+        return _fluxf
+
+    def _get_flux_2d(self, kT, nH, cf, mf, vf):
+        lkT = np.atleast_1d(np.log10(kT*K_per_keV))
+        lnH = np.atleast_1d(np.log10(nH))
+        tidxs = np.searchsorted(self.Tvals, lkT)-1
+        didxs = np.searchsorted(self.Dvals, lnH)-1
+        dT = (lkT - self.Tvals[tidxs]) / self.dTvals[tidxs]
+        dn = (lnH - self.Dvals[didxs]) / self.dDvals[didxs]
+        idx1 = np.ravel_multi_index((didxs+1,tidxs+1), (self.n_D, self.n_T))
+        idx2 = np.ravel_multi_index((didxs+1,tidxs), (self.n_D, self.n_T))
+        idx3 = np.ravel_multi_index((didxs,tidxs+1), (self.n_D, self.n_T))
+        idx4 = np.ravel_multi_index((didxs,tidxs), (self.n_D, self.n_T))
+        dx1 = dT*dn
+        dx2 = dn-dx1
+        dx3 = dT-dx1
+        dx4 = 1.0+dx1-dT-dn
+        cflux = dx1*cf[idx1]+dx2*cf[idx2]+dx3*cf[idx3]+dx4*cf[idx4]
+        mflux = dx1*mf[idx1]+dx2*mf[idx2]+dx3*mf[idx3]+dx4*mf[idx4]
+        if vf is not None:
+            vflux = dx1[np.newaxis,:]*vf[:,idx1]
+            vflux += dx2[np.newaxis,:]*vf[:,idx2]
+            vflux += dx3[np.newaxis,:]*vf[:,idx3]
+            vflux += dx4[np.newaxis,:]*vf[:,idx4]
+        else:
+            vflux = None
+        return cflux, mflux, vflux
 
 
 class AbsorptionModel:

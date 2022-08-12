@@ -174,9 +174,11 @@ class SourceModel:
             ftype, emiss_name[1].replace("emissivity", "photon_emissivity")
         )
 
+        efluxf = self.make_fluxf(emin, emax, energy=True)
+
         def _luminosity_field(field, data):
             return data.ds.arr(
-                self.process_data("energy_field", data, elim=[emin, emax]), "keV/s")
+                self.process_data("energy_field", data, fluxf=efluxf), "keV/s")
 
         ds.add_field(
             lum_name,
@@ -198,8 +200,10 @@ class SourceModel:
             units="erg/cm**3/s",
         )
 
+        pfluxf = self.make_fluxf(emin, emax, energy=False)
+
         def _photon_emissivity_field(field, data):
-            ret = data.ds.arr(self.process_data("photon_field", data, elim=[emin, emax]),
+            ret = data.ds.arr(self.process_data("photon_field", data, fluxf=pfluxf),
                               "photons/s")
             return ret * data[ftype, "density"] / data[ftype, "mass"]
 
@@ -225,10 +229,11 @@ class SourceModel:
             )
             ei_dname = emiss_dname.replace(r"\epsilon", "I")
 
+            eif = self.make_fluxf(emin_src, emax_src, energy=True)
+
             def _intensity_field(field, data):
                 ret = data.ds.arr(self.process_data("energy_field",
-                                                    data, 
-                                                    elim=[emin_src, emax_src]), "keV/s")
+                                                    data, fluxf=eif), "keV/s")
                 idV = data[ftype, "density"] / data[ftype, "mass"]
                 I = dist_fac * ret * idV
                 return I.in_units("erg/cm**3/s/arcsec**2")
@@ -246,10 +251,11 @@ class SourceModel:
             )
             i_dname = emiss_dname.replace(r"\epsilon", "I")
 
+            pif = self.make_fluxf(emin_src, emax_src, energy=False)
+
             def _photon_intensity_field(field, data):
                 ret = data.ds.arr(self.process_data("photon_field",
-                                                    data,
-                                                    elim=[emin_src, emax_src]), "photons/s")
+                                                    data, fluxf=pif), "photons/s")
                 idV = data[ftype, "density"] / data[ftype, "mass"]
                 I = (1.0 + redshift) * dist_fac * ret * idV
                 return I.in_units("photons/cm**3/s/arcsec**2")
@@ -328,7 +334,7 @@ class ThermalSourceModel(SourceModel):
             h_fraction = compute_H_abund(abund_table)
         self.h_fraction = h_fraction
 
-    def setup_model(self, data_source, redshift, spectral_norm):
+    def setup_model(self, data_source, redshift, spectral_norm, elim=None):
         if isinstance(data_source, Dataset):
             ds = data_source
         else:
@@ -409,12 +415,11 @@ class ThermalSourceModel(SourceModel):
         return self._make_spectrum(data_source.ds, self.ebins, spec, 
                                    redshift, dist, cosmology)
 
-    def process_data(self, mode, chunk, elim=None):
+    def make_fluxf(self, emin, emax, energy=False):
+        return self.spectral_model.make_fluxf(emin, emax, energy=energy)
 
-        if elim is not None:
-            eidxs = (self.ebins[:-1] > elim[0]) & (self.ebins[1:] < elim[1])
-        else:
-            eidxs = ...
+    def process_data(self, mode, chunk, fluxf=None):
+
         orig_shape = chunk[self.temperature_field].shape
         if len(orig_shape) == 0:
             orig_ncells = 0
@@ -516,28 +521,24 @@ class ThermalSourceModel(SourceModel):
 
             kTi = kT[ibegin:iend]
 
-            if self._density_dependence:
-                nHi = nH[ibegin:iend]
-                cspec, mspec, vspec = self.spectral_model.get_spectrum(kTi, nHi)
-            else:
-                cspec, mspec, vspec = self.spectral_model.get_spectrum(kTi)
+            if mode in ["photons", "spectrum"]:
 
-            tot_spec = np.zeros((nck, self.nbins))
-            tot_spec += cspec
-            tot_spec += metalZ[ibegin:iend, np.newaxis]*mspec
-            if self.num_var_elem > 0:
-                tot_spec += np.sum(elemZ[:,ibegin:iend,np.newaxis]*vspec, axis=0)
-
-            if mode in ["photons", "photon_field"]:
-
-                if mode == "photon_field":
-                    spec_sum = tot_spec[:, eidxs].sum(axis=-1)
+                if self._density_dependence:
+                    nHi = nH[ibegin:iend]
+                    cspec, mspec, vspec = self.spectral_model.get_spectrum(kTi, nHi)
                 else:
-                    spec_sum = tot_spec.sum(axis=-1)
+                    cspec, mspec, vspec = self.spectral_model.get_spectrum(kTi)
 
-                cell_norm = spec_sum*cnm
+                tot_spec = np.zeros((nck, self.nbins))
+                tot_spec += cspec
+                tot_spec += metalZ[ibegin:iend, np.newaxis] * mspec
+                if self.num_var_elem > 0:
+                    tot_spec += np.sum(elemZ[:, ibegin:iend, np.newaxis] * vspec, axis=0)
 
                 if mode == "photons":
+
+                    spec_sum = tot_spec[:, eidxs].sum(axis=-1)
+                    cell_norm = spec_sum * cnm
 
                     cell_n = np.atleast_1d(self.prng.poisson(lam=cell_norm))
 
@@ -567,18 +568,24 @@ class ThermalSourceModel(SourceModel):
                         ei += cn
                     start_e = end_e
 
-                elif mode == "photon_field":
+                elif mode == "spectrum":
 
-                    ret[idxs[ibegin:iend]] = cell_norm
+                    spec += np.sum(tot_spec * cnm[:, np.newaxis], axis=0)
 
-            elif mode == "energy_field":
+            else:
 
-                ret[idxs[ibegin:iend]] = np.sum(tot_spec[:, eidxs]*self.emid[eidxs],
-                                                axis=-1)*cnm
+                if self._density_dependence:
+                    nHi = nH[ibegin:iend]
+                    cflux, mflux, vflux = fluxf(kTi, nHi)
+                else:
+                    cflux, mflux, vflux = fluxf(kTi)
 
-            elif mode == "spectrum":
+                tot_flux = cflux
+                tot_flux += metalZ[ibegin:iend] * mflux
+                if self.num_var_elem > 0:
+                    tot_flux += np.sum(elemZ[:, ibegin:iend] * vflux, axis=0)
 
-                spec += np.sum(tot_spec*cnm[:,np.newaxis], axis=0)
+                ret[idxs[ibegin:iend]] = tot_flux*cnm
 
             self.pbar.update(nck)
 
