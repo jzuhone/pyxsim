@@ -113,10 +113,8 @@ class TableCIEModel(ThermalSpectralModel):
         except for elements not listed which are given zero abundance)
         "lodd" : from Lodders, K (2003, ApJ 591, 1220)
     nei : boolean, optional
-        If True, use the non-equilibrium ionization tables. These are
-        not supplied with pyXSIM/SOXS but must be downloaded separately, in
-        which case the *apec_root* parameter must also be set to their
-        location. Default: False
+        If True, use the non-equilibrium ionization tables. Only available
+        for the "apec" model. Default: False
 
     Examples
     --------
