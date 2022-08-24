@@ -169,6 +169,7 @@ class Atable1DSpectralModel(ThermalSpectralModel):
         self.nbins = self.sgen.nbins
         self.ebins = self.sgen.ebins
         self.emid = self.sgen.emid
+        self.var_elem = self.sgen.var_elem
         self.var_elem_names = self.sgen.var_elem
         self.atable = self.sgen.atable
         self.de = self.sgen.de
@@ -204,9 +205,9 @@ class MekalSpectralModel(Atable1DSpectralModel):
 
 
 class CloudyCIESpectralModel(Atable1DSpectralModel):
-    def __init__(self, emin, emax, nbins, binscale="linear", var_elem_option=None):
+    def __init__(self, emin, emax, nbins, binscale="linear", var_elem=None):
         cgen = CloudyCIEGenerator(emin, emax, nbins, binscale=binscale,
-                                  var_elem_option=var_elem_option)
+                                  var_elem=var_elem)
         super().__init__(cgen)
         self.var_ion_names = []
 
@@ -241,36 +242,21 @@ class IGMSpectralModel(ThermalSpectralModel):
     cxb_factor : float, optional
         The fraction of the CXB photons that are resonant scattered to enhance
         the lines. Default: 0.5
-    var_elem_option: integer, optional
-        An integer to choose between options for variable elements, which are:
-        1: specify abundances of O, Ne, and Fe separately from other metals
-        2: specify abundances of O, Ne, Mg, Si, S, and Fe separately from other
-           metals
-        Default: None, which means no metal abundances can be specified
-        separately.
     var_elem : list of strings, optional
         The names of elements to allow to vary freely
         from the single abundance parameter. Default:
         None
     """
     def __init__(self, emin, emax, nbins, binscale="linear", resonant_scattering=False, 
-                 cxb_factor=0.5, var_elem_option=None, var_elem=None):
+                 cxb_factor=0.5, var_elem=None):
         self.igen = IGMGenerator(emin, emax, nbins, binscale=binscale,
                                  resonant_scattering=resonant_scattering,
-                                 cxb_factor=cxb_factor,
-                                 var_elem_option=var_elem_option)
-        if var_elem is not None:
-            if set(var_elem) != set(self.igen.var_elem):
-                raise RuntimeError("The supplied set of abundances does not match "
-                                   "what is available for 'var_elem_option = "
-                                   f"{self.igen.var_elem_option}!\n"
-                                   "Free elements: %s\nAbundances: %s" % (set(var_elem),
-                                                                          set(self.igen.var_elem)))
+                                 cxb_factor=cxb_factor, var_elem=var_elem)
         self.ebins = self.igen.ebins
         self.emid = self.igen.emid
         self.de = self.igen.de
         self.nbins = nbins
-        self.var_elem = var_elem
+        self.var_elem = self.igen.var_elem
         self.nvar_elem = self.igen.nvar_elem
         self.min_table_kT = 10**self.igen.Tvals[0] / K_per_keV
         self.max_table_kT = 10**self.igen.Tvals[-1] / K_per_keV
@@ -283,9 +269,8 @@ class IGMSpectralModel(ThermalSpectralModel):
         self.n_T = self.igen.n_T
         self.n_D = self.igen.n_D
         self.binscale = self.igen.binscale
-        self.var_elem_option = var_elem_option
         self.cie_model = CloudyCIESpectralModel(emin, emax, nbins, binscale=self.binscale, 
-                                                var_elem_option=self.var_elem_option)
+                                                var_elem=self.var_elem)
 
     def prepare_spectrum(self, zobs, kT_min, kT_max):
         """

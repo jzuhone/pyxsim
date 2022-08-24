@@ -278,7 +278,7 @@ class ThermalSourceModel(SourceModel):
     _nei = False
 
     def __init__(self, spectral_model, emin, emax, nbins, Zmet, binscale="linear",
-                 kT_min=0.025, kT_max=64.0, var_elem=None, max_density=5.0e-25, 
+                 kT_min=0.025, kT_max=64.0, var_elem=None, max_density=None, 
                  method="invert_cdf", abund_table="angr", prng=None, 
                  temperature_field=None, emission_measure_field=None, 
                  h_fraction=None, nH_min=None, nH_max=None):
@@ -529,15 +529,14 @@ class ThermalSourceModel(SourceModel):
                 else:
                     cspec, mspec, vspec = self.spectral_model.get_spectrum(kTi)
 
-                tot_spec = np.zeros((nck, self.nbins))
-                tot_spec += cspec
+                tot_spec = cspec
                 tot_spec += metalZ[ibegin:iend, np.newaxis] * mspec
                 if self.num_var_elem > 0:
                     tot_spec += np.sum(elemZ[:, ibegin:iend, np.newaxis] * vspec, axis=0)
 
                 if mode == "photons":
 
-                    spec_sum = tot_spec[:, eidxs].sum(axis=-1)
+                    spec_sum = tot_spec.sum(axis=-1)
                     cell_norm = spec_sum * cnm
 
                     cell_n = np.atleast_1d(self.prng.poisson(lam=cell_norm))
@@ -648,15 +647,6 @@ class IGMSourceModel(ThermalSourceModel):
     cxb_factor : float, optional
         The fraction of the CXB photons that are resonant scattered to enhance
         the lines. Default: 0.5
-    var_elem_option: integer, optional
-        An integer to choose between options for variable elements, which are:
-        1: specify abundances of O, Ne, and Fe separately from other metals
-        2: specify abundances of O, Ne, Mg, Si, S, and Fe separately from other
-           metals
-        3: specify abundances of C, N, O, Ne, Mg, Si, S, Ca, and Fe separately 
-           from other metals
-        Default: None, which means no metal abundances can be specified
-        separately.
     temperature_field : string or (ftype, fname) tuple, optional
         The yt temperature field to use for the thermal modeling. Must have
         units of Kelvin. If not specified, the default temperature field for
@@ -679,14 +669,13 @@ class IGMSourceModel(ThermalSourceModel):
     max_density : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
         The maximum density of the cells or particles to use when generating 
         photons. If a float, the units are assumed to be g/cm**3. 
-        Default: 5e-25 g/cm**3.
+        Default: None, meaning no maximum density.
     var_elem : dictionary, optional
         Elements that should be allowed to vary freely from the single abundance
         parameter. Each dictionary value, specified by the abundance symbol, 
         corresponds to the abundance of that symbol. If a float, it is understood
         to be constant and in solar units. If a string or tuple of strings, it is
-        assumed to be a spatially varying field. Must match what is specified by
-        var_elem_option. Default: None
+        assumed to be a spatially varying field. Default: None
     method : string, optional
         The method used to generate the photon energies from the spectrum:
         "invert_cdf": Invert the cumulative distribution function of the spectrum.
@@ -698,19 +687,14 @@ class IGMSourceModel(ThermalSourceModel):
         such as for a test. Default is to use the :mod:`numpy.random` module.
     """
     def __init__(self, emin, emax, nbins, Zmet, nh_field, binscale="linear",
-                 resonant_scattering=False, cxb_factor=0.5, var_elem_option=None,
-                 temperature_field=None, emission_measure_field=None, h_fraction=None,
-                 kT_min=0.00431, kT_max=64.0, max_density=5.0e-25, var_elem=None,
-                 method="invert_cdf", prng=None):
-        if var_elem_option is not None:
-            if var_elem is None:
-                raise RuntimeError(f"'var_elem_option' = {var_elem_option}, "
-                                   f"so 'var_elem' cannot be None!")
+                 resonant_scattering=False, cxb_factor=0.5, temperature_field=None,
+                 emission_measure_field=None, h_fraction=None, kT_min=0.00431, 
+                 kT_max=64.0, max_density=None, var_elem=None, method="invert_cdf",
+                 prng=None):
         var_elem_keys = list(var_elem.keys()) if var_elem else None
         spectral_model = IGMSpectralModel(emin, emax, nbins, binscale=binscale,
                                           resonant_scattering=resonant_scattering,
-                                          cxb_factor=cxb_factor, var_elem_option=var_elem_option,
-                                          var_elem=var_elem_keys)
+                                          cxb_factor=cxb_factor, var_elem=var_elem_keys)
         nH_min = 10**spectral_model.Dvals[0]
         nH_max = 10**spectral_model.Dvals[-1]
         super().__init__(spectral_model, emin, emax, nbins, Zmet, binscale=binscale, kT_min=kT_min,
@@ -768,7 +752,7 @@ class CIESourceModel(ThermalSourceModel):
     max_density : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
         The maximum density of the cells or particles to use when generating 
         photons. If a float, the units are assumed to be g/cm**3. 
-        Default: 5e-25 g/cm**3.
+        Default: None, meaning no maximum density.
     var_elem : dictionary, optional
         Elements that should be allowed to vary freely from the single abundance
         parameter. Each dictionary value, specified by the abundance symbol, 
@@ -809,16 +793,6 @@ class CIESourceModel(ThermalSourceModel):
         except for elements not listed which are given zero abundance)
         "lodd" : from Lodders, K (2003, ApJ 591, 1220)
         "feld" : from Feldman U. (1992, Physica Scripta, 46, 202)
-    var_elem_option: integer, optional
-        If using the "cloudy" CIE model, an integer to choose between options 
-        for variable elements, which are:
-        1: specify abundances of O, Ne, and Fe separately from other metals
-        2: specify abundances of O, Ne, Mg, Si, S, and Fe separately from other
-           metals
-        3: specify abundances of C, N, O, Ne, Mg, Si, S, Ca, and Fe separately 
-           from other metals
-        Default: None, which means no metal abundances can be specified
-        separately.
     prng : integer or :class:`~numpy.random.RandomState` object 
         A pseudo-random number generator. Typically will only be specified
         if you have a reason to generate the same set of random numbers, 
@@ -831,16 +805,9 @@ class CIESourceModel(ThermalSourceModel):
     """
     def __init__(self, model, emin, emax, nbins, Zmet, binscale="linear", temperature_field=None,
                  emission_measure_field=None, h_fraction=None, kT_min=0.025,
-                 kT_max=64.0, max_density=5.0e-25, var_elem=None, method="invert_cdf",
+                 kT_max=64.0, max_density=None, var_elem=None, method="invert_cdf",
                  thermal_broad=True, model_root=None, model_vers=None, nolines=False,
-                 abund_table="angr", var_elem_option=None, prng=None):
-        if var_elem_option is not None:
-            if model != "cloudy":
-                raise RuntimeError("'var_elem_option' only works with the 'cloudy' "
-                                   "model!")
-            if var_elem is None:
-                raise RuntimeError(f"'var_elem_option' = {var_elem_option}, "
-                                   f"so 'var_elem' cannot be None!")
+                 abund_table="angr", prng=None):
         var_elem_keys = list(var_elem.keys()) if var_elem else None
         if model in ["apec", "spex"]:
             spectral_model = TableCIEModel(model, emin, emax, nbins,
@@ -860,7 +827,7 @@ class CIESourceModel(ThermalSourceModel):
                               "'feld', so using that one.")
                 abund_table = "feld"
             spectral_model = CloudyCIESpectralModel(emin, emax, nbins, binscale=binscale,
-                                                    var_elem_option=var_elem_option)
+                                                    var_elem=var_elem_keys)
         super().__init__(spectral_model, emin, emax, nbins, Zmet, binscale=binscale, kT_min=kT_min, 
                          kT_max=kT_max, var_elem=var_elem, max_density=max_density, method=method,
                          abund_table=abund_table, prng=prng, temperature_field=temperature_field,
@@ -916,7 +883,7 @@ class NEISourceModel(CIESourceModel):
     max_density : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
         The maximum density of the cells or particles to use when generating 
         photons. If a float, the units are assumed to be g/cm**3. 
-        Default: 5e-25 g/cm**3.
+        Default: None, meaning no maximum density.
     method : string, optional
         The method used to generate the photon energies from the spectrum:
         "invert_cdf": Invert the cumulative distribution function of the spectrum.
@@ -973,7 +940,7 @@ class NEISourceModel(CIESourceModel):
     """
     def __init__(self, emin, emax, nbins, var_elem, binscale="linear", temperature_field=None,
                  emission_measure_field=None, h_fraction=None, kT_min=0.025,
-                 kT_max=64.0, max_density=5.0e-25, method="invert_cdf", thermal_broad=True,
+                 kT_max=64.0, max_density=None, method="invert_cdf", thermal_broad=True,
                  model_root=None, model_vers=None, nolines=False, abund_table="angr", prng=None):
         super().__init__("apec", emin, emax, nbins, 0.0, binscale=binscale, 
                          temperature_field=temperature_field, 
