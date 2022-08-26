@@ -43,7 +43,7 @@ class LineSourceModel(SourceModel):
     --------
     >>> location = (3.5, "keV")
     >>> sigma = (1000., "km/s")
-    >>> line_model = LineEmissionSourceModel(location, "dark_matter_density_squared", sigma=sigma)
+    >>> line_model = LineSourceModel(location, "dark_matter_density_squared", sigma=sigma)
     """
     def __init__(self, e0, emission_field, sigma=None, prng=None):
         from unyt.exceptions import UnitConversionError
@@ -86,7 +86,10 @@ class LineSourceModel(SourceModel):
         return self._make_spectrum(data_source.ds, ebins, spec,
                                    redshift, dist, cosmology)
 
-    def process_data(self, mode, chunk, ebins=None, elim=None):
+    def make_fluxf(self, emin, emax, energy=False):
+        return {"emin": emin, "emax": emax}
+
+    def process_data(self, mode, chunk, fluxf=None, ebins=None):
 
         num_cells = len(chunk[self.emission_field])
 
@@ -129,8 +132,8 @@ class LineSourceModel(SourceModel):
 
         elif mode in ["photon_field", "energy_field"]:
 
-            xlo = elim[0]-self.e0.value
-            xhi = elim[1]-self.e0.value
+            xlo = fluxf["emin"][0]-self.e0.value
+            xhi = fluxf["emax"][1]-self.e0.value
             if self.sigma is None:
                 if (xlo < 0) & (xhi > 0.0):
                     fac = 1.0

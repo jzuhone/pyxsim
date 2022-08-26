@@ -70,7 +70,10 @@ class PowerLawSourceModel(SourceModel):
         return self._make_spectrum(data_source.ds, ebins, spec,
                                    redshift, dist, cosmology)
 
-    def process_data(self, mode, chunk, elim=None, ebins=None):
+    def make_fluxf(self, emin, emax, energy=False):
+        return {"emin": emin, "emax": emax}
+
+    def process_data(self, mode, chunk, fluxf=None, ebins=None):
 
         num_cells = len(chunk[self.emission_field])
 
@@ -79,12 +82,12 @@ class PowerLawSourceModel(SourceModel):
         else:
             alpha = chunk[self.alpha].v
 
-        if mode in ["photons", "spectrum"]:
+        if fluxf is None:
             ei = self.emin.v
             ef = self.emax.v
         else:
-            ei = elim[0]
-            ef = elim[1]
+            ei = fluxf["emin"][0]
+            ef = fluxf["emax"][1]
 
         if mode in ["photons", "photon_field"]:
 

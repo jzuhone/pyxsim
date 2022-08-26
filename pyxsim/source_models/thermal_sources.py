@@ -183,7 +183,7 @@ class ThermalSourceModel(SourceModel):
         spec = np.zeros(self.nbins)
         for chunk in data_source.chunks([], "io"):
             spec += self.process_data("spectrum", chunk)
-        return self._make_spectrum(data_source.ds, self.ebins, spec, 
+        return self._make_spectrum(data_source.ds, self.ebins, spec,
                                    redshift, dist, cosmology)
 
     def make_fluxf(self, emin, emax, energy=False):

@@ -17,6 +17,8 @@ class SourceModel:
         self.observer = "external"
 
     def process_data(self, mode, chunk, fluxf=None):
+        # This needs to be implemented for every
+        # source model specifically
         pass
 
     def setup_model(self, data_source, redshift, spectral_norm):
@@ -44,6 +46,13 @@ class SourceModel:
         return np.sum((pos-self.c[:,np.newaxis])**2, axis=0)*cm2_per_kpc2
 
     def cleanup_model(self):
+        # This needs to be implemented for every
+        # source model specifically
+        pass
+
+    def make_fluxf(self, emin, emax, energy=False):
+        # This needs to be implemented for every
+        # source model specifically
         pass
 
     def _make_dist_fac(self, ds, redshift, dist, cosmology):
