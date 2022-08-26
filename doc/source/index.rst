@@ -21,8 +21,8 @@ pyXSIM Documentation
 What is pyXSIM?
 ---------------
 
-pyXSIM is a Python package for simulating X-ray observations from astrophysical 
-sources.
+pyXSIM is a Python package for simulating X-ray emission from astrophysical
+sources. 
 
 X-rays probe the high-energy universe, from hot galaxy clusters to compact 
 objects such as neutron stars and black holes and many interesting sources in 
@@ -75,7 +75,7 @@ Table of Contents
    :maxdepth: 2
 
    installing
-   v2_to_v3
+   v3_to_v4
    how_it_works
    basic_yt_concepts
    photon_lists
