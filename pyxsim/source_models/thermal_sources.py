@@ -392,7 +392,7 @@ class IGMSourceModel(ThermalSourceModel):
     Assumes the abundance tables from Feldman 1992.
 
     Table data and README files can be found at
-    https://wwwmpa.mpa-garching.mpg.de/~ildar/igm/v2x/.
+    https://wwwmpa.mpa-garching.mpg.de/~ildar/igm/v3/.
 
     Parameters
     ----------
