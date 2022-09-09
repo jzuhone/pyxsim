@@ -3,7 +3,7 @@
 Thermal Sources
 ---------------
 
-X-ray emission from theraml sources in pyXSIM can be generated from models 
+X-ray emission from thermal sources in pyXSIM can be generated from models 
 which assume collisional ionization is dominant (whether in equilibrium or not)
 or a combination of collisional and photoionization processes are relevant. In
 the former case, the emission is a function of temperature :math:`T` and 
@@ -46,17 +46,22 @@ from this table. The accuracy of this method is sufficient for most purposes.
 Three types of thermal source models are available, which will be described
 in turn below. 
 
-By default, setting up a :class:`~pyxsim.source_models.ThermalSourceModel` 
-object requires the following arguments:
+.. _cie-source-model:
 
-* ``spectral_model``: The thermal spectral model to assume. Can be a string or 
-  :class:`~pyxsim.spectral_models.SpectralModel` instance. Currently, the only
-  string value built into pyXSIM is ``"apec"``. 
+Thermal Sources in Collisional Ionization Equilbrium (CIE)
+==========================================================
+
+The :class:`~pyxsim.source_models.thermal_sources.CIESourceModel` class
+simulates thermal emission under the assumption of collisional ionization
+equilibrium (CIE). By default, setting up a 
+:class:`~pyxsim.source_models.thermal_sources.CIESourceModel` object requires 
+the following arguments:
+
+* ``model``: The specific CIE model to use. Options are ``"apec"``, ``"spex"``,
+  ``"mekal"``, or ``"cloudy"``. 
 * ``emin``: The minimum energy for the spectrum in keV.
 * ``emax``: The maximum energy for the spectrum in keV.
-* ``nchan``: The number of channels in the spectrum. If one is thermally 
-  broadening lines (the default), it is recommended that this number create an 
-  energy resolution per channel of roughly 1 eV.
+* ``nbins``: The number of bins in the spectrum. 
 * ``Zmet``: The metallicity. Either a floating-point number for a constant
   metallicity, or the name of a yt field for a spatially-varying metallicity.
 
@@ -64,46 +69,37 @@ So creating a default instance is rather simple:
 
 .. code-block:: python
 
-    thermal_model = pyxsim.ThermalSourceModel("apec", 0.1, 11.0, 10000, 0.3)
+    thermal_model = pyxsim.CIESourceModel("apec", 0.1, 11.0, 10000, 0.3)
 
 However, this model is very customizable. There are a number of other optional 
 parameters which can be set:
 
 * ``temperature_field``: The yt field to use as the temperature. Must have 
-  dimensions of temperature. The default is ``("gas", "temperature")`` for 
-  grid-based datasets and ``("PartType0", "Temperature")`` or 
-  ``("io", "temperature")`` for particle-based datasets, depending on which is
-  available.
+  dimensions of temperature. The default is ``("gas", "temperature")``.
 * ``emission_measure_field``: The yt field to use as the emission measure. Must
   have dimensions of number density or per-volume. The default is 
-  ``("gas", "emission_measure")`` for grid-based datasets. For particle-based 
-  datasets, a new field is constructed, using the default density and mass 
-  fields of the dataset, and the fields ``("PartType0", "ElectronAbundance")``
-  ``("PartType0", "NeutralHydrogenAbundance")`` to construct the electron and
-  hydrogen ion number densities if they are present in the dataset.
-* ``kT_min``: The minimum temperature in units of keV in the set of temperature
-  bins. Default is 0.025.
-* ``kT_max``: The maximum temperature in units of keV in the set of temperature
-  bins. Default is 64.0.
-* ``n_kT``: The number of temperature bins to use. Default is 10000.
-* ``kT_scale``: The scaling of the temperature bins, either "linear" or "log".
-  Default: "linear"
+  ``("gas", "emission_measure")``. 
+* ``kT_min``: The minimum temperature in units of keV. Default is 0.025.
+* ``kT_max``: The maximum temperature in units of keV. Default is 64.0.
 * ``method``: The method used to generate the photon energies from the spectrum.
   Either ``"invert_cdf"``,
   which inverts the cumulative distribution function of the spectrum, or 
   ``"accept_reject"``, which uses the acceptance-rejection method on the 
   spectrum. The first method should be sufficient for most cases.
 * ``thermal_broad``: A boolean specifying whether or not the spectral lines
-  should be thermally broadened. Default: True
+  should be thermally broadened. Only available for the ``"apec"`` and 
+  ``"spex"`` models. Default: True
 * ``model_root``: A path specifying where the model files are stored. If not 
   provided, a default location known to pyXSIM is used.
 * ``model_vers``: The version identifier string for the model files, e.g. 
-  "2.0.2". The default depends on the model used.
-* ``var_elem``: Used to specify the abundances of specific elements, whether via
-  floating-point numbers of yt fields. A dictionary of elements and values 
-  should be specified. See :ref:`var-abund` below for more details.
+  "2.0.2". The default depends on the model used. Currently only implemented
+  for the ``"apec"`` or ``"spex"`` models.
+* ``var_elem``: Optionally used to specify the abundances of specific elements, 
+  whether via floating-point numbers or yt fields. A dictionary of elements and 
+  values should be specified. See :ref:`var-abund` below for more details.
 * ``nolines``: If set to ``True``, the photons for this source will be generated 
-  assuming no emission lines. Default: ``False``
+  assuming no emission lines. Only available for the ``"apec"`` and ``"spex"`` 
+  models. Default: ``False``
 * ``abund_table``: The solar abundance table assumed for the different elements.
   See the discussion in :ref:`solar-abund-tables` below for more details. 
   Default: ``"angr"``
@@ -111,30 +107,6 @@ parameters which can be set:
   if you have a reason to generate the same set of random numbers, such as for a 
   test or a comparison. Default is the :mod:`numpy.random` module, but a 
   :class:`~numpy.random.RandomState` object or an integer seed can also be used. 
-
-Tweaking the Temperature Bins
-+++++++++++++++++++++++++++++
-
-As mentioned above, :class:`~pyxsim.source_models.ThermalSourceModel` bins the 
-dataset's cells/particles into a 1-D table of temperatures, each bin containing
-a spectrum. It is important that this temperature binning faithfully reflects 
-the temperature distribution within the dataset adequately. It may be necessary
-to tweak the number, limits, or scaling of the temperature bins. Some example 
-situations where it may be necessary to do this are:
-
-* A situation in which there is a lot of low-temperature, high-density gas that 
-  is not expected to emit X-rays, in which case one could set ``kT_min`` to a 
-  higher value than these temperatures. 
-* A situation in which the temperatures in the dataset span a small dynamic 
-  range, in which case one would set both ``kT_min`` and ``kT_max`` to bracket 
-  this range, and set ``n_kT`` to ensure that the bins are finely spaced. 
-* A situation with both low and high temperature gas which are expected to emit 
-  X-rays, requiring resolution over a large dynamic range. One could set 
-  ``n_kT`` to a large value, or alternatively one could set ``kT_scale="log"`` 
-  to adopt logarithmic binning. 
-
-Some degree of trial and error may be necessary to determine the correct setup 
-of the temperature bins.
 
 .. _solar-abund-tables:
 
@@ -145,8 +117,8 @@ The abundance parameters discussed so far assume abundance of a particular
 element or a number of elements relative to the Solar value. Underlying this
 are the values of the Solar abundances themselves. It is possible to change the
 Solar abundance table in pyXSIM via the optional ``abund_table`` argument to 
-:class:`~pyxsim.source_models.ThermalSourceModel`. By default, pyXSIM assumes 
-the `Anders & Grevesse 1989 <http://adsabs.harvard.edu/abs/1989GeCoA..53..197A>`_ 
+:class:`~pyxsim.source_models.thermal_sources.CIESourceModel`. By default, 
+pyXSIM assumes the `Anders & Grevesse 1989 <http://adsabs.harvard.edu/abs/1989GeCoA..53..197A>`_ 
 abundances corresponding to a setting of ``"angr"`` for this parameter, but it 
 is possible to use other tables of solar abundances. The other tables included 
 which can be used are:
@@ -159,9 +131,9 @@ The Solar abundance table can be changed like this:
 
 .. code-block:: python
 
-    thermal_model = pyxsim.ThermalSourceModel("apec", 0.1, 20.0, 10000, 
-                                              ("gas","metallicity"),
-                                              prng=25, abund_table='lodd')
+    thermal_model = pyxsim.CIESourceModel("apec", 0.1, 20.0, 10000, 
+                                          ("gas","metallicity"),
+                                          prng=25, abund_table='lodd')
 
 Alternatively, one can supply their own abundance table by providing a NumPy 
 array, list, or tuple of abundances 30 elements in length corresponding to the
@@ -178,18 +150,19 @@ and Zn. An example:
                          1.41E-09, 8.91E-08, 8.51E-09, 4.37E-07, 2.69E-07,
                          3.16E-05, 9.77E-08, 1.66E-06, 1.55E-08, 3.63E-08])
 
-    thermal_model = pyxsim.ThermalSourceModel("apec", 0.1, 20.0, 10000, 
-                                              prng=25, abund_table=my_abund)
+    thermal_model = pyxsim.CIESourceModel("spex", 0.1, 20.0, 10000, 
+                                          prng=25, abund_table=my_abund)
 
 .. _var-abund:
 
 Variable Abundances
 +++++++++++++++++++
 
-By default, :class:`~pyxsim.source_models.ThermalSourceModel` assumes all 
-abundances besides H, He, and the trace elements are set by the single value or
-yt field provided by the ``Zmet`` parameter. However, more fine-grained control
-is possible. :class:`~pyxsim.source_models.ThermalSourceModel` accepts a 
+By default, :class:`~pyxsim.source_models.CIESourceModel` assumes all 
+abundances besides H, He, and perhaps some trace elements are set by the single 
+value or yt field provided by the ``Zmet`` parameter. However, more fine-grained 
+control
+is possible. :class:`~pyxsim.source_models.CIESourceModel` accepts a 
 ``var_elem`` optional argument to specify which elements should be allowed to
 vary freely. The syntax is the same as for ``Zmet``, in that each element set 
 can be a single floating-point value or a yt field name corresponding to a field
@@ -209,21 +182,86 @@ number or field name:
     # Setting abundances by numbers
     Zmet = 0.3
     var_elem = {"O": 0.4, "Ca": 0.5} 
-    source_model = pyxsim.ThermalSourceModel(0.05, 50.0, 10000, Zmet, var_elem=var_elem)
+    source_model = pyxsim.CIESourceModel(0.05, 50.0, 10000, Zmet, var_elem=var_elem)
 
 Whatever elements are not specified here are assumed to be set as normal, 
 whether they are H, He, trace elements, or metals covered by the ``Zmet`` 
 parameter. 
 
+Examples
+++++++++
+
+Here, we will show several examples of constructing 
+:class:`~pyxsim.source_models.ThermalSourceModel` objects. 
+
+An example where we use the default parameters, and a constant 
+metallicity:
+
+.. code-block:: python
+
+    thermal_model = pyxsim.CIESourceModel("apec", 0.1, 20.0, 10000, 0.5)
+
+An example where we use a metallicity field and change the temperature field:
+
+.. code-block:: python
+
+    thermal_model = pyxsim.CIESourceModel("apec", 0.1, 20.0, 10000, 
+                                          ("gas", "metallicity"),
+                                          temperature_field=("hot_gas","temperature")
+
+An example where we change the limits of the temperature, and use the MeKaL
+model:
+
+.. code-block:: python
+
+    thermal_model = pyxsim.CIESourceModel("mekal", 0.1, 20.0, 10000, 0.3,
+                                          kT_min=0.1, kT_max=100.)
+                                              
+An example where we turn off thermal broadening of spectral lines, specify a
+directory to find the model files, and specify the model version:
+
+.. code-block:: python
+
+    thermal_model = pyxsim.CIESourceModel("apec", 0.1, 20.0, 10000, 0.3,
+                                          thermal_broad=False, 
+                                          model_root="/Users/jzuhone/data",
+                                          model_vers="3.0.3")
+
+An example where we specify a random number generator and use the Cloudy
+model:
+
+.. code-block:: python
+
+    thermal_model = pyxsim.CIESourceModel("cloudy", 0.1, 20.0, 10000, 0.3,
+                                          prng=25)
+
+Turning off line emission for the ``"apec"`` model:
+
+.. code-block:: python
+    
+    thermal_model = pyxsim.CIESourceModel("apec", 0.1, 20.0, 10000, 0.3,
+                                          prng=25, nolines=True)
+
 .. _nei:
 
 Non-Equilibrium Ionization
-++++++++++++++++++++++++++
+==========================
 
-pyXSIM 2.2.0 and afterward has support for non-equilibrium ionization (NEI) 
-emitting plasmas in :class:`~pyxsim.source_models.NEISourceModel`. First, 
-one must create a dictionary mapping elements in their different ionization 
-states to the corresponding fields in your dataset as seen from yt:
+pyXSIM has support for emission from plasmas in a non-equilibrium ionization
+state in the :class:`~pyxsim.source_models.thermal_sources.NEISourceModel`.
+In this case, it is assumed that the NEI calculation for the various ionization
+states has been carried out in your simulation code, so that you have fields
+available for each element and ionization state that you want to generate
+emission from. 
+
+To use :class:`~pyxsim.source_models.thermal_sources.NEISourceModel`, one must 
+first create a dictionary mapping elements in their different ionization states 
+to the corresponding fields in your dataset as seen from yt, or single 
+floating-point values. The ionization states in the keys of this dictionary 
+are given in the ``"{elem}^{ion}"`` format, where ``ion=0`` is neutral, 
+``ion=1`` is singly ionized, and so on. 
+
+Here is an example from a FLASH dataset:
 
 .. code-block:: python
 
@@ -244,60 +282,28 @@ states to the corresponding fields in your dataset as seen from yt:
                 "O^8": ("flash", "o8  ")
                }
 
-    source_model = pyxsim.NEISourceModel(0.3, 1.7, 1000, var_elem=var_elem)
+Unlike the :class:`~pyxsim.source_models.thermal_sources.CIESourceModel`, for 
+the :class:`~pyxsim.source_models.thermal_sources.NEISourceModel` source all
+elements and ionizations must be specified in the ``var_elem`` dictionary,
+which is now required. There is no separate ``Zmet`` which can be set. The
+required arguments are:
+
+* ``emin``: The minimum energy for the spectrum in keV.
+* ``emax``: The maximum energy for the spectrum in keV.
+* ``nbins``: The number of bins in the spectrum. 
+* ``var_elem``: Used to specify the abundances of specific elements, whether 
+  via floating-point numbers or yt fields. A dictionary of elements and values 
+  should be specified. 
+
+All other optional keyword arguments are the same as in the 
+:class:`~pyxsim.source_models.thermal_sources.CIESourceModel`, see above for
+details. The :class:`~pyxsim.source_models.thermal_sources.NEISourceModel`
+is currently only compatible with the ``"apec"`` emission model. An example 
+invocation is:
+
+.. code-block:: python
+
+    source_model = pyxsim.NEISourceModel(0.3, 1.7, 1000, var_elem)
 
 Note that no other elements will be modeled except those which are specified
 in ``var_elem``.
-
-Examples
-++++++++
-
-Here, we will show several examples of constructing 
-:class:`~pyxsim.source_models.ThermalSourceModel` objects. 
-
-An example where we use the default parameters, and a constant 
-metallicity:
-
-.. code-block:: python
-
-    thermal_model = pyxsim.ThermalSourceModel("apec", 0.1, 20.0, 10000, 0.5)
-
-An example where we use a metallicity field and change the temperature field:
-
-.. code-block:: python
-
-    thermal_model = pyxsim.ThermalSourceModel("apec", 0.1, 20.0, 10000, 
-                                              ("gas", "metallicity"),
-                                              temperature_field=("hot_gas","temperature")
-
-An example where we change the limits and number of the temperature bins:
-
-.. code-block:: python
-
-    thermal_model = pyxsim.ThermalSourceModel("apec", 0.1, 20.0, 10000, 0.3,
-                                              kT_min=0.1, kT_max=100.,
-                                              n_kT=50000)
-                                              
-An example where we turn off thermal broadening of spectral lines, specify a
-directory to find the model files, and specify the model version:
-
-.. code-block:: python
-
-    thermal_model = pyxsim.ThermalSourceModel("apec", 0.1, 20.0, 10000, 0.3,
-                                              thermal_broad=False, 
-                                              model_root="/Users/jzuhone/data",
-                                              model_vers="3.0.3")
-
-An example where we specify a random number generator:
-
-.. code-block:: python
-
-    thermal_model = pyxsim.ThermalSourceModel("apec", 0.1, 20.0, 10000, 0.3,
-                                              prng=25)
-
-Turning off line emission:
-
-.. code-block:: python
-
-    thermal_model = pyxsim.ThermalSourceModel("apec", 0.1, 20.0, 10000, 0.3,
-                                              prng=25, nolines=True)

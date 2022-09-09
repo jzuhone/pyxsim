@@ -564,6 +564,7 @@ class CIESourceModel(ThermalSourceModel):
         except for elements not listed which are given zero abundance)
         "lodd" : from Lodders, K (2003, ApJ 591, 1220)
         "feld" : from Feldman U. (1992, Physica Scripta, 46, 202)
+        "cl17.03" : the abundance table used in Cloudy v17.03.
     prng : integer or :class:`~numpy.random.RandomState` object 
         A pseudo-random number generator. Typically will only be specified
         if you have a reason to generate the same set of random numbers, 
@@ -686,6 +687,7 @@ class NEISourceModel(CIESourceModel):
         except for elements not listed which are given zero abundance)
         "lodd" : from Lodders, K (2003, ApJ 591, 1220)
         "feld" : from Feldman U. (Physica Scripta, 46, 202)
+        "cl17.03" : the abundance table used in Cloudy v17.03.
     prng : integer or :class:`~numpy.random.RandomState` object 
         A pseudo-random number generator. Typically will only be specified
         if you have a reason to generate the same set of random numbers, 
