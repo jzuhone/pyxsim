@@ -74,10 +74,6 @@ class ThermalSourceModel(SourceModel):
                     max_density = YTQuantity(max_density[0], max_density[1])
                 else:
                     max_density = YTQuantity(max_density, "g/cm**3")
-        if emission_measure_field is None:
-            emission_measure_field = ('gas', 'emission_measure')
-        if temperature_field is None:
-            temperature_field = ('gas', 'temperature')
         self.temperature_field = temperature_field
         self.emission_measure_field = emission_measure_field
         self.density_field = None  # Will be determined later
@@ -409,23 +405,22 @@ class IGMSourceModel(ThermalSourceModel):
         The metallicity. If a float, assumes a constant metallicity throughout
         in solar units. If a string or tuple of strings, is taken to be the 
         name of the metallicity field.
-    nh_field : string or (ftype, fname) tuple
-        The yt hydrogen nuclei density field (meaning all hydrogen, ionized or not) 
-        to use for the model. Must have units of cm**-3. 
     resonant_scattering : boolean, optional
         Whether or not to include the effects of resonant scattering
         from CXB photons. Default: False
     cxb_factor : float, optional
         The fraction of the CXB photons that are resonant scattered to enhance
         the lines. Default: 0.5
+    nh_field : string or (ftype, fname) tuple, optional
+        The yt hydrogen nuclei density field (meaning all hydrogen, ionized or not) 
+        to use for the model. Must have units of cm**-3. 
+        Default: ("gas", "H_nuclei_density")
     temperature_field : string or (ftype, fname) tuple, optional
         The yt temperature field to use for the thermal modeling. Must have
-        units of Kelvin. If not specified, the default temperature field for
-        the dataset will be used.
+        units of Kelvin. Default: ("gas", "temperature")
     emission_measure_field : string or (ftype, fname) tuple, optional
         The yt emission measure field to use for the thermal modeling. Must
-        have units of cm^-3. If not specified, the default emission measure
-        field for the dataset will be used or derived.
+        have units of cm^-3. Default: ("gas", "emission_measure") 
     h_fraction : float, string, or tuple of strings, optional
         The hydrogen mass fraction. If a float, assumes a constant mass 
         fraction of hydrogen throughout. If a string or tuple of strings, 
@@ -457,22 +452,24 @@ class IGMSourceModel(ThermalSourceModel):
         if you have a reason to generate the same set of random numbers, 
         such as for a test. Default is to use the :mod:`numpy.random` module.
     """
-    def __init__(self, emin, emax, nbins, Zmet, nh_field, binscale="linear",
-                 resonant_scattering=False, cxb_factor=0.5, temperature_field=None,
-                 emission_measure_field=None, h_fraction=None, kT_min=0.00431, 
-                 kT_max=64.0, max_density=None, var_elem=None, method="invert_cdf",
-                 prng=None):
+    def __init__(self, emin, emax, nbins, Zmet, binscale="linear",
+                 resonant_scattering=False, cxb_factor=0.5, 
+                 nh_field=("gas", "H_nuclei_density"), 
+                 temperature_field=("gas", "temperature"),
+                 emission_measure_field=("gas", "emission_measure"), 
+                 h_fraction=None, kT_min=0.00431, kT_max=64.0, max_density=None, 
+                 var_elem=None, method="invert_cdf", prng=None):
         var_elem_keys = list(var_elem.keys()) if var_elem else None
         spectral_model = IGMSpectralModel(emin, emax, nbins, binscale=binscale,
                                           resonant_scattering=resonant_scattering,
                                           cxb_factor=cxb_factor, var_elem=var_elem_keys)
         nH_min = 10**spectral_model.Dvals[0]
         nH_max = 10**spectral_model.Dvals[-1]
-        super().__init__(spectral_model, emin, emax, nbins, Zmet, binscale=binscale, kT_min=kT_min,
-                         kT_max=kT_max, nH_min=nH_min, nH_max=nH_max, var_elem=var_elem,
-                         max_density=max_density, method=method, abund_table="feld", prng=prng,
-                         temperature_field=temperature_field, h_fraction=h_fraction,
-                         emission_measure_field=emission_measure_field)
+        super().__init__(spectral_model, emin, emax, nbins, Zmet, binscale=binscale, 
+                         kT_min=kT_min, kT_max=kT_max, nH_min=nH_min, nH_max=nH_max, 
+                         var_elem=var_elem, max_density=max_density, method=method, 
+                         abund_table="feld", prng=prng, temperature_field=temperature_field, 
+                         h_fraction=h_fraction, emission_measure_field=emission_measure_field)
         self.nh_field = nh_field
 
 
@@ -503,12 +500,10 @@ class CIESourceModel(ThermalSourceModel):
         Default: "linear"
     temperature_field : string or (ftype, fname) tuple, optional
         The yt temperature field to use for the thermal modeling. Must have
-        units of Kelvin. If not specified, the default temperature field for
-        the dataset will be used.
+        units of Kelvin. Default: ("gas", "temperature")
     emission_measure_field : string or (ftype, fname) tuple, optional
         The yt emission measure field to use for the thermal modeling. Must
-        have units of cm^-3. If not specified, the default emission measure
-        field for the dataset will be used or derived.
+        have units of cm^-3. Default: ("gas", "emission_measure") 
     h_fraction : float, string, or tuple of strings, optional
         The hydrogen mass fraction. If a float, assumes a constant mass 
         fraction of hydrogen throughout. If a string or tuple of strings, 
@@ -575,10 +570,12 @@ class CIESourceModel(ThermalSourceModel):
     >>> source_model = CIESourceModel("apec", 0.1, 10.0, 10000,
     ...                               ("gas", "metallicity"))
     """
-    def __init__(self, model, emin, emax, nbins, Zmet, binscale="linear", temperature_field=None,
-                 emission_measure_field=None, h_fraction=None, kT_min=0.025,
-                 kT_max=64.0, max_density=None, var_elem=None, method="invert_cdf",
-                 thermal_broad=True, model_root=None, model_vers=None, nolines=False,
+    def __init__(self, model, emin, emax, nbins, Zmet, binscale="linear", 
+                 temperature_field=("gas", "temperature"),
+                 emission_measure_field=("gas", "emission_measure"), 
+                 h_fraction=None, kT_min=0.025, kT_max=64.0, max_density=None, 
+                 var_elem=None, method="invert_cdf", thermal_broad=True, 
+                 model_root=None, model_vers=None, nolines=False,
                  abund_table="angr", prng=None):
         var_elem_keys = list(var_elem.keys()) if var_elem else None
         if model in ["apec", "spex"]:
@@ -635,12 +632,10 @@ class NEISourceModel(CIESourceModel):
         Default: "linear"
     temperature_field : string or (ftype, fname) tuple, optional
         The yt temperature field to use for the thermal modeling. Must have
-        units of Kelvin. If not specified, the default temperature field for
-        the dataset will be used.
+        units of Kelvin. Default: ("gas","temperature")
     emission_measure_field : string or (ftype, fname) tuple, optional
         The yt emission measure field to use for the thermal modeling. Must
-        have units of cm^-3. If not specified, the default emission measure
-        field for the dataset will be used or derived.
+        have units of cm^-3. Default: ("gas","emission_measure") 
     h_fraction : float, string, or tuple of strings, optional
         The hydrogen mass fraction. If a float, assumes a constant mass 
         fraction of hydrogen throughout. If a string or tuple of strings, 
@@ -711,10 +706,12 @@ class NEISourceModel(CIESourceModel):
     >>>            }
     >>> source_model = ApecNEISourceModel(0.1, 10.0, 10000, var_elem)
     """
-    def __init__(self, emin, emax, nbins, var_elem, binscale="linear", temperature_field=None,
-                 emission_measure_field=None, h_fraction=None, kT_min=0.025,
-                 kT_max=64.0, max_density=None, method="invert_cdf", thermal_broad=True,
-                 model_root=None, model_vers=None, nolines=False, abund_table="angr", prng=None):
+    def __init__(self, emin, emax, nbins, var_elem, binscale="linear", 
+                 temperature_field=("gas", "temperature"),
+                 emission_measure_field=("gas", "emission_measure"), 
+                 h_fraction=None, kT_min=0.025, kT_max=64.0, max_density=None, 
+                 method="invert_cdf", thermal_broad=True, model_root=None, 
+                 model_vers=None, nolines=False, abund_table="angr", prng=None):
         super().__init__("apec", emin, emax, nbins, 0.0, binscale=binscale, 
                          temperature_field=temperature_field, 
                          emission_measure_field=emission_measure_field, h_fraction=h_fraction,
