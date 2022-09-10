@@ -385,7 +385,7 @@ class IGMSourceModel(ThermalSourceModel):
     For temperatures higher than kT ~ 1.09 keV, a Cloudy-based CIE model
     is used to compute the spectrum. 
 
-    Assumes the abundance tables from Feldman 1992.
+    Assumes the abundance table from Feldman 1992.
 
     Table data and README files can be found at
     https://wwwmpa.mpa-garching.mpg.de/~ildar/igm/v3/.
@@ -405,6 +405,9 @@ class IGMSourceModel(ThermalSourceModel):
         The metallicity. If a float, assumes a constant metallicity throughout
         in solar units. If a string or tuple of strings, is taken to be the 
         name of the metallicity field.
+    binscale : string, optional
+        The scale of the energy binning: "linear" or "log". 
+        Default: "linear"
     resonant_scattering : boolean, optional
         Whether or not to include the effects of resonant scattering
         from CXB photons. Default: False
@@ -425,7 +428,7 @@ class IGMSourceModel(ThermalSourceModel):
         The hydrogen mass fraction. If a float, assumes a constant mass 
         fraction of hydrogen throughout. If a string or tuple of strings, 
         is taken to be the name of the hydrogen fraction field. Defaults to
-        the appropriate value for the Feldman abundance tables.
+        the appropriate value for the Feldman abundance table.
     kT_min : float, optional
         The default minimum temperature in keV to compute emission for.
         Default: 0.00431
@@ -508,7 +511,7 @@ class CIESourceModel(ThermalSourceModel):
         The hydrogen mass fraction. If a float, assumes a constant mass 
         fraction of hydrogen throughout. If a string or tuple of strings, 
         is taken to be the name of the hydrogen fraction field. Default is
-        whatever value is appropriate for the chosen abundance tables.
+        whatever value is appropriate for the chosen abundance table.
     kT_min : float, optional
         The default minimum temperature in keV to compute emission for.
         Default: 0.025
@@ -640,7 +643,7 @@ class NEISourceModel(CIESourceModel):
         The hydrogen mass fraction. If a float, assumes a constant mass 
         fraction of hydrogen throughout. If a string or tuple of strings, 
         is taken to be the name of the hydrogen fraction field. Default is
-        whatever value is appropriate for the chosen abundance tables.
+        whatever value is appropriate for the chosen abundance table.
     kT_min : float, optional
         The default minimum temperature in keV to compute emission for.
         Default: 0.025

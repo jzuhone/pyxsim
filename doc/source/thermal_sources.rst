@@ -65,7 +65,18 @@ the following arguments:
 * ``Zmet``: The metallicity. Either a floating-point number for a constant
   metallicity, or the name of a yt field for a spatially-varying metallicity.
 
-So creating a default instance is rather simple:
+Exactly what abundances are set by the ``Zmet`` parameter depends on the 
+model used:
+
+* ``"apec"`` and ``"spex"``: Includes C, N, O, Ne, Mg, Al, Si, S, Ar, Ca, 
+  Fe, Ni (He fixed at abundance table value, Li, Be, B, F, Na, P, Cl, K, 
+  Sc, Ti, V, Cr, Mn, Co, Cu, Zn fixed at solar).
+* ``"mekal"``: Includes C, N, O, Ne, Na, Mg, Al, Si, S, Ar, Ca, Fe, Ni 
+  (He fixed at abundance table value, other elements not modeled)
+* ``"cloudy"``: He fixed at abundance table value, all higher elements up 
+  Zn to included.
+
+Creating a default instance is rather simple:
 
 .. code-block:: python
 
@@ -74,13 +85,23 @@ So creating a default instance is rather simple:
 However, this model is very customizable. There are a number of other optional 
 parameters which can be set:
 
+* ``binscale``: The scale of the energy binning: "linear" or "log". 
+  Default: "linear"
 * ``temperature_field``: The yt field to use as the temperature. Must have 
   dimensions of temperature. The default is ``("gas", "temperature")``.
 * ``emission_measure_field``: The yt field to use as the emission measure. Must
   have dimensions of number density or per-volume. The default is 
   ``("gas", "emission_measure")``. 
+* ``h_fraction``: The hydrogen mass fraction. If a float, assumes a constant 
+  mass fraction of hydrogen throughout. If a string or tuple of strings, 
+  is taken to be the name of the hydrogen fraction field from yt. Defaults to
+  the appropriate value for the chosen abundance table.
 * ``kT_min``: The minimum temperature in units of keV. Default is 0.025.
 * ``kT_max``: The maximum temperature in units of keV. Default is 64.0.
+* ``max_density``: The maximum mass density of the cells or particles to use 
+  when generating photons. If a float, the units are assumed to be g/cm**3. 
+  can also be a ``YTQuantity`` or a float, string tuple such as 
+  ``(5.0e-25, "g/cm**3")`` Default: None, meaning no maximum density.
 * ``method``: The method used to generate the photon energies from the spectrum.
   Either ``"invert_cdf"``,
   which inverts the cumulative distribution function of the spectrum, or 
@@ -120,12 +141,15 @@ Solar abundance table in pyXSIM via the optional ``abund_table`` argument to
 :class:`~pyxsim.source_models.thermal_sources.CIESourceModel`. By default, 
 pyXSIM assumes the `Anders & Grevesse 1989 <http://adsabs.harvard.edu/abs/1989GeCoA..53..197A>`_ 
 abundances corresponding to a setting of ``"angr"`` for this parameter, but it 
-is possible to use other tables of solar abundances. The other tables included 
+is possible to use other tables of solar abundances. tables included 
 which can be used are:
 
+* ``"angr"``: `Anders & Grevesse 1989 <http://adsabs.harvard.edu/abs/1989GeCoA..53..197A>`_
 * ``"aspl"``: `Asplund et al. 2009 <http://adsabs.harvard.edu/abs/2009ARA%26A..47..481A>`_
 * ``"wilm"``: `Wilms et al. 2000 <http://adsabs.harvard.edu/abs/2000ApJ...542..914W>`_
 * ``"lodd"``: `Lodders 2003 <http://adsabs.harvard.edu/abs/2003ApJ...591.1220L>`_
+* ``"feld"``: `Feldman 1992 <https://ui.adsabs.harvard.edu/abs/1992PhyS...46..202F>`_
+* ``"cl17.03"``: The abundances used by default in Cloudy 17.03.
 
 The Solar abundance table can be changed like this:
 
@@ -153,22 +177,26 @@ and Zn. An example:
     thermal_model = pyxsim.CIESourceModel("spex", 0.1, 20.0, 10000, 
                                           prng=25, abund_table=my_abund)
 
+.. note:: 
+
+    Currently the solar abundance table cannot be changed for the ``"cloudy"``
+    model. It is set to ``"feld"``. 
+
 .. _var-abund:
 
 Variable Abundances
 +++++++++++++++++++
 
-By default, :class:`~pyxsim.source_models.CIESourceModel` assumes all 
-abundances besides H, He, and perhaps some trace elements are set by the single 
+As noted above, by default :class:`~pyxsim.source_models.CIESourceModel` assumes 
+all abundances besides H, He, and perhaps some trace elements are set by the single
 value or yt field provided by the ``Zmet`` parameter. However, more fine-grained 
-control
-is possible. :class:`~pyxsim.source_models.CIESourceModel` accepts a 
-``var_elem`` optional argument to specify which elements should be allowed to
-vary freely. The syntax is the same as for ``Zmet``, in that each element set 
-can be a single floating-point value or a yt field name corresponding to a field
-in the dataset. ``var_elem`` should be a dictionary of key, value pairs where 
-the key is the standard abbreviation for the element and the value is the single 
-number or field name:
+control is possible. :class:`~pyxsim.source_models.CIESourceModel` accepts a 
+``var_elem`` optional argument to specify which elements should be allowed to vary
+freely. The syntax is the same as for ``Zmet``, in that each element set can be a 
+single floating-point value or a yt field name corresponding to a field in the 
+dataset. ``var_elem`` should be a dictionary of key, value pairs where the key is 
+the standard abbreviation for the element and the value is the single number or 
+field name:
 
 .. code-block:: python
 
@@ -186,7 +214,12 @@ number or field name:
 
 Whatever elements are not specified here are assumed to be set as normal, 
 whether they are H, He, trace elements, or metals covered by the ``Zmet`` 
-parameter. 
+parameter. The abundances that you can specify in ``var_elem`` depend on 
+the model being used:
+
+* ``"apec"`` and ``"spex"``: Can vary any element He and higher up to Zn
+* ``"mekal"``: Can vary He, C, N, O, Ne, Na, Mg, Al, Si, S, Ar, Ca, Fe, Ni 
+* ``"cloudy"``: Can vary C, N, O, Ne, Fe, S, Si, Ca, and Mg
 
 Examples
 ++++++++
@@ -307,3 +340,81 @@ invocation is:
 
 Note that no other elements will be modeled except those which are specified
 in ``var_elem``.
+
+.. _igm-source-model:
+
+IGM Source Model
+================
+
+The :class:`~pyxsim.source_models.thermal_sources.IGMSourceModel` is 
+a source model for a thermal plasma including photoionization and 
+resonant scattering from the CXB, based on 
+`Khabibullin & Churazov 2019 <https://ui.adsabs.harvard.edu/abs/2019MNRAS.482.4972K/>`_ 
+and `Churazov et al. 2001 <https://ui.adsabs.harvard.edu/abs/2001MNRAS.323...93C/>`_.
+Because of the included effects of photoionization and resonant 
+scattering, this model is dependent on the hydrogen number density in
+an explicit way beyond the normalization.
+
+This model is appropriate for simulation emission from low-density, 
+high-temperature plasmas such as the warm-hot intergalactic medium (WHIM) and
+the outskirts of the circumgalactic medium (CGM). The densities and 
+temperatures involved are :math:`n_H \sim 10^{-7} - 10^{-4} \rm{cm}^{-3}` and
+:math:`T \sim 10^5 - 10^7` K. For resonant scattering, it is assumed that 
+a fraction of CXB photons are scattering off of heavy ions, enhancing line
+emission. 
+
+For temperatures higher than :math:`kT \sim 1.09` keV, the emission is
+essentially density-independent (aside from the normalization) and a 
+Cloudy-based CIE model is used to compute the spectrum. This model assumes the
+abundance tables from Feldman 1992 (``"feld"``) and currently cannot be changed 
+to another.
+
+The arguments for :class:`~pyxsim.source_models.thermal_sources.IGMSourceModel`
+are very similar to :class:`~pyxsim.source_models.thermal_sources.CIESourceModel`.
+Required arguments are:
+
+* ``emin``: The minimum energy for the spectrum in keV.
+* ``emax``: The maximum energy for the spectrum in keV.
+* ``nbins``: The number of bins in the spectrum. 
+* ``Zmet``: The metallicity. Either a floating-point number for a constant
+  metallicity, or the name of a yt field for a spatially-varying metallicity.
+
+For the :class:`~pyxsim.source_models.thermal_sources.IGMSourceModel`, He is 
+fixed at abundance table value, and all higher elements up Zn to included in
+``Zmet``. Optional arguments are:
+
+* ``binscale``: The scale of the energy binning: "linear" or "log". 
+  Default: "linear"
+* ``resonant_scattering``: Whether or not to include the effects of resonant 
+  scattering from CXB photons. Default: False
+* ``cxb_factor``: The fraction of the CXB photons that are resonant scattered 
+  to enhance the lines. Default: 0.5
+* ``nh_field``: The yt field to use as the number density of hydrogen. 
+  Must have number density dimensions. The default is ``("gas", "H_nuclei_density")``.
+* ``temperature_field``: The yt field to use as the temperature. Must have 
+  dimensions of temperature. The default is ``("gas", "temperature")``.
+* ``emission_measure_field``: The yt field to use as the emission measure. Must
+  have dimensions of number density or per-volume. The default is 
+  ``("gas", "emission_measure")``. 
+* ``h_fraction``: The hydrogen mass fraction. If a float, assumes a constant 
+  mass fraction of hydrogen throughout. If a string or tuple of strings, 
+  is taken to be the name of the hydrogen fraction field from yt. Defaults to
+  the appropriate value for the Feldman abundance table.
+* ``kT_min``: The minimum temperature in units of keV. Default is 0.00431.
+* ``kT_max``: The maximum temperature in units of keV. Default is 64.0.
+* ``max_density``: The maximum mass density of the cells or particles to use 
+  when generating photons. If a float, the units are assumed to be g/cm**3. 
+  can also be a ``YTQuantity`` or a float, string tuple such as 
+  ``(5.0e-25, "g/cm**3")`` Default: None, meaning no maximum density.
+* ``method``: The method used to generate the photon energies from the spectrum.
+  Either ``"invert_cdf"``,
+  which inverts the cumulative distribution function of the spectrum, or 
+  ``"accept_reject"``, which uses the acceptance-rejection method on the 
+  spectrum. The first method should be sufficient for most cases.
+* ``var_elem``: Optionally used to specify the abundances of specific elements, 
+  whether via floating-point numbers or yt fields. A dictionary of elements and 
+  values should be specified. See :ref:`igm-var-abund` below for more details.
+* ``prng``: A pseudo-random number generator. Typically will only be specified
+  if you have a reason to generate the same set of random numbers, such as for a 
+  test or a comparison. Default is the :mod:`numpy.random` module, but a 
+  :class:`~numpy.random.RandomState` object or an integer seed can also be used. 
