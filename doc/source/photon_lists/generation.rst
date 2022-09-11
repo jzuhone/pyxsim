@@ -1,13 +1,12 @@
-.. _photon-lists:
+.. _generating-photon-lists:
 
-Photon Lists
-============
+Generating Photon Lists
+=======================
 
-The first step in creating synthetic X-ray observations with pyXSIM is that of
-generating a photon list. A photon list is a three-dimensional HDF5 dataset that
-contains a distribution of cell positions, velocities, and photon energies
-within each cell. Once created, it be used to generated simulated X-ray events
-from a particular line of sight. 
+A photon list in pyXSIM is a three-dimensional HDF5 dataset that contains a 
+distribution of cell or particle positions, velocities, and photon energies
+within each cell or particle. Once created, it be used to generated simulated 
+X-ray events from a particular line of sight. 
 
 Generating a New Photon List from a Data Source
 -----------------------------------------------
@@ -128,7 +127,6 @@ fields, you can specify them using the ``velocity_fields`` keyword argument:
                                              exp_time, source_model, 
                                              center=center, dist=(4., "kpc"), 
                                              velocity_fields=vfields)
-
 
 Merging Photon Lists
 --------------------

@@ -418,3 +418,39 @@ fixed at abundance table value, and all higher elements up Zn to included in
   if you have a reason to generate the same set of random numbers, such as for a 
   test or a comparison. Default is the :mod:`numpy.random` module, but a 
   :class:`~numpy.random.RandomState` object or an integer seed can also be used. 
+
+Examples
+++++++++
+
+A simple invocation of the IGM model using a single metallicity field: 
+
+.. code-block:: python
+
+    source_model = pyxsim.IGMSourceModel(0.1, 5.0, 1000, 
+                                         ("gas","metallicity"), binscale="log")
+
+Turning on resonant scattering, assuming 30% of the CXB photons are scattered:
+
+.. code-block:: python
+
+    source_model = pyxsim.IGMSourceModel(0.1, 5.0, 1000, 
+                                         ("gas","metallicity"),
+                                         resonant_scattering=True,
+                                         cxb_factor=0.3, 
+                                         binscale="log")
+                                         
+Specifying the abundances of C, N, and Fe separately:
+
+.. code-block:: python
+
+    var_elem = {"C": ("gas", "C_fraction"), 
+                "N": ("gas", "N_fraction"),
+                "Fe": ("gas", "Fe_fraction")}
+           
+    source_model = pyxsim.IGMSourceModel(0.1, 5.0, 1000, 
+                                         ("gas","metallicity"),
+                                         resonant_scattering=True,
+                                         cxb_factor=0.3, 
+                                         binscale="log", 
+                                         var_elem=var_elem)
+

@@ -4,13 +4,13 @@ Source Models for X-ray Emission
 ================================
 
 pyXSIM comes with a number of pre-defined ``SourceModel`` types for 
-generating X-ray emission. These ``SourceModel``s can be used in three
-different ways:
+generating X-ray emission. Source models form the core of pyXSIM. 
+These ``SourceModel``s can be used in three different ways:
 
 * Generating X-ray emission fields for yt
-* Generating 
-
-Generating 
+* Generating spectra from yt data containers such as spheres, rectangular
+  solids, etc.
+* Generating mock photon lists for use in instrument simulators
 
 Source Model Types
 ------------------
