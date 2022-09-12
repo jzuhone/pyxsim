@@ -30,11 +30,12 @@ photon lists are. The arguments are:
   coordinate axis (``"x"``, ``"y"``, or ``"z"``), or a three-vector for an 
   off-axis projection, e.g. ``[1.0, -0.3, 0.24]``. 
 * ``sky_center``: Central RA, Dec of the events in degrees.
-* ``absorb_model`` (optional): A string or 
-  :class:`~pyxsim.spectral_models.AbsorptionModel` class representing a model 
-  for foreground galactic absorption. This parameter can take a string or the 
-  class itself. See :ref:`absorb-models` for more details on how to use them. 
-  Known options for strings are ``"wabs"`` and ``"tbabs"``.
+* ``absorb_model`` (optional): A string representing a model for foreground 
+  galactic absorption. The two models included in pyXSIM for absorption are:
+  ``"wabs"`` (`Wisconsin (Morrison and McCammon; ApJ 270, 119) <http://adsabs.harvard.edu/abs/1983ApJ...270..119M>`_),
+  and ``"tbabs"`` (`Tuebingen-Boulder (Wilms, J., Allen, A., & McCray, R. 2000, ApJ, 542, 914) <http://adsabs.harvard.edu/abs/2000ApJ...542..914W>`_).
+  The default is no absorption--if an absorption model is chosen, the ``nH``
+  parameter must also be set. 
 * ``nH`` (optional): The foreground galactic column density in units of 
   :math:`10^{22} \rm{atoms} \rm{cm}^{-2}`, for use when one is applying 
   foreground galactic absorption.
