@@ -6,6 +6,8 @@ ChangeLog
 Version 4.0
 -----------
 
+This is a major update to pyXSIM which incldues many new features.
+
 * Non-PHOX modes, spectra and fields
 * New thermal spectral models
 * Iterate over chunks in thermal models

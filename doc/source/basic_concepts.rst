@@ -1,14 +1,30 @@
-.. _basic-yt-concepts:
+.. _basic-concepts:
+
+Basic Concepts
+==============
+
+Basic pyXSIM Concepts
+---------------------
+
+
+pyXSIM Limitations
+++++++++++++++++++
+
+pyXSIM currently has the following limitations, which may or may not be 
+lifted in the future: 
+
+* pyXSIM is currently unable to simulate any sources with any optical 
+  thickness, self-absorption, or self-scattering.
+* pyXSIM is currently unable to simulate any sources with explicit time 
+  dependence.
+* pyXSIM is currently limited to datasets in Cartesian coordinates. 
 
 Basic yt Concepts
-=================
+-----------------
 
 In this section we will outline some basic yt concepts that you will need to 
 familiarize yourself with in order to use pyXSIM effectively. If you are 
 familiar with how yt works, you can safely skip this section.
-
-Three-Dimensional Datasets and Data Objects
--------------------------------------------
 
 Datasets
 ++++++++
@@ -53,7 +69,7 @@ objects and the options to use to create them, check out
 `the yt documentation on data objects <http://yt-project.org/doc/analyzing/objects.html>`_.
 
 Unitful Quantities
-------------------
+++++++++++++++++++
 
 yt employs a symbolic unit system when dealing with physical quantities with
 units. pyXSIM uses yt's unit system to keep track of the units of various 
@@ -83,7 +99,7 @@ information, since the units will be checked for correct dimensionality and will
 be converted if necessary. 
 
 Field Specifications
---------------------
+++++++++++++++++++++
 
 This means that whenever pyXSIM accepts a field specification as an argument, it
 will need to be in one of the following two forms:

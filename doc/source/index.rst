@@ -57,6 +57,7 @@ Table of Contents
    v3_to_v4
    basic_concepts
    source_models
+   xray_fields
    photon_lists
    parallel
    getting_help
