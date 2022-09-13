@@ -16,7 +16,6 @@ from pyxsim.photon_list import \
     project_photons_allsky
 
 from pyxsim.source_models import \
-   SourceModel, \
    CIESourceModel, \
    NEISourceModel, \
    LineSourceModel, \

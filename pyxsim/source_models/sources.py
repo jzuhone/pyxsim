@@ -135,9 +135,9 @@ class SourceModel:
         ftype = self.ftype
 
         emiss_name = (
-            ftype, f"xray_emissivity_{emin}_{emax}_keV"
+            ftype, f"xray_emissivity_{emin.value}_{emax.value}_keV"
         )
-        emiss_dname = rf"\epsilon_{{X}} ({emin}-{emax} keV)"
+        emiss_dname = rf"\epsilon_{{X}} ({emin.value}-{emax.value} keV)"
 
         lum_name = (
             ftype, emiss_name[1].replace("emissivity", "luminosity")
@@ -243,9 +243,9 @@ class SourceModel:
         emax_src = emax*(1.0+redshift)
 
         ei_name = (
-            ftype, f"xray_intensity_{emin}_{emax}_keV"
+            ftype, f"xray_intensity_{emin.value}_{emax.value}_keV"
         )
-        ei_dname = rf"I_{{X}} ({emin}-{emax} keV)"
+        ei_dname = rf"I_{{X}} ({emin.value}-{emax.value} keV)"
 
         eif = self.make_fluxf(emin_src, emax_src, energy=True)
 
