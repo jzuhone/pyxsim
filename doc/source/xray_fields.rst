@@ -54,7 +54,9 @@ Three fields have been created--one for the X-ray emissivity in the chosen band 
 :math:`\rm{erg}~\rm{cm}^{-3}~\rm{s}^{-1}`, another for the X-ray luminosity in the
 chosen band in :math:`\rm{erg}~\rm{s}^{-1}`, and another for the X-ray photon
 emissivity in :math:`\rm{photon}~\rm{cm}^{-3}~\rm{s}^{-1}`. These fields exist in
-the same way as any other field in yt, and can be used in the same ways:
+the same way as any other field in yt, and can be used in the same ways. 
+
+Querying emissivity values in a sphere:
 
 .. code-block:: python
 
@@ -65,3 +67,22 @@ the same way as any other field in yt, and can be used in the same ways:
 
     [6.75018212e-30 6.63582106e-30 6.45686636e-30 ... 2.59468150e-30
      2.55886161e-30 2.65063999e-30] erg/(cm**3*s)
+
+Summing luminosity in a sphere:
+
+.. code-block:: python
+
+    print(sp.sum(("gas", "xray_luminosity_0.5_7.0_keV")))
+
+.. code-block:: pycon
+
+    unyt_quantity(7.73753352e+44, 'erg/s')
+
+Projecting the photon emissivity along a sight line:
+
+.. code-block:: python
+
+    prj = yt.ProjectionPlot(ds, "z", xray_fields[-1], width=(0.5, "Mpc"))
+    prj.save()
+
+.. image:: _images/projected_emiss.png
