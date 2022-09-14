@@ -12,11 +12,11 @@ These ``SourceModel``s can be used in three different ways:
   solids, etc.
 * Generating mock photon lists for use in instrument simulators
 
-Source Model Types
-------------------
-
 There are currently three different types of source models in pyXSIM:
 
-* :ref:`thermal-sources`
-* :ref:`powerlaw-sources`
-* :ref:`line-sources`
+.. toctree::
+    :maxdepth: 1
+
+    thermal_sources
+    powerlaw_sources
+    line_sources

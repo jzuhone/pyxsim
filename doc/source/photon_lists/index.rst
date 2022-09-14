@@ -107,3 +107,11 @@ images and spectra that can be processed with standard software tools for
 working with X-ray observations. pyXSIM provides a way to export the simulated 
 events for use with other packages which simulate X-ray observatories more 
 accurately. The details on how to do this can be found in :ref:`instruments`. 
+
+.. toctree::
+    :maxdepth: 1
+    
+    generation
+    event_lists
+    instruments
+    light_cone

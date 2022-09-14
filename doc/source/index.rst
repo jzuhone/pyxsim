@@ -56,9 +56,9 @@ Table of Contents
    installing
    v3_to_v4
    basic_concepts
-   source_models
+   source_models/index
    xray_fields
-   photon_lists
+   photon_lists/index
    parallel
    getting_help
    cookbook/index

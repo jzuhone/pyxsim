@@ -11,14 +11,14 @@ metallicity :math:`Z`, and is proportional to the density squared:
 
 .. math::
 
-    \varepsilon(E) = n_en_H\Lambda(T, Z, E)
+    \varepsilon(E) = n_en_H\Lambda(T, Z; E)
 
 In the case where photoionization is important, the emission is directly 
 dependent on the number density of hydrogen:
 
 .. math::
 
-    \varepsilon(E) = n_en_H\Lambda(nH, T, Z, E)
+    \varepsilon(E) = n_en_H\Lambda(n_H, T, Z; E)
 
 In either case, the metallicity :math:`Z` may be a single value encompassing 
 all metals or a vector corresponding to a list of individual elements. Since 
@@ -225,7 +225,7 @@ Examples
 ++++++++
 
 Here, we will show several examples of constructing 
-:class:`~pyxsim.source_models.ThermalSourceModel` objects. 
+:class:`~pyxsim.source_models.thermal_models.CIESourceModel` objects. 
 
 An example where we use the default parameters, and a constant 
 metallicity:
