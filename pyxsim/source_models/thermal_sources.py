@@ -207,10 +207,10 @@ class ThermalSourceModel(SourceModel):
         kT = np.ravel(
             chunk[self.temperature_field].to_value("keV", "thermal"))
         cut &= (kT >= self.kT_min) & (kT <= self.kT_max)
-        if self.nh_field is not None:
-            nH = np.ravel(chunk[self.nh_field].d[cut])
-        else:
-            nH = None
+
+        cell_nrm = np.ravel(
+            chunk[self.emission_measure_field].d*self.spectral_norm
+        )
 
         num_cells = cut.sum()
 
@@ -223,16 +223,18 @@ class ThermalSourceModel(SourceModel):
         elif num_cells == 0:
             return np.zeros(orig_shape)
 
-        kT = np.ravel(kT[cut])
+        kT = kT[cut]
+        cell_nrm = cell_nrm[cut]
 
-        cell_nrm = np.ravel(
-            chunk[self.emission_measure_field].d[cut]*self.spectral_norm
-        )
+        if self.nh_field is not None:
+            nH = np.ravel(chunk[self.nh_field].d)[cut]
+        else:
+            nH = None
 
         if isinstance(self.h_fraction, float):
             X_H = self.h_fraction
         else:
-            X_H = np.ravel(chunk[self.h_fraction].d[cut])
+            X_H = np.ravel(chunk[self.h_fraction].d)[cut]
 
         if self._nei:
             metalZ = np.zeros(num_cells)
@@ -246,7 +248,7 @@ class ThermalSourceModel(SourceModel):
                 fac = self.Zconvert
                 if str(mZ.units) != "Zsun":
                     fac /= X_H
-                metalZ = np.ravel(mZ.d[cut]*fac)
+                metalZ = np.ravel(mZ.d*fac)[cut]
 
         elemZ = None
         if self.num_var_elem > 0:
@@ -260,10 +262,10 @@ class ThermalSourceModel(SourceModel):
                     fac = self.mconvert[key]
                     if str(eZ.units) != "Zsun":
                         fac /= X_H
-                    elemZ[j,:] = np.ravel(eZ.d[cut]*fac)
+                    elemZ[j,:] = np.ravel(eZ.d*fac)[cut]
 
         if self.observer == "internal" and mode == "photons":
-            pos = np.array([np.ravel(chunk[self.p_fields[i]].to_value("kpc")[cut])
+            pos = np.array([np.ravel(chunk[self.p_fields[i]].to_value("kpc"))[cut]
                             for i in range(3)])
             r2 = self.compute_radius(pos)
             cell_nrm /= r2
