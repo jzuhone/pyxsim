@@ -203,14 +203,14 @@ field name:
     # Setting abundances by yt field names
     Zmet = ("gas", "metallicity")
     var_elem = {"O": ("gas", "O_fraction"), "Ca": ("gas","Ca_fraction")} 
-    source_model = pyxsim.CIESourceModel(0.05, 50.0, 10000, Zmet, var_elem=var_elem)
+    source_model = pyxsim.CIESourceModel("cloudy", 0.05, 50.0, 10000, Zmet, var_elem=var_elem)
     
 .. code-block:: python
 
     # Setting abundances by numbers
     Zmet = 0.3
     var_elem = {"O": 0.4, "Ca": 0.5} 
-    source_model = pyxsim.CIESourceModel(0.05, 50.0, 10000, Zmet, var_elem=var_elem)
+    source_model = pyxsim.CIESourceModel("mekal", 0.05, 50.0, 10000, Zmet, var_elem=var_elem)
 
 Whatever elements are not specified here are assumed to be set as normal, 
 whether they are H, He, trace elements, or metals covered by the ``Zmet`` 

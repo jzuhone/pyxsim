@@ -194,7 +194,6 @@ class SourceModel:
     def make_intensity_fields(self, ds, emin, emax, redshift=0.0, 
                               dist=None, cosmology=None):
         r"""
-
         Make the following fields in the observer frame within a 
         specific energy band for a dataset in yt:
 
