@@ -6,6 +6,11 @@ Basic Concepts
 Basic pyXSIM Concepts
 ---------------------
 
+"Photon" Lists vs. "Event" Lists
+++++++++++++++++++++++++++++++++
+
+SIMPUT Catalogs
++++++++++++++++
 
 pyXSIM Limitations
 ++++++++++++++++++

@@ -67,6 +67,14 @@ The arguments taken by :func:`~pyxsim.photon_list.make_photons` are as follows:
   ``['velocity_x', 'velocity_y', 'velocity_z']`` for grid datasets, and 
   ``['particle_velocity_x', 'particle_velocity_y', 'particle_velocity_z']`` 
   for particle datasets.
+* ``bulk_velocity`` (optional): A 3-element array or list specifying the local 
+  velocity frame of reference. If not a :class:`~yt.units.yt_array.YTArray`, 
+  it is assumed to have units of km/s. Default: [0.0, 0.0, 0.0] km/s.
+* ``observer`` (optional): Whether the observer is "external", and the flat-sky
+  approximation can be assumed for the purposes of projecting photons onto the 
+  sky, or the observer is "internal" and a spherical projection is assumed.
+  Default is "external". For more details on the "internal" observing mode see 
+  :ref:`allsky`.
 
 As an example, we'll assume we have created a ``source_model`` representing the
 thermal emission from the plasma (see :ref:`source-models` for more details on

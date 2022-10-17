@@ -353,7 +353,7 @@ resonant scattering from the CXB, based on
 and `Churazov et al. 2001 <https://ui.adsabs.harvard.edu/abs/2001MNRAS.323...93C/>`_.
 Because of the included effects of photoionization and resonant 
 scattering, this model is dependent on the hydrogen number density in
-an explicit way beyond the normalization.
+an explicit way, aside from the normalization.
 
 This model is appropriate for simulation emission from low-density, 
 high-temperature plasmas such as the warm-hot intergalactic medium (WHIM) and
@@ -422,7 +422,8 @@ fixed at abundance table value, and all higher elements up Zn to included in
 Examples
 ++++++++
 
-A simple invocation of the IGM model using a single metallicity field: 
+A simple invocation of the IGM model using a single metallicity field, and
+log-spaced energy binning: 
 
 .. code-block:: python
 

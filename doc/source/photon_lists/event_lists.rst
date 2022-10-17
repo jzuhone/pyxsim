@@ -39,6 +39,9 @@ photon lists are. The arguments are:
 * ``nH`` (optional): The foreground galactic column density in units of 
   :math:`10^{22} \rm{atoms} \rm{cm}^{-2}`, for use when one is applying 
   foreground galactic absorption.
+* ``abund_table`` (optional): The abundance table to be used for abundances in the 
+  TBabs absorption model. Default is set in the SOXS configuration file, the default 
+  for which is ``"angr"``. Other options are ``"angr"``, ``"aspl"``, 
 * ``no_shifting`` (optional): If set to True, the photon energies will not be
   velocity Doppler shifted. Default False.
 * ``north_vector`` (optional): A vector defining the "up" direction, e.g. 
