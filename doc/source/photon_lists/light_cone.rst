@@ -108,4 +108,4 @@ like this:
     events = pyxsim.EventList("enzo_64_events")
     events.write_fits_image("light_cone_img.fits", fov, 1024)
 
-.. image:: _images/light_cone.png
+.. image:: ../_images/light_cone.png

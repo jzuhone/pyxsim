@@ -16,10 +16,11 @@ mode, photons could come from sources at any position on the sky, so it is ideal
 for making all-sky maps. 
 
 The following example shows how to create such an observation of the circumgalactic
-medium from "inside a galaxy", using a Milky Way-sized halo extracted from 
-`Illustris TNG<https://www.tng-project.org>`_.  First, we load up a dataset in 
-``yt``, and put a filter on the gas cells so that we only consider gas that is likely
-to be X-ray emitting:
+medium from "inside a galaxy", using a 
+`Milky Way-sized halo <https://www.tng-project.org/api/TNG50-1/snapshots/99/subhalos/494709/>`_ 
+extracted from `Illustris TNG<https://www.tng-project.org>`_ (the actual dataset used is the 
+``parent_halo` with ID = 136). First, we load up the dataset in ``yt``, and put a filter on 
+the gas cells so that we only consider gas that is likely to be X-ray emitting:
 
 .. code-block:: python
 
@@ -145,4 +146,63 @@ This creates a file of events that can be used as normal to create a SIMPUT cata
     el = pyxsim.EventList("sub_494709_events_internal.h5")
     el.write_to_simput("sub_494709_events_internal", overwrite=True)
 
-The resulting SIMPUT catalog has 
+The resulting SIMPUT catalog has the same format as the case of "external" observers,
+so in theory you could take any 
+:ref:`instrument simulator that supports SIMPUT catalogs<instruments>` and point at
+a particular location in the sky to look at it. However, it is also possible to create
+an "all-sky" map with a particular instrument model using SOXS. For this, we can use
+the :meth:`~soxs.instrument.simple_event_list` function, which simply convolves the 
+photons in the SIMPUT catalog with the instrument's ARF and RMF:
+
+.. code-block:: python
+
+    # convolve the all-sky map
+    soxs.simple_event_list("sub_494709_events_internal_simput.fits", 
+                           "sub_494709_internal_evt.fits", (50.0, "s"), "lem_2eV", 
+                           overwrite=True, use_gal_coords=True)
+
+No PSF scattering or any other instrumental effects are applied in this mode--the
+assumption is that these effects are negligible for the angular sizes one is 
+investigating. The ``use_gal_coords=True`` option takes the celestial coordinates
+in the file and converts them into Galactic coordinates. 
+
+The resulting event list can used to produce an "all-sky" map in X-rays using 
+```healpy``<https://healpy.readthedocs.io/>`_ like so:
+
+.. code-block:: python
+
+    import healpy as hp
+    import numpy as np
+    from astropy.io import fits
+    import matplotlib.pyplot as plt
+
+    # specify the minimum and maximum energies (in eV) of the band
+    # to plot
+    emin = 500.0
+    emax = 1500.0
+    
+    # Open the file, read in the photons (making a cut on energy),
+    # then convert latitude and longitude to radians
+    with fits.open("sub_494709_internal_evt.fits") as f:
+        cut = (f["EVENTS"].data["ENERGY"] > emin) & (f["EVENTS"].data["ENERGY"] <= emax)
+        lon = np.deg2rad(f["EVENTS"].data["GLON"][cut])
+        lat = np.deg2rad(90.0-f["EVENTS"].data["GLAT"][cut])
+    
+    # Make the histogram image using HealPy
+    nside = 32
+    
+    pixel_indices = hp.ang2pix(nside, lat, lon)
+    
+    m = np.bincount(pixel_indices, minlength=hp.nside2npix(nside))
+
+    # Make a plot of the all-sky image and save 
+
+    fig = plt.figure(figsize=(20,10))
+    hp.mollview(m, min=0.1, norm='log', fig=fig)
+    hp.graticule()
+    
+    fig.savefig("allsky.png")
+
+In this case, the resulting image looks like this:
+
+.. image:: ../_images/allsky.png
