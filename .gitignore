@@ -4,6 +4,9 @@ syntax: glob
 pyxsim.egg-info
 doc/build
 doc/source/*.fits
+doc/source/cookbook/*.fits
+doc/source/cookbook/*.h5
+doc/source/cookbook/*.reg
 build
 dist
 sky_functions.c
