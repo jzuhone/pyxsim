@@ -233,7 +233,7 @@ class SourceModel:
         emin = parse_value(emin, "keV")
         emax = parse_value(emax, "keV")
 
-        self.setup_model(ds, redshift)
+        self.setup_model(ds, 0.0)
 
         ftype = self.ftype
 
