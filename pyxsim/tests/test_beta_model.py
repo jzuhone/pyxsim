@@ -38,16 +38,16 @@ except KeyError:
 rmf = RedistributionMatrixFile(mucal_spec["rmf"])
 arf = AuxiliaryResponseFile(mucal_spec['arf'])
 fit_model = TableCIEModel("apec", rmf.elo[0], rmf.ehi[-1], rmf.n_e,
-                          0.1, 10.0)
+                          0.1, 10.0).cgen
 agen_var = TableCIEModel("apec", rmf.elo[0], rmf.ehi[-1], rmf.n_e,
-                         0.1, 10.0, var_elem=["O", "Ca"], thermal_broad=True)
+                         0.1, 10.0, var_elem=["O", "Ca"], thermal_broad=True).cgen
 
 
 def mymodel(pars, x, xhi=None):
     dx = x[1]-x[0]
     tm = TBabsModel(pars[0])
     tbabs = tm.get_absorb(x+0.5*dx)
-    bapec = fit_model.return_spectrum(pars[1], pars[2], pars[3], pars[4], velocity=pars[5])
+    bapec = fit_model.get_spectrum(pars[1], pars[2], pars[3], pars[4], velocity=pars[5])
     eidxs = np.logical_and(rmf.elo >= x[0]-0.5*dx, rmf.elo <= x[-1]+0.5*dx)
     return tbabs*bapec[eidxs]
 
@@ -56,8 +56,8 @@ def mymodel_var(pars, x, xhi=None):
     dx = x[1]-x[0]
     tm = TBabsModel(pars[0])
     tbabs = tm.get_absorb(x+0.5*dx)
-    bapec = agen_var.return_spectrum(pars[1], pars[2], pars[3], pars[4],
-                                     elem_abund={"O": pars[5], "Ca": pars[6]})
+    bapec = agen_var.get_spectrum(pars[1], pars[2], pars[3], pars[4],
+                                  elem_abund={"O": pars[5], "Ca": pars[6]})
     eidxs = np.logical_and(rmf.elo >= x[0]-0.5*dx, rmf.elo <= x[-1]+0.5*dx)
     return tbabs*bapec[eidxs]
 
@@ -277,12 +277,6 @@ def test_beta_model_fields():
     kT_sim = bms.kT
     Z_sim = bms.Z
 
-    thermal_model = CIESourceModel("apec", 0.1, 11.5, 2000, Z_sim)
-
-    xray_fields = thermal_model.make_source_fields(ds, 0.5, 7.0)
-    lum = sphere.sum(xray_fields[1]).value
-    plum = (sphere[xray_fields[-1]]*sphere["cell_volume"]).sum().value
-
     D_A = cosmo.angular_diameter_distance(0.0, redshift).to_value("cm")
     D_L = cosmo.luminosity_distance(0.0, redshift).to_value("cm")
 
@@ -290,13 +284,29 @@ def test_beta_model_fields():
 
     agen = ApecGenerator(0.1, 11.5, 2000)
 
-    spec1 = agen.get_spectrum(kT_sim, Z_sim, redshift, norm)
-    pflux1, eflux1 = spec1.get_flux_in_band(0.5/(1.0+redshift), 7.0/(1.0+redshift))
-    lum1 = 4.0*np.pi*D_L**2*eflux1.value
-    plum1 = 4.0*np.pi*D_L**2*pflux1.value/(1.0+redshift)
+    spec = agen.get_spectrum(kT_sim, Z_sim, redshift, norm)
+    pflux, eflux = spec.get_flux_in_band(0.5/(1.0+redshift), 7.0/(1.0+redshift))
+    lum = 4.0*np.pi*D_L**2*eflux.value
+    plum = 4.0*np.pi*D_L**2*pflux.value/(1.0+redshift)
 
-    assert np.abs(lum1-lum)/lum1 < 0.001
-    assert np.abs(plum1-plum)/plum1 < 0.01
+    thermal_model = CIESourceModel("apec", 0.1, 11.5, 2000, Z_sim)
+
+    xray_fields = thermal_model.make_source_fields(ds, 0.5, 7.0)
+    lum1 = sphere.sum(xray_fields[1]).value
+    plum1 = (sphere[xray_fields[-1]]*sphere["cell_volume"]).sum().value
+
+    int_fields = thermal_model.make_intensity_fields(ds, 0.5/(1.0+redshift), 7.0/(1.0+redshift),
+                                                     redshift=redshift)
+    angular_scale = 1.0/cosmo.angular_scale(0.0, redshift).to("cm/arcsec")
+
+    eflux2 = (sphere[int_fields[0]]*sphere["cell_volume"]).sum()*angular_scale**2
+    pflux2 = (sphere[int_fields[1]]*sphere["cell_volume"]).sum()*angular_scale**2
+
+    assert np.abs(lum1-lum)/lum < 0.001
+    assert np.abs(plum1-plum)/plum < 0.01
+
+    assert np.abs(eflux2.value-eflux.value)/eflux.value < 0.001
+    assert np.abs(pflux2.value-pflux.value)/pflux.value < 0.01
 
 
 if __name__ == "__main__":
