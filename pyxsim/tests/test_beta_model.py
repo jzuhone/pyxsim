@@ -3,9 +3,10 @@ A unit test for the pyxsim analysis module.
 """
 
 from pyxsim import \
-    TableCIEModel, TBabsModel, \
     CIESourceModel, make_photons, \
     project_photons, EventList
+from pyxsim.spectral_models import \
+    TableCIEModel, TBabsModel
 from pyxsim.tests.utils import \
     BetaModelSource, ParticleBetaModelSource
 import numpy as np
