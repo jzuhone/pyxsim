@@ -32,7 +32,7 @@ conda install --yes numpy pytest pip h5py astropy nose cython scipy yt
 pip install soxs==4.0b6
 
 if [[ ${mode} == "testing" ]]; then
-  conda install --yes -c sherpa 
+  conda install --yes -c sherpa sherpa
 fi 
 
 if [[ ${mode} == "wheels" ]]; then
