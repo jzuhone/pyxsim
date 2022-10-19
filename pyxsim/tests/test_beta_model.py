@@ -22,6 +22,7 @@ from soxs.instrument import RedistributionMatrixFile, \
 from soxs.events import write_spectrum
 from soxs.instrument_registry import get_instrument_from_registry, \
     make_simple_instrument
+from soxs import ApecGenerator
 from yt.utilities.cosmology import Cosmology
 
 cosmo = Cosmology()
@@ -122,8 +123,8 @@ def do_beta_model(source, axis="z", prng=None):
     norm_sim *= 1.0e-14/(4*np.pi*D_A*D_A*(1.+redshift)*(1.+redshift))
     norm_sim = float(norm_sim.in_cgs())
 
-    v1, v2 = sphere.quantities.weighted_variance(("gas", "velocity_z"),
-                                                 ("gas", "emission_measure"))
+    v1, v2 = sphere.quantities.weighted_standard_deviation(("gas", "velocity_z"),
+                                                           ("gas", "emission_measure"))
 
     if isinstance(axis, str):
         if axis == "z":
@@ -260,6 +261,42 @@ def test_vapec_beta_model():
 
     os.chdir(curdir)
     shutil.rmtree(tmpdir)
+
+
+def test_beta_model_fields():
+    bms = BetaModelSource()
+    ds = bms.ds
+
+    A = 30000.
+    exp_time = 1.0e4
+    redshift = 0.2
+    nH_sim = 0.02
+
+    sphere = ds.sphere("c", (0.5, "Mpc"))
+
+    kT_sim = bms.kT
+    Z_sim = bms.Z
+
+    thermal_model = CIESourceModel("apec", 0.1, 11.5, 2000, Z_sim)
+
+    xray_fields = thermal_model.make_source_fields(ds, 0.5, 7.0)
+    lum = sphere.sum(xray_fields[1]).value
+    plum = (sphere[xray_fields[-1]]*sphere["cell_volume"]).sum().value
+
+    D_A = cosmo.angular_diameter_distance(0.0, redshift).to_value("cm")
+    D_L = cosmo.luminosity_distance(0.0, redshift).to_value("cm")
+
+    norm = 1.0e-14*sphere.sum(("gas", "emission_measure")).v/(4.0*np.pi*D_A*D_A*(1+redshift)**2)
+
+    agen = ApecGenerator(0.1, 11.5, 2000)
+
+    spec1 = agen.get_spectrum(kT_sim, Z_sim, redshift, norm)
+    pflux1, eflux1 = spec1.get_flux_in_band(0.5/(1.0+redshift), 7.0/(1.0+redshift))
+    lum1 = 4.0*np.pi*D_L**2*eflux1.value
+    plum1 = 4.0*np.pi*D_L**2*pflux1.value/(1.0+redshift)
+
+    assert np.abs(lum1-lum)/lum1 < 0.001
+    assert np.abs(plum1-plum)/plum1 < 0.01
 
 
 if __name__ == "__main__":
