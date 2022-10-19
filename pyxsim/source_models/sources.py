@@ -143,7 +143,7 @@ class SourceModel:
         lum_name = (
             ftype, emiss_name[1].replace("emissivity", "luminosity")
         )
-        lum_dname = emiss_dname.replace("\epsilon", "\rm{{L}}")
+        lum_dname = emiss_dname.replace(r"\epsilon", "\rm{{L}}")
 
         phot_emiss_name = (
             ftype, emiss_name[1].replace("emissivity", "photon_emissivity")
