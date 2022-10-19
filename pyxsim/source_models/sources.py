@@ -21,8 +21,10 @@ class SourceModel:
         # source model specifically
         pass
 
-    def setup_model(self, data_source, redshift):
-        self.redshift = redshift
+    def setup_model(self, mode, data_source, redshift):
+        # This needs to be implemented for every
+        # source model specifically
+        pass
 
     def set_pv(self, p_fields, v_fields, le, re, dw, c, periodicity,
                observer):
