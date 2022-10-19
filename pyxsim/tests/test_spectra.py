@@ -5,8 +5,8 @@ import soxs
 
 def test_apec():
 
-    amod = TableCIEModel("apec", 0.1, 10.0, 10000, thermal_broad=True)
-    amod.prepare_spectrum(0.2, 1, 10)
+    amod = TableCIEModel("apec", 0.1, 10.0, 10000, 1.0, 10.0, thermal_broad=True)
+    amod.prepare_spectrum(0.2)
 
     acspec, amspec, _ = amod.get_spectrum(6.0)
     spec = acspec+0.3*amspec
@@ -33,7 +33,7 @@ def test_apec():
 def test_igm():
 
     imod = IGMSpectralModel(0.2, 3.0, 1000)
-    imod.prepare_spectrum(0.05, 0.003, 10.0)
+    imod.prepare_spectrum(0.05)
 
     icspec, imspec, _ = imod.get_spectrum(1.0, 0.01)
     spec = icspec+0.3*imspec

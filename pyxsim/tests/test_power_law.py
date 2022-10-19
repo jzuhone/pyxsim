@@ -1,6 +1,7 @@
 from pyxsim import \
     PowerLawSourceModel, make_photons, \
-    WabsModel, project_photons, EventList
+    project_photons, EventList
+from pyxsim.spectral_models import WabsModel
 from pyxsim.tests.utils import \
     BetaModelSource
 from yt.units.yt_array import YTQuantity

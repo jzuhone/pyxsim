@@ -27,7 +27,7 @@ def test_line_emission():
     ds = bms.ds
 
     def _dm_emission(field, data):
-        return (data["dark_matter_density"]/m_chi)**2*data["cell_volume"]*cross_section
+        return (data["gas","dark_matter_density"]/m_chi)**2*data["cell_volume"]*cross_section
     ds.add_field(("gas","dm_emission"), function=_dm_emission, units="s**-1",
                  sampling_type="cell")
 
@@ -42,7 +42,7 @@ def test_line_emission():
     sphere = ds.sphere("c", (100.,"kpc"))
 
     line_model = LineSourceModel(location, "dm_emission", 
-                                 sigma="dark_matter_dispersion", prng=32)
+                                 sigma=("stream","dark_matter_dispersion"), prng=32)
 
     n_photons, n_cells = make_photons("my_photons.h5", sphere, redshift, A, 
                                       exp_time, line_model)
