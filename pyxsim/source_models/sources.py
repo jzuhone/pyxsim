@@ -16,13 +16,12 @@ class SourceModel:
         self.prng = parse_prng(prng)
         self.observer = "external"
 
-    def process_data(self, mode, chunk, fluxf=None):
+    def process_data(self, mode, chunk, spectral_norm, fluxf=None):
         # This needs to be implemented for every
         # source model specifically
         pass
 
-    def setup_model(self, data_source, redshift, spectral_norm):
-        self.spectral_norm = spectral_norm
+    def setup_model(self, data_source, redshift):
         self.redshift = redshift
 
     def set_pv(self, p_fields, v_fields, le, re, dw, c, periodicity,
@@ -130,7 +129,7 @@ class SourceModel:
         emin = parse_value(emin, "keV")
         emax = parse_value(emax, "keV")
 
-        self.setup_model(ds, redshift, spectral_norm)
+        self.setup_model(ds, redshift)
 
         ftype = self.ftype
 
@@ -152,7 +151,8 @@ class SourceModel:
 
         def _luminosity_field(field, data):
             return data.ds.arr(
-                self.process_data("energy_field", data, fluxf=efluxf), "keV/s")
+                self.process_data("energy_field", data, spectral_norm, 
+                                  fluxf=efluxf), "keV/s")
 
         ds.add_field(
             lum_name,
@@ -177,7 +177,8 @@ class SourceModel:
         pfluxf = self.make_fluxf(emin, emax, energy=False)
 
         def _photon_emissivity_field(field, data):
-            ret = data.ds.arr(self.process_data("photon_field", data, fluxf=pfluxf),
+            ret = data.ds.arr(self.process_data("photon_field", data, spectral_norm,
+                                                fluxf=pfluxf),
                               "photons/s")
             return ret * data[ftype, "density"] / data[ftype, "mass"]
 
@@ -227,16 +228,16 @@ class SourceModel:
             raise ValueError("Either 'redshift' must be > 0.0 or 'dist' must "
                              "not be None!")
 
+        spectral_norm = 1.0
+
         emin = parse_value(emin, "keV")
         emax = parse_value(emax, "keV")
 
-        self.setup_model(ds, redshift, 1.0)
+        self.setup_model(ds, redshift)
 
         ftype = self.ftype
 
         dist_fac, redshift = self._make_dist_fac(ds, redshift, dist, cosmology)
-
-        self.setup_model(ds, redshift, 1.0)
 
         emin_src = emin*(1.0+redshift)
         emax_src = emax*(1.0+redshift)
@@ -249,8 +250,8 @@ class SourceModel:
         eif = self.make_fluxf(emin_src, emax_src, energy=True)
 
         def _intensity_field(field, data):
-            ret = data.ds.arr(self.process_data("energy_field",
-                                                data, fluxf=eif), "keV/s")
+            ret = data.ds.arr(self.process_data("energy_field", data,
+                                                spectral_norm, fluxf=eif), "keV/s")
             idV = data[ftype, "density"] / data[ftype, "mass"]
             I = dist_fac * ret * idV
             return I.in_units("erg/cm**3/s/arcsec**2")
@@ -270,8 +271,8 @@ class SourceModel:
         pif = self.make_fluxf(emin_src, emax_src, energy=False)
 
         def _photon_intensity_field(field, data):
-            ret = data.ds.arr(self.process_data("photon_field",
-                                                data, fluxf=pif), "photons/s")
+            ret = data.ds.arr(self.process_data("photon_field", data,
+                                                spectral_norm, fluxf=pif), "photons/s")
             idV = data[ftype, "density"] / data[ftype, "mass"]
             I = (1.0 + redshift) * dist_fac * ret * idV
             return I.in_units("photons/cm**3/s/arcsec**2")

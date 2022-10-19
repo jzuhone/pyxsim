@@ -91,7 +91,6 @@ class ThermalSourceModel(SourceModel):
         mylog.info(f"kT_max = {kT_max} keV")
         self.nH_min = nH_min
         self.nH_max = nH_max
-        self.spectral_norm = None
         self.redshift = None
         self.pbar = None
         self.Zconvert = 1.0
@@ -100,8 +99,13 @@ class ThermalSourceModel(SourceModel):
         if h_fraction is None:
             h_fraction = compute_H_abund(abund_table)
         self.h_fraction = h_fraction
+        self.ebins = self.spectral_model.ebins
+        self.de = self.spectral_model.de
+        self.emid = self.spectral_model.emid
+        self.bin_edges = np.log10(self.ebins) if self.binscale == "log" else self.ebins
+        self.nbins = self.emid.size
 
-    def setup_model(self, data_source, redshift, spectral_norm, elim=None):
+    def setup_model(self, data_source, redshift):
         if isinstance(data_source, Dataset):
             ds = data_source
         else:
@@ -153,13 +157,6 @@ class ThermalSourceModel(SourceModel):
             mylog.info(f"Using nH field '{self.nh_field}'.")
         self.spectral_model.prepare_spectrum(redshift, self.kT_min,
                                              self.kT_max)
-        self.ebins = self.spectral_model.ebins
-        self.de = self.spectral_model.de
-        self.emid = self.spectral_model.emid
-        self.bin_edges = np.log10(self.ebins) if self.binscale == "log" else self.ebins
-        self.nbins = self.emid.size
-        self.spectral_norm = spectral_norm
-
         if isinstance(data_source, Dataset):
             self.pbar = DummyProgressBar()
         else:
@@ -175,17 +172,18 @@ class ThermalSourceModel(SourceModel):
                                  desc="Processing cells/particles ")
 
     def make_spectrum(self, data_source, redshift=0.0, dist=None, cosmology=None):
-        self.setup_model(data_source, redshift, 1.0)
+        self.setup_model(data_source, redshift)
+        spectral_norm = 1.0
         spec = np.zeros(self.nbins)
         for chunk in data_source.chunks([], "io"):
-            spec += self.process_data("spectrum", chunk)
+            spec += self.process_data("spectrum", chunk, spectral_norm)
         return self._make_spectrum(data_source.ds, self.ebins, spec,
                                    redshift, dist, cosmology)
 
     def make_fluxf(self, emin, emax, energy=False):
         return self.spectral_model.make_fluxf(emin, emax, energy=energy)
 
-    def process_data(self, mode, chunk, fluxf=None):
+    def process_data(self, mode, chunk, spectral_norm, fluxf=None):
 
         orig_shape = chunk[self.temperature_field].shape
         if len(orig_shape) == 0:
@@ -209,7 +207,7 @@ class ThermalSourceModel(SourceModel):
         cut &= (kT >= self.kT_min) & (kT <= self.kT_max)
 
         cell_nrm = np.ravel(
-            chunk[self.emission_measure_field].d*self.spectral_norm
+            chunk[self.emission_measure_field].d*spectral_norm
         )
 
         num_cells = cut.sum()
@@ -585,6 +583,7 @@ class CIESourceModel(ThermalSourceModel):
         var_elem_keys = list(var_elem.keys()) if var_elem else None
         if model in ["apec", "spex"]:
             spectral_model = TableCIEModel(model, emin, emax, nbins,
+                                           kT_min, kT_max,
                                            binscale=binscale,
                                            var_elem=var_elem_keys,
                                            thermal_broad=thermal_broad,

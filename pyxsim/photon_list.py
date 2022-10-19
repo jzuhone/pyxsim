@@ -261,7 +261,7 @@ def make_photons(photon_prefix, data_source, redshift, area,
 
     spectral_norm = parameters["fid_area"].v*local_exp_time*dist_fac
 
-    source_model.setup_model(data_source, redshift, spectral_norm)
+    source_model.setup_model(data_source, redshift)
 
     p_fields, v_fields, w_field = determine_fields(ds,
                                                    source_model.ftype,
@@ -321,7 +321,7 @@ def make_photons(photon_prefix, data_source, redshift, area,
 
     for chunk in parallel_objects(data_source.chunks([], "io")):
 
-        chunk_data = source_model.process_data("photons", chunk)
+        chunk_data = source_model.process_data("photons", chunk, spectral_norm)
 
         if chunk_data is not None:
 

@@ -63,33 +63,30 @@ class LineSourceModel(SourceModel):
             self.sigma = sigma
         self.emission_field = emission_field
         self.prng = parse_prng(prng)
-        self.spectral_norm = None
-        self.redshift = None
         self.ftype = None
 
-    def setup_model(self, data_source, redshift, spectral_norm):
+    def setup_model(self, data_source, redshift):
         if isinstance(data_source, Dataset):
             ds = data_source
         else:
             ds = data_source.ds
-        self.spectral_norm = spectral_norm
-        self.redshift = redshift
-        self.scale_factor = 1.0 / (1.0 + self.redshift)
+        self.scale_factor = 1.0 / (1.0 + redshift)
         self.ftype = ds._get_field_info(self.emission_field).name[0]
 
     def make_spectrum(self, data_source, emin, emax, nbins, redshift=0.0,
                       dist=None, cosmology=None):
         ebins = np.linspace(emin, emax, nbins+1)
         spec = np.zeros(nbins)
+        spectral_norm = 1.0
         for chunk in data_source.chunks([], "io"):
-            spec += self.process_data("spectrum", chunk, ebins=ebins)
+            spec += self.process_data("spectrum", chunk, spectral_norm, ebins=ebins)
         return self._make_spectrum(data_source.ds, ebins, spec,
                                    redshift, dist, cosmology)
 
     def make_fluxf(self, emin, emax, energy=False):
         return {"emin": emin, "emax": emax}
 
-    def process_data(self, mode, chunk, fluxf=None, ebins=None):
+    def process_data(self, mode, chunk, spectral_norm, fluxf=None, ebins=None):
 
         num_cells = len(chunk[self.emission_field])
 
@@ -97,7 +94,7 @@ class LineSourceModel(SourceModel):
 
         if mode == "photons":
 
-            F = norm_field*self.spectral_norm*self.scale_factor
+            F = norm_field*spectral_norm*self.scale_factor
             if self.observer == "internal":
                 pos = np.array([np.ravel(chunk[self.p_fields[i]].to_value("kpc"))
                                 for i in range(3)])

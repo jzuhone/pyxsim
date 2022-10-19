@@ -121,10 +121,9 @@ class TableCIEModel(ThermalSpectralModel):
     >>> apec_model = TableCIEModel("apec", 0.05, 50.0, 1000, model_vers="3.0.3",
     ...                            thermal_broad=False)
     """
-    def __init__(self, model, emin, emax, nbins, binscale="linear", var_elem=None,
-                 model_root=None, model_vers=None, 
-                 thermal_broad=True, nolines=False,
-                 abund_table="angr", nei=False):
+    def __init__(self, model, emin, emax, nbins, kT_min, kT_max, binscale="linear", 
+                 var_elem=None, model_root=None, model_vers=None, thermal_broad=True, 
+                 nolines=False, abund_table="angr", nei=False):
         self.cgen = CIEGenerator(model, emin, emax, nbins, binscale=binscale, 
                                  var_elem=var_elem, model_root=model_root, 
                                  model_vers=model_vers, broadening=thermal_broad, 
@@ -136,18 +135,20 @@ class TableCIEModel(ThermalSpectralModel):
         self.var_ion_names = self.cgen.var_ion_names
         self.atable = self.cgen.atable
         self.de = np.diff(self.ebins)
+        self.kT_min = kT_min
+        self.kT_max = kT_max
+        self.idx_min = max(np.searchsorted(self.cgen.Tvals, kT_min)-1, 0)
+        self.idx_max = min(np.searchsorted(self.cgen.Tvals, kT_max)+1, self.cgen.nT-1)
+        self.Tvals = self.cgen.Tvals[self.idx_min:self.idx_max]
+        self.nT = self.Tvals.size
+        self.dTvals = np.diff(self.Tvals)
 
-    def prepare_spectrum(self, zobs, kT_min, kT_max):
+    def prepare_spectrum(self, zobs):
         """
         Prepare the thermal model for execution given a redshift *zobs* for the spectrum.
         """
-        idx_min = max(np.searchsorted(self.cgen.Tvals, kT_min)-1, 0)
-        idx_max = min(np.searchsorted(self.cgen.Tvals, kT_max)+1, self.cgen.nT-1)
         cosmic_spec, metal_spec, var_spec = \
-            self.cgen._get_table(list(range(idx_min, idx_max)), zobs, 0.0)
-        self.Tvals = self.cgen.Tvals[idx_min:idx_max]
-        self.nT = self.Tvals.size
-        self.dTvals = np.diff(self.Tvals)
+            self.cgen._get_table(list(range(self.idx_min, self.idx_max)), zobs, 0.0)
         self.cosmic_spec = cosmic_spec
         self.metal_spec = metal_spec
         self.var_spec = var_spec
@@ -176,7 +177,7 @@ class Atable1DSpectralModel(ThermalSpectralModel):
         self.binscale = self.sgen.binscale
         self.Tvals = self.sgen.Tvals
 
-    def prepare_spectrum(self, zobs, kT_min, kT_max):
+    def prepare_spectrum(self, zobs):
         eidxs, ne, ebins, emid, de = self.sgen._get_energies(zobs)
         cosmic_spec, metal_spec, var_spec = self.sgen._get_table(ne, eidxs, zobs)
         self.cosmic_spec = 1.0e-14*regrid_spectrum(self.ebins, ebins, cosmic_spec)
@@ -272,7 +273,7 @@ class IGMSpectralModel(ThermalSpectralModel):
         self.cie_model = CloudyCIESpectralModel(emin, emax, nbins, binscale=self.binscale, 
                                                 var_elem=self.var_elem)
 
-    def prepare_spectrum(self, zobs, kT_min, kT_max):
+    def prepare_spectrum(self, zobs):
         """
         Prepare the thermal model for execution given a redshift *zobs* for the spectrum.
         """
@@ -283,7 +284,7 @@ class IGMSpectralModel(ThermalSpectralModel):
         if var_spec is not None:
             var_spec = 1.0e-14*regrid_spectrum(self.ebins, ebins, var_spec)
         self.var_spec = var_spec
-        self.cie_model.prepare_spectrum(zobs, kT_min, kT_max)
+        self.cie_model.prepare_spectrum(zobs)
 
     def get_spectrum(self, kT, nH):
         kT = np.atleast_1d(kT)
