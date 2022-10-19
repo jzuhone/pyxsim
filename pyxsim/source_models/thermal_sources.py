@@ -155,8 +155,7 @@ class ThermalSourceModel(SourceModel):
                    f"'{self.temperature_field}'.")
         if self.nh_field is not None:
             mylog.info(f"Using nH field '{self.nh_field}'.")
-        self.spectral_model.prepare_spectrum(redshift, self.kT_min,
-                                             self.kT_max)
+        self.spectral_model.prepare_spectrum(redshift)
         if isinstance(data_source, Dataset):
             self.pbar = DummyProgressBar()
         else:

@@ -36,9 +36,10 @@ except KeyError:
 
 rmf = RedistributionMatrixFile(mucal_spec["rmf"])
 arf = AuxiliaryResponseFile(mucal_spec['arf'])
-fit_model = TableCIEModel("apec", rmf.elo[0], rmf.ehi[-1], rmf.n_e)
+fit_model = TableCIEModel("apec", rmf.elo[0], rmf.ehi[-1], rmf.n_e,
+                          0.1, 10.0)
 agen_var = TableCIEModel("apec", rmf.elo[0], rmf.ehi[-1], rmf.n_e,
-                         var_elem=["O", "Ca"], thermal_broad=True)
+                         0.1, 10.0, var_elem=["O", "Ca"], thermal_broad=True)
 
 
 def mymodel(pars, x, xhi=None):
