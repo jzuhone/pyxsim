@@ -14,6 +14,7 @@ from yt.utilities.physical_constants import clight
 import os
 import tempfile
 import shutil
+from numpy.testing import assert_allclose
 from sherpa.astro.ui import load_user_model, add_user_pars, \
     load_pha, ignore, fit, set_model, set_stat, set_method, \
     get_fit_results
@@ -304,6 +305,38 @@ def test_beta_model_fields():
 
     assert np.abs(eflux2.value-eflux.value)/eflux.value < 0.001
     assert np.abs(pflux2.value-pflux.value)/pflux.value < 0.01
+
+
+def test_beta_model_spectrum():
+    bms = BetaModelSource()
+    ds = bms.ds
+
+    redshift = 0.2
+
+    sphere = ds.sphere("c", (0.5, "Mpc"))
+
+    kT_sim = bms.kT
+    Z_sim = bms.Z
+
+    D_A = cosmo.angular_diameter_distance(0.0, redshift).to_value("cm")
+
+    norm1 = 1.0e-14*sphere.sum(("gas", "emission_measure")).v
+    norm2 = norm1/(4.0*np.pi*D_A*D_A*(1+redshift)**2)
+
+    agen = ApecGenerator(0.2, 7.0, 2000)
+
+    spec1 = agen.get_spectrum(kT_sim, Z_sim, redshift, norm2)
+
+    thermal_model = CIESourceModel("apec", 0.2, 7.0, 2000, Z_sim)
+    spec2 = thermal_model.make_spectrum(sphere, 0.2, 7.0, 2000, redshift=redshift, 
+                                        cosmology=cosmo)
+    assert_allclose(spec1.flux.value, spec2.flux.value)
+
+    spec3 = agen.get_spectrum(kT_sim, Z_sim, 0.0, norm1)
+
+    spec4 = thermal_model.make_spectrum(sphere, 0.2, 7.0, 2000)
+
+    assert_allclose(spec3.flux.value, spec4.flux.value)
 
 
 if __name__ == "__main__":

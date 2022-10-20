@@ -83,8 +83,8 @@ class PowerLawSourceModel(SourceModel):
             ei = self.emin.v
             ef = self.emax.v
         else:
-            ei = fluxf["emin"][0]
-            ef = fluxf["emax"][1]
+            ei = fluxf["emin"].v
+            ef = fluxf["emax"].v
 
         if mode in ["photons", "photon_field"]:
 
