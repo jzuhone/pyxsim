@@ -56,19 +56,15 @@ class SourceModel:
         # source model specifically
         pass
 
-    def _make_dist_fac(self, ds, redshift, dist, cosmology):
+    def _make_dist_fac(self, ds, redshift, dist, cosmology, per_sa=False):
         if dist is None:
             if cosmology is None:
                 if hasattr(ds, "cosmology"):
                     cosmology = ds.cosmology
                 else:
                     cosmology = Cosmology()
-            D_L = cosmology.luminosity_distance(0.0, redshift)
+            dist = cosmology.luminosity_distance(0.0, redshift)
             angular_scale = 1.0 / cosmology.angular_scale(0.0, redshift)
-            dist_fac = ds.quan(
-                1.0 / (4.0 * np.pi * D_L * D_L * angular_scale * angular_scale).v,
-                "rad**-2",
-            )
         else:
             redshift = 0.0  # Only for local sources!
             try:
@@ -81,18 +77,17 @@ class SourceModel:
                     raise TypeError(
                         "dist should be a YTQuantity or a (value, unit) tuple!"
                     ) from e
-
             angular_scale = dist / ds.quan(1.0, "radian")
-            dist_fac = ds.quan(
-                1.0 / (4.0 * np.pi * dist * dist * angular_scale * angular_scale).v,
-                "rad**-2",
-            )
+        dist_fac = 1.0/(4.0*np.pi*dist*dist)
+        if per_sa:
+            dist_fac = ds.quan((dist_fac/angular_scale**2).v, "rad**-2")
         return dist_fac, redshift
 
     def _make_spectrum(self, ds, ebins, spec, redshift, dist, cosmology):
+        spec /= np.diff(ebins)
         if redshift > 0.0 or dist is not None:
             dist_fac, redshift = self._make_dist_fac(ds, redshift, dist, cosmology)
-            spec *= (1.0+redshift)*dist_fac
+            spec *= (1.0+redshift)**2*dist_fac.in_cgs()
             spec_class = Spectrum
         else:
             spec_class = CountRateSpectrum
@@ -239,7 +234,8 @@ class SourceModel:
 
         ftype = self.ftype
 
-        dist_fac, redshift = self._make_dist_fac(ds, redshift, dist, cosmology)
+        dist_fac, redshift = self._make_dist_fac(ds, redshift, dist, cosmology, 
+                                                 per_sa=True)
 
         emin_src = emin*(1.0+redshift)
         emax_src = emax*(1.0+redshift)

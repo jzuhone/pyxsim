@@ -49,7 +49,7 @@ def mymodel(pars, x, xhi=None):
     tbabs = tm.get_absorb(x+0.5*dx)
     bapec = fit_model.get_spectrum(pars[1], pars[2], pars[3], pars[4], velocity=pars[5])
     eidxs = np.logical_and(rmf.elo >= x[0]-0.5*dx, rmf.elo <= x[-1]+0.5*dx)
-    return tbabs*bapec.flux[eidxs]*bapec.de
+    return tbabs*(bapec.flux*bapec.de)[eidxs]
 
 
 def mymodel_var(pars, x, xhi=None):
@@ -59,7 +59,7 @@ def mymodel_var(pars, x, xhi=None):
     bapec = agen_var.get_spectrum(pars[1], pars[2], pars[3], pars[4],
                                   elem_abund={"O": pars[5], "Ca": pars[6]})
     eidxs = np.logical_and(rmf.elo >= x[0]-0.5*dx, rmf.elo <= x[-1]+0.5*dx)
-    return tbabs*bapec.flux[eidxs]*bapec.de
+    return tbabs*(bapec.flux*bapec.de)[eidxs]
 
 
 def test_beta_model():
@@ -267,10 +267,7 @@ def test_beta_model_fields():
     bms = BetaModelSource()
     ds = bms.ds
 
-    A = 30000.
-    exp_time = 1.0e4
     redshift = 0.2
-    nH_sim = 0.02
 
     sphere = ds.sphere("c", (0.5, "Mpc"))
 

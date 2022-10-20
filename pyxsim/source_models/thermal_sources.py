@@ -10,7 +10,7 @@ from yt.units.yt_array import YTQuantity
 from pyxsim.spectral_models import TableCIEModel, IGMSpectralModel, \
     CloudyCIESpectralModel, MekalSpectralModel
 from pyxsim.utils import parse_value, compute_H_abund
-from soxs.utils import parse_prng
+from soxs.utils import parse_prng, regrid_spectrum
 from soxs.constants import elem_names, atomic_weights, metal_elem, \
     abund_tables
 from yt.utilities.exceptions import YTFieldNotFound
@@ -170,19 +170,24 @@ class ThermalSourceModel(SourceModel):
                 self.pbar = tqdm(leave=True, total=self.tot_num_cells,
                                  desc="Processing cells/particles ")
 
-    def make_spectrum(self, data_source, redshift=0.0, dist=None, cosmology=None):
+    def make_spectrum(self, data_source, emin, emax, nbins, redshift=0.0, dist=None, 
+                      cosmology=None):
         self.setup_model(data_source, redshift)
         spectral_norm = 1.0
-        spec = np.zeros(self.nbins)
+        spec = np.zeros(nbins)
+        ebins = np.linspace(emin, emax, nbins+1)
         for chunk in data_source.chunks([], "io"):
-            spec += self.process_data("spectrum", chunk, spectral_norm)
-        return self._make_spectrum(data_source.ds, self.ebins, spec,
+            s = self.process_data("spectrum", chunk, spectral_norm)
+            spec += regrid_spectrum(ebins, self.ebins, s)
+        return self._make_spectrum(data_source.ds, ebins, spec,
                                    redshift, dist, cosmology)
 
     def make_fluxf(self, emin, emax, energy=False):
         return self.spectral_model.make_fluxf(emin, emax, energy=energy)
 
     def process_data(self, mode, chunk, spectral_norm, fluxf=None):
+
+        spec = np.zeros(self.nbins)
 
         orig_shape = chunk[self.temperature_field].shape
         if len(orig_shape) == 0:
@@ -192,6 +197,8 @@ class ThermalSourceModel(SourceModel):
         if orig_ncells == 0:
             if mode == "photons":
                 return
+            elif mode == "spectrum":
+                return spec
             else:
                 return np.array([])
 
@@ -274,7 +281,6 @@ class ThermalSourceModel(SourceModel):
         start_e = 0
         end_e = 0
 
-        spec = np.zeros(self.nbins)
         idxs = np.where(cut)[0]
 
         for ck in chunked(range(num_cells), 100):
