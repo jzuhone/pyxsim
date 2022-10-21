@@ -16,6 +16,7 @@ from sherpa.astro.ui import load_user_model, add_user_pars, \
     get_fit_results 
 from soxs.instrument import RedistributionMatrixFile, \
     AuxiliaryResponseFile, instrument_simulator
+from soxs import Spectrum
 from soxs.events import write_spectrum
 from soxs.instrument_registry import get_instrument_from_registry, \
     make_simple_instrument
@@ -135,17 +136,15 @@ def test_power_law_fields():
     ds.add_field(("gas", "hard_emission"), function=_hard_emission, 
                  units="keV**-1*s**-1", sampling_type="local")
 
-    cosmo = Cosmology()
-
     sphere = ds.sphere("c", (100., "kpc"))
+
+    norm = sphere["gas", "hard_emission"].sum().v
 
     alpha1 = 1.1
     plaw_model1 = PowerLawSourceModel(1.0, 0.01, 11.0, "hard_emission", 
                                       alpha1)
 
     src_fields1 = plaw_model1.make_source_fields(ds, 0.5, 7.0)
-
-    norm = sphere["gas", "hard_emission"].sum().v
 
     plum0 = -norm*(7.0**-0.1-0.5**-0.1)/0.1
     plum1 = (sphere[src_fields1[-1]]*sphere["cell_volume"]).sum().v
@@ -155,10 +154,41 @@ def test_power_law_fields():
     elum1 = sphere[src_fields1[1]].sum().to_value("keV/s")
     assert_allclose(elum0, elum1)
 
+    del sphere[src_fields1[-1]]
+    del sphere[src_fields1[1]]
+
     alpha2 = 1.0
     plaw_model2 = PowerLawSourceModel(1.0, 0.01, 11.0, "hard_emission", 
                                       alpha2)
 
+    src_fields2 = plaw_model2.make_source_fields(ds, 0.5, 7.0, force_override=True)
 
-if __name__ == "__main__":
-    test_power_law()
+    plum2 = norm*np.log(7.0/0.5)
+    plum3 = (sphere[src_fields2[-1]]*sphere["cell_volume"]).sum().v
+    assert_allclose(plum2, plum3)
+
+    elum2 = norm*(7.0-0.5)
+    elum3 = sphere[src_fields2[1]].sum().to_value("keV/s")
+    assert_allclose(elum2, elum3)
+
+
+def test_power_law_spectrum():
+    bms = BetaModelSource()
+    ds = bms.ds
+
+    def _hard_emission(field, data):
+        return data.ds.quan(1.0e-18, "s**-1*keV**-1")*data["density"]*data["cell_volume"]/mp
+    ds.add_field(("gas", "hard_emission"), function=_hard_emission, 
+                 units="keV**-1*s**-1", sampling_type="local")
+
+    sphere = ds.sphere("c", (100., "kpc"))
+    norm = sphere["gas", "hard_emission"].sum().v
+
+    alpha = 1.1
+    plaw_model = PowerLawSourceModel(1.0, 0.01, 11.0, "hard_emission", alpha)
+
+    spec0 = Spectrum.from_powerlaw(alpha, 0.0, norm, 0.1, 6.0, 1000)
+    spec1 = plaw_model.make_spectrum(sphere, 0.1, 6.0, 1000)
+    
+    print(spec0, spec1)
+    

@@ -84,7 +84,6 @@ class SourceModel:
         return dist_fac, redshift
 
     def _make_spectrum(self, ds, ebins, spec, redshift, dist, cosmology):
-        spec /= np.diff(ebins)
         if redshift > 0.0 or dist is not None:
             dist_fac, redshift = self._make_dist_fac(ds, redshift, dist, cosmology)
             spec *= (1.0+redshift)**2*dist_fac.in_cgs()
@@ -93,7 +92,7 @@ class SourceModel:
             spec_class = CountRateSpectrum
         return spec_class(ebins, spec)
 
-    def make_source_fields(self, ds, emin, emax):
+    def make_source_fields(self, ds, emin, emax, force_override=False):
         r"""
         Make the following fields in the rest frame of the 
         source within a specific energy band for a dataset in yt:
@@ -157,6 +156,7 @@ class SourceModel:
             display_name=lum_dname,
             sampling_type="local",
             units="erg/s",
+            force_override=force_override,
         )
 
         def _emissivity_field(field, data):
@@ -169,6 +169,7 @@ class SourceModel:
             display_name=emiss_dname,
             sampling_type="local",
             units="erg/cm**3/s",
+            force_override=force_override,
         )
 
         pfluxf = self.make_fluxf(emin, emax, energy=False)
@@ -185,12 +186,13 @@ class SourceModel:
             display_name=emiss_dname,
             sampling_type="local",
             units="photons/cm**3/s",
+            force_override=force_override,
         )
 
         return [emiss_name, lum_name, phot_emiss_name]
 
     def make_intensity_fields(self, ds, emin, emax, redshift=0.0, 
-                              dist=None, cosmology=None):
+                              dist=None, cosmology=None, force_override=True):
         r"""
         Make the following fields in the observer frame within a 
         specific energy band for a dataset in yt:
@@ -260,6 +262,7 @@ class SourceModel:
             display_name=ei_dname,
             sampling_type="local",
             units="erg/cm**3/s/arcsec**2",
+            force_override=force_override,
         )
 
         i_name = (
@@ -281,6 +284,7 @@ class SourceModel:
             display_name=ei_dname,
             sampling_type="local",
             units="photons/cm**3/s/arcsec**2",
+            force_override=force_override,
         )
 
         return [ei_name, i_name]

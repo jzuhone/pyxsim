@@ -179,6 +179,7 @@ class ThermalSourceModel(SourceModel):
         for chunk in data_source.chunks([], "io"):
             s = self.process_data("spectrum", chunk, spectral_norm)
             spec += regrid_spectrum(ebins, self.ebins, s)
+        spec /= np.diff(ebins)
         return self._make_spectrum(data_source.ds, ebins, spec,
                                    redshift, dist, cosmology)
 

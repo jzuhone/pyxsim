@@ -92,7 +92,8 @@ class PowerLawSourceModel(SourceModel):
             norm_fac[alpha == 1] = np.log(ef / ei)
             norm_fac *= self.e0.v**alpha
             norm = norm_fac * chunk[self.emission_field].v
-            norm[alpha != 1] /= (1.-alpha[alpha != 1])
+            if np.any(alpha != 1):
+                norm[alpha != 1] /= (1.-alpha[alpha != 1])
 
             if mode == "photons":
 
@@ -139,6 +140,10 @@ class PowerLawSourceModel(SourceModel):
             return norm_fac * chunk[self.emission_field].v
 
         elif mode == "spectrum":
-
+            
             emid = 0.5*(ebins[1:]+ebins[:-1])
-            return chunk[self.emission_field].v.sum()*(emid/self.e0.v)**(-alpha)
+            spec = np.zeros(emid.size)
+
+            for i in range(num_cells):
+                spec += chunk[self.emission_field].v[i]*(emid/self.e0.v)**(-alpha[i])
+            return spec
