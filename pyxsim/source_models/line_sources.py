@@ -155,20 +155,20 @@ class LineSourceModel(SourceModel):
         elif mode == "spectrum":
 
             inv_sf = 1.0 / self.scale_factor
-            
-            de = ebins*inv_sf-self.e0.value
+            ee = ebins*inv_sf-self.e0.value
+            de = np.diff(ebins*inv_sf)
 
             if isinstance(self.sigma, YTQuantity):
-                xtmp = de/self.sigma.value
+                xtmp = ee/self.sigma.value
                 ret = np.interp(xtmp, gx, gcdf)
-                spec = norm_field.d.sum()*(ret[1:]-ret[:-1])
+                spec = norm_field.d.sum()*(ret[1:]-ret[:-1])/de
             elif self.sigma is not None:
                 spec = np.zeros(ebins.size-1)
                 sigma = (chunk[self.sigma]*self.e0/clight).to_value("keV")
                 for i in range(num_cells):
-                    xtmp = de/sigma[i]
+                    xtmp = ee/sigma[i]
                     ret = np.interp(xtmp, gx, gcdf)
-                    spec += norm_field.d[i]*(ret[1:]-ret[:-1])
+                    spec += norm_field.d[i]*(ret[1:]-ret[:-1])/de
             else:
                 spec = np.zeros(ebins.size-1)
                 idx = np.searchsorted(ebins*inv_sf, self.e0.value)
