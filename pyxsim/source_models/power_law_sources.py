@@ -62,6 +62,7 @@ class PowerLawSourceModel(SourceModel):
         ebins = np.linspace(emin, emax, nbins+1)
         spec = np.zeros(nbins)
         spectral_norm = 1.0
+        self.setup_model(data_source, redshift)
         for chunk in data_source.chunks([], "io"):
             spec += self.process_data("spectrum", chunk, spectral_norm, ebins=ebins)
         return self._make_spectrum(data_source.ds, ebins, spec,
@@ -141,9 +142,10 @@ class PowerLawSourceModel(SourceModel):
 
         elif mode == "spectrum":
             
+            inv_sf = 1.0/self.scale_factor
             emid = 0.5*(ebins[1:]+ebins[:-1])
             spec = np.zeros(emid.size)
 
             for i in range(num_cells):
-                spec += chunk[self.emission_field].v[i]*(emid/self.e0.v)**(-alpha[i])
+                spec += chunk[self.emission_field].v[i]*(emid*inv_sf/self.e0.v)**(-alpha[i])
             return spec

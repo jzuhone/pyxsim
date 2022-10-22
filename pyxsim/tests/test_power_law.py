@@ -173,6 +173,9 @@ def test_power_law_fields():
 
 
 def test_power_law_spectrum():
+
+    cosmo = Cosmology()
+
     bms = BetaModelSource()
     ds = bms.ds
 
@@ -190,5 +193,14 @@ def test_power_law_spectrum():
     spec0 = Spectrum.from_powerlaw(alpha, 0.0, norm, 0.1, 6.0, 1000)
     spec1 = plaw_model.make_spectrum(sphere, 0.1, 6.0, 1000)
     
-    print(spec0, spec1)
+    assert_allclose(spec0.flux.value, spec1.flux.value)
+
+    D_A = cosmo.angular_diameter_distance(0.0, 0.2).to_value("cm")
+
+    dist_fac = 1.0/(4.0*np.pi*(D_A*1.2)**2)
+    spec2 = Spectrum.from_powerlaw(alpha, 0.2, norm*dist_fac, 0.1, 6.0, 1000)
+    spec3 = plaw_model.make_spectrum(sphere, 0.1, 6.0, 1000, redshift=0.2)
+    
+    assert_allclose(spec2.flux.value, spec3.flux.value)
+
     

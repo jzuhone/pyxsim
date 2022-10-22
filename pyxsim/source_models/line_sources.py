@@ -78,6 +78,7 @@ class LineSourceModel(SourceModel):
         ebins = np.linspace(emin, emax, nbins+1)
         spec = np.zeros(nbins)
         spectral_norm = 1.0
+        self.setup_model(data_source, redshift)
         for chunk in data_source.chunks([], "io"):
             spec += self.process_data("spectrum", chunk, spectral_norm, ebins=ebins)
         return self._make_spectrum(data_source.ds, ebins, spec,
@@ -129,8 +130,8 @@ class LineSourceModel(SourceModel):
 
         elif mode in ["photon_field", "energy_field"]:
 
-            xlo = fluxf["emin"][0]-self.e0.value
-            xhi = fluxf["emax"][1]-self.e0.value
+            xlo = fluxf["emin"].v-self.e0.value
+            xhi = fluxf["emax"].v-self.e0.value
             if self.sigma is None:
                 if (xlo < 0) & (xhi > 0.0):
                     fac = 1.0
@@ -143,15 +144,19 @@ class LineSourceModel(SourceModel):
                     sigma = self.sigma.value
                 else:
                     sigma = (chunk[self.sigma] * self.e0 / clight).to_value("keV")
-                fac = norm.cdf(xhi/sigma)-norm.cdf(xlo/sigma)
+                xhis = xhi/sigma
+                xlos = xlo/sigma
+                fac = norm.cdf(xhis)-norm.cdf(xlos)
                 if mode == "energy_field":
-                    fac = self.e0.value*fac-sigma*(np.exp(-0.5*xhi*xhi)-np.exp(-0.5*xlo*xlo))/np.sqrt(2.0*np.pi)
-
+                    fac = self.e0.value*fac
+                    fac -= sigma*(np.exp(-0.5*xhis**2)-np.exp(-0.5*xlos**2))/np.sqrt(2.0*np.pi)
             return fac*norm_field
 
         elif mode == "spectrum":
 
-            de = ebins-self.e0.value
+            inv_sf = 1.0 / self.scale_factor
+            
+            de = ebins*inv_sf-self.e0.value
 
             if isinstance(self.sigma, YTQuantity):
                 xtmp = de/self.sigma.value
@@ -166,7 +171,7 @@ class LineSourceModel(SourceModel):
                     spec += norm_field.d[i]*(ret[1:]-ret[:-1])
             else:
                 spec = np.zeros(ebins.size-1)
-                idx = np.searchsorted(ebins, self.e0.value)
+                idx = np.searchsorted(ebins*inv_sf, self.e0.value)
                 spec[idx] = norm_field.d.sum()
 
             return spec

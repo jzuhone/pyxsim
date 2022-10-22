@@ -10,6 +10,8 @@ import h5py
 import os
 import tempfile
 import shutil
+from numpy.testing import assert_allclose
+
 
 cross_section = YTQuantity(500.0e-22, "cm**3/s")
 m_chi = YTQuantity(10.0, "GeV").to_equivalent("g", "mass_energy")
@@ -69,5 +71,49 @@ def test_line_emission():
     shutil.rmtree(tmpdir)
 
 
+def test_line_emission_fields():
+    
+    cosmo = Cosmology()
+
+    bms = BetaModelSource()
+    ds = bms.ds
+
+    def _dm_emission(field, data):
+        return (data["gas","dark_matter_density"]/m_chi)**2*data["cell_volume"]*cross_section
+    ds.add_field(("gas","dm_emission"), function=_dm_emission, units="s**-1",
+                 sampling_type="cell")
+
+    location = YTQuantity(3.5, "keV")
+    sigma = YTQuantity(1000., "km/s")
+    sigma_E = (location*sigma/clight).in_units("keV")
+
+    redshift = 0.01
+
+    sphere = ds.sphere("c", (100.,"kpc"))
+
+    dm_E = (sphere["dm_emission"]).sum()
+
+    line_model1 = LineSourceModel(location, "dm_emission")
+
+    line_fields1 = line_model1.make_source_fields(ds, 0.5, 7.0)
+    assert_allclose(sphere[line_fields1[1]].sum().to("keV/s"), dm_E*location)
+    assert_allclose((sphere[line_fields1[-1]]*sphere["cell_volume"]).sum(), dm_E)
+
+    line_fields2 = line_model1.make_source_fields(ds, 0.5, 2.0)
+    assert_allclose(sphere[line_fields2[1]].sum().to("keV/s"), 0.0)
+    assert_allclose(sphere[line_fields2[-1]].sum(), 0.0)
+
+    line_model2 = LineSourceModel(location, "dm_emission", 
+                                  sigma=("stream","dark_matter_dispersion"))
+
+    line_fields3 = line_model2.make_source_fields(ds, 0.5, 7.0, force_override=True)
+    assert_allclose(sphere[line_fields3[1]].sum().to("keV/s"), dm_E*location)
+    assert_allclose((sphere[line_fields3[-1]]*sphere["cell_volume"]).sum(), dm_E)
+
+    line_fields4 = line_model2.make_source_fields(ds, 0.1, 3.5)
+    de = sigma_E/np.sqrt(2.0*np.pi)
+
+    assert_allclose(sphere[line_fields4[1]].sum().to('keV/s'), dm_E*(0.5*location-de))
+    assert_allclose((sphere[line_fields4[-1]]*sphere["cell_volume"]).sum(), 0.5*dm_E)
 if __name__ == "__main__":
     test_line_emission()
