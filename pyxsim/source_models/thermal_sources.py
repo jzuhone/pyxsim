@@ -2,7 +2,6 @@
 Classes for specific source models
 """
 import numpy as np
-from tqdm.auto import tqdm
 from pyxsim.utils import mylog
 from pyxsim.source_models.sources import SourceModel
 from yt.data_objects.static_output import Dataset
@@ -14,34 +13,7 @@ from soxs.utils import parse_prng, regrid_spectrum
 from soxs.constants import elem_names, atomic_weights, metal_elem, \
     abund_tables
 from yt.utilities.exceptions import YTFieldNotFound
-from yt.utilities.parallel_tools.parallel_analysis_interface import \
-    parallel_objects, communication_system, parallel_capable
 from more_itertools import chunked
-
-comm = communication_system.communicators[-1]
-
-
-class ParallelProgressBar:
-    def __init__(self, title):
-        self.title = title
-        mylog.info(f"Starting '{title}'")
-
-    def update(self, *args, **kwargs):
-        return
-
-    def close(self):
-        mylog.info(f"Finishing '{self.title}'")
-
-
-class DummyProgressBar:
-    def __init__(self):
-        pass
-
-    def update(self, *args, **kwargs):
-        return
-
-    def close(self):
-        return
 
 
 class ThermalSourceModel(SourceModel):
@@ -105,7 +77,7 @@ class ThermalSourceModel(SourceModel):
         self.bin_edges = np.log10(self.ebins) if self.binscale == "log" else self.ebins
         self.nbins = self.emid.size
 
-    def setup_model(self, data_source, redshift):
+    def setup_model(self, mode, data_source, redshift):
         if isinstance(data_source, Dataset):
             ds = data_source
         else:
@@ -156,23 +128,12 @@ class ThermalSourceModel(SourceModel):
         if self.nh_field is not None:
             mylog.info(f"Using nH field '{self.nh_field}'.")
         self.spectral_model.prepare_spectrum(redshift)
-        if isinstance(data_source, Dataset):
-            self.pbar = DummyProgressBar()
-        else:
-            citer = data_source.chunks([], "io")
-            num_cells = 0
-            for chunk in parallel_objects(citer):
-                num_cells += chunk[self.temperature_field].size
-            self.tot_num_cells = comm.mpi_allreduce(num_cells)
-            if parallel_capable:
-                self.pbar = ParallelProgressBar("Processing cells/particles ")
-            else:
-                self.pbar = tqdm(leave=True, total=self.tot_num_cells,
-                                 desc="Processing cells/particles ")
+        if mode in ["photons", "spectrum"]:
+            self.setup_pbar(data_source)
 
     def make_spectrum(self, data_source, emin, emax, nbins, redshift=0.0, dist=None, 
                       cosmology=None):
-        self.setup_model(data_source, redshift)
+        self.setup_model("spectrum", data_source, redshift)
         spectral_norm = 1.0
         spec = np.zeros(nbins)
         ebins = np.linspace(emin, emax, nbins+1)
@@ -180,6 +141,7 @@ class ThermalSourceModel(SourceModel):
             s = self.process_data("spectrum", chunk, spectral_norm)
             spec += regrid_spectrum(ebins, self.ebins, s)
         spec /= np.diff(ebins)
+        self.cleanup_model("spectrum")
         return self._make_spectrum(data_source.ds, ebins, spec,
                                    redshift, dist, cosmology)
 
@@ -219,7 +181,7 @@ class ThermalSourceModel(SourceModel):
 
         num_cells = cut.sum()
 
-        if mode == "photons":
+        if mode in ["photons", "spectrum"]:
             if num_cells == 0:
                 self.pbar.update(orig_ncells)
                 return
@@ -344,6 +306,8 @@ class ThermalSourceModel(SourceModel):
 
                     spec += np.sum(tot_spec * cnm[:, np.newaxis], axis=0)
 
+                self.pbar.update(nck)
+
             else:
 
                 if self._density_dependence:
@@ -359,8 +323,6 @@ class ThermalSourceModel(SourceModel):
 
                 ret[idxs[ibegin:iend]] = tot_flux*cnm
 
-            self.pbar.update(nck)
-
         if mode == "photons":
             active_cells = number_of_photons > 0
             idxs = idxs[active_cells]
@@ -374,8 +336,9 @@ class ThermalSourceModel(SourceModel):
         else:
             return np.resize(ret, orig_shape)
 
-    def cleanup_model(self):
-        self.pbar.close()
+    def cleanup_model(self, mode):
+        if mode in ["spectrum", "photons"]:
+            self.pbar.close()
 
 
 class IGMSourceModel(ThermalSourceModel):

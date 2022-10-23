@@ -6,6 +6,7 @@ from soxs.utils import parse_prng
 from scipy.stats import norm
 from yt.data_objects.static_output import Dataset
 from yt.units.yt_array import YTQuantity
+from pyxsim.lib.spectra import line_spectrum
 
 import numpy as np
 
@@ -65,22 +66,30 @@ class LineSourceModel(SourceModel):
         self.prng = parse_prng(prng)
         self.ftype = None
 
-    def setup_model(self, data_source, redshift):
+    def setup_model(self, mode, data_source, redshift):
         if isinstance(data_source, Dataset):
             ds = data_source
         else:
             ds = data_source.ds
         self.scale_factor = 1.0 / (1.0 + redshift)
         self.ftype = ds._get_field_info(self.emission_field).name[0]
+        if mode == "spectrum":
+            self.setup_pbar(data_source)
+
+    def cleanup_model(self, mode):
+        if mode == "spectrum":
+            self.pbar.close()
+
 
     def make_spectrum(self, data_source, emin, emax, nbins, redshift=0.0,
                       dist=None, cosmology=None):
         ebins = np.linspace(emin, emax, nbins+1)
         spec = np.zeros(nbins)
         spectral_norm = 1.0
-        self.setup_model(data_source, redshift)
+        self.setup_model("spectrum", data_source, redshift)
         for chunk in data_source.chunks([], "io"):
             spec += self.process_data("spectrum", chunk, spectral_norm, ebins=ebins)
+        self.cleanup_model("spectrum")
         return self._make_spectrum(data_source.ds, ebins, spec,
                                    redshift, dist, cosmology)
 
@@ -163,12 +172,9 @@ class LineSourceModel(SourceModel):
                 ret = np.interp(xtmp, gx, gcdf)
                 spec = norm_field.d.sum()*(ret[1:]-ret[:-1])/de
             elif self.sigma is not None:
-                spec = np.zeros(ebins.size-1)
                 sigma = (chunk[self.sigma]*self.e0/clight).to_value("keV")
-                for i in range(num_cells):
-                    xtmp = ee/sigma[i]
-                    ret = np.interp(xtmp, gx, gcdf)
-                    spec += norm_field.d[i]*(ret[1:]-ret[:-1])/de
+                spec = line_spectrum(num_cells, ee, sigma, gx, gcdf,
+                                     norm_field.d, self.pbar)/de
             else:
                 spec = np.zeros(ebins.size-1)
                 idx = np.searchsorted(ebins*inv_sf, self.e0.value)

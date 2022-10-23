@@ -1,12 +1,17 @@
-from pyxsim.utils import parse_value
+from pyxsim.utils import parse_value, ParallelProgressBar
 from soxs.utils import parse_prng
 from yt.utilities.cosmology import Cosmology
 from soxs.spectra import Spectrum, CountRateSpectrum
 from yt.units.yt_array import YTQuantity
+from tqdm.auto import tqdm
+from yt.utilities.parallel_tools.parallel_analysis_interface import \
+    parallel_objects, communication_system, parallel_capable
 
 import numpy as np
 
 cm2_per_kpc2 = YTQuantity(1.0, "kpc**2").to_value("cm**2")
+
+comm = communication_system.communicators[-1]
 
 
 class SourceModel:
@@ -20,6 +25,18 @@ class SourceModel:
         # This needs to be implemented for every
         # source model specifically
         pass
+
+    def setup_pbar(self, data_source):
+        citer = data_source.chunks([], "io")
+        num_cells = 0
+        for chunk in parallel_objects(citer):
+            num_cells += chunk[self.emission_field].size
+        self.tot_num_cells = comm.mpi_allreduce(num_cells)
+        if parallel_capable:
+            self.pbar = ParallelProgressBar("Processing cells/particles ")
+        else:
+            self.pbar = tqdm(leave=True, total=self.tot_num_cells,
+                             desc="Processing cells/particles ")
 
     def setup_model(self, mode, data_source, redshift):
         # This needs to be implemented for every
@@ -46,7 +63,7 @@ class SourceModel:
                 pos[:,tfr] -= self.dw[i]
         return np.sum((pos-self.c[:,np.newaxis])**2, axis=0)*cm2_per_kpc2
 
-    def cleanup_model(self):
+    def cleanup_model(self, mode):
         # This needs to be implemented for every
         # source model specifically
         pass
@@ -125,7 +142,7 @@ class SourceModel:
         emin = parse_value(emin, "keV")
         emax = parse_value(emax, "keV")
 
-        self.setup_model(ds, redshift)
+        self.setup_model("fields", ds, redshift)
 
         ftype = self.ftype
 
@@ -232,7 +249,7 @@ class SourceModel:
         emin = parse_value(emin, "keV")
         emax = parse_value(emax, "keV")
 
-        self.setup_model(ds, 0.0)
+        self.setup_model("fields", ds, 0.0)
 
         ftype = self.ftype
 

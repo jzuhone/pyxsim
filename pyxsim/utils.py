@@ -194,3 +194,15 @@ def create_metal_fields(ds, metallicity_field, elements, abund_table):
 
 def compute_H_abund(abund_table):
     return atomic_weights[1]/(atomic_weights*abund_tables[abund_table]).sum()
+
+
+class ParallelProgressBar:
+    def __init__(self, title):
+        self.title = title
+        mylog.info(f"Starting '{title}'")
+
+    def update(self, *args, **kwargs):
+        return
+
+    def close(self):
+        mylog.info(f"Finishing '{self.title}'")

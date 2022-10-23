@@ -10,3 +10,4 @@ doc/source/cookbook/*.reg
 build
 dist
 sky_functions.c
+spectra.c

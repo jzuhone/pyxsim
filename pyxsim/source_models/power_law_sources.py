@@ -2,6 +2,7 @@ from pyxsim.source_models.sources import SourceModel
 from soxs.utils import parse_prng
 from pyxsim.utils import parse_value
 from yt.data_objects.static_output import Dataset
+from pyxsim.lib.spectra import power_law_spectrum
 
 import numpy as np
 
@@ -49,22 +50,29 @@ class PowerLawSourceModel(SourceModel):
         self.prng = parse_prng(prng)
         self.ftype = None
 
-    def setup_model(self, data_source, redshift):
+    def setup_model(self, mode, data_source, redshift):
         if isinstance(data_source, Dataset):
             ds = data_source
         else:
             ds = data_source.ds
         self.scale_factor = 1.0 / (1.0 + redshift)
         self.ftype = ds._get_field_info(self.emission_field).name[0]
+        if mode == "spectrum":
+            self.setup_pbar(data_source)
+
+    def cleanup_model(self, mode):
+        if mode == "spectrum":
+            self.pbar.close()
 
     def make_spectrum(self, data_source, emin, emax, nbins, redshift=0.0,
                       dist=None, cosmology=None):
         ebins = np.linspace(emin, emax, nbins+1)
         spec = np.zeros(nbins)
         spectral_norm = 1.0
-        self.setup_model(data_source, redshift)
+        self.setup_model("spectrum", data_source, redshift)
         for chunk in data_source.chunks([], "io"):
             spec += self.process_data("spectrum", chunk, spectral_norm, ebins=ebins)
+        self.cleanup_model("spectrum")
         return self._make_spectrum(data_source.ds, ebins, spec,
                                    redshift, dist, cosmology)
 
@@ -78,7 +86,7 @@ class PowerLawSourceModel(SourceModel):
         if isinstance(self.alpha, float):
             alpha = self.alpha*np.ones(num_cells)
         else:
-            alpha = chunk[self.alpha].v
+            alpha = chunk[self.alpha].d
 
         if fluxf is None:
             ei = self.emin.v
@@ -92,7 +100,7 @@ class PowerLawSourceModel(SourceModel):
             norm_fac = ef**(1.-alpha) - ei**(1.-alpha)
             norm_fac[alpha == 1] = np.log(ef / ei)
             norm_fac *= self.e0.v**alpha
-            norm = norm_fac * chunk[self.emission_field].v
+            norm = norm_fac * chunk[self.emission_field].d
             if np.any(alpha != 1):
                 norm[alpha != 1] /= (1.-alpha[alpha != 1])
 
@@ -138,14 +146,15 @@ class PowerLawSourceModel(SourceModel):
             norm_fac = ef**(2.-alpha) - ei**(2.-alpha)
             norm_fac *= self.e0.v ** alpha / (2. - alpha)
 
-            return norm_fac * chunk[self.emission_field].v
+            return norm_fac * chunk[self.emission_field].d
 
         elif mode == "spectrum":
-            
-            inv_sf = 1.0/self.scale_factor
-            emid = 0.5*(ebins[1:]+ebins[:-1])
-            spec = np.zeros(emid.size)
 
-            for i in range(num_cells):
-                spec += chunk[self.emission_field].v[i]*(emid*inv_sf/self.e0.v)**(-alpha[i])
+            inv_sf = 1.0/self.scale_factor
+            emid = 0.5*(ebins[1:]+ebins[:-1])*inv_sf/self.e0.v
+
+            spec = power_law_spectrum(num_cells, emid, alpha, 
+                                      chunk[self.emission_field].d,
+                                      self.pbar)
+
             return spec

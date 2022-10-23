@@ -261,7 +261,7 @@ def make_photons(photon_prefix, data_source, redshift, area,
 
     spectral_norm = parameters["fid_area"].v*local_exp_time*dist_fac
 
-    source_model.setup_model(data_source, redshift)
+    source_model.setup_model("photons", data_source, redshift)
 
     p_fields, v_fields, w_field = determine_fields(ds,
                                                    source_model.ftype,
@@ -383,7 +383,7 @@ def make_photons(photon_prefix, data_source, redshift, area,
 
     f.close()
 
-    source_model.cleanup_model()
+    source_model.cleanup_model("photons")
 
     all_nphotons = comm.mpi_allreduce(n_photons)
     all_ncells = comm.mpi_allreduce(n_cells)
