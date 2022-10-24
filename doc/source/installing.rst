@@ -9,7 +9,7 @@ Dependencies
 pyXSIM 4.x is compatible with Python 3.8+, and requires the following Python
 packages:
 
-- `yt <http://yt-project.org>`_ (version 4.0 or higher)
+- `yt <http://yt-project.org>`_ (version 4.1 or higher)
 - `soxs <http://hea-www.cfa.harvard.edu/~jzuhone/soxs>`_ (version 4.0.0 or 
   higher)
 - `NumPy <http://www.numpy.org>`_

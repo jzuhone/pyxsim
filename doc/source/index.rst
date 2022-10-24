@@ -63,6 +63,7 @@ Table of Contents
    parallel
    getting_help
    cookbook/index
+   api/index
 
 Indices and tables
 ==================

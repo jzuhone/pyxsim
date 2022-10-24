@@ -113,7 +113,7 @@ def make_photons(photon_prefix, data_source, redshift, area,
     exp_time : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
         The exposure time to determine the number of photons. If units are
         not specified, it is assumed to be in seconds.
-    source_model : :class:`~pyxsim.source_models.SourceModel`
+    source_model : :class:`~pyxsim.source_models.sources.SourceModel`
         A source model used to generate the photons.
     point_sources : boolean, optional
         If True, the photons will be assumed to be generated from the exact
@@ -153,7 +153,7 @@ def make_photons(photon_prefix, data_source, redshift, area,
 
     Examples
     --------
-    >>> thermal_model = pyxsim.ApecSourceModel(0.1, 10.0, 1000, 0.3)
+    >>> thermal_model = pyxsim.CIESourceModel(0.1, 10.0, 1000, 0.3)
     >>> redshift = 0.05
     >>> area = 6000.0 # assumed here in cm**2
     >>> time = 2.0e5 # assumed here in seconds
@@ -646,12 +646,10 @@ def project_photons(photon_prefix, event_prefix, normal, sky_center,
         should be an off-axis normal vector, e.g [1.0, 2.0, -3.0]
     sky_center : array-like
         Center RA, Dec of the events in degrees.
-    absorb_model : string or :class:`~pyxsim.spectral_models.AbsorptionModel`
+    absorb_model : string
         A model for foreground galactic absorption, to simulate the
-        absorption of events before being detected. This cannot be applied
-        here if you already did this step previously in the creation of the
-        :class:`~pyxsim.photon_list.PhotonList` instance. Known options for
-        strings are "wabs" and "tbabs".
+        absorption of events before being detected. Known options for
+        are "wabs" and "tbabs".
     nH : float, optional
         The foreground column density in units of 10^22 cm^{-2}. Only used
         if absorption is applied.
@@ -724,8 +722,9 @@ def project_photons_allsky(photon_prefix, event_prefix, normal,
                            no_shifting=False, kernel="top_hat", save_los=False, 
                            prng=None):
     r"""
-    Projects photons onto the sky sphere given a normal vector, and
-    stores them in an HDF5 dataset which contains an event list.
+    Projects photons onto the sky sphere given a normal vector ("z" or "up" in
+    spherical coordinates), and stores them in an HDF5 dataset which contains
+    an event list.
 
     Parameters
     ----------
@@ -737,16 +736,13 @@ def project_photons_allsky(photon_prefix, event_prefix, normal,
         The prefix of the filename(s) which will be written to contain the
         event list. If run in serial, the filename will be "{event_prefix}.h5",
         if run in parallel, the filename will be "{event_prefix}.{mpi_rank}.h5".
-    normal : character or array-like
-        Normal vector to the plane of projection. If "x", "y", or "z", will
-        assume to be along that axis (and will probably be faster). Otherwise,
-        should be an off-axis normal vector, e.g [1.0, 2.0, -3.0]
-    absorb_model : string or :class:`~pyxsim.spectral_models.AbsorptionModel`
+    normal : array-like
+        The vector determining the "z" or "up" vector for the spherical coordinate
+        system for the all-sky projection, something like [1.0, 2.0, -3.0]
+    absorb_model : string
         A model for foreground galactic absorption, to simulate the
-        absorption of events before being detected. This cannot be applied
-        here if you already did this step previously in the creation of the
-        :class:`~pyxsim.photon_list.PhotonList` instance. Known options for
-        strings are "wabs" and "tbabs".
+        absorption of events before being detected. Known options are "wabs" 
+        and "tbabs".
     nH : float, optional
         The foreground column density in units of 10^22 cm^{-2}. Only used
         if absorption is applied.

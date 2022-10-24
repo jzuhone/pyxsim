@@ -26,11 +26,11 @@ class SourceModel:
         # source model specifically
         pass
 
-    def setup_pbar(self, data_source):
+    def setup_pbar(self, data_source, field):
         citer = data_source.chunks([], "io")
         num_cells = 0
         for chunk in parallel_objects(citer):
-            num_cells += chunk[self.emission_field].size
+            num_cells += chunk[field].size
         self.tot_num_cells = comm.mpi_allreduce(num_cells)
         if parallel_capable:
             self.pbar = ParallelProgressBar("Processing cells/particles ")
@@ -110,7 +110,7 @@ class SourceModel:
         return spec_class(ebins, spec)
 
     def make_source_fields(self, ds, emin, emax, force_override=False):
-        r"""
+        """
         Make the following fields in the rest frame of the 
         source within a specific energy band for a dataset in yt:
 
@@ -123,12 +123,12 @@ class SourceModel:
 
         Parameters
         ----------
-        ds : `~yt.data_objects.static_output.Dataset`
+        ds : :class:`~yt.data_objects.static_output.Dataset`
             The loaded yt dataset to make the fields for.
-        emin : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity 
+        emin : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity` 
             The minimum energy in the band. If a float, it is assumed to be
             in keV.
-        emax : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity
+        emax : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
             The minimum energy in the band. If a float, it is assumed to be
             in keV.
         force_override : boolean, optional
@@ -213,7 +213,7 @@ class SourceModel:
 
     def make_intensity_fields(self, ds, emin, emax, redshift=0.0, 
                               dist=None, cosmology=None, force_override=True):
-        r"""
+        """
         Make the following fields in the observer frame within a 
         specific energy band for a dataset in yt:
 
@@ -225,17 +225,17 @@ class SourceModel:
 
         Parameters
         ----------
-        ds : `~yt.data_objects.static_output.Dataset`
+        ds : :class:`~yt.data_objects.static_output.Dataset`
             The loaded yt dataset to make the fields for.
-        emin : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity 
+        emin : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity` 
             The minimum energy in the band. If a float, it is assumed to be
             in keV.
-        emax : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity
+        emax : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
             The minimum energy in the band. If a float, it is assumed to be
             in keV.
         redshift : float, optional
             The redshift of the source. Default: 0.0
-        dist : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity    
+        dist : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`    
             The angular diameter distance, used for nearby sources. This may be
             optionally supplied instead of it being determined from the
             *redshift* and given *cosmology*. If units are not specified, it is

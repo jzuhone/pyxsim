@@ -126,7 +126,7 @@ class ThermalSourceModel(SourceModel):
             mylog.info(f"Using nH field '{self.nh_field}'.")
         self.spectral_model.prepare_spectrum(redshift)
         if mode in ["photons", "spectrum"]:
-            self.setup_pbar(data_source)
+            self.setup_pbar(data_source, self.temperature_field)
 
     def make_spectrum(self, data_source, emin, emax, nbins, redshift=0.0, dist=None, 
                       cosmology=None):
@@ -705,7 +705,7 @@ class NEISourceModel(CIESourceModel):
     >>>             "O^7": ("flash", "o7  "),
     >>>             "O^8": ("flash", "o8  ")
     >>>            }
-    >>> source_model = ApecNEISourceModel(0.1, 10.0, 10000, var_elem)
+    >>> source_model = NEISourceModel(0.1, 10.0, 10000, var_elem)
     """
     def __init__(self, emin, emax, nbins, var_elem, binscale="linear", 
                  temperature_field=("gas", "temperature"),

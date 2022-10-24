@@ -39,9 +39,8 @@ If we instead want to find a spectrum of a source measured by an observer at a s
 distance, then we can specify either a redshift and a cosmology (which uniquely specifies
 a distance) or we can set a distance explicitly for a local source.
 
-Here's an example where only a redshift is specified. In this case, the
-`Planck 2018 cosmology <https://ui.adsabs.harvard.edu/abs/2020A%26A...641A...6P/>`_ 
-is assumed by default:
+Here's an example where only a redshift is specified. In this case, a cosmology is assumed 
+by default from yt, usually the one associated with the dataset:
 
 .. code-block:: python
 

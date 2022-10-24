@@ -74,7 +74,7 @@ class LineSourceModel(SourceModel):
         self.scale_factor = 1.0 / (1.0 + redshift)
         self.ftype = ds._get_field_info(self.emission_field).name[0]
         if mode == "spectrum":
-            self.setup_pbar(data_source)
+            self.setup_pbar(data_source, self.emission_field)
 
     def cleanup_model(self, mode):
         if mode == "spectrum":
@@ -91,10 +91,10 @@ class LineSourceModel(SourceModel):
         ----------
         data_source : :class:`~yt.data_objects.data_containers.YTSelectionContainer`
             The data source from which the photons will be generated.
-        emin : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity 
+        emin : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity` 
             The minimum energy in the band. If a float, it is assumed to be
             in keV.
-        emax : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity 
+        emax : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity` 
             The minimum energy in the band. If a float, it is assumed to be
             in keV.
         nbins : integer
@@ -102,7 +102,7 @@ class LineSourceModel(SourceModel):
         redshift : float, optional
             If greater than 0, we assume that the spectrum should be created in 
             the observer frame at a distance given by the cosmology. Default: 0.0
-        dist : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity, optional 
+        dist : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`, optional 
             The distance to a nearby source, if redshift = 0.0. If a float, it 
             is assumed to be in units of kpc.
         cosmology : :class:`~yt.utilities.cosmology.Cosmology`, optional

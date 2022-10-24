@@ -15,11 +15,47 @@ opposed to the distance to the source as a whole for the "flat-sky" case. In thi
 mode, photons could come from sources at any position on the sky, so it is ideal 
 for making all-sky maps. 
 
+Instead of the :func:`~pyxsim.photon_list.project_photons` function, this functionality
+uses the :func:`~pyxsim.photon_list.project_photons_allsky` function, which takes the
+following parameters:
+
+* ``photon_prefix``: The prefix of the filename(s) containing the photon list.
+  If run in serial, the filename will be "{photon_prefix}.h5", if run in 
+  parallel, the filenames will be "{photon_prefix}.{mpi_rank}.h5".
+* ``event_prefix``: The prefix of the filename(s) which will be written to
+  contain the event list. If run in serial, the filename will be 
+  ``"{event_prefix}.h5"``, if run in parallel, the filename will be 
+  ``"{event_prefix}.{mpi_rank}.h5"``.
+* ``normal``: The vector determining the "z" or "up" vector for the spherical 
+  coordinate system for the all-sky projection, something like [1.0, 2.0, -3.0]
+* ``absorb_model`` (optional): A string representing a model for foreground 
+  galactic absorption. The two models included in pyXSIM for absorption are:
+  ``"wabs"`` (`Wisconsin (Morrison and McCammon; ApJ 270, 119) <http://adsabs.harvard.edu/abs/1983ApJ...270..119M>`_),
+  and ``"tbabs"`` (`Tuebingen-Boulder (Wilms, J., Allen, A., & McCray, R. 2000, ApJ, 542, 914) <http://adsabs.harvard.edu/abs/2000ApJ...542..914W>`_).
+  The default is no absorption--if an absorption model is chosen, the ``nH``
+  parameter must also be set. 
+* ``nH`` (optional): The foreground galactic column density in units of 
+  :math:`10^{22} \rm{atoms} \rm{cm}^{-2}`, for use when one is applying 
+  foreground galactic absorption.
+* ``abund_table`` (optional): The abundance table to be used for abundances in the 
+  TBabs absorption model. Default is set in the SOXS configuration file, the default 
+  for which is ``"angr"``. Other options are ``"angr"``, ``"aspl"``, ``"lodd"``,
+  ``"feld"``, ``"wilm"``, and ``"cl17.03"``. For the definitions of these, see
+  :ref:`solar-abund-tables`.
+* ``no_shifting`` (optional): If set to True, the photon energies will not be
+  velocity Doppler shifted. Default False.
+* ``save_los`` (optional): If ``True``, save the line-of-sight positions along 
+  the radial direction in units of kpc to the events list. Default: ``False``.
+* ``prng`` (optional): An integer seed, pseudo-random number generator, 
+  :class:`~numpy.random.RandomState` object, or :mod:`~numpy.random` (the 
+  default). Use this if you have a reason to generate the same set of random 
+  numbers, such as for a test. 
+
 The following example shows how to create such an observation of the circumgalactic
 medium from "inside a galaxy", using a 
 `Milky Way-sized halo <https://www.tng-project.org/api/TNG50-1/snapshots/99/subhalos/494709/>`_ 
-extracted from `Illustris TNG<https://www.tng-project.org>`_ (the actual dataset used is the 
-``parent_halo` with ID = 136). First, we load up the dataset in ``yt``, and put a filter on 
+extracted from `Illustris TNG <https://www.tng-project.org>`_ (the actual dataset used is the 
+``parent_halo`` with ID = 136). First, we load up the dataset in ``yt``, and put a filter on 
 the gas cells so that we only consider gas that is likely to be X-ray emitting:
 
 .. code-block:: python
@@ -167,7 +203,7 @@ investigating. The ``use_gal_coords=True`` option takes the celestial coordinate
 in the file and converts them into Galactic coordinates. 
 
 The resulting event list can used to produce an "all-sky" map in X-rays using 
-```healpy``<https://healpy.readthedocs.io/>`_ like so:
+`healpy <https://healpy.readthedocs.io/>`_ like so:
 
 .. code-block:: python
 

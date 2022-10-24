@@ -59,7 +59,7 @@ class XrayLightCone(LightCone):
         angular_width : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`
             The angular width of the light cone simulation. If units are not
             specified, it is assumed to be in degrees.
-        source_model : :class:`~pyxsim.source_models.SourceModel`
+        source_model : :class:`~pyxsim.source_models.sources.SourceModel`
             A source model used to generate the events.
         sky_center : array-like
             Center RA, Dec of the events in degrees.
@@ -71,12 +71,9 @@ class XrayLightCone(LightCone):
             be assumed:
             ['velocity_x', 'velocity_y', 'velocity_z'] for grid datasets
             ['particle_velocity_x', 'particle_velocity_y', 'particle_velocity_z'] for particle datasets
-        absorb_model : string or :class:`~pyxsim.spectral_models.AbsorptionModel` 
+        absorb_model : string
             A model for foreground galactic absorption, to simulate the absorption
-            of events before being detected. This cannot be applied here if you 
-            already did this step previously in the creation of the 
-            :class:`~pyxsim.photon_list.PhotonList` instance. Known options for 
-            strings are "wabs" and "tbabs".
+            of events before being detected. Known options are "wabs" and "tbabs".
         nH : float, optional
             The foreground column density in units of 10^22 cm^{-2}. Only used if
             absorption is applied.
