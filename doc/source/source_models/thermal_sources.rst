@@ -413,7 +413,7 @@ fixed at abundance table value, and all higher elements up Zn to included in
   spectrum. The first method should be sufficient for most cases.
 * ``var_elem``: Optionally used to specify the abundances of specific elements, 
   whether via floating-point numbers or yt fields. A dictionary of elements and 
-  values should be specified. See :ref:`igm-var-abund` below for more details.
+  values should be specified. See :ref:`var-abund` below for more details.
 * ``prng``: A pseudo-random number generator. Typically will only be specified
   if you have a reason to generate the same set of random numbers, such as for a 
   test or a comparison. Default is the :mod:`numpy.random` module, but a 

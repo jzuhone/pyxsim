@@ -1,6 +1,3 @@
-"""
-Classes for specific source models
-"""
 import numpy as np
 from pyxsim.utils import mylog
 from pyxsim.source_models.sources import SourceModel
@@ -376,8 +373,7 @@ class ThermalSourceModel(SourceModel):
 class IGMSourceModel(ThermalSourceModel):
     _nei = False
     _density_dependence = True
-
-    r"""
+    """
     A source model for a thermal plasma including photoionization and 
     resonant scattering from the CXB based on Khabibullin & Churazov 2019
     (https://ui.adsabs.harvard.edu/abs/2019MNRAS.482.4972K/) and Churazov 
@@ -480,7 +476,7 @@ class IGMSourceModel(ThermalSourceModel):
 class CIESourceModel(ThermalSourceModel):
     _nei = False
     _density_dependence = False
-    r"""
+    """
     Initialize a source model from a CIE spectrum, using either
     the APEC, SPEX, MeKaL, or Cloudy models.
 
@@ -612,7 +608,7 @@ class CIESourceModel(ThermalSourceModel):
 
 class NEISourceModel(CIESourceModel):
     _nei = True
-    r"""
+    """
     Initialize a source model from a thermal spectrum, using the
     APEC NEI tables from https://www.atomdb.org. Note that for this
     class a set of specific element fields must be supplied. This should
