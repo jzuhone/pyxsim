@@ -494,7 +494,7 @@ yt-based Filtering
 
 If you want more detailed control over which cells or particles may get used,
 then you need to use one of 
-`various methods in yt for dataset filtering<https://yt-project.org/doc/analyzing/filtering.html>`_. 
+`various methods in yt for dataset filtering <https://yt-project.org/doc/analyzing/filtering.html>`_. 
 
 AMR cell-based Filtering
 ^^^^^^^^^^^^^^^^^^^^^^^^

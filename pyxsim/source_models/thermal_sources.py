@@ -138,10 +138,10 @@ class ThermalSourceModel(SourceModel):
         ----------
         data_source : :class:`~yt.data_objects.data_containers.YTSelectionContainer`
             The data source from which the photons will be generated.
-        emin : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity 
+        emin : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity` 
             The minimum energy in the band. If a float, it is assumed to be
             in keV.
-        emax : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity 
+        emax : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity` 
             The minimum energy in the band. If a float, it is assumed to be
             in keV.
         nbins : integer
@@ -149,7 +149,7 @@ class ThermalSourceModel(SourceModel):
         redshift : float, optional
             If greater than 0, we assume that the spectrum should be created in 
             the observer frame at a distance given by the cosmology. Default: 0.0
-        dist : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity, optional 
+        dist : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`, optional 
             The distance to a nearby source, if redshift = 0.0. If a float, it 
             is assumed to be in units of kpc.
         cosmology : :class:`~yt.utilities.cosmology.Cosmology`, optional
@@ -371,8 +371,6 @@ class ThermalSourceModel(SourceModel):
 
 
 class IGMSourceModel(ThermalSourceModel):
-    _nei = False
-    _density_dependence = True
     """
     A source model for a thermal plasma including photoionization and 
     resonant scattering from the CXB based on Khabibullin & Churazov 2019
@@ -452,6 +450,9 @@ class IGMSourceModel(ThermalSourceModel):
         if you have a reason to generate the same set of random numbers, 
         such as for a test. Default is to use the :mod:`numpy.random` module.
     """
+    _nei = False
+    _density_dependence = True
+
     def __init__(self, emin, emax, nbins, Zmet, binscale="linear",
                  resonant_scattering=False, cxb_factor=0.5, 
                  nh_field=("gas", "H_nuclei_density"), 
@@ -474,8 +475,6 @@ class IGMSourceModel(ThermalSourceModel):
 
 
 class CIESourceModel(ThermalSourceModel):
-    _nei = False
-    _density_dependence = False
     """
     Initialize a source model from a CIE spectrum, using either
     the APEC, SPEX, MeKaL, or Cloudy models.
@@ -540,7 +539,7 @@ class CIESourceModel(ThermalSourceModel):
     model_vers : string, optional
         The version identifier string for the model files, e.g.
         "2.0.2", if supported by the model. Currently only supported by
-         "apec" and "spex". Default depends on the model being used.
+        "apec" and "spex". Default depends on the model being used.
     nolines : boolean, optional
         Turn off lines entirely for generating emission. Only available
         for "apec" or "spex". Default: False
@@ -570,6 +569,9 @@ class CIESourceModel(ThermalSourceModel):
     >>> source_model = CIESourceModel("apec", 0.1, 10.0, 10000,
     ...                               ("gas", "metallicity"))
     """
+    _nei = False
+    _density_dependence = False
+
     def __init__(self, model, emin, emax, nbins, Zmet, binscale="linear", 
                  temperature_field=("gas", "temperature"),
                  emission_measure_field=("gas", "emission_measure"), 
@@ -607,7 +609,6 @@ class CIESourceModel(ThermalSourceModel):
 
 
 class NEISourceModel(CIESourceModel):
-    _nei = True
     """
     Initialize a source model from a thermal spectrum, using the
     APEC NEI tables from https://www.atomdb.org. Note that for this
@@ -707,6 +708,8 @@ class NEISourceModel(CIESourceModel):
     >>>            }
     >>> source_model = NEISourceModel(0.1, 10.0, 10000, var_elem)
     """
+    _nei = True
+
     def __init__(self, emin, emax, nbins, var_elem, binscale="linear", 
                  temperature_field=("gas", "temperature"),
                  emission_measure_field=("gas", "emission_measure"), 

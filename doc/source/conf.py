@@ -309,15 +309,15 @@ texinfo_documents = [
 
 
 # Example configuration for intersphinx: refer to the Python standard library.
-intersphinx_mapping = {'http://docs.python.org/': None,
-                       'http://yt-project.org/doc/': None,
-                       'http://docs.scipy.org/doc/numpy/': None,
-                       'http://hea-www.cfa.harvard.edu/~jzuhone/soxs/': None,
-                       'http://docs.astropy.org/en/stable/': None}
+intersphinx_mapping = {'https://docs.python.org/': None,
+                       'https://yt-project.org/doc/': None,
+                       'https://docs.scipy.org/doc/numpy/': None,
+                       'https://hea-www.cfa.harvard.edu/~jzuhone/soxs/': None,
+                       'https://docs.astropy.org/en/stable/': None}
 
-def remove_module_docstring(app, what, name, obj, options, lines):
-    if what == "module" and name in ["photon_list","event_list"]:
-        del lines[:]
+#def remove_module_docstring(app, what, name, obj, options, lines):
+#    if what == "module" and name in ["photon_list","event_list"]:
+#        del lines[:]
 
-def setup(app):
-    app.connect("autodoc-process-docstring", remove_module_docstring)
+#def setup(app):
+#    app.connect("autodoc-process-docstring", remove_module_docstring)
