@@ -162,3 +162,9 @@ These can be used to make projections:
     prj.save()
 
 .. image:: _images/projected_intensity.png
+
+.. note::
+
+    At this time, Doppler-shifting of photon energies by motions of the emitting 
+    material is not available for the creation of intensity fields in this mode, 
+    but it will be available in a future release.

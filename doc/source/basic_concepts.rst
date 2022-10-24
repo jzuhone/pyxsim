@@ -6,11 +6,34 @@ Basic Concepts
 Basic pyXSIM Concepts
 ---------------------
 
+In this section we will describe some basic concepts of pyXSIM that one should
+familiarize themselves with. 
+
 "Photon" Lists vs. "Event" Lists
 ++++++++++++++++++++++++++++++++
 
+If one is attempting to create synthetic observations for use with instrument
+models, this is done by first creating a "photon list", which is then used to 
+create an "event list". The first is a sample of photons with cosmologically
+redshifted energies that are distributed in 3D, associated with their original
+cells or particles. This is a large sample that is then used to create the
+event list, at which point a line-of-sight observation direction is chosen,
+which projects the photons to the sky plane and shifts the photon energies
+via Doppler shifting from the line-of-sight velocity of the originating cell.
+
+These concepts are described in more detail in :ref:`phlist_overview`.
+
 SIMPUT Catalogs
 +++++++++++++++
+
+The `SIMPUT <https://www.sternwarte.uni-erlangen.de/sixte/sources/>`_ standard 
+is a FITS file format used by pyXSIM to convert event lists (mentioned above) 
+to a format that can be read in by instrument simulation software such as 
+`SOXS <https://hea-www.cfa.harvard.edu/soxs>`_, 
+`SIXTE <https://www.sternwarte.uni-erlangen.de/research/sixte/>`_, 
+`MARX <https://space.mit.edu/ASC/MARX/>`_, or 
+`SIMX <https://hea-www.cfa.harvard.edu/simx/>`_. See :ref:`instruments` for 
+more details. 
 
 pyXSIM Limitations
 ++++++++++++++++++

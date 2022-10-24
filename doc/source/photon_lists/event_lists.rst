@@ -41,7 +41,9 @@ photon lists are. The arguments are:
   foreground galactic absorption.
 * ``abund_table`` (optional): The abundance table to be used for abundances in the 
   TBabs absorption model. Default is set in the SOXS configuration file, the default 
-  for which is ``"angr"``. Other options are ``"angr"``, ``"aspl"``, 
+  for which is ``"angr"``. Other options are ``"angr"``, ``"aspl"``, ``"lodd"``,
+  ``"feld"``, ``"wilm"``, and ``"cl17.03"``. For the definitions of these, see
+  :ref:`solar-abund-tables`.
 * ``no_shifting`` (optional): If set to True, the photon energies will not be
   velocity Doppler shifted. Default False.
 * ``north_vector`` (optional): A vector defining the "up" direction, e.g. 
@@ -57,6 +59,10 @@ photon lists are. The arguments are:
   only be used for visualization purposes. Supply a float here to smooth with a 
   standard deviation with this fraction of the cell or particle size. 
   Default: None
+* ``flat_sky`` (optional): If ``True``, we assume that the sky is "flat" and 
+  RA, Dec positions are computed using simple linear offsets, Default: ``False``.
+* ``save_los`` (optional): If ``True``, save the line-of-sight positions along 
+  the projection axis in units of kpc to the events list. Default: ``False``.
 * ``prng`` (optional): An integer seed, pseudo-random number generator, 
   :class:`~numpy.random.RandomState` object, or :mod:`~numpy.random` (the 
   default). Use this if you have a reason to generate the same set of random 

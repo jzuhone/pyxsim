@@ -1,4 +1,4 @@
-.. _spectra:
+.. _xray-spectra:
 
 Generating Spectra from Data Objects
 ====================================
@@ -90,5 +90,9 @@ same time):
     
     spec_obs = plaw_model.make_spectrum(sp, emin, emax, nbins, dist=(8.0, "kpc"))
    
+.. note::
 
+    At this time, Doppler-shifting of photon energies by motions of the emitting 
+    material is not available for the creation of spectra in this mode, but it will 
+    be available in a future release.
 

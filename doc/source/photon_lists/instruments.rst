@@ -7,10 +7,10 @@ If you want to produce a realistic simulation of a particular instrumental
 configuration, pyXSIM provides options for exporting its event lists to 
 external packages. The supported software packages are:
 
-* `MARX <http://space.mit.edu/ASC/MARX/>`_ 
-* `SIMX <http://hea-www.cfa.harvard.edu/simx/>`_
-* `SIXTE <http://https://www.sternwarte.uni-erlangen.de/research/sixte/>`_
-* `SOXS <http://hea-www.cfa.harvard.edu/~jzuhone/soxs>`_
+* `MARX <https://space.mit.edu/ASC/MARX/>`_ 
+* `SIMX <https://hea-www.cfa.harvard.edu/simx/>`_
+* `SIXTE <https://https://www.sternwarte.uni-erlangen.de/research/sixte/>`_
+* `SOXS <https://hea-www.cfa.harvard.edu/soxs>`_
 
 MARX
 ----

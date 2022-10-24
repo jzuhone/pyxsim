@@ -1,128 +1,54 @@
-.. _v1_to_v2:
+.. _v3_to_v4:
 
-Important API Changes Between pyXSIM Version 2 and Version 3
+Important API Changes Between pyXSIM Version 3 and Version 4
 ============================================================
 
 This section documents the most important API changes between
-pyXSIM version 2 and 3, with code examples showing how to update 
-your code for version 3. 
+pyXSIM version 3 and 4, with code examples showing how to update 
+your code for version 4. 
 
-Metallicity in Thermal Sources
-------------------------------
+API Changes to Thermal Source Models
+------------------------------------
 
-In the :class:`~pyxsim.source_models.ThermalSourceModel` class, the ``Zmet``
-keyword argument has been changed to a required argument. Whereas previously 
-one would not have to set ``Zmet`` at all, and it would default to 
-0.3 :math:`Z_\odot`, it now must be set. 
-
-Old way:
+The class ``ThermalSourceModel`` in version 3 of pyXSIM has now been
+subclassed into three separate classes, 
+:class:`~pyxsim.source_models.thermal_sources.CIESourceModel`,
+:class:`~pyxsim.source_models.thermal_sources.NEISourceModel`, and
+:class:`~pyxsim.source_models.thermal_sources.IGMSourceModel`.
+``ThermalSourceModel`` itself should no longer be used as a standalone
+class. In order to replicate the functionality of the previously existing
+``ThermalSourceModel`` class for CIE spectra, change (for example):
 
 .. code-block:: python
 
-    # spatially constant metallicity
-    source_model = pyxsim.ThermalSourceModel("apec", 0.1, 11.0, 1000.0, Zmet=0.4)
+    import pyxsim
     
-    # metallicity field
-    source_model = pyxsim.ThermalSourceModel("apec", 0.1, 11.0, 1000.0, 
-                                             Zmet=("gas","metallicity"))
+    source_model = pyxsim.ThermalSourceModel("apec", 0.1, 10.0, 5000, 0.3)
 
-New way:
+to:
 
 .. code-block:: python
 
-    # spatially constant metallicity
-    source_model = pyxsim.ThermalSourceModel("apec", 0.1, 11.0, 1000.0, 0.4)
+    import pyxsim
     
-    # metallicity field
-    source_model = pyxsim.ThermalSourceModel("apec", 0.1, 11.0, 1000.0, 
-                                             ("gas","metallicity"))
+    source_model = pyxsim.CIESourceModel("apec", 0.1, 10.0, 5000, 0.3)
 
-Creating Photon Lists
----------------------
-
-Photon lists are no longer created as a ``PhotonList`` class, but are written
-directly to disk as the photons are generated. The change was made since photon 
-lists can sometimes become quite large and difficult to fit into memory, even if
-it does not take very long to generate them. The effect is essentially the same
-as if in pyXSIM 2.x one were to generate a ``PhotonList`` and write it immediately
-to disk.
-
-Old way of creating a photon list:
+and for NEI sources, change:
 
 .. code-block:: python
- 
-    photons = pyxsim.PhotonList.from_data_source(sp, redshift, area, exp_time,
-                                                 source_model, center=center, 
-                                                 cosmology=cosmo)
- 
-    photons.write_h5_file("my_photons.h5")
+
+    import pyxsim
     
-New way of creating a photon list, with the identical result:
+    source_model = pyxsim.ThermalSourceModel("apec", 0.1, 10.0, 5000, 
+                                             ("gas", "metallicity"), var_elem=var_elem,
+                                             nei=True)
+                                             
+to:
 
 .. code-block:: python
 
-    n_photons, n_cells = pyxsim.make_photons("my_photons", sp, redshift, area,
-                                             exp_time, source_model, 
-                                             center=center, cosmology=cosmo)
-
-All other optional arguments are the same. See :ref:`photon-lists` for more
-information. 
-
-Creating Event Lists
---------------------
-
-Similarly, event lists (projected, redshifted, absorbed photons) are written
-directly to disk as they are created, and are created from photons which are
-also read from disk in chunks. This results in a similar API change:
-
-Old way of creating an event list:
-
-.. code-block:: python
-
-    photons = pyxsim.PhotonList.from_file("my_photons.h5")
-    events = photons.project_photons("z", (30.0, 45.0))
-    events.write_h5_file("my_events.h5")
+    import pyxsim
     
-New way of creating an event list:
+    source_model = pyxsim.NEISourceModel(0.1, 10.0, 5000, var_elem)
 
-.. code-block:: python
-    
-    n_events = pyxsim.project_photons("my_photons", "my_events", "z", 
-                                      (30.0, 45.0))
-    
-All optional arguments are the same. See :ref:`event-lists` for more 
-information. 
-
-Using Event Lists
------------------
-
-There is still a :class:`~pyxsim.event_list.EventList` class in pyXSIM 3.x. 
-To create an :class:`~pyxsim.event_list.EventList` instance, the only way
-to do it now is to read it from disk:
-
-.. code-block:: python
-
-    events = pyxsim.EventList("my_events.h5")
-
-The way to write a SIMPUT catalog from an :class:`~pyxsim.event_list.EventList` 
-has changed slightly. The old way was:
-
-.. code-block:: python
-
-    events.write_simput_file("my_great_events", overwrite=False)
-
-The new way is:
-
-.. code-block:: python
-
-    events.write_to_simput("my_great_events", overwrite=False)
-
-See :ref:`event-lists` for more information. 
-
-Generating Background and Point Source Events
----------------------------------------------
-
-The source generator functions :func:`~pyxsim.source_generators.background.make_background`
-and :func:`~pyxsim.source_generators.point_sources.make_point_sources`
-no longer exist in pyXSIM. To make background and point source events, 
-please consult the `SOXS <https://hea-www.cfa.harvard.edu/soxs>`_ package.
+See :ref:`thermal-sources` for more details.

@@ -693,7 +693,7 @@ def project_photons(photon_prefix, event_prefix, normal, sky_center,
         SPH particles, "gaussian" or "top_hat". Default: "top_hat".
     save_los : boolean, optional
         If True, save the line-of-sight positions along the projection axis in
-        units of kpc to the events file. Default: False
+        units of kpc to the events list. Default: False
     prng : integer or :class:`~numpy.random.RandomState` object
         A pseudo-random number generator. Typically will only be specified
         if you have a reason to generate the same set of random numbers,
