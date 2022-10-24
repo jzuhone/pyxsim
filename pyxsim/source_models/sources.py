@@ -125,12 +125,15 @@ class SourceModel:
         ----------
         ds : `~yt.data_objects.static_output.Dataset`
             The loaded yt dataset to make the fields for.
-        emin : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity, optional 
+        emin : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity 
             The minimum energy in the band. If a float, it is assumed to be
             in keV.
-        emax : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity, optional 
+        emax : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity
             The minimum energy in the band. If a float, it is assumed to be
             in keV.
+        force_override : boolean, optional
+            If True, override a pre-existing field with the same name.
+            Default: False
 
         Returns
         -------
@@ -224,9 +227,15 @@ class SourceModel:
         ----------
         ds : `~yt.data_objects.static_output.Dataset`
             The loaded yt dataset to make the fields for.
+        emin : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity 
+            The minimum energy in the band. If a float, it is assumed to be
+            in keV.
+        emax : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity
+            The minimum energy in the band. If a float, it is assumed to be
+            in keV.
         redshift : float, optional
             The redshift of the source. Default: 0.0
-        dist : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity, optional     
+        dist : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity    
             The angular diameter distance, used for nearby sources. This may be
             optionally supplied instead of it being determined from the
             *redshift* and given *cosmology*. If units are not specified, it is

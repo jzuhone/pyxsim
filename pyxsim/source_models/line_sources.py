@@ -83,6 +83,38 @@ class LineSourceModel(SourceModel):
 
     def make_spectrum(self, data_source, emin, emax, nbins, redshift=0.0,
                       dist=None, cosmology=None):
+        """
+        Make a count rate spectrum in the source frame from a yt data container, 
+        or a spectrum in the observer frame. 
+
+        Parameters
+        ----------
+        data_source : :class:`~yt.data_objects.data_containers.YTSelectionContainer`
+            The data source from which the photons will be generated.
+        emin : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity 
+            The minimum energy in the band. If a float, it is assumed to be
+            in keV.
+        emax : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity 
+            The minimum energy in the band. If a float, it is assumed to be
+            in keV.
+        nbins : integer
+            The number of bins in the spectrum.
+        redshift : float, optional
+            If greater than 0, we assume that the spectrum should be created in 
+            the observer frame at a distance given by the cosmology. Default: 0.0
+        dist : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity, optional 
+            The distance to a nearby source, if redshift = 0.0. If a float, it 
+            is assumed to be in units of kpc.
+        cosmology : :class:`~yt.utilities.cosmology.Cosmology`, optional
+            Cosmological information. If not supplied, we try to get the
+            cosmology from the dataset. Otherwise, LCDM with the default yt 
+            parameters is assumed.
+
+        Returns
+        -------
+        :class:`~soxs.spectra.CountRateSpectrum` or :class:`~soxs.spectra.Spectrum`,
+        depending on how the method is invoked. 
+        """
         ebins = np.linspace(emin, emax, nbins+1)
         spec = np.zeros(nbins)
         spectral_norm = 1.0

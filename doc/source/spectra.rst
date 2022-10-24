@@ -56,20 +56,18 @@ is assumed by default:
 The resulting spectrum ``spec_obs`` is a :class:`~soxs.spectrum.Spectrum` object, which 
 has a number of methods in SOXS that can be used to analyze and visualize it.
 
-If you want to choose a different cosmology, specify an AstroPy 
-:class:`~astropy.cosmology.Cosmology` object (see the 
-`AstroPy cosmology documentation<https://docs.astropy.org/en/stable/cosmology/index.html>`_
-for more details):
+If you want to choose a different cosmology, specify a yt 
+:class:`~yt.utilities.cosmology.Cosmology` object:
 
 .. code-block:: python
 
     # Make a flux spectrum in the observer frame at some redshift
     # at a specified cosmology
     
-    from astropy.cosmology import FlatLambdaCDM
+    from yt.utilities.cosmology import Cosmology
     
-    cosmo = FlatLambdaCDM(H0=70, Om0=0.3, Ob0=0.05)
-    
+    cosmo = Cosmology(hubble_constant=0.704, omega_matter=1.0-0.728)
+
     emin_obs = 2.0
     emax_obs = 20.0
     redshift = 0.1
