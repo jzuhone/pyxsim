@@ -455,3 +455,103 @@ Specifying the abundances of C, N, and Fe separately:
                                          binscale="log", 
                                          var_elem=var_elem)
 
+.. _hot-gas-filter:
+
+Filtering Out Non-X-ray Emitting Gas
+====================================
+
+In simulations where may gas phases are present, there may be a significant
+amount of thermal gas that is not expected to be emitting in X-rays. For any
+of the thermal source models detailed above, there are various ways to ensure
+that this gas is not operated on in pyXSIM. 
+
+pyXSIM-based Filtering
+++++++++++++++++++++++
+
+The first is to make use of the ``kT_min`` and ``kT_max`` keyword arguments:
+
+.. code-block:: python
+
+    thermal_model = pyxsim.CIESourceModel("apec", 0.1, 20.0, 10000, 
+                                          ("gas","metallicity"),
+                                          kT_min=0.1,
+                                          kT_max=50.0,
+                                          prng=25, abund_table='lodd')
+
+where both ``kT_min`` and ``kT_max`` are in units of keV. It may also be useful
+to specify a maximum density above which no emission should be calculated with the
+``max_density`` keyword argument:
+
+.. code-block:: python
+
+        source_model = pyxsim.IGMSourceModel(0.1, 5.0, 1000, 
+                                             ("gas","metallicity"), 
+                                             max_density=(5.0e-25, "g/cm**3"),
+                                             binscale="log")
+
+yt-based Filtering
+++++++++++++++++++
+
+If you want more detailed control over which cells or particles may get used,
+then you need to use one of 
+`various methods in yt for dataset filtering<https://yt-project.org/doc/analyzing/filtering.html>`_. 
+
+AMR cell-based Filtering
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+For example, if your dataset is AMR cell-based, then the use of a 
+`yt cut region <https://yt-project.org/doc/analyzing/filtering.html#cut-regions>`_ is recommended. 
+In this case, we exclude all gas above :math:`T = 3 \times 10^5 \rm{K}`, below 
+:math:`\rho = 5 \times 10^{-25}~\rm{g}~\rm{cm}^{-3}`, and include no gas with star formation. 
+
+.. code-block:: python
+
+    # this example takes a box region and makes cuts on density, temperature, and star
+    # formation rate
+    
+    c = ds.find_min(("gas", "gravitational_potential")) # center of box
+    w = ds.quan(1.0, "Mpc") # width of box
+    le = c-0.5*w # left edge of box
+    re = c+0.5*w # right edge of box
+    box = ds.box(le, re) # create the box
+    
+    # chain these conditions together
+    hot_box = box.include_above(("gas", "temperature"), 3e5, "K")
+    hot_diffuse_box = hot_box.include_below(("gas", "density"), 5e-25), "g/cm**3")
+    xray_box = hot_diffuse_box.include_equal(("gas", "star_formation_rate"), 0.0), "Msun/yr")
+
+This is a new data container exactly like a sphere or box object that can be used to 
+create photons, make fields, etc.
+
+Particle-based Filtering
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+In the case of particle data (including particle-ish data like Arepo Voronoi cells), 
+it makes most sense to use a 
+`yt particle filter <https://yt-project.org/doc/analyzing/filtering.html#filtering-particle-fields>`_.
+This creates a new particle type that can be used in analysis in the same way as
+regular particle types. 
+
+Here is an example of instantiating a particle filter for an Arepo dataset.
+In this case, we exclude all gas above :math:`T = 3 \times 10^5 \rm{K}`, below 
+:math:`\rho = 5 \times 10^{-25}~\rm{g}~\rm{cm}^{-3}`, and include no gas with star 
+formation. 
+
+.. code-block:: python
+
+    # define hot gas filter 
+    def hot_gas(pfilter, data):
+        pfilter1 = data[pfilter.filtered_type, "temperature"] > 3.0e5
+        pfilter2 = data["PartType0", "StarFormationRate"] == 0.0
+        pfilter3 = data[pfilter.filtered_type, "density"] < 5e-25
+        return pfilter1 & pfilter2 & pfilter3
+    # add the filter to yt itself
+    yt.add_particle_filter("hot_gas", function=hot_gas,
+                           filtered_type='gas', requires=["temperature","density"])
+    
+    # load dataset and assign filter
+    ds = yt.load("cutout_136.hdf5")
+    ds.add_particle_filter("hot_gas")
+
+Note that for this dataset the ``"gas"`` and ``"PartType0"`` field types are the
+same.

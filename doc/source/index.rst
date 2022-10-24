@@ -58,6 +58,7 @@ Table of Contents
    basic_concepts
    source_models/index
    xray_fields
+   spectra
    photon_lists/index
    parallel
    getting_help
