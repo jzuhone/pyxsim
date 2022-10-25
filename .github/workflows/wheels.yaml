@@ -18,16 +18,16 @@ jobs:
         # because forward compatibility is much easier to
         # guarantee than backward compatibility
         os: [
-            ubuntu-18.04,
-            macos-10.15,
+            ubuntu-latest,
+            macOS-latest
         ]
       fail-fast: false
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Build wheels for CPython
-        uses: pypa/cibuildwheel@v2.3.0
+        uses: pypa/cibuildwheel@v2.11.1
         with:
           output-dir: dist
         env:
@@ -41,7 +41,7 @@ jobs:
           CIBW_BUILD_VERBOSITY: 1
           CIBW_BEFORE_BUILD: "rm -rf build/"  # working around .so files accumulation between builds leading up to bloated wheels
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: wheels
           path: ./dist/*.whl
@@ -50,12 +50,12 @@ jobs:
     name: Build source distribution
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Build sdist
         run: pipx run build --sdist
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: tarball
           path: dist/*.tar.gz

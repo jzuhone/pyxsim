@@ -11,5 +11,6 @@ out on your own, using `sample datasets provided by the yt Project <http://yt-pr
         
     Thermal_Emission
     Advanced_Thermal_Emission
+    More_Advanced_Thermal_Emission
     Power_Law
     Line_Emission

@@ -5,7 +5,7 @@ on:
   release:
     types: ['released', 'prereleased']
 
-# workflow_dispatch:        # Un comment line if you also want to trigger action manually
+  workflow_dispatch:        # Un comment line if you also want to trigger action manually
 
 jobs:
   conda_deployment_with_new_tag:
@@ -13,27 +13,32 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-18.04, macos-10.15]
+        os: [macOS-latest, ubuntu-latest]
         python-version: ["3.8", "3.9", "3.10"]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0
       - name: Conda environment creation and activation
-        uses: s-weigand/setup-conda@v1.1.1
+        uses: conda-incubator/setup-miniconda@v2
         with:
-          update-conda: true
-          conda-channels: conda-forge, default, jzuhone
-          activate-conda: true
-          python-version: ${{matrix.python-version}}
+          python-version: ${{ matrix.python-version }}
+          environment-file: ./conda/build_env.yaml    # Path to the build conda environment
+          auto-update-conda: false
+          auto-activate-base: false
+          show-channel-urls: true
       - name: Install dependencies
         shell: bash
         run: source ./conda/ci_install.sh
       - name: Build and upload the conda packages
-        uses: uibcdf/action-build-and-upload-conda-packages@v1.1-beta.1
+        uses: uibcdf/action-build-and-upload-conda-packages@v1.1.0
         with:
           meta_yaml_dir: conda
           python-version: ${{ matrix.python-version }} # Values previously defined in `matrix`
           user: jzuhone
+          platform_linux-64: true
+          platform_linux-aarch64: false
+          platform_osx-64: true
+          platform_osx-arm64: false
           label: auto
           token: ${{ secrets.ANACONDA_TOKEN }} # Replace with the right name of your secret
