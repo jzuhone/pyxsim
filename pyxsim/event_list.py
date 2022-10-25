@@ -43,8 +43,12 @@ class EventList:
                 self.num_events.append(f["data"]["xsky"].size)
                 if i == 0:
                     for field in p:
-                        self.parameters[field] = p[field][()]
+                        if field == "observer":
+                            self.parameters[field] = p[field].asstr()[()]
+                        else:
+                            self.parameters[field] = p[field][()]
         self.tot_num_events = np.sum(self.num_events)
+        self.observer = self.parameters.get("observer", "external")
 
     def write_fits_file(self, fitsfile, fov, nx, overwrite=False):
         """
@@ -166,7 +170,7 @@ class EventList:
         """
         import unyt as u
         from soxs.simput import SimputCatalog, SimputPhotonList
-
+        from astropy.coordinates import SkyCoord
         simput_file = f"{prefix}_simput.fits"
         
         begin_cat = True
@@ -183,8 +187,15 @@ class EventList:
                     flux = np.sum(d["eobs"][()]*u.keV).to_value("erg") / \
                            self.parameters["exp_time"]/self.parameters["area"]
 
-                    src = SimputPhotonList(d["xsky"][()], d["ysky"][()],
-                                           d["eobs"][()], flux, name=name)
+                    if self.observer == "internal":
+                        c = SkyCoord(d["xsky"][()], d["ysky"][()], unit='deg',
+                                     frame='galactic')
+                        ra = c.icrs.ra.value
+                        dec = c.icrs.dec.value
+                    else:
+                        ra = d["xsky"][()]
+                        dec = d["ysky"][()]
+                    src = SimputPhotonList(ra, dec, d["eobs"][()], flux, name=name)
 
                     if begin_cat:
                         cat = SimputCatalog.from_source(simput_file, src,

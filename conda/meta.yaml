@@ -1,0 +1,28 @@
+package:
+  name: pyxsim
+  version: "{{ environ['GIT_DESCRIBE_TAG'] }}"
+
+source:
+  path: ../
+    
+requirements:
+  build:
+    - python
+    - numpy
+    - setuptools
+    - cython
+    - setuptools>=45
+    - setuptools_scm[toml]>=6.2
+  run:
+    - python
+    - numpy
+    - h5py
+    - astropy
+    - yt>=4.0.1
+    - soxs==4.0b1
+    - scipy
+    - tqdm
+
+about:
+  home: http://hea-www.cfa.harvard.edu/~jzuhone/pyxsim
+  license: BSD

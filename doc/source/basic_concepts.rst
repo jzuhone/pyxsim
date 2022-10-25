@@ -1,14 +1,58 @@
-.. _basic-yt-concepts:
+.. _basic-concepts:
+
+Basic Concepts
+==============
+
+Basic pyXSIM Concepts
+---------------------
+
+In this section we will describe some basic concepts of pyXSIM that one should
+familiarize themselves with. 
+
+"Photon" Lists vs. "Event" Lists
+++++++++++++++++++++++++++++++++
+
+If one is attempting to create synthetic observations for use with instrument
+models, this is done by first creating a "photon list", which is then used to 
+create an "event list". The first is a sample of photons with cosmologically
+redshifted energies that are distributed in 3D, associated with their original
+cells or particles. This is a large sample that is then used to create the
+event list, at which point a line-of-sight observation direction is chosen,
+which projects the photons to the sky plane and shifts the photon energies
+via Doppler shifting from the line-of-sight velocity of the originating cell.
+
+These concepts are described in more detail in :ref:`phlist_overview`.
+
+SIMPUT Catalogs
++++++++++++++++
+
+The `SIMPUT <https://www.sternwarte.uni-erlangen.de/sixte/sources/>`_ standard 
+is a FITS file format used by pyXSIM to convert event lists (mentioned above) 
+to a format that can be read in by instrument simulation software such as 
+`SOXS <https://hea-www.cfa.harvard.edu/soxs>`_, 
+`SIXTE <https://www.sternwarte.uni-erlangen.de/research/sixte/>`_, 
+`MARX <https://space.mit.edu/ASC/MARX/>`_, or 
+`SIMX <https://hea-www.cfa.harvard.edu/simx/>`_. See :ref:`instruments` for 
+more details. 
+
+pyXSIM Limitations
+++++++++++++++++++
+
+pyXSIM currently has the following limitations, which may or may not be 
+lifted in the future: 
+
+* pyXSIM is currently unable to simulate any sources with any optical 
+  thickness, self-absorption, or self-scattering.
+* pyXSIM is currently unable to simulate any sources with explicit time 
+  dependence.
+* pyXSIM is currently limited to datasets in Cartesian coordinates. 
 
 Basic yt Concepts
-=================
+-----------------
 
 In this section we will outline some basic yt concepts that you will need to 
 familiarize yourself with in order to use pyXSIM effectively. If you are 
 familiar with how yt works, you can safely skip this section.
-
-Three-Dimensional Datasets and Data Objects
--------------------------------------------
 
 Datasets
 ++++++++
@@ -53,7 +97,7 @@ objects and the options to use to create them, check out
 `the yt documentation on data objects <http://yt-project.org/doc/analyzing/objects.html>`_.
 
 Unitful Quantities
-------------------
+++++++++++++++++++
 
 yt employs a symbolic unit system when dealing with physical quantities with
 units. pyXSIM uses yt's unit system to keep track of the units of various 
@@ -83,7 +127,7 @@ information, since the units will be checked for correct dimensionality and will
 be converted if necessary. 
 
 Field Specifications
---------------------
+++++++++++++++++++++
 
 This means that whenever pyXSIM accepts a field specification as an argument, it
 will need to be in one of the following two forms:

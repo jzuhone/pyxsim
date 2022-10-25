@@ -3,13 +3,66 @@ Photon emission and absoprtion models.
 """
 import numpy as np
 
-from soxs.spectra import ApecGenerator, \
+from soxs.thermal_spectra import CIEGenerator, IGMGenerator, \
+    MekalGenerator, CloudyCIEGenerator
+from soxs.spectra import \
     get_wabs_absorb, get_tbabs_absorb
-from soxs.utils import parse_prng
+from soxs.constants import K_per_keV
+from soxs.utils import parse_prng, regrid_spectrum
 from yt.units.yt_array import YTArray, YTQuantity
+from scipy.interpolate import interp1d
 
 
-class TableApecModel(ApecGenerator):
+class ThermalSpectralModel:
+    _logT = False
+
+    def _Tconv(self, kT):
+        if self._logT:
+            return np.log10(kT * K_per_keV)
+        else:
+            return kT
+
+    def get_spectrum(self, kT):
+        """
+        Get the thermal emission spectrum given a temperature *kT* in keV. 
+        """
+        kT = np.atleast_1d(self._Tconv(kT))
+        var_spec = None
+        cosmic_spec = self.cf(kT)
+        metal_spec = self.mf(kT)
+        if self.var_spec is not None:
+            var_spec = self.vf(kT)
+        return cosmic_spec, metal_spec, var_spec
+
+    def make_fluxf(self, emin, emax, energy=False):
+        eidxs = (self.ebins[:-1] > emin) & (self.ebins[1:] < emax)
+        emid = self.emid[eidxs]
+        if energy:
+            cosmic_flux = (self.cosmic_spec[:,eidxs]*emid).sum(axis=-1)
+            metal_flux = (self.metal_spec[:,eidxs]*emid).sum(axis=-1)
+        else:
+            cosmic_flux = self.cosmic_spec[:,eidxs].sum(axis=-1)
+            metal_flux = self.metal_spec[:,eidxs].sum(axis=-1)
+        cf = interp1d(self.Tvals, cosmic_flux, fill_value=0.0,
+                      assume_sorted=True, copy=False)
+        mf = interp1d(self.Tvals, metal_flux, fill_value=0.0,
+                      assume_sorted=True, copy=False)
+        if self.var_spec is not None:
+            if energy:
+                var_flux = (self.var_spec[:, :, eidxs]*emid).sum(axis=-1)
+            else:
+                var_flux = self.var_spec[:,:,eidxs].sum(axis=-1)
+            vf = interp1d(self.Tvals, var_flux, axis=1, fill_value=0.0,
+                          assume_sorted=True, copy=False)
+        else:
+            vf = lambda kT: None
+        def _fluxf(kT):
+            kT = self._Tconv(kT)
+            return cf(kT), mf(kT), vf(kT)
+        return _fluxf
+
+
+class TableCIEModel(ThermalSpectralModel):
     r"""
     Initialize a thermal gas emission model from the AtomDB APEC tables
     available at http://www.atomdb.org. This code borrows heavily from Python
@@ -22,11 +75,14 @@ class TableApecModel(ApecGenerator):
         The minimum energy for the spectral model.
     emax : float
         The maximum energy for the spectral model.
-    nchan : integer
-        The number of channels in the spectral model. If one
+    nbins : integer
+        The number of bins in the spectral model. If one
         is thermally broadening lines, it is recommended that 
         this value result in an energy resolution per channel
-        of roughly 1 eV.
+        of roughly 1 eV or smaller.
+    binscale : string, optional
+        The scale of the energy binning: "linear" or "log". 
+        Default: "linear"
     var_elem : list of strings, optional
         The names of elements to allow to vary freely
         from the single abundance parameter. Default:
@@ -36,7 +92,7 @@ class TableApecModel(ApecGenerator):
         not provided, the default SOXS-provided files are used.
     model_vers : string, optional
         The version identifier string for the APEC files, e.g.
-        "3.0.3". Default: 3.0.8
+        "3.0.3". Default: 3.0.9
     thermal_broad : boolean, optional
         Whether or not the spectral lines should be thermally
         broadened. Default: True
@@ -57,95 +113,313 @@ class TableApecModel(ApecGenerator):
         except for elements not listed which are given zero abundance)
         "lodd" : from Lodders, K (2003, ApJ 591, 1220)
     nei : boolean, optional
-        If True, use the non-equilibrium ionization tables. These are
-        not supplied with pyXSIM/SOXS but must be downloaded separately, in
-        which case the *apec_root* parameter must also be set to their
-        location. Default: False
+        If True, use the non-equilibrium ionization tables. Only available
+        for the "apec" model. Default: False
 
     Examples
     --------
-    >>> apec_model = TableApecModel(0.05, 50.0, 1000, apec_vers="3.0.3",
-    ...                             thermal_broad=False)
+    >>> apec_model = TableCIEModel("apec", 0.05, 50.0, 1000, model_vers="3.0.3",
+    ...                            thermal_broad=False)
     """
-    def __init__(self, emin, emax, nchan, var_elem=None,
-                 model_root=None, model_vers=None, 
-                 thermal_broad=True, nolines=False,
-                 abund_table="angr", nei=False):
-        super(TableApecModel, self).__init__(emin, emax, nchan, var_elem=var_elem,
-                                             apec_root=model_root, apec_vers=model_vers, 
-                                             broadening=thermal_broad, nolines=nolines,
-                                             abund_table=abund_table, nei=nei)
-        self.nchan = self.nbins
+    def __init__(self, model, emin, emax, nbins, kT_min, kT_max, binscale="linear", 
+                 var_elem=None, model_root=None, model_vers=None, thermal_broad=True, 
+                 nolines=False, abund_table="angr", nei=False):
+        self.cgen = CIEGenerator(model, emin, emax, nbins, binscale=binscale, 
+                                 var_elem=var_elem, model_root=model_root, 
+                                 model_vers=model_vers, broadening=thermal_broad, 
+                                 nolines=nolines, abund_table=abund_table, nei=nei)
+        self.nbins = self.cgen.nbins
+        self.ebins = self.cgen.ebins
+        self.emid = self.cgen.emid
+        self.var_elem_names = self.cgen.var_elem_names
+        self.var_ion_names = self.cgen.var_ion_names
+        self.atable = self.cgen.atable
+        self.de = np.diff(self.ebins)
+        self.kT_min = kT_min
+        self.kT_max = kT_max
+        self.idx_min = max(np.searchsorted(self.cgen.Tvals, kT_min)-1, 0)
+        self.idx_max = min(np.searchsorted(self.cgen.Tvals, kT_max)+1, self.cgen.nT-1)
+        self.Tvals = self.cgen.Tvals[self.idx_min:self.idx_max]
+        self.nT = self.Tvals.size
+        self.dTvals = np.diff(self.Tvals)
 
-    def prepare_spectrum(self, zobs, kT_min, kT_max):
+    def prepare_spectrum(self, zobs):
         """
         Prepare the thermal model for execution given a redshift *zobs* for the spectrum.
         """
-        idx_min = min(np.searchsorted(self.Tvals, kT_min)-1, 0)
-        idx_max = max(np.searchsorted(self.Tvals, kT_max), self.nT-1)
         cosmic_spec, metal_spec, var_spec = \
-            self._get_table(list(range(idx_min, idx_max+1)), zobs, 0.0)
-        self.cosmic_spec = YTArray(cosmic_spec, "cm**3/s")
-        self.metal_spec = YTArray(metal_spec, "cm**3/s")
-        if var_spec is None:
-            self.var_spec = var_spec
+            self.cgen._get_table(list(range(self.idx_min, self.idx_max)), zobs, 0.0)
+        self.cosmic_spec = cosmic_spec
+        self.metal_spec = metal_spec
+        self.var_spec = var_spec
+        self.cf = interp1d(self.Tvals, self.cosmic_spec, axis=0, fill_value=0.0,
+                           assume_sorted=True, copy=False)
+        self.mf = interp1d(self.Tvals, self.metal_spec, axis=0, fill_value=0.0,
+                           assume_sorted=True, copy=False)
+        if var_spec is not None:
+            self.vf = interp1d(self.Tvals, self.var_spec, axis=1, fill_value=0.0,
+                               assume_sorted=True, copy=False)
         else:
-            self.var_spec = YTArray(var_spec, "cm**3/s")
+            self.vf = None
 
-    def get_spectrum(self, kT):
-        """
-        Get the thermal emission spectrum given a temperature *kT* in keV. 
-        """
-        tindex = np.searchsorted(self.Tvals, kT)-1
-        var_spec = None
-        if tindex >= self.Tvals.shape[0]-1 or tindex < 0:
-            cosmic_spec = YTArray(np.zeros(self.nchan), "cm**3/s")
-            metal_spec = cosmic_spec
-            if self.var_spec is not None:
-                var_spec = YTArray(np.zeros((self.num_var_elem, self.nchan)), "cm**3/s")
+
+class Atable1DSpectralModel(ThermalSpectralModel):
+    _logT = True
+    def __init__(self, sgen):
+        self.sgen = sgen
+        self.nbins = self.sgen.nbins
+        self.ebins = self.sgen.ebins
+        self.emid = self.sgen.emid
+        self.var_elem = self.sgen.var_elem
+        self.var_elem_names = self.sgen.var_elem
+        self.atable = self.sgen.atable
+        self.de = self.sgen.de
+        self.binscale = self.sgen.binscale
+        self.Tvals = self.sgen.Tvals
+
+    def prepare_spectrum(self, zobs):
+        eidxs, ne, ebins, emid, de = self.sgen._get_energies(zobs)
+        cosmic_spec, metal_spec, var_spec = self.sgen._get_table(ne, eidxs, zobs)
+        self.cosmic_spec = 1.0e-14*regrid_spectrum(self.ebins, ebins, cosmic_spec)
+        self.metal_spec = 1.0e-14*regrid_spectrum(self.ebins, ebins, metal_spec)
+        if var_spec is not None:
+            var_spec = 1.0e-14*regrid_spectrum(self.ebins, ebins, var_spec)
+        self.var_spec = var_spec
+        self.cf = interp1d(self.Tvals, self.cosmic_spec, axis=0, fill_value=0.0,
+                           assume_sorted=True, copy=False)
+        self.mf = interp1d(self.Tvals, self.metal_spec, axis=0, fill_value=0.0,
+                           assume_sorted=True, copy=False)
+        if var_spec is not None:
+            self.vf = interp1d(self.Tvals, self.var_spec, axis=1, fill_value=0.0,
+                               assume_sorted=True, copy=False)
         else:
-            dT = (kT-self.Tvals[tindex])/self.dTvals[tindex]
-            cspec_l = self.cosmic_spec[tindex, :]
-            mspec_l = self.metal_spec[tindex, :]
-            cspec_r = self.cosmic_spec[tindex+1, :]
-            mspec_r = self.metal_spec[tindex+1, :]
-            cosmic_spec = cspec_l*(1.-dT)+cspec_r*dT
-            metal_spec = mspec_l*(1.-dT)+mspec_r*dT
+            self.vf = None
+
+
+class MekalSpectralModel(Atable1DSpectralModel):
+    def __init__(self, emin, emax, nbins, binscale="linear", var_elem=None,
+                 abund_table="angr"):
+        mgen = MekalGenerator(emin, emax, nbins, binscale=binscale,
+                              var_elem=var_elem, abund_table=abund_table)
+        super().__init__(mgen)
+        self.var_ion_names = []
+
+
+class CloudyCIESpectralModel(Atable1DSpectralModel):
+    def __init__(self, emin, emax, nbins, binscale="linear", var_elem=None):
+        cgen = CloudyCIEGenerator(emin, emax, nbins, binscale=binscale,
+                                  var_elem=var_elem)
+        super().__init__(cgen)
+        self.var_ion_names = []
+
+
+class IGMSpectralModel(ThermalSpectralModel):
+    _logT = True
+    r"""
+    A spectral model for a thermal plasma including photoionization and 
+    resonant scattering from the CXB based on Khabibullin & Churazov 2019
+    (https://ui.adsabs.harvard.edu/abs/2019MNRAS.482.4972K/) and Churazov 
+    et al. 2001 (https://ui.adsabs.harvard.edu/abs/2001MNRAS.323...93C/).
+
+    For temperatures higher than kT ~ 1.09 keV, a Cloudy-based CIE model 
+    is used to compute the spectrum. 
+ 
+    Assumes the abundance tables from Feldman 1992.
+
+    Table data and README files can be found at
+    https://wwwmpa.mpa-garching.mpg.de/~ildar/igm/v2x/.
+
+    Parameters
+    ----------
+    emin : float, (value, unit) tuple, or :class:`~astropy.units.Quantity`
+        The minimum energy for the spectral model.
+    emax : float, (value, unit) tuple, or :class:`~astropy.units.Quantity`
+        The maximum energy for the spectral model.
+    nbins : integer
+        The number of bins in the spectral model.
+    resonant_scattering : boolean, optional
+        Whether or not to include the effects of resonant scattering
+        from CXB photons. Default: False
+    cxb_factor : float, optional
+        The fraction of the CXB photons that are resonant scattered to enhance
+        the lines. Default: 0.5
+    var_elem : list of strings, optional
+        The names of elements to allow to vary freely
+        from the single abundance parameter. Default:
+        None
+    """
+    def __init__(self, emin, emax, nbins, binscale="linear", resonant_scattering=False, 
+                 cxb_factor=0.5, var_elem=None):
+        self.igen = IGMGenerator(emin, emax, nbins, binscale=binscale,
+                                 resonant_scattering=resonant_scattering,
+                                 cxb_factor=cxb_factor, var_elem=var_elem)
+        self.ebins = self.igen.ebins
+        self.emid = self.igen.emid
+        self.de = self.igen.de
+        self.nbins = nbins
+        self.var_elem = self.igen.var_elem
+        self.nvar_elem = self.igen.nvar_elem
+        self.min_table_kT = 10**self.igen.Tvals[0] / K_per_keV
+        self.max_table_kT = 10**self.igen.Tvals[-1] / K_per_keV
+        self.min_table_nH = 10**self.igen.Dvals[0]
+        self.max_table_nH = 10**self.igen.Dvals[-1]
+        self.Tvals = self.igen.Tvals
+        self.Dvals = self.igen.Dvals
+        self.dTvals = self.igen.dTvals
+        self.dDvals = self.igen.dDvals
+        self.n_T = self.igen.n_T
+        self.n_D = self.igen.n_D
+        self.binscale = self.igen.binscale
+        self.cie_model = CloudyCIESpectralModel(emin, emax, nbins, binscale=self.binscale, 
+                                                var_elem=self.var_elem)
+
+    def prepare_spectrum(self, zobs):
+        """
+        Prepare the thermal model for execution given a redshift *zobs* for the spectrum.
+        """
+        eidxs, ne, ebins, emid, de = self.igen._get_energies(zobs)
+        cosmic_spec, metal_spec, var_spec = self.igen._get_table(ne, eidxs, zobs)
+        self.cosmic_spec = 1.0e-14*regrid_spectrum(self.ebins, ebins, cosmic_spec)
+        self.metal_spec = 1.0e-14*regrid_spectrum(self.ebins, ebins, metal_spec)
+        if var_spec is not None:
+            var_spec = 1.0e-14*regrid_spectrum(self.ebins, ebins, var_spec)
+        self.var_spec = var_spec
+        self.cie_model.prepare_spectrum(zobs)
+
+    def get_spectrum(self, kT, nH):
+        kT = np.atleast_1d(kT)
+        nH = np.atleast_1d(nH)
+        use_igm = (kT >= self.min_table_kT) & (kT <= self.max_table_kT)
+        use_igm &= (nH >= self.min_table_nH) & (nH <= self.max_table_nH)
+        use_cie = ~use_igm
+        cspec = np.zeros((kT.size, self.nbins))
+        mspec = np.zeros((kT.size, self.nbins))
+        if self.var_spec is not None:
+            vspec = np.zeros((self.nvar_elem, kT.size, self.nbins))
+        else:
+            vspec = None
+        n_cie = use_cie.sum()
+        n_igm = use_igm.sum()
+        if n_igm > 0:
+            nHi = nH[use_igm]
+            c1, m1, v1 = self._get_spectrum_2d(kT[use_igm], nHi)
+            cspec[use_igm, :] = c1/nHi[:,np.newaxis]
+            mspec[use_igm, :] = m1/nHi[:,np.newaxis]
             if self.var_spec is not None:
-                vspec_l = self.var_spec[:, tindex, :]
-                vspec_r = self.var_spec[:, tindex+1, :]
-                var_spec = vspec_l*(1.-dT) + vspec_r*dT
-        return cosmic_spec, metal_spec, var_spec
+                vspec[:,use_igm,:] = v1/nHi[np.newaxis,:,np.newaxis]
+        if n_cie > 0:
+            c2, m2, v2 = self.cie_model.get_spectrum(kT[use_cie])
+            cspec[use_cie, :] = c2
+            mspec[use_cie, :] = m2
+            if self.var_spec is not None:
+                vspec[:,use_cie,:] = v2
+        return cspec, mspec, vspec
 
-    def return_spectrum(self, temperature, metallicity, redshift, norm,
-                        velocity=0.0, elem_abund=None):
-        """
-        Given the properties of a thermal plasma, return a spectrum.
+    def _get_spectrum_2d(self, kT, nH):
+        lkT = np.atleast_1d(np.log10(kT*K_per_keV))
+        lnH = np.atleast_1d(np.log10(nH))
+        tidxs = np.searchsorted(self.Tvals, lkT)-1
+        didxs = np.searchsorted(self.Dvals, lnH)-1
+        dT = (lkT - self.Tvals[tidxs]) / self.dTvals[tidxs]
+        dn = (lnH - self.Dvals[didxs]) / self.dDvals[didxs]
+        idx1 = np.ravel_multi_index((didxs+1,tidxs+1), (self.n_D, self.n_T))
+        idx2 = np.ravel_multi_index((didxs+1,tidxs), (self.n_D, self.n_T))
+        idx3 = np.ravel_multi_index((didxs,tidxs+1), (self.n_D, self.n_T))
+        idx4 = np.ravel_multi_index((didxs,tidxs), (self.n_D, self.n_T))
+        dx1 = dT*dn
+        dx2 = dn-dx1
+        dx3 = dT-dx1
+        dx4 = 1.0+dx1-dT-dn
+        cspec = dx1[:,np.newaxis]*self.cosmic_spec[idx1,:]
+        cspec += dx2[:,np.newaxis]*self.cosmic_spec[idx2,:]
+        cspec += dx3[:,np.newaxis]*self.cosmic_spec[idx3,:]
+        cspec += dx4[:,np.newaxis]*self.cosmic_spec[idx4,:]
+        mspec = dx1[:,np.newaxis]*self.metal_spec[idx1,:]
+        mspec += dx2[:,np.newaxis]*self.metal_spec[idx2,:]
+        mspec += dx3[:,np.newaxis]*self.metal_spec[idx3,:]
+        mspec += dx4[:,np.newaxis]*self.metal_spec[idx4,:]
+        if self.var_spec is not None:
+            vspec = dx1[np.newaxis,:,np.newaxis]*self.var_spec[:,idx1,:]
+            vspec += dx2[np.newaxis,:,np.newaxis]*self.var_spec[:,idx2,:]
+            vspec += dx3[np.newaxis,:,np.newaxis]*self.var_spec[:,idx3,:]
+            vspec += dx4[np.newaxis,:,np.newaxis]*self.var_spec[:,idx4,:]
+        else:
+            vspec = None
+        return cspec, mspec, vspec
 
-        Parameters
-        ----------
-        temperature : float
-            The temperature of the plasma in keV.
-        metallicity : float
-            The metallicity of the plasma in solar units.
-        redshift : float
-            The redshift of the plasma.
-        norm : float
-            The normalization of the model, in the standard Xspec units of
-            1.0e-14*EM/(4*pi*(1+z)**2*D_A**2).
-        velocity : float, optional
-            Velocity broadening parameter in km/s. Default: 0.0
-        elem_abund : dict of element name, float pairs
-            A dictionary of elemental abundances to vary
-            freely of the abund parameter. Default: None
-        """
-        spec = super(TableApecModel, self).get_spectrum(temperature, metallicity, 
-                                                        redshift, norm, velocity=velocity,
-                                                        elem_abund=elem_abund)
-        return YTArray(spec.flux*spec.de, "photons/s/cm**2")
+    def make_fluxf(self, emin, emax, energy=False):
+        eidxs = (self.ebins[:-1] > emin) & (self.ebins[1:] < emax)
+        emid = self.emid[eidxs]
+        if energy:
+            cosmic_flux = (self.cosmic_spec[:,eidxs]*emid).sum(axis=-1)
+            metal_flux = (self.metal_spec[:,eidxs]*emid).sum(axis=-1)
+        else:
+            cosmic_flux = self.cosmic_spec[:,eidxs].sum(axis=-1)
+            metal_flux = self.metal_spec[:,eidxs].sum(axis=-1)
+        if self.var_spec is not None:
+            if energy:
+                var_flux = (self.var_spec[:, :, eidxs]*emid).sum(axis=-1)
+            else:
+                var_flux = self.var_spec[:,:,eidxs].sum(axis=-1)
+        else:
+            var_flux = None
+        cie_fluxf = self.cie_model.make_fluxf(emin, emax, energy=energy)
+        def _fluxf(kT, nH):
+            kT = np.atleast_1d(kT)
+            nH = np.atleast_1d(nH)
+            use_igm = (kT >= self.min_table_kT) & (kT <= self.max_table_kT)
+            use_igm &= (nH >= self.min_table_nH) & (nH <= self.max_table_nH)
+            use_cie = ~use_igm
+            cflux = np.zeros(kT.size)
+            mflux = np.zeros(kT.size)
+            if self.var_spec is not None:
+                vflux = np.zeros((self.nvar_elem, kT.size))
+            else:
+                vflux = None
+            n_cie = use_cie.sum()
+            n_igm = use_igm.sum()
+            if n_igm > 0:
+                nHi = nH[use_igm]
+                c1, m1, v1 = self._get_flux_2d(kT[use_igm], nHi, cosmic_flux,
+                                               metal_flux, var_flux)
+                cflux[use_igm] = c1/nHi
+                mflux[use_igm] = m1/nHi
+                if self.var_spec is not None:
+                    vflux[:,use_igm] = v1/nHi[np.newaxis,:]
+            if n_cie > 0:
+                c2, m2, v2 = cie_fluxf(kT[use_cie])
+                cflux[use_cie] = c2
+                mflux[use_cie] = m2
+                if self.var_spec is not None:
+                    vflux[:,use_cie] = v2
+            return cflux, mflux, vflux
+        return _fluxf
 
-
-thermal_models = {"apec": TableApecModel}
+    def _get_flux_2d(self, kT, nH, cf, mf, vf):
+        lkT = np.atleast_1d(np.log10(kT*K_per_keV))
+        lnH = np.atleast_1d(np.log10(nH))
+        tidxs = np.searchsorted(self.Tvals, lkT)-1
+        didxs = np.searchsorted(self.Dvals, lnH)-1
+        dT = (lkT - self.Tvals[tidxs]) / self.dTvals[tidxs]
+        dn = (lnH - self.Dvals[didxs]) / self.dDvals[didxs]
+        idx1 = np.ravel_multi_index((didxs+1,tidxs+1), (self.n_D, self.n_T))
+        idx2 = np.ravel_multi_index((didxs+1,tidxs), (self.n_D, self.n_T))
+        idx3 = np.ravel_multi_index((didxs,tidxs+1), (self.n_D, self.n_T))
+        idx4 = np.ravel_multi_index((didxs,tidxs), (self.n_D, self.n_T))
+        dx1 = dT*dn
+        dx2 = dn-dx1
+        dx3 = dT-dx1
+        dx4 = 1.0+dx1-dT-dn
+        cflux = dx1*cf[idx1]+dx2*cf[idx2]+dx3*cf[idx3]+dx4*cf[idx4]
+        mflux = dx1*mf[idx1]+dx2*mf[idx2]+dx3*mf[idx3]+dx4*mf[idx4]
+        if vf is not None:
+            vflux = dx1[np.newaxis,:]*vf[:,idx1]
+            vflux += dx2[np.newaxis,:]*vf[:,idx2]
+            vflux += dx3[np.newaxis,:]*vf[:,idx3]
+            vflux += dx4[np.newaxis,:]*vf[:,idx4]
+        else:
+            vflux = None
+        return cflux, mflux, vflux
 
 
 class AbsorptionModel:
@@ -202,12 +476,13 @@ class TBabsModel(AbsorptionModel):
     """
     _name = "tbabs"
 
-    def __init__(self, nH):
+    def __init__(self, nH, abund_table="angr"):
         self.nH = YTQuantity(nH, "1.0e22*cm**-2")
+        self.abund_table = abund_table
 
     def get_absorb(self, e):
         e = np.array(e)
-        return get_tbabs_absorb(e, self.nH.v)
+        return get_tbabs_absorb(e, self.nH.v, abund_table=self.abund_table)
 
 
 class WabsModel(AbsorptionModel):
@@ -226,8 +501,9 @@ class WabsModel(AbsorptionModel):
     """
     _name = "wabs"
 
-    def __init__(self, nH):
+    def __init__(self, nH, abund_table="angr"):
         self.nH = YTQuantity(nH, "1.0e22*cm**-2")
+        self.abund_table = abund_table
 
     def get_absorb(self, e):
         e = np.array(e)

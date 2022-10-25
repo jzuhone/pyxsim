@@ -21,8 +21,8 @@ pyXSIM Documentation
 What is pyXSIM?
 ---------------
 
-pyXSIM is a Python package for simulating X-ray observations from astrophysical 
-sources.
+pyXSIM is a Python package for simulating X-ray emission from astrophysical
+sources. 
 
 X-rays probe the high-energy universe, from hot galaxy clusters to compact 
 objects such as neutron stars and black holes and many interesting sources in 
@@ -35,27 +35,6 @@ observations it produces in various ways, as well as ways to export the
 simulated X-ray events to other software packages to simulate the end products
 of specific X-ray observatories. 
 
-The Heritage of pyXSIM
-----------------------
-
-pyXSIM is an implementation of the 
-`PHOX <http://www.mpa-garching.mpg.de/~kdolag/Phox/>`_
-algorithm, developed for constructing mock X-ray observations from SPH datasets
-by Veronica Biffi and Klaus Dolag. There are two relevant papers:
-
-`Biffi, V., Dolag, K., Bohringer, H., & Lemson, G. 2012, MNRAS, 420,
-3545 <http://adsabs.harvard.edu/abs/2012MNRAS.420.3545B>`_
-
-`Biffi, V., Dolag, K., Bohringer, H. 2013, MNRAS, 428,
-1395 <http://adsabs.harvard.edu/abs/2013MNRAS.428.1395B>`_
-
-pyXSIM had a previous life as the ``photon_simulator`` analysis module as a part
-of the `yt Project <http://yt-project.org>`_. pyXSIM still depends critically on
-yt to provide the link between the simulation data and the algorithm for 
-generating the X-ray photons. For detailed information about the design of the 
-algorithm in yt, check out
-`the SciPy 2014 Proceedings. <http://conference.scipy.org/proceedings/scipy2014/zuhone.html>`_
-
 License
 -------
 
@@ -65,7 +44,7 @@ pyXSIM is released under a
 Current Version
 ---------------
 
-The current stable version is 3.0.0. See the :ref:`changelog` for details on 
+The current stable version is 4.0.0. See the :ref:`changelog` for details on 
 changes from previous versions.
 
 Table of Contents
@@ -75,18 +54,16 @@ Table of Contents
    :maxdepth: 2
 
    installing
-   v2_to_v3
-   how_it_works
-   basic_yt_concepts
-   photon_lists
-   source_models
-   absorb_models    
-   event_lists
-   light_cone
-   instruments
+   v3_to_v4
+   basic_concepts
+   source_models/index
+   xray_fields
+   spectra
+   photon_lists/index
    parallel
    getting_help
    cookbook/index
+   api/index
 
 Indices and tables
 ==================

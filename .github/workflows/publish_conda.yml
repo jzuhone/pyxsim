@@ -1,0 +1,39 @@
+
+name: Build and upload conda packages
+
+on:
+  release:
+    types: ['released', 'prereleased']
+
+# workflow_dispatch:        # Un comment line if you also want to trigger action manually
+
+jobs:
+  conda_deployment_with_new_tag:
+    name: Conda deployment of package with Python ${{ matrix.python-version }} and ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-18.04, macos-10.15]
+        python-version: ["3.8", "3.9", "3.10"]
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Conda environment creation and activation
+        uses: s-weigand/setup-conda@v1.1.1
+        with:
+          update-conda: true
+          conda-channels: conda-forge, default, jzuhone
+          activate-conda: true
+          python-version: ${{matrix.python-version}}
+      - name: Install dependencies
+        shell: bash
+        run: source ./conda/ci_install.sh
+      - name: Build and upload the conda packages
+        uses: uibcdf/action-build-and-upload-conda-packages@v1.1-beta.1
+        with:
+          meta_yaml_dir: conda
+          python-version: ${{ matrix.python-version }} # Values previously defined in `matrix`
+          user: jzuhone
+          label: auto
+          token: ${{ secrets.ANACONDA_TOKEN }} # Replace with the right name of your secret

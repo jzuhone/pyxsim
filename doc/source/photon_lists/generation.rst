@@ -1,13 +1,12 @@
-.. _photon-lists:
+.. _generating-photon-lists:
 
-Photon Lists
-============
+Generating Photon Lists
+=======================
 
-The first step in creating synthetic X-ray observations with pyXSIM is that of
-generating a photon list. A photon list is a three-dimensional HDF5 dataset that
-contains a distribution of cell positions, velocities, and photon energies
-within each cell. Once created, it be used to generated simulated X-ray events
-from a particular line of sight. 
+A photon list in pyXSIM is a three-dimensional HDF5 dataset that contains a 
+distribution of cell or particle positions, velocities, and photon energies
+within each cell or particle. Once created, it be used to generated simulated 
+X-ray events from a particular line of sight. 
 
 Generating a New Photon List from a Data Source
 -----------------------------------------------
@@ -68,6 +67,14 @@ The arguments taken by :func:`~pyxsim.photon_list.make_photons` are as follows:
   ``['velocity_x', 'velocity_y', 'velocity_z']`` for grid datasets, and 
   ``['particle_velocity_x', 'particle_velocity_y', 'particle_velocity_z']`` 
   for particle datasets.
+* ``bulk_velocity`` (optional): A 3-element array or list specifying the local 
+  velocity frame of reference. If not a :class:`~yt.units.yt_array.YTArray`, 
+  it is assumed to have units of km/s. Default: [0.0, 0.0, 0.0] km/s.
+* ``observer`` (optional): Whether the observer is "external", and the flat-sky
+  approximation can be assumed for the purposes of projecting photons onto the 
+  sky, or the observer is "internal" and a spherical projection is assumed.
+  Default is "external". For more details on the "internal" observing mode see 
+  :ref:`allsky`.
 
 As an example, we'll assume we have created a ``source_model`` representing the
 thermal emission from the plasma (see :ref:`source-models` for more details on
@@ -128,7 +135,6 @@ fields, you can specify them using the ``velocity_fields`` keyword argument:
                                              exp_time, source_model, 
                                              center=center, dist=(4., "kpc"), 
                                              velocity_fields=vfields)
-
 
 Merging Photon Lists
 --------------------

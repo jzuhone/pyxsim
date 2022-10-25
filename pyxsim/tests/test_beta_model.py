@@ -3,9 +3,10 @@ A unit test for the pyxsim analysis module.
 """
 
 from pyxsim import \
-    TableApecModel, TBabsModel, \
-    ThermalSourceModel, make_photons, \
+    CIESourceModel, make_photons, \
     project_photons, EventList
+from pyxsim.spectral_models import \
+    TableCIEModel, TBabsModel
 from pyxsim.tests.utils import \
     BetaModelSource, ParticleBetaModelSource
 import numpy as np
@@ -13,6 +14,7 @@ from yt.utilities.physical_constants import clight
 import os
 import tempfile
 import shutil
+from numpy.testing import assert_allclose
 from sherpa.astro.ui import load_user_model, add_user_pars, \
     load_pha, ignore, fit, set_model, set_stat, set_method, \
     get_fit_results
@@ -21,6 +23,7 @@ from soxs.instrument import RedistributionMatrixFile, \
 from soxs.events import write_spectrum
 from soxs.instrument_registry import get_instrument_from_registry, \
     make_simple_instrument
+from soxs import ApecGenerator
 from yt.utilities.cosmology import Cosmology
 
 cosmo = Cosmology()
@@ -35,28 +38,29 @@ except KeyError:
 
 rmf = RedistributionMatrixFile(mucal_spec["rmf"])
 arf = AuxiliaryResponseFile(mucal_spec['arf'])
-fit_model = TableApecModel(rmf.elo[0], rmf.ehi[-1], rmf.n_e)
-agen_var = TableApecModel(rmf.elo[0], rmf.ehi[-1], rmf.n_e,
-                          var_elem=["O", "Ca"], thermal_broad=True)
+fit_model = TableCIEModel("apec", rmf.elo[0], rmf.ehi[-1], rmf.n_e,
+                          0.1, 10.0).cgen
+agen_var = TableCIEModel("apec", rmf.elo[0], rmf.ehi[-1], rmf.n_e,
+                         0.1, 10.0, var_elem=["O", "Ca"], thermal_broad=True).cgen
 
 
 def mymodel(pars, x, xhi=None):
     dx = x[1]-x[0]
     tm = TBabsModel(pars[0])
     tbabs = tm.get_absorb(x+0.5*dx)
-    bapec = fit_model.return_spectrum(pars[1], pars[2], pars[3], pars[4], velocity=pars[5])
+    bapec = fit_model.get_spectrum(pars[1], pars[2], pars[3], pars[4], velocity=pars[5])
     eidxs = np.logical_and(rmf.elo >= x[0]-0.5*dx, rmf.elo <= x[-1]+0.5*dx)
-    return tbabs*bapec[eidxs]
+    return tbabs*(bapec.flux*bapec.de)[eidxs]
 
 
 def mymodel_var(pars, x, xhi=None):
     dx = x[1]-x[0]
     tm = TBabsModel(pars[0])
     tbabs = tm.get_absorb(x+0.5*dx)
-    bapec = agen_var.return_spectrum(pars[1], pars[2], pars[3], pars[4],
-                                     elem_abund={"O": pars[5], "Ca": pars[6]})
+    bapec = agen_var.get_spectrum(pars[1], pars[2], pars[3], pars[4],
+                                  elem_abund={"O": pars[5], "Ca": pars[6]})
     eidxs = np.logical_and(rmf.elo >= x[0]-0.5*dx, rmf.elo <= x[-1]+0.5*dx)
-    return tbabs*bapec[eidxs]
+    return tbabs*(bapec.flux*bapec.de)[eidxs]
 
 
 def test_beta_model():
@@ -110,8 +114,7 @@ def do_beta_model(source, axis="z", prng=None):
     kT_sim = source.kT
     Z_sim = source.Z
 
-    thermal_model = ThermalSourceModel("apec", 0.1, 11.5, 20000, Z_sim,
-                                       prng=prng)
+    thermal_model = CIESourceModel("apec", 0.1, 11.5, 20000, Z_sim, prng=prng)
     n_photons, n_cells = make_photons("my_photons", sphere, redshift, 
                                       A, exp_time, thermal_model)
 
@@ -121,8 +124,8 @@ def do_beta_model(source, axis="z", prng=None):
     norm_sim *= 1.0e-14/(4*np.pi*D_A*D_A*(1.+redshift)*(1.+redshift))
     norm_sim = float(norm_sim.in_cgs())
 
-    v1, v2 = sphere.quantities.weighted_variance(("gas", "velocity_z"),
-                                                 ("gas", "emission_measure"))
+    v1, v2 = sphere.quantities.weighted_standard_deviation(("gas", "velocity_z"),
+                                                           ("gas", "emission_measure"))
 
     if isinstance(axis, str):
         if axis == "z":
@@ -188,7 +191,7 @@ def test_vapec_beta_model():
     curdir = os.getcwd()
     os.chdir(tmpdir)
 
-    prng = 45
+    prng = 47
 
     ds = bms.ds
 
@@ -207,10 +210,8 @@ def test_vapec_beta_model():
     var_elem = {"O": ("stream", "oxygen"),
                 "Ca": ("stream", "calcium")}
 
-    thermal_model = ThermalSourceModel("apec", 0.1, 11.5, 20000, 
-                                       ("gas","metallicity"),
-                                       var_elem=var_elem,
-                                       prng=prng)
+    thermal_model = CIESourceModel("apec", 0.1, 11.5, 20000, ("gas","metallicity"),
+                                   var_elem=var_elem, prng=prng)
 
     n_photons = make_photons("my_photons", sphere, redshift, A, exp_time,
                              thermal_model)
@@ -261,6 +262,81 @@ def test_vapec_beta_model():
 
     os.chdir(curdir)
     shutil.rmtree(tmpdir)
+
+
+def test_beta_model_fields():
+    bms = BetaModelSource()
+    ds = bms.ds
+
+    redshift = 0.2
+
+    sphere = ds.sphere("c", (0.5, "Mpc"))
+
+    kT_sim = bms.kT
+    Z_sim = bms.Z
+
+    D_A = cosmo.angular_diameter_distance(0.0, redshift).to_value("cm")
+    D_L = cosmo.luminosity_distance(0.0, redshift).to_value("cm")
+
+    norm = 1.0e-14*sphere.sum(("gas", "emission_measure")).v/(4.0*np.pi*D_A*D_A*(1+redshift)**2)
+
+    agen = ApecGenerator(0.1, 11.5, 2000)
+
+    spec = agen.get_spectrum(kT_sim, Z_sim, redshift, norm)
+    pflux, eflux = spec.get_flux_in_band(0.5/(1.0+redshift), 7.0/(1.0+redshift))
+    lum = 4.0*np.pi*D_L**2*eflux.value
+    plum = 4.0*np.pi*D_L**2*pflux.value/(1.0+redshift)
+
+    thermal_model = CIESourceModel("apec", 0.1, 11.5, 2000, Z_sim)
+
+    xray_fields = thermal_model.make_source_fields(ds, 0.5, 7.0)
+    lum1 = sphere.sum(xray_fields[1]).value
+    plum1 = (sphere[xray_fields[-1]]*sphere["cell_volume"]).sum().value
+
+    int_fields = thermal_model.make_intensity_fields(ds, 0.5/(1.0+redshift), 7.0/(1.0+redshift),
+                                                     redshift=redshift)
+    angular_scale = 1.0/cosmo.angular_scale(0.0, redshift).to("cm/arcsec")
+
+    eflux2 = (sphere[int_fields[0]]*sphere["cell_volume"]).sum()*angular_scale**2
+    pflux2 = (sphere[int_fields[1]]*sphere["cell_volume"]).sum()*angular_scale**2
+
+    assert np.abs(lum1-lum)/lum < 0.001
+    assert np.abs(plum1-plum)/plum < 0.01
+
+    assert np.abs(eflux2.value-eflux.value)/eflux.value < 0.001
+    assert np.abs(pflux2.value-pflux.value)/pflux.value < 0.01
+
+
+def test_beta_model_spectrum():
+    bms = BetaModelSource()
+    ds = bms.ds
+
+    redshift = 0.2
+
+    sphere = ds.sphere("c", (0.5, "Mpc"))
+
+    kT_sim = bms.kT
+    Z_sim = bms.Z
+
+    D_A = cosmo.angular_diameter_distance(0.0, redshift).to_value("cm")
+
+    norm1 = 1.0e-14*sphere.sum(("gas", "emission_measure")).v
+    norm2 = norm1/(4.0*np.pi*D_A*D_A*(1+redshift)**2)
+
+    agen = ApecGenerator(0.2, 7.0, 2000)
+
+    spec1 = agen.get_spectrum(kT_sim, Z_sim, redshift, norm2)
+
+    thermal_model = CIESourceModel("apec", 0.2, 7.0, 2000, Z_sim)
+    spec2 = thermal_model.make_spectrum(sphere, 0.2, 7.0, 2000, redshift=redshift, 
+                                        cosmology=cosmo)
+    assert_allclose(spec1.flux.value, spec2.flux.value)
+
+    spec3 = agen.get_spectrum(kT_sim, Z_sim, 0.0, norm1)
+
+    spec4 = thermal_model.make_spectrum(sphere, 0.2, 7.0, 2000)
+
+    assert_allclose(spec3.flux.value, spec4.flux.value)
 
 
 if __name__ == "__main__":

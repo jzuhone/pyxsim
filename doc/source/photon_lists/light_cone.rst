@@ -15,8 +15,8 @@ see `this documentation <https://yt-astro-analysis.readthedocs.io/en/latest/ligh
 
     This functionality requires installing the 
     `yt_astro_analysis package <https://yt-astro-analysis.readthedocs.io/>`_,
-    and it should be installed from source. To do this, checkout the 
-    `installation documentation <https://yt-astro-analysis.readthedocs.io/en/latest/Installation.html#installing-from-source>`_.
+    To do this, checkout the 
+    `installation documentation <https://yt-astro-analysis.readthedocs.io/en/latest/Installation.html>`_.
 
 The :class:`~pyxsim.source_generators.light_cone.XrayLightCone` object allows 
 one to make a projected set of X-ray events from a light cone solution, 
@@ -108,4 +108,4 @@ like this:
     events = pyxsim.EventList("enzo_64_events")
     events.write_fits_image("light_cone_img.fits", fov, 1024)
 
-.. image:: _images/light_cone.png
+.. image:: ../_images/light_cone.png

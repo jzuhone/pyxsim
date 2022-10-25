@@ -3,6 +3,9 @@ from astropy.units import Quantity
 import logging
 from more_itertools import always_iterable
 import numpy as np
+from soxs.constants import elem_names, \
+    atomic_weights, abund_tables
+
 
 pyxsimLogger = logging.getLogger("pyxsim")
 
@@ -121,9 +124,8 @@ def merge_files(input_files, output_file, overwrite=False,
 
     skip = [exp_time_key] if add_exposure_times else []
     for fn in input_files[1:]:
-        f = h5py.File(fn, "r")
-        validate_parameters(f_in["parameters"], f["parameters"], skip=skip)
-        f.close()
+        with h5py.File(fn, "r") as f:
+            validate_parameters(f_in["parameters"], f["parameters"], skip=skip)
 
     f_in.close()
 
@@ -131,14 +133,13 @@ def merge_files(input_files, output_file, overwrite=False,
     tot_exp_time = 0.0
 
     for i, fn in enumerate(input_files):
-        f = h5py.File(fn, "r")
-        if add_exposure_times:
-            tot_exp_time += f["/parameters"][exp_time_key][()]
-        else:
-            tot_exp_time = max(tot_exp_time, f["/parameters"][exp_time_key][()])
-        for key in f["/data"]:
-            data[key].append(f["/data"][key][:])
-        f.close()
+        with h5py.File(fn, "r") as f:
+            if add_exposure_times:
+                tot_exp_time += f["/parameters"][exp_time_key][()]
+            else:
+                tot_exp_time = max(tot_exp_time, f["/parameters"][exp_time_key][()])
+            for key in f["/data"]:
+                data[key].append(f["/data"][key][:])
 
     p_out[exp_time_key] = tot_exp_time
 
@@ -148,3 +149,60 @@ def merge_files(input_files, output_file, overwrite=False,
 
     f_out.close()
 
+
+def compute_elem_mass_fraction(elem, abund_table="angr"):
+    if isinstance(elem, str):
+        elem = elem_names.index(elem)
+    atable = abund_tables[abund_table]
+    mZ = (atomic_weights[3:]*atable[3:]).sum()
+    mE = atomic_weights[elem]*atable[elem]
+    return mE/mZ
+
+
+def create_metal_fields(ds, metallicity_field, elements, abund_table):
+    """
+    Create a set of metal abundance fields based on an abundance table
+    for a dataset that does not have them. An overall metallicity field
+    is required to scale the individual abundances by.
+    
+    Parameters
+    ----------
+    ds : :class:`~yt.data_objects.static_output.Dataset`
+        The dataset object for which this field will be created.
+    metallicity_field : 2-tuple of strings
+        The metallicity field of the dataset.
+    elements : string or list of strings
+        The element or elements to make fields for.
+    abund_table : string
+        The abundance table to use when computing the fields for the
+        individual elements.
+    """
+    elements = ensure_list(elements)
+    def make_metal_field(elem):
+        fac = compute_elem_mass_fraction(elem, abund_table=abund_table)
+        def _metal_field(field, data):
+            return fac*data[metallicity_field].to("dimensionless")
+        return _metal_field
+    mfields = []
+    for elem in elements:
+        func = make_metal_field(elem)
+        mfield = (metallicity_field[0], f"{elem}_fraction")
+        ds.add_field(mfield, func, sampling_type="local", units="")
+        mfields.append(mfield)
+    return mfields
+
+
+def compute_H_abund(abund_table):
+    return atomic_weights[1]/(atomic_weights*abund_tables[abund_table]).sum()
+
+
+class ParallelProgressBar:
+    def __init__(self, title):
+        self.title = title
+        mylog.info(f"Starting '{title}'")
+
+    def update(self, *args, **kwargs):
+        return
+
+    def close(self):
+        mylog.info(f"Finishing '{self.title}'")

@@ -3,6 +3,46 @@
 ChangeLog
 =========
 
+Version 4.0
+-----------
+
+This is a major update to pyXSIM which incldues many new features.
+
+* In addition to the already existing mode of generating photon lists for 
+  producing synthetic observations, pyXSIM now has two new modes: creating
+  X-ray emission, luminosity, and intensity fields for use in yt (see :ref:`xray-fields`)
+  and creating spectra from yt data containers (see :ref:`xray-spectra`). 
+* Many changes to thermal sources, all of which are detailed in :ref:`thermal-sources`:
+  - ``ThermalSourceModel``, the class for modeling thermal emission spectra,
+    has been refactored into three new classes: 
+    :class:`~pyxsim.source_models.thermal_sources.CIESourceModel`,
+    :class:`~pyxsim.source_models.thermal_sources.NEISourceModel`, and
+    :class:`~pyxsim.source_models.thermal_sources.IGMSourceModel`. For sources
+    in CIE, it is now possible to use SPEX, MeKaL, and Cloudy CIE models for
+    the spectra. The new IGM model includes photoionization and resonant 
+    scattering off of the CXB.
+  - There is now no default value for the ``max_density`` parameter in 
+    ``ThermalSourceModel`` instances (previously it was ``max_density=5e-25``).
+  - ``ThermalSourceModel`` subclasses can now use log-spaced energy binning
+    for the spectral model.
+  - It is now possible to specify a yt field that allows for the hydrogen
+    fraction to spatially vary for thermal sources. 
+  - Abundance tables from Feldman (1996) and Cloudy 17.03 have been added as options
+    for specifying solar abundances.
+* When creating a photon list, it is now possible to add a ``bulk_velocity`` 
+  parameter, which will change the frame of reference for the velocity fields
+  used in Doppler shifting of photons. See :ref:`generating-photon-lists` for more
+  details.
+* A new (and experimental) mode for creating all-sky mock observations using 
+  "internal" observers has been added to pyXSIM. See :ref:`allsky` for more details. 
+* A new option for using a flat-field projection when producing an event list has
+  been added. See :ref:`event-lists` for more details.
+* A new option for saving the line-of-sight coordinates when producing an event list 
+  has been added. See :ref:`event-lists` for more details.
+* When producing an event list, it is now possible to change the abundance table
+  assumed if one is using the "TBabs" model for foreground Galactic absorption. See
+  :ref:`event-lists` for more details. 
+
 Version 3.0.1
 -------------
 
