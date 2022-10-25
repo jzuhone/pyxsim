@@ -23,7 +23,7 @@ setup(name='pyxsim',
       author_email='jzuhone@gmail.com',
       url='http://github.com/jzuhone/pyxsim',
       install_requires=["numpy", "astropy>=4.0", "h5py>=3.0", "scipy", "yt>=4.1.1", 
-                        "soxs>=4.0b5", "tqdm"],
+                        "soxs>=4.0.0", "tqdm"],
       include_package_data=True,
       ext_modules=cython_extensions,
       classifiers=[
