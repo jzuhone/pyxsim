@@ -3,8 +3,22 @@
 ChangeLog
 =========
 
-Version 4.0
------------
+Version 4.0.1
+-------------
+
+This is a critical bugfix update to pyXSIM. The only change is that this version 
+has a minimum requirement of yt 4.1.2, which fixes a bug in which the number density
+of hydrogen nuclei for certain Arepo datasets (including those from Illustris TNG) 
+was a factor of 2 too high. This, in turn, resulted in emission measures that were
+a factor 2 too high, and also affects calculations that include photoionization,
+which depend on the number density of hydrogen nuclei.
+
+The bug, and its fix, are detailed here:
+
+https://github.com/yt-project/yt/pull/4211
+
+Version 4.0.0
+-------------
 
 This is a major update to pyXSIM which incldues many new features.
 
@@ -13,22 +27,21 @@ This is a major update to pyXSIM which incldues many new features.
   X-ray emission, luminosity, and intensity fields for use in yt (see :ref:`xray-fields`)
   and creating spectra from yt data containers (see :ref:`xray-spectra`). 
 * Many changes to thermal sources, all of which are detailed in :ref:`thermal-sources`:
-  - ``ThermalSourceModel``, the class for modeling thermal emission spectra,
-    has been refactored into three new classes: 
-    :class:`~pyxsim.source_models.thermal_sources.CIESourceModel`,
-    :class:`~pyxsim.source_models.thermal_sources.NEISourceModel`, and
-    :class:`~pyxsim.source_models.thermal_sources.IGMSourceModel`. For sources
-    in CIE, it is now possible to use SPEX, MeKaL, and Cloudy CIE models for
-    the spectra. The new IGM model includes photoionization and resonant 
-    scattering off of the CXB.
-  - There is now no default value for the ``max_density`` parameter in 
-    ``ThermalSourceModel`` instances (previously it was ``max_density=5e-25``).
-  - ``ThermalSourceModel`` subclasses can now use log-spaced energy binning
-    for the spectral model.
-  - It is now possible to specify a yt field that allows for the hydrogen
-    fraction to spatially vary for thermal sources. 
-  - Abundance tables from Feldman (1996) and Cloudy 17.03 have been added as options
-    for specifying solar abundances.
+    * Modeling thermal emission spectra has been refactored into three new classes: 
+      :class:`~pyxsim.source_models.thermal_sources.CIESourceModel`,
+      :class:`~pyxsim.source_models.thermal_sources.NEISourceModel`, and
+      :class:`~pyxsim.source_models.thermal_sources.IGMSourceModel`. For sources
+      in CIE, it is now possible to use SPEX, MeKaL, and Cloudy CIE models for
+      the spectra. The new IGM model includes photoionization and resonant 
+      scattering off of the CXB.
+    * There is now no default value for the ``max_density`` parameter in 
+      ``ThermalSourceModel`` instances (previously it was ``max_density=5e-25``).
+    * ``ThermalSourceModel`` subclasses can now use log-spaced energy binning
+      for the spectral model.
+    * It is now possible to specify a yt field that allows for the hydrogen
+      fraction to spatially vary for thermal sources. 
+    * Abundance tables from Feldman (1996) and Cloudy 17.03 have been added as options
+      for specifying solar abundances.
 * When creating a photon list, it is now possible to add a ``bulk_velocity`` 
   parameter, which will change the frame of reference for the velocity fields
   used in Doppler shifting of photons. See :ref:`generating-photon-lists` for more
