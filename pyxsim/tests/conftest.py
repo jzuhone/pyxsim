@@ -16,7 +16,10 @@ def answer_store(request):
 
 @pytest.fixture()
 def answer_dir(request):
-    ad = os.path.abspath(request.config.getoption('--answer_dir'))
+    ad = request.config.getoption("--answer_dir")
+    if ad is None:
+        pytest.skip("No answer directory")
+    ad = os.path.abspath(ad)
     if not os.path.exists(ad):
         os.makedirs(ad)
     return ad
