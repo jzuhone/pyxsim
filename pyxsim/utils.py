@@ -164,7 +164,7 @@ def create_metal_fields(ds, metallicity_field, elements, abund_table):
     Create a set of metal abundance fields based on an abundance table
     for a dataset that does not have them. An overall metallicity field
     is required to scale the individual abundances by.
-    
+
     Parameters
     ----------
     ds : :class:`~yt.data_objects.static_output.Dataset`

@@ -104,8 +104,8 @@ class EventList:
                 x.append(xx[keep])
                 y.append(yy[keep])
 
-        mylog.info(f"Threw out {self.tot_num_events-n_events} events because "
-                   f"they fell outside the field of view.")
+        mylog.info("Threw out %d events because they fell outside the "
+                   "field of view.", self.tot_num_events-n_events)
 
         col_e = fits.Column(name='ENERGY', format='E', unit='eV',
                             array=np.concatenate(e)*1000.0)
@@ -172,7 +172,7 @@ class EventList:
         from soxs.simput import SimputCatalog, SimputPhotonList
         from astropy.coordinates import SkyCoord
         simput_file = f"{prefix}_simput.fits"
-        
+
         begin_cat = True
         for i, fn in enumerate(self.filenames):
             if len(self.filenames) == 1:
@@ -206,7 +206,7 @@ class EventList:
                         cat.append(src, src_filename=phlist_file,
                                    overwrite=overwrite)
                 else:
-                    mylog.warning(f"No events found in file {fn}, so skipping.")
+                    mylog.warning("No events found in file %s, so skipping.", fn)
 
     def write_fits_image(self, imagefile, fov, nx, emin=None,
                          emax=None, overwrite=False):

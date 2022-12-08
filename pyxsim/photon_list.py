@@ -201,7 +201,7 @@ def make_photons(photon_prefix, data_source, redshift, area,
             mylog.warning("Redshift must be zero for internal observers. "
                           "Resetting redshift to 0.0.")
             redshift = 0.0
-        
+
     if isinstance(center, str):
         if center == "center" or center == "c":
             parameters["center"] = ds.domain_center
@@ -249,7 +249,7 @@ def make_photons(photon_prefix, data_source, redshift, area,
                        f"omega_matter = {cosmo.omega_matter}, "
                        f"omega_lambda = {cosmo.omega_lambda}")
         else:
-            mylog.info(f"Observing local source at distance {D_A}.")
+            mylog.info("Observing local source at distance %g.", D_A)
     else:
         mylog.info("The observer is internal to the source.")
 
@@ -389,8 +389,8 @@ def make_photons(photon_prefix, data_source, redshift, area,
     all_ncells = comm.mpi_allreduce(n_cells)
 
     mylog.info("Finished generating photons.")
-    mylog.info(f"Number of photons generated: {all_nphotons}")
-    mylog.info(f"Number of cells with photons: {all_ncells}")
+    mylog.info("Number of photons generated: %d", all_nphotons)
+    mylog.info("Number of cells with photons: %d", all_ncells)
 
     return all_nphotons, all_ncells
 
@@ -474,8 +474,8 @@ def _project_photons(obs, photon_prefix, event_prefix, normal,
 
     if d["energy"].size == 0:
 
-        mylog.warning(f"No photons are in file {photon_file}, so "
-                      f"I am done.")
+        mylog.warning("No photons are in file %s, so I am done.",
+                      photon_file)
         n_events = 0
 
     else:
@@ -558,16 +558,16 @@ def _project_photons(obs, photon_prefix, event_prefix, normal,
 
                     if data_type == "particles":
                         dx *= 0.5
-                    
+
                     xsky, ysky, los = scatter_events(norm, prng, kernel,
                                                      data_type, num_det, det, n_ph,
                                                      x, y, z, dx, x_hat, y_hat, z_hat)
-    
+
                     if data_type == "cells" and sigma_pos is not None:
                         sigma = sigma_pos*np.repeat(dx, n_ph)[det]
                         xsky += sigma*prng.normal(loc=0.0, scale=1.0, size=num_det)
                         ysky += sigma*prng.normal(loc=0.0, scale=1.0, size=num_det)
-    
+
                     xsky /= D_A
                     ysky /= D_A
 
@@ -668,12 +668,13 @@ def project_photons(photon_prefix, event_prefix, normal, sky_center,
         "lodd" : from Lodders, K (2003, ApJ 591, 1220)
         "cl17.03" : the default abundance table in Cloudy 17.03
     no_shifting : boolean, optional
-        If set, the photon energies will not be Doppler shifted.
+        If set, the photon energies will not be Doppler shifted. Default: False
     north_vector : a sequence of floats
         A vector defining the "up" direction. This option sets the
         orientation of the plane of projection. If not set, an arbitrary
-        grid-aligned north_vector is chosen. Ignored in the case where a
-        particular axis (e.g., "x", "y", or "z") is explicitly specified.
+        grid-aligned north_vector perpendicular to the normal is chosen. 
+        Ignored in the case where a particular axis (e.g., "x", "y", or 
+        "z") is explicitly specified.
     sigma_pos : float, optional
         Apply a gaussian smoothing operation to the sky positions of the
         events. This may be useful when the binned events appear blocky due
@@ -719,8 +720,8 @@ def project_photons(photon_prefix, event_prefix, normal, sky_center,
 
 def project_photons_allsky(photon_prefix, event_prefix, normal,
                            absorb_model=None, nH=None, abund_table="angr",
-                           no_shifting=False, kernel="top_hat", save_los=False, 
-                           prng=None):
+                           no_shifting=False, center_vector=None,
+                           kernel="top_hat", save_los=False, prng=None):
     r"""
     Projects photons onto the sky sphere given a normal vector ("z" or "up" in
     spherical coordinates), and stores them in an HDF5 dataset which contains
@@ -738,7 +739,8 @@ def project_photons_allsky(photon_prefix, event_prefix, normal,
         if run in parallel, the filename will be "{event_prefix}.{mpi_rank}.h5".
     normal : array-like
         The vector determining the "z" or "up" vector for the spherical coordinate
-        system for the all-sky projection, something like [1.0, 2.0, -3.0]
+        system for the all-sky projection, something like [1.0, 2.0, -3.0]. It
+        will be normalized before use. 
     absorb_model : string
         A model for foreground galactic absorption, to simulate the
         absorption of events before being detected. Known options are "wabs" 
@@ -761,7 +763,11 @@ def project_photons_allsky(photon_prefix, event_prefix, normal,
         "lodd" : from Lodders, K (2003, ApJ 591, 1220)
         "cl17.03" : the default abundance table in Cloudy 17.03
     no_shifting : boolean, optional
-        If set, the photon energies will not be Doppler shifted.
+        If set, the photon energies will not be Doppler shifted. Default: False
+    center_vector : a sequence of floats
+        A vector defining what direction will be placed at the center of
+        the lat/lon coordinate system. If not set, an arbitrary
+        grid-aligned center_vector perpendicular to the normal is chosen.
     kernel : string, optional
         The kernel used when smoothing positions of X-rays originating from
         SPH particles, "gaussian" or "top_hat". Default: "top_hat".
@@ -786,4 +792,5 @@ def project_photons_allsky(photon_prefix, event_prefix, normal,
     return _project_photons("internal", photon_prefix, event_prefix, normal,
                             [0.0, 0.0], absorb_model=absorb_model, nH=nH, 
                             abund_table=abund_table, no_shifting=no_shifting, 
-                            kernel=kernel, save_los=save_los, prng=prng)
+                            kernel=kernel, save_los=save_los, north_vector=center_vector,
+                            prng=prng)
