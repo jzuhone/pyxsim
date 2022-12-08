@@ -444,6 +444,9 @@ def _project_photons(obs, photon_prefix, event_prefix, normal,
         if comm.rank == 0:
             mylog.info(f"Foreground galactic absorption: using the "
                        f"{absorb_model._name} model and nH = {nH}.")
+    abs_model_name = absorb_model._name if absorb_model else "none"
+    if nH is None:
+        nH = 0.0
 
     f = h5py.File(photon_file, "r")
 
@@ -489,6 +492,8 @@ def _project_photons(obs, photon_prefix, event_prefix, normal,
         pe.create_dataset("observer", data=observer)
         pe.create_dataset("no_shifting", data=int(no_shifting))
         pe.create_dataset("normal", data=normal)
+        pe.create_dataset("absoption_model", data=abs_model_name)
+        pe.create_dataset("nH", data=nH)
 
         event_fields = ["xsky", "ysky", "eobs"]
         if save_los:
