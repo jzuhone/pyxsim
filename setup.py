@@ -2,15 +2,22 @@
 from setuptools import setup, find_packages
 from setuptools.extension import Extension
 import numpy as np
+import os
+
+
+if os.name == "nt":
+    std_libs = []
+else:
+    std_libs = ["m"]
 
 cython_extensions = [
     Extension("pyxsim.lib.sky_functions",
               ["pyxsim/lib/sky_functions.pyx"],
-              language="c", libraries=["m"],
+              language="c", libraries=std_libs,
               include_dirs=[np.get_include()]),
     Extension("pyxsim.lib.spectra",
               ["pyxsim/lib/spectra.pyx"],
-              language="c", libraries=["m"],
+              language="c", libraries=std_libs,
               include_dirs=[np.get_include()])
 
 ]
@@ -23,7 +30,7 @@ setup(name='pyxsim',
       author_email='jzuhone@gmail.com',
       url='http://github.com/jzuhone/pyxsim',
       install_requires=["numpy", "astropy>=4.0", "h5py>=3.0", "scipy", "yt>=4.1.2", 
-                        "soxs>=4.0.0", "tqdm"],
+                        "soxs>=4.1.0", "tqdm"],
       include_package_data=True,
       ext_modules=cython_extensions,
       classifiers=[
