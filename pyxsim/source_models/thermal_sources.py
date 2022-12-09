@@ -244,7 +244,7 @@ class ThermalSourceModel(SourceModel):
                 fac = self.Zconvert
                 if str(mZ.units) != "Zsun":
                     fac /= X_H
-                metalZ = np.ravel(mZ.d*fac)[cut]
+                metalZ = np.ravel(mZ.d[cut]*fac)
 
         elemZ = None
         if self.num_var_elem > 0:
@@ -258,7 +258,7 @@ class ThermalSourceModel(SourceModel):
                     fac = self.mconvert[key]
                     if str(eZ.units) != "Zsun":
                         fac /= X_H
-                    elemZ[j,:] = np.ravel(eZ.d*fac)[cut]
+                    elemZ[j,:] = np.ravel(eZ.d[cut]*fac)
 
         if self.observer == "internal" and mode == "photons":
             pos = np.array([np.ravel(chunk[self.p_fields[i]].to_value("kpc"))[cut]
