@@ -430,11 +430,13 @@ class IGMSourceModel(ThermalSourceModel):
         The scale of the energy binning: "linear" or "log".
         Default: "linear"
     resonant_scattering : boolean, optional
-        Whether or not to include the effects of resonant scattering
+        Whether to include the effects of resonant scattering
         from CXB photons. Default: False
     cxb_factor : float, optional
         The fraction of the CXB photons that are resonant scattered to enhance
         the lines. Default: 0.5
+    model_vers : string, optional
+        The version identifier string for the model files, "3" or "4".
     nh_field : string or (ftype, fname) tuple, optional
         The yt hydrogen nuclei density field (meaning all hydrogen, ionized or not)
         to use for the model. Must have units of cm**-3.
@@ -498,6 +500,7 @@ class IGMSourceModel(ThermalSourceModel):
         max_density=None,
         var_elem=None,
         method="invert_cdf",
+        model_res="lo",
         prng=None,
     ):
         var_elem_keys = list(var_elem.keys()) if var_elem else None
@@ -509,6 +512,7 @@ class IGMSourceModel(ThermalSourceModel):
             resonant_scattering=resonant_scattering,
             cxb_factor=cxb_factor,
             var_elem=var_elem_keys,
+            model_res=model_res,
         )
         nH_min = 10 ** spectral_model.Dvals[0]
         nH_max = 10 ** spectral_model.Dvals[-1]
@@ -592,7 +596,7 @@ class CIESourceModel(ThermalSourceModel):
         "accept_reject": Acceptance-rejection method using the spectrum.
         The first method should be sufficient for most cases.
     thermal_broad : boolean, optional
-        Whether or not the spectral lines should be thermally
+        Whether the spectral lines should be thermally
         broadened. Only available for "apec" or "spex". Default: True
     model_root : string, optional
         The directory root where the model files are stored. If not provided,
@@ -600,7 +604,7 @@ class CIESourceModel(ThermalSourceModel):
     model_vers : string, optional
         The version identifier string for the model files, e.g.
         "2.0.2", if supported by the model. Currently only supported by
-        "apec" and "spex". Default depends on the model being used.
+        "apec", "spex", and "cloudy". Default depends on the model being used.
     nolines : boolean, optional
         Turn off lines entirely for generating emission. Only available
         for "apec" or "spex". Default: False
@@ -655,6 +659,7 @@ class CIESourceModel(ThermalSourceModel):
         model_vers=None,
         nolines=False,
         abund_table="angr",
+        model_res="lo",
         prng=None,
     ):
         var_elem_keys = list(var_elem.keys()) if var_elem else None
@@ -687,7 +692,8 @@ class CIESourceModel(ThermalSourceModel):
                 )
                 abund_table = "feld"
             spectral_model = CloudyCIESpectralModel(
-                emin, emax, nbins, binscale=binscale, var_elem=var_elem_keys
+                emin, emax, nbins, binscale=binscale, var_elem=var_elem_keys, 
+                model_res=model_res,
             )
         super().__init__(
             spectral_model,

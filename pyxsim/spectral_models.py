@@ -304,9 +304,11 @@ class MekalSpectralModel(Atable1DSpectralModel):
 
 
 class CloudyCIESpectralModel(Atable1DSpectralModel):
-    def __init__(self, emin, emax, nbins, binscale="linear", var_elem=None):
+    def __init__(
+        self, emin, emax, nbins, binscale="linear", var_elem=None, model_res="lo"
+    ):
         cgen = CloudyCIEGenerator(
-            emin, emax, nbins, binscale=binscale, var_elem=var_elem
+            emin, emax, nbins, binscale=binscale, var_elem=var_elem, model_res=model_res
         )
         super().__init__(cgen)
         self.var_ion_names = []
@@ -357,6 +359,7 @@ class IGMSpectralModel(ThermalSpectralModel):
         resonant_scattering=False,
         cxb_factor=0.5,
         var_elem=None,
+        model_res="lo",
     ):
         self.igen = IGMGenerator(
             emin,
@@ -366,6 +369,7 @@ class IGMSpectralModel(ThermalSpectralModel):
             resonant_scattering=resonant_scattering,
             cxb_factor=cxb_factor,
             var_elem=var_elem,
+            model_res=model_res,
         )
         self.ebins = self.igen.ebins
         self.emid = self.igen.emid
