@@ -261,6 +261,10 @@ def make_photons(photon_prefix, data_source, redshift, area,
 
     spectral_norm = parameters["fid_area"].v*local_exp_time*dist_fac
 
+    dw = ds.domain_width.to_value("kpc")
+    le, re = find_object_bounds(data_source)
+    c = parameters["center"].to_value("kpc")
+
     source_model.setup_model("photons", data_source, redshift)
 
     p_fields, v_fields, w_field = determine_fields(ds,
@@ -274,10 +278,6 @@ def make_photons(photon_prefix, data_source, redshift, area,
         parameters["data_type"] = "cells"
     else:
         parameters["data_type"] = "particles"
-
-    dw = ds.domain_width.to_value("kpc")
-    le, re = find_object_bounds(data_source)
-    c = parameters["center"].to_value("kpc")
 
     source_model.set_pv(p_fields, v_fields, le, re, dw, c, ds.periodicity,
                         observer)
