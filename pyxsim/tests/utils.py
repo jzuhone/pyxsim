@@ -5,6 +5,7 @@ from yt.loaders import \
     load_uniform_grid, load_particles
 from numpy.random import RandomState
 from soxs.tests.utils import file_answer_testing
+from numbers import Real
 
 # Gas parameters
 R = 1.0 # Mpc
@@ -129,8 +130,29 @@ def hdf5_answer_testing(filename, answer_store, answer_dir):
         d_old = f_old["data"]
         d_new = f_new["data"]
         for k in p_old:
-            assert_equal(p_old[k][()], p_new[k][()])
+            v_old = p_old[k][()]
+            v_new = p_new[k][()]
+            if isinstance(v_old, Real):
+                assert_almost_equal(v_old, v_new)
+            else:
+                assert_equal(v_old, v_new)
         for k in d_old:
             assert_almost_equal(d_old[k][()], d_new[k][()])
         f_old.close()
         f_new.close()
+
+
+def events_ks_testing(fn, spec, texp, area, check_dir):
+    from scipy.stats import kstest
+    from astropy.table import Table
+    import h5py
+    with h5py.File(fn, "r") as f:
+        e = f["data"]["eobs"][:].copy()
+    N = spec.flux.value*area*texp*spec.de.value
+    cts, _ = np.histogram(e, bins=spec.ebins.value)
+    _, pvalue = kstest(cts, N)
+    if check_dir is not None:
+        t = Table({"emid": spec.emid.value, "data": cts, "model": N})
+        t.write(check_dir, format="ascii.commented_header",
+                overwrite=True)
+    return pvalue

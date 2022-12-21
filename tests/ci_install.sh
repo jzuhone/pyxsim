@@ -27,12 +27,7 @@ fi
 
 PYVER=`python --version`
 
-conda config --add channels https://conda.anaconda.org/sherpa
 conda install --yes numpy pytest pip h5py astropy nose cython scipy yt soxs
-
-if [[ ${mode} == "testing" ]]; then
-  conda install --yes -c sherpa sherpa
-fi 
 
 if [[ ${mode} == "wheels" ]]; then
   conda install --yes wheel setuptools
