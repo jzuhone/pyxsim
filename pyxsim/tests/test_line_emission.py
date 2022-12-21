@@ -74,8 +74,6 @@ def test_line_emission():
 
 
 def test_line_emission_fields():
-    
-    cosmo = Cosmology()
 
     bms = BetaModelSource()
     ds = bms.ds
@@ -88,8 +86,6 @@ def test_line_emission_fields():
     location = YTQuantity(3.5, "keV")
     sigma = YTQuantity(1000., "km/s")
     sigma_E = (location*sigma/clight).in_units("keV")
-
-    redshift = 0.01
 
     sphere = ds.sphere("c", (100.,"kpc"))
 
@@ -156,6 +152,3 @@ def test_line_emission_spectra():
     assert_allclose(np.average(spec2.emid.value, weights=spec2.flux.value), location.v/1.2)
     assert_allclose(weight_std(spec2.emid.value, spec2.flux.value), sigma_E.v/1.2, rtol=1.0e-3)
     assert_allclose(np.sum(spec2.flux.value*spec2.de.value), dm_E.v*dist_fac/1.2)
-
-if __name__ == "__main__":
-    test_line_emission()
