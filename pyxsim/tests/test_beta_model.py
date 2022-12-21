@@ -108,7 +108,7 @@ def do_beta_model(source, check_dir, axis="z", prng=None):
     spec = agen.get_spectrum(kT_sim, Z_sim, redshift_sim, norm_sim, velocity=sigma_sim)
     spec.apply_foreground_absorption(nH_sim, model="tbabs")
 
-    pvalue = events_ks_testing("my_events.h5", spec, exp_time, A)
+    pvalue = events_ks_testing("my_events.h5", spec, exp_time, A, check_dir)
 
     assert pvalue > 0.05
 
@@ -164,7 +164,7 @@ def test_vapec_beta_model():
                              elem_abund={"O": O_sim, "Ca": Ca_sim})
     spec.apply_foreground_absorption(nH_sim, model="tbabs")
 
-    pvalue = events_ks_testing("my_events.h5", spec, exp_time, A)
+    pvalue = events_ks_testing("my_events.h5", spec, exp_time, A, check_dir)
 
     print(pvalue)
     assert pvalue > 0.05
