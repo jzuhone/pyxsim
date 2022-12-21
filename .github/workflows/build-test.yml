@@ -14,19 +14,19 @@ defaults:
         shell: bash
     
 env:
-    ANSWER_VER: pyxsim20
+    ANSWER_VER: pyxsim21
     
 jobs:
     build:
         strategy:
             matrix:
                 os: [ubuntu-latest]
-                python-version: [ 3.9 ]
+                python-version: [ '3.10' ]
                 include:
                     - os: ubuntu-latest
-                      python-version: '3.10'
+                      python-version: '3.11'
                     - os: ubuntu-latest
-                      python-version: 3.8
+                      python-version: 3.9
             fail-fast: false
         runs-on: ${{ matrix.os }}
         steps:
