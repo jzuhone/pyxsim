@@ -5,6 +5,7 @@ import h5py
 import numpy as np
 from soxs.utils import parse_prng
 from unyt.array import unyt_array
+from yt import __version__ as yt_version
 from yt.funcs import get_pbar
 from yt.utilities.cosmology import Cosmology
 from yt.utilities.orientation import Orientation
@@ -14,6 +15,7 @@ from yt.utilities.parallel_tools.parallel_analysis_interface import (
 )
 from yt.utilities.physical_constants import clight
 
+from pyxsim import __version__ as pyxsim_version
 from pyxsim.lib.sky_functions import (
     doppler_shift,
     pixel_to_cel,
@@ -316,6 +318,11 @@ def make_photons(
 
     f = h5py.File(photon_file, "w")
 
+    # Info
+    info = f.create_group("info")
+    info.attrs["yt_version"] = yt_version
+    info.attrs["pyxsim_version"] = pyxsim_version
+
     # Parameters
 
     p = f.create_group("parameters")
@@ -330,6 +337,7 @@ def make_photons(
     p.create_dataset("observer", data=parameters["observer"])
     p.create_dataset("center", data=parameters["center"].d)
     p.create_dataset("bulk_velocity", data=parameters["bulk_velocity"].d)
+    p.create_dataset("velocity_fields", data=np.array(v_fields))
 
     n_cells = 0
     n_photons = 0
@@ -467,10 +475,12 @@ def _project_photons(
         x_hat = orient.unit_vectors[0]
         y_hat = orient.unit_vectors[1]
         z_hat = orient.unit_vectors[2]
+        north_vector = orient.north_vector
     else:
         x_hat = np.zeros(3)
         y_hat = np.zeros(3)
         z_hat = np.zeros(3)
+        north_vector = None
 
     if comm.size > 1:
         photon_file = f"{photon_prefix}.{comm.rank:04d}.h5"
@@ -545,16 +555,27 @@ def _project_photons(
 
         fe = h5py.File(event_file, "w")
 
+        ie = fe.create_group("info")
+        ie.attrs["pyxsim_version"] = pyxsim_version
+        ie.attrs["yt_version"] = yt_version
+
         pe = fe.create_group("parameters")
         pe.create_dataset("exp_time", data=float(p["fid_exp_time"][()]))
         pe.create_dataset("area", data=float(p["fid_area"][()]))
         pe.create_dataset("sky_center", data=sky_center)
         pe.create_dataset("observer", data=observer)
         pe.create_dataset("no_shifting", data=int(no_shifting))
+        pe.create_dataset("flat_sky", data=int(flat_sky))
         pe.create_dataset("normal", data=normal)
+        if north_vector is not None:
+            pe.create_dataset("north_vector", data=north_vector)
         pe.create_dataset("absoption_model", data=abs_model_name)
-        pe.create_dataset("nH", data=nH)
-
+        if absorb_model is not None:
+            pe.create_dataset("nH", data=nH)
+            pe.create_dataset("abund_table", data=abund_table)
+        if sigma_pos is not None:
+            pe.create_dataset("sigma_pos", data=sigma_pos)
+        pe.create_dataset("kernel", data=kernel)
         event_fields = ["xsky", "ysky", "eobs"]
         if save_los:
             event_fields.append("los")
