@@ -25,6 +25,13 @@ cython_extensions = [
         libraries=std_libs,
         include_dirs=[np.get_include()],
     ),
+    Extension(
+        "pyxsim.lib.interpolate",
+        ["pyxsim/lib/interpolate.pyx"],
+        language="c",
+        libraries=std_libs,
+        include_dirs=[np.get_include()],
+    ),
 ]
 
 

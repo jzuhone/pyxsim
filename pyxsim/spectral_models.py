@@ -14,6 +14,26 @@ from soxs.thermal_spectra import (
 from soxs.utils import parse_prng, regrid_spectrum
 from yt.units.yt_array import YTArray, YTQuantity
 
+from pyxsim.lib.interpolate import interp1d_spec, interp1d_var_spec
+
+
+class SpectralInterpolator1D:
+    def __init__(self, tbins, spec):
+        self.tbins = tbins.byteswap().newbyteorder("<").astype("float64")
+        self.spec = spec
+        self.nchan = self.spec.shape[-1]
+        self.var_elem = len(self.spec.shape) == 3
+
+    def __call__(self, t_vals):
+        x_i = (np.digitize(t_vals, self.tbins) - 1).astype("int32")
+        if np.any((x_i == -1) | (x_i == len(self.tbins) - 1)):
+            x_i = np.minimum(np.maximum(x_i, 0), len(self.tbins) - 2)
+        if self.var_elem:
+            s_vals = interp1d_var_spec(self.spec, t_vals, self.tbins, x_i)
+        else:
+            s_vals = interp1d_spec(self.spec, t_vals, self.tbins, x_i)
+        return s_vals
+
 
 class ThermalSpectralModel:
     _logT = False
@@ -108,7 +128,7 @@ class TableCIEModel(ThermalSpectralModel):
         The version identifier string for the APEC files, e.g.
         "3.0.3". Default: 3.0.9
     thermal_broad : boolean, optional
-        Whether or not the spectral lines should be thermally
+        Whether the spectral lines should be thermally
         broadened. Default: True
     nolines : boolean, optional
         Turn off lines entirely for generating spectra.
@@ -194,31 +214,10 @@ class TableCIEModel(ThermalSpectralModel):
         self.cosmic_spec = cosmic_spec
         self.metal_spec = metal_spec
         self.var_spec = var_spec
-        self.cf = interp1d(
-            self.Tvals,
-            self.cosmic_spec,
-            axis=0,
-            fill_value=0.0,
-            assume_sorted=True,
-            copy=False,
-        )
-        self.mf = interp1d(
-            self.Tvals,
-            self.metal_spec,
-            axis=0,
-            fill_value=0.0,
-            assume_sorted=True,
-            copy=False,
-        )
+        self.cf = SpectralInterpolator1D(self.Tvals, self.cosmic_spec)
+        self.mf = SpectralInterpolator1D(self.Tvals, self.metal_spec)
         if var_spec is not None:
-            self.vf = interp1d(
-                self.Tvals,
-                self.var_spec,
-                axis=1,
-                fill_value=0.0,
-                assume_sorted=True,
-                copy=False,
-            )
+            self.vf = SpectralInterpolator1D(self.Tvals, self.var_spec)
         else:
             self.vf = None
 
@@ -246,31 +245,10 @@ class Atable1DSpectralModel(ThermalSpectralModel):
         if var_spec is not None:
             var_spec = 1.0e-14 * regrid_spectrum(self.ebins, ebins, var_spec)
         self.var_spec = var_spec
-        self.cf = interp1d(
-            self.Tvals,
-            self.cosmic_spec,
-            axis=0,
-            fill_value=0.0,
-            assume_sorted=True,
-            copy=False,
-        )
-        self.mf = interp1d(
-            self.Tvals,
-            self.metal_spec,
-            axis=0,
-            fill_value=0.0,
-            assume_sorted=True,
-            copy=False,
-        )
+        self.cf = SpectralInterpolator1D(self.Tvals, self.cosmic_spec)
+        self.mf = SpectralInterpolator1D(self.Tvals, self.metal_spec)
         if var_spec is not None:
-            self.vf = interp1d(
-                self.Tvals,
-                self.var_spec,
-                axis=1,
-                fill_value=0.0,
-                assume_sorted=True,
-                copy=False,
-            )
+            self.vf = SpectralInterpolator1D(self.Tvals, self.var_spec)
         else:
             self.vf = None
 

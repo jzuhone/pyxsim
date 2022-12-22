@@ -11,3 +11,4 @@ build
 dist
 sky_functions.c
 spectra.c
+interpolate.c
