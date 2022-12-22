@@ -1,13 +1,16 @@
-from pyxsim.utils import parse_value, ParallelProgressBar
-from soxs.utils import parse_prng
-from yt.utilities.cosmology import Cosmology
-from soxs.spectra import Spectrum, CountRateSpectrum
-from yt.units.yt_array import YTQuantity
-from tqdm.auto import tqdm
-from yt.utilities.parallel_tools.parallel_analysis_interface import \
-    parallel_objects, communication_system, parallel_capable
-
 import numpy as np
+from soxs.spectra import CountRateSpectrum, Spectrum
+from soxs.utils import parse_prng
+from tqdm.auto import tqdm
+from yt.units.yt_array import YTQuantity
+from yt.utilities.cosmology import Cosmology
+from yt.utilities.parallel_tools.parallel_analysis_interface import (
+    communication_system,
+    parallel_capable,
+    parallel_objects,
+)
+
+from pyxsim.utils import ParallelProgressBar, parse_value
 
 cm2_per_kpc2 = YTQuantity(1.0, "kpc**2").to_value("cm**2")
 
@@ -35,16 +38,16 @@ class SourceModel:
         if parallel_capable:
             self.pbar = ParallelProgressBar("Processing cells/particles ")
         else:
-            self.pbar = tqdm(leave=True, total=self.tot_num_cells,
-                             desc="Processing cells/particles ")
+            self.pbar = tqdm(
+                leave=True, total=self.tot_num_cells, desc="Processing cells/particles "
+            )
 
     def setup_model(self, mode, data_source, redshift):
         # This needs to be implemented for every
         # source model specifically
         pass
 
-    def set_pv(self, p_fields, v_fields, le, re, dw, c, periodicity,
-               observer):
+    def set_pv(self, p_fields, v_fields, le, re, dw, c, periodicity, observer):
         self.p_fields = p_fields
         self.v_fields = v_fields
         self.le = le
@@ -59,9 +62,9 @@ class SourceModel:
             if self.periodicity[i]:
                 tfl = pos[i] < self.le[i]
                 tfr = pos[i] > self.re[i]
-                pos[:,tfl] += self.dw[i]
-                pos[:,tfr] -= self.dw[i]
-        return np.sum((pos-self.c[:,np.newaxis])**2, axis=0)*cm2_per_kpc2
+                pos[:, tfl] += self.dw[i]
+                pos[:, tfr] -= self.dw[i]
+        return np.sum((pos - self.c[:, np.newaxis]) ** 2, axis=0) * cm2_per_kpc2
 
     def cleanup_model(self, mode):
         # This needs to be implemented for every
@@ -95,15 +98,15 @@ class SourceModel:
                         "dist should be a YTQuantity or a (value, unit) tuple!"
                     ) from e
             angular_scale = dist / ds.quan(1.0, "radian")
-        dist_fac = 1.0/(4.0*np.pi*dist*dist)
+        dist_fac = 1.0 / (4.0 * np.pi * dist * dist)
         if per_sa:
-            dist_fac = ds.quan((dist_fac/angular_scale**2).v, "rad**-2")
+            dist_fac = ds.quan((dist_fac / angular_scale**2).v, "rad**-2")
         return dist_fac, redshift
 
     def _make_spectrum(self, ds, ebins, spec, redshift, dist, cosmology):
         if redshift > 0.0 or dist is not None:
             dist_fac, redshift = self._make_dist_fac(ds, redshift, dist, cosmology)
-            spec *= (1.0+redshift)**2*dist_fac.in_cgs()
+            spec *= (1.0 + redshift) ** 2 * dist_fac.in_cgs()
             spec_class = Spectrum
         else:
             spec_class = CountRateSpectrum
@@ -111,7 +114,7 @@ class SourceModel:
 
     def make_source_fields(self, ds, emin, emax, force_override=False):
         """
-        Make the following fields in the rest frame of the 
+        Make the following fields in the rest frame of the
         source within a specific energy band for a dataset in yt:
 
         f"xray_emissivity_{emin}_{emax}_keV" (in erg/cm**3/s)
@@ -125,7 +128,7 @@ class SourceModel:
         ----------
         ds : :class:`~yt.data_objects.static_output.Dataset`
             The loaded yt dataset to make the fields for.
-        emin : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity` 
+        emin : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
             The minimum energy in the band. If a float, it is assumed to be
             in keV.
         emax : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
@@ -149,26 +152,24 @@ class SourceModel:
 
         ftype = self.ftype
 
-        emiss_name = (
-            ftype, f"xray_emissivity_{emin.value}_{emax.value}_keV"
-        )
+        emiss_name = (ftype, f"xray_emissivity_{emin.value}_{emax.value}_keV")
         emiss_dname = rf"\epsilon_{{X}} ({emin.value}-{emax.value} keV)"
 
-        lum_name = (
-            ftype, emiss_name[1].replace("emissivity", "luminosity")
-        )
+        lum_name = (ftype, emiss_name[1].replace("emissivity", "luminosity"))
         lum_dname = emiss_dname.replace(r"\epsilon", "\rm{{L}}")
 
         phot_emiss_name = (
-            ftype, emiss_name[1].replace("emissivity", "photon_emissivity")
+            ftype,
+            emiss_name[1].replace("emissivity", "photon_emissivity"),
         )
 
         efluxf = self.make_fluxf(emin, emax, energy=True)
 
         def _luminosity_field(field, data):
             return data.ds.arr(
-                self.process_data("energy_field", data, spectral_norm, 
-                                  fluxf=efluxf), "keV/s")
+                self.process_data("energy_field", data, spectral_norm, fluxf=efluxf),
+                "keV/s",
+            )
 
         ds.add_field(
             lum_name,
@@ -181,7 +182,7 @@ class SourceModel:
 
         def _emissivity_field(field, data):
             ret = data[lum_name]
-            return ret*data[ftype, "density"]/data[ftype, "mass"]
+            return ret * data[ftype, "density"] / data[ftype, "mass"]
 
         ds.add_field(
             emiss_name,
@@ -195,9 +196,10 @@ class SourceModel:
         pfluxf = self.make_fluxf(emin, emax, energy=False)
 
         def _photon_emissivity_field(field, data):
-            ret = data.ds.arr(self.process_data("photon_field", data, spectral_norm,
-                                                fluxf=pfluxf),
-                              "photons/s")
+            ret = data.ds.arr(
+                self.process_data("photon_field", data, spectral_norm, fluxf=pfluxf),
+                "photons/s",
+            )
             return ret * data[ftype, "density"] / data[ftype, "mass"]
 
         ds.add_field(
@@ -211,10 +213,18 @@ class SourceModel:
 
         return [emiss_name, lum_name, phot_emiss_name]
 
-    def make_intensity_fields(self, ds, emin, emax, redshift=0.0, 
-                              dist=None, cosmology=None, force_override=True):
+    def make_intensity_fields(
+        self,
+        ds,
+        emin,
+        emax,
+        redshift=0.0,
+        dist=None,
+        cosmology=None,
+        force_override=True,
+    ):
         """
-        Make the following fields in the observer frame within a 
+        Make the following fields in the observer frame within a
         specific energy band for a dataset in yt:
 
         f"xray_intensity_{emin}_{emax}_keV" (in erg/cm**3/s/arcsec**2)
@@ -227,7 +237,7 @@ class SourceModel:
         ----------
         ds : :class:`~yt.data_objects.static_output.Dataset`
             The loaded yt dataset to make the fields for.
-        emin : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity` 
+        emin : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
             The minimum energy in the band. If a float, it is assumed to be
             in keV.
         emax : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
@@ -235,14 +245,14 @@ class SourceModel:
             in keV.
         redshift : float, optional
             The redshift of the source. Default: 0.0
-        dist : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`    
+        dist : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
             The angular diameter distance, used for nearby sources. This may be
             optionally supplied instead of it being determined from the
             *redshift* and given *cosmology*. If units are not specified, it is
             assumed to be in kpc. To use this, the redshift must be set to zero.
         cosmology : :class:`~yt.utilities.cosmology.Cosmology`, optional
             Cosmological information. If not supplied, we try to get the
-            cosmology from the dataset. Otherwise, LCDM with the default yt 
+            cosmology from the dataset. Otherwise, LCDM with the default yt
             parameters is assumed.
 
         Returns
@@ -250,8 +260,9 @@ class SourceModel:
         The list of fields which are generated.
         """
         if redshift == 0.0 and dist is None:
-            raise ValueError("Either 'redshift' must be > 0.0 or 'dist' must "
-                             "not be None!")
+            raise ValueError(
+                "Either 'redshift' must be > 0.0 or 'dist' must " "not be None!"
+            )
 
         spectral_norm = 1.0
 
@@ -262,22 +273,23 @@ class SourceModel:
 
         ftype = self.ftype
 
-        dist_fac, redshift = self._make_dist_fac(ds, redshift, dist, cosmology, 
-                                                 per_sa=True)
-
-        emin_src = emin*(1.0+redshift)
-        emax_src = emax*(1.0+redshift)
-
-        ei_name = (
-            ftype, f"xray_intensity_{emin.value}_{emax.value}_keV"
+        dist_fac, redshift = self._make_dist_fac(
+            ds, redshift, dist, cosmology, per_sa=True
         )
+
+        emin_src = emin * (1.0 + redshift)
+        emax_src = emax * (1.0 + redshift)
+
+        ei_name = (ftype, f"xray_intensity_{emin.value}_{emax.value}_keV")
         ei_dname = rf"I_{{X}} ({emin.value}-{emax.value} keV)"
 
         eif = self.make_fluxf(emin_src, emax_src, energy=True)
 
         def _intensity_field(field, data):
-            ret = data.ds.arr(self.process_data("energy_field", data,
-                                                spectral_norm, fluxf=eif), "keV/s")
+            ret = data.ds.arr(
+                self.process_data("energy_field", data, spectral_norm, fluxf=eif),
+                "keV/s",
+            )
             idV = data[ftype, "density"] / data[ftype, "mass"]
             I = dist_fac * ret * idV
             return I.in_units("erg/cm**3/s/arcsec**2")
@@ -291,15 +303,15 @@ class SourceModel:
             force_override=force_override,
         )
 
-        i_name = (
-            ftype, ei_name[1].replace("intensity", "photon_intensity")
-        )
+        i_name = (ftype, ei_name[1].replace("intensity", "photon_intensity"))
 
         pif = self.make_fluxf(emin_src, emax_src, energy=False)
 
         def _photon_intensity_field(field, data):
-            ret = data.ds.arr(self.process_data("photon_field", data,
-                                                spectral_norm, fluxf=pif), "photons/s")
+            ret = data.ds.arr(
+                self.process_data("photon_field", data, spectral_norm, fluxf=pif),
+                "photons/s",
+            )
             idV = data[ftype, "density"] / data[ftype, "mass"]
             I = (1.0 + redshift) * dist_fac * ret * idV
             return I.in_units("photons/cm**3/s/arcsec**2")

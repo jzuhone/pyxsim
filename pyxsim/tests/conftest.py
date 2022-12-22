@@ -1,19 +1,21 @@
-import pytest
 import os
+
+import pytest
 
 
 def pytest_addoption(parser):
-    parser.addoption("--answer_dir",
-                     help="Directory where answers are stored.")
-    parser.addoption("--check_dir",
-                     help="Directory where spectrum checks are stored.")
-    parser.addoption("--answer_store", action="store_true",
-                     help="Generate new answers, but don't test.")
+    parser.addoption("--answer_dir", help="Directory where answers are stored.")
+    parser.addoption("--check_dir", help="Directory where spectrum checks are stored.")
+    parser.addoption(
+        "--answer_store",
+        action="store_true",
+        help="Generate new answers, but don't test.",
+    )
 
 
 @pytest.fixture()
 def answer_store(request):
-    return request.config.getoption('--answer_store')
+    return request.config.getoption("--answer_store")
 
 
 @pytest.fixture()

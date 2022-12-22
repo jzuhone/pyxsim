@@ -1,43 +1,62 @@
 import time
 
+from soxs.utils import parse_prng
+from yt.loaders import load
+from yt.utilities.parallel_tools.parallel_analysis_interface import communication_system
+from yt_astro_analysis.cosmological_observation.api import LightCone
+
 from pyxsim.photon_list import make_photons, project_photons
 from pyxsim.utils import parse_value
 
-from yt_astro_analysis.cosmological_observation.api import LightCone
-
-from yt.loaders import load
-
-from soxs.utils import parse_prng
-
-from yt.utilities.parallel_tools.parallel_analysis_interface import \
-    communication_system
-
 comm = communication_system.communicators[-1]
 
-axes_lookup = [(1,2), (2,0), (0,1)]
+axes_lookup = [(1, 2), (2, 0), (0, 1)]
 
 
 class XrayLightCone(LightCone):
-    def __init__(self, parameter_filename, simulation_type,
-                 near_redshift, far_redshift, seed=None,
-                 use_minimum_datasets=True, deltaz_min=0.0,
-                 minimum_coherent_box_fraction=0.0):
+    def __init__(
+        self,
+        parameter_filename,
+        simulation_type,
+        near_redshift,
+        far_redshift,
+        seed=None,
+        use_minimum_datasets=True,
+        deltaz_min=0.0,
+        minimum_coherent_box_fraction=0.0,
+    ):
         if seed is None:
             seed = time.time()
         super(XrayLightCone, self).__init__(
-            parameter_filename, simulation_type, near_redshift, far_redshift,
-            use_minimum_datasets=use_minimum_datasets, deltaz_min=deltaz_min,
-            minimum_coherent_box_fraction=minimum_coherent_box_fraction)
+            parameter_filename,
+            simulation_type,
+            near_redshift,
+            far_redshift,
+            use_minimum_datasets=use_minimum_datasets,
+            deltaz_min=deltaz_min,
+            minimum_coherent_box_fraction=minimum_coherent_box_fraction,
+        )
         self.calculate_light_cone_solution(seed=seed)
 
-    def generate_events(self, photon_prefix, event_prefix,
-                        area, exp_time, angular_width,
-                        source_model, sky_center, parameters=None,
-                        velocity_fields=None, absorb_model=None,
-                        nH=None, no_shifting=False, sigma_pos=None,
-                        prng=None):
+    def generate_events(
+        self,
+        photon_prefix,
+        event_prefix,
+        area,
+        exp_time,
+        angular_width,
+        source_model,
+        sky_center,
+        parameters=None,
+        velocity_fields=None,
+        absorb_model=None,
+        nH=None,
+        no_shifting=False,
+        sigma_pos=None,
+        prng=None,
+    ):
         """
-        Generate projected events from a light cone simulation. 
+        Generate projected events from a light cone simulation.
 
         Parameters
         ----------
@@ -103,31 +122,43 @@ class XrayLightCone(LightCone):
             ds = load(output["filename"])
             dw = ds.domain_width
             ax = output["projection_axis"]
-            c = output["projection_center"]*dw + ds.domain_left_edge
+            c = output["projection_center"] * dw + ds.domain_left_edge
             le = c.copy()
             re = c.copy()
-            width = ds.quan(aw*output["box_width_per_angle"], 
-                            "unitary").to("code_length")
-            depth = dw[ax].to("code_length")*output["box_depth_fraction"]
-            le[ax] -= 0.5*depth
-            re[ax] += 0.5*depth
+            width = ds.quan(aw * output["box_width_per_angle"], "unitary").to(
+                "code_length"
+            )
+            depth = dw[ax].to("code_length") * output["box_depth_fraction"]
+            le[ax] -= 0.5 * depth
+            re[ax] += 0.5 * depth
             for off_ax in axes_lookup[ax]:
-                le[off_ax] -= 0.5*width
-                re[off_ax] += 0.5*width
+                le[off_ax] -= 0.5 * width
+                re[off_ax] += 0.5 * width
             reg = ds.box(le, re)
             pprefix = f"{photon_prefix}.lc{i}"
-            n_photons, n_cells = make_photons(pprefix, reg,
-                                              output['redshift'],
-                                              area, exp_time,
-                                              source_model,
-                                              parameters=parameters,
-                                              center=c,
-                                              velocity_fields=velocity_fields,
-                                              cosmology=ds.cosmology)
+            n_photons, n_cells = make_photons(
+                pprefix,
+                reg,
+                output["redshift"],
+                area,
+                exp_time,
+                source_model,
+                parameters=parameters,
+                center=c,
+                velocity_fields=velocity_fields,
+                cosmology=ds.cosmology,
+            )
             eprefix = f"{event_prefix}.lc{i}"
-            n_events = project_photons(pprefix, eprefix, "xyz"[ax],
-                                       sky_center, absorb_model=absorb_model,
-                                       nH=nH, no_shifting=no_shifting,
-                                       sigma_pos=sigma_pos, prng=prng)
+            n_events = project_photons(
+                pprefix,
+                eprefix,
+                "xyz"[ax],
+                sky_center,
+                absorb_model=absorb_model,
+                nH=nH,
+                no_shifting=no_shifting,
+                sigma_pos=sigma_pos,
+                prng=prng,
+            )
 
             comm.barrier()

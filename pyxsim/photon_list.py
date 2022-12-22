@@ -1,20 +1,27 @@
 """
 Classes for generating lists of photons
 """
+import h5py
 import numpy as np
+from soxs.utils import parse_prng
+from unyt.array import unyt_array
 from yt.funcs import get_pbar
-from pyxsim.lib.sky_functions import pixel_to_cel, \
-    scatter_events, doppler_shift, scatter_events_allsky
-from yt.utilities.physical_constants import clight
 from yt.utilities.cosmology import Cosmology
 from yt.utilities.orientation import Orientation
-from yt.utilities.parallel_tools.parallel_analysis_interface import \
-    communication_system, parallel_objects
-from unyt.array import unyt_array
-import h5py
+from yt.utilities.parallel_tools.parallel_analysis_interface import (
+    communication_system,
+    parallel_objects,
+)
+from yt.utilities.physical_constants import clight
+
+from pyxsim.lib.sky_functions import (
+    doppler_shift,
+    pixel_to_cel,
+    scatter_events,
+    scatter_events_allsky,
+)
 from pyxsim.spectral_models import absorb_models
-from pyxsim.utils import parse_value, mylog
-from soxs.utils import parse_prng
+from pyxsim.utils import mylog, parse_value
 
 comm = communication_system.communicators[-1]
 
@@ -23,10 +30,13 @@ init_chunk = 100000
 
 def determine_fields(ds, source_type, point_sources):
     from yt.geometry.particle_geometry_handler import ParticleIndex
+
     # Figure out if this is a particle field or otherwise
-    ptype = (source_type in ds.particle_types) | \
-            (source_type in ds.known_filters) | \
-            ((source_type == "gas") & isinstance(ds.index, ParticleIndex))
+    ptype = (
+        (source_type in ds.particle_types)
+        | (source_type in ds.known_filters)
+        | ((source_type == "gas") & isinstance(ds.index, ParticleIndex))
+    )
     if ptype:
         ppos = [f"particle_position_{ax}" for ax in "xyz"]
         pvel = [f"particle_velocity_{ax}" for ax in "xyz"]
@@ -53,7 +63,7 @@ def determine_fields(ds, source_type, point_sources):
 
 def find_object_bounds(data_source):
     """
-    This logic is required to determine the bounds of the object, which is 
+    This logic is required to determine the bounds of the object, which is
     solely for fixing coordinates at periodic boundaries
     """
     if hasattr(data_source, "base_object"):
@@ -76,21 +86,34 @@ def find_object_bounds(data_source):
     else:
         # Not sure what to do with any other object yet, so just
         # return the domain edges and punt.
-        mylog.warning("You are using a region that is not currently "
-                      "supported for straddling periodic boundaries. "
-                      "Check to make sure that your region does not "
-                      "do so.")
+        mylog.warning(
+            "You are using a region that is not currently "
+            "supported for straddling periodic boundaries. "
+            "Check to make sure that your region does not "
+            "do so."
+        )
         le = data_source.ds.domain_left_edge
         re = data_source.ds.domain_right_edge
 
     return le.to_value("kpc"), re.to_value("kpc")
 
 
-def make_photons(photon_prefix, data_source, redshift, area,
-                 exp_time, source_model, point_sources=False,
-                 parameters=None, center=None, dist=None,
-                 cosmology=None, velocity_fields=None,
-                 bulk_velocity=None, observer="external"):
+def make_photons(
+    photon_prefix,
+    data_source,
+    redshift,
+    area,
+    exp_time,
+    source_model,
+    point_sources=False,
+    parameters=None,
+    center=None,
+    dist=None,
+    cosmology=None,
+    velocity_fields=None,
+    bulk_velocity=None,
+    observer="external",
+):
     r"""
     Write a photon list dataset to disk from a yt data source and assuming a
     source model for the photons. The redshift, collecting area, exposure time,
@@ -124,7 +147,7 @@ def make_photons(photon_prefix, data_source, redshift, area,
         if necessary.
     center : string or array_like, optional
         The origin of the photon spatial coordinates. Accepts "c", "max", or
-        a coordinate. If array-like and without units, it is assumed to be in 
+        a coordinate. If array-like and without units, it is assumed to be in
         units of kpc. If not specified, pyxsim attempts to use the "center"
         field parameter of the data_source.
     dist : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`, optional
@@ -134,10 +157,10 @@ def make_photons(photon_prefix, data_source, redshift, area,
         assumed to be in kpc. To use this, the redshift must be set to zero.
     cosmology : :class:`~yt.utilities.cosmology.Cosmology`, optional
         Cosmological information. If not supplied, we try to get the
-        cosmology from the dataset. Otherwise, LCDM with the default yt 
+        cosmology from the dataset. Otherwise, LCDM with the default yt
         parameters is assumed.
     velocity_fields : list of fields
-        The yt fields to use for the velocity. If not specified, the 
+        The yt fields to use for the velocity. If not specified, the
         following will be assumed:
         ['velocity_x', 'velocity_y', 'velocity_z'] for grid datasets
         ['particle_velocity_x', 'particle_velocity_y', 'particle_velocity_z'] for particle datasets
@@ -174,7 +197,7 @@ def make_photons(photon_prefix, data_source, redshift, area,
     if parameters is None:
         parameters = {}
     if cosmology is None:
-        if hasattr(ds, 'cosmology'):
+        if hasattr(ds, "cosmology"):
             cosmo = ds.cosmology
         else:
             cosmo = Cosmology()
@@ -184,22 +207,28 @@ def make_photons(photon_prefix, data_source, redshift, area,
     if observer == "external":
         if dist is None:
             if redshift <= 0.0:
-                msg = "If redshift <= 0.0, you must specify a distance to the " \
-                      "source using the 'dist' argument!"
+                msg = (
+                    "If redshift <= 0.0, you must specify a distance to the "
+                    "source using the 'dist' argument!"
+                )
                 mylog.error(msg)
                 raise ValueError(msg)
             D_A = cosmo.angular_diameter_distance(0.0, redshift).to("Mpc")
         else:
             D_A = parse_value(dist, "kpc")
             if redshift > 0.0:
-                mylog.warning("Redshift must be zero for nearby sources. "
-                              "Resetting redshift to 0.0.")
+                mylog.warning(
+                    "Redshift must be zero for nearby sources. "
+                    "Resetting redshift to 0.0."
+                )
                 redshift = 0.0
     else:
         D_A = parse_value(0.0, "kpc")
         if redshift > 0.0:
-            mylog.warning("Redshift must be zero for internal observers. "
-                          "Resetting redshift to 0.0.")
+            mylog.warning(
+                "Redshift must be zero for internal observers. "
+                "Resetting redshift to 0.0."
+            )
             redshift = 0.0
 
     if isinstance(center, str):
@@ -220,13 +249,14 @@ def make_photons(photon_prefix, data_source, redshift, area,
         parameters["center"] = ds.arr(center, "code_length")
     elif center is None:
         if hasattr(data_source, "left_edge"):
-            parameters["center"] = 0.5*(data_source.left_edge + 
-                                        data_source.right_edge)
+            parameters["center"] = 0.5 * (
+                data_source.left_edge + data_source.right_edge
+            )
         else:
             parameters["center"] = data_source.get_field_parameter("center")
 
     if bulk_velocity is None:
-        bulk_velocity = ds.arr([0.0]*3, "km/s")
+        bulk_velocity = ds.arr([0.0] * 3, "km/s")
     elif isinstance(bulk_velocity, unyt_array):
         bulk_velocity = bulk_velocity.to("km/s")
     elif isinstance(bulk_velocity, (list, np.ndarray)):
@@ -245,9 +275,11 @@ def make_photons(photon_prefix, data_source, redshift, area,
 
     if observer == "external":
         if redshift > 0.0:
-            mylog.info(f"Cosmology: h = {cosmo.hubble_constant}, "
-                       f"omega_matter = {cosmo.omega_matter}, "
-                       f"omega_lambda = {cosmo.omega_lambda}")
+            mylog.info(
+                f"Cosmology: h = {cosmo.hubble_constant}, "
+                f"omega_matter = {cosmo.omega_matter}, "
+                f"omega_lambda = {cosmo.omega_lambda}"
+            )
         else:
             mylog.info("Observing local source at distance %g.", D_A)
     else:
@@ -255,11 +287,11 @@ def make_photons(photon_prefix, data_source, redshift, area,
 
     local_exp_time = parameters["fid_exp_time"].v
     D_A = parameters["fid_d_a"].to_value("cm")
-    dist_fac = 1.0/(4.*np.pi)
+    dist_fac = 1.0 / (4.0 * np.pi)
     if observer == "external":
-        dist_fac /= D_A*D_A*(1.+redshift)**2
+        dist_fac /= D_A * D_A * (1.0 + redshift) ** 2
 
-    spectral_norm = parameters["fid_area"].v*local_exp_time*dist_fac
+    spectral_norm = parameters["fid_area"].v * local_exp_time * dist_fac
 
     dw = ds.domain_width.to_value("kpc")
     le, re = find_object_bounds(data_source)
@@ -267,9 +299,9 @@ def make_photons(photon_prefix, data_source, redshift, area,
 
     source_model.setup_model("photons", data_source, redshift)
 
-    p_fields, v_fields, w_field = determine_fields(ds,
-                                                   source_model.ftype,
-                                                   point_sources)
+    p_fields, v_fields, w_field = determine_fields(
+        ds, source_model.ftype, point_sources
+    )
 
     if velocity_fields is not None:
         v_fields = velocity_fields
@@ -279,8 +311,7 @@ def make_photons(photon_prefix, data_source, redshift, area,
     else:
         parameters["data_type"] = "particles"
 
-    source_model.set_pv(p_fields, v_fields, le, re, dw, c, ds.periodicity,
-                        observer)
+    source_model.set_pv(p_fields, v_fields, le, re, dw, c, ds.periodicity, observer)
 
     f = h5py.File(photon_file, "w")
 
@@ -314,8 +345,13 @@ def make_photons(photon_prefix, data_source, redshift, area,
             dtype = "int64"
         else:
             dtype = "float64"
-        d.create_dataset(field, data=np.zeros(init_chunk, dtype=dtype),
-                         maxshape=(None,), dtype=dtype, chunks=True)
+        d.create_dataset(
+            field,
+            data=np.zeros(init_chunk, dtype=dtype),
+            maxshape=(None,),
+            dtype=dtype,
+            chunks=True,
+        )
 
     f.flush()
 
@@ -354,18 +390,19 @@ def make_photons(photon_prefix, data_source, redshift, area,
 
                 vel = chunk[v_fields[i]][idxs].to_value("km/s")
                 # Coordinates are centered
-                d[ax][c_offset:c_offset+chunk_nc] = pos-c[i]
+                d[ax][c_offset : c_offset + chunk_nc] = pos - c[i]
                 # Velocities have the bulk velocity subtracted off
-                d[f"v{ax}"][c_offset:c_offset+chunk_nc] = vel-bulk_velocity.v[i]
+                d[f"v{ax}"][c_offset : c_offset + chunk_nc] = vel - bulk_velocity.v[i]
 
-            d["num_photons"][c_offset:c_offset+chunk_nc] = number_of_photons
-            d["energy"][p_offset:p_offset+chunk_nph] = energies
+            d["num_photons"][c_offset : c_offset + chunk_nc] = number_of_photons
+            d["energy"][p_offset : p_offset + chunk_nph] = energies
 
             if w_field is None:
-                d["dx"][c_offset:c_offset+chunk_nc] = 0.0
+                d["dx"][c_offset : c_offset + chunk_nc] = 0.0
             else:
-                d["dx"][c_offset:c_offset+chunk_nc] = \
-                    chunk[w_field][idxs].to_value("kpc")
+                d["dx"][c_offset : c_offset + chunk_nc] = chunk[w_field][idxs].to_value(
+                    "kpc"
+                )
 
             n_cells += chunk_nc
             n_photons += chunk_nph
@@ -395,13 +432,26 @@ def make_photons(photon_prefix, data_source, redshift, area,
     return all_nphotons, all_ncells
 
 
-def _project_photons(obs, photon_prefix, event_prefix, normal,
-                     sky_center, absorb_model=None, nH=None, abund_table="angr",
-                     no_shifting=False, north_vector=None, flat_sky=False,
-                     sigma_pos=None, kernel="top_hat", save_los=False,
-                     prng=None):
+def _project_photons(
+    obs,
+    photon_prefix,
+    event_prefix,
+    normal,
+    sky_center,
+    absorb_model=None,
+    nH=None,
+    abund_table="angr",
+    no_shifting=False,
+    north_vector=None,
+    flat_sky=False,
+    sigma_pos=None,
+    kernel="top_hat",
+    save_los=False,
+    prng=None,
+):
 
     from yt.funcs import ensure_numpy_array
+
     prng = parse_prng(prng)
 
     if photon_prefix.endswith(".h5"):
@@ -430,7 +480,7 @@ def _project_photons(obs, photon_prefix, event_prefix, normal,
 
     sky_center = ensure_numpy_array(sky_center)
 
-    scale_shift = -1.0/clight.to_value("km/s")
+    scale_shift = -1.0 / clight.to_value("km/s")
 
     if isinstance(absorb_model, str):
         if absorb_model not in absorb_models:
@@ -438,12 +488,16 @@ def _project_photons(obs, photon_prefix, event_prefix, normal,
         absorb_model = absorb_models[absorb_model]
     if absorb_model is not None:
         if nH is None:
-            raise RuntimeError("You specified an absorption model, but didn't "
-                               "specify a value for nH!")
+            raise RuntimeError(
+                "You specified an absorption model, but didn't "
+                "specify a value for nH!"
+            )
         absorb_model = absorb_model(nH, abund_table=abund_table)
         if comm.rank == 0:
-            mylog.info(f"Foreground galactic absorption: using the "
-                       f"{absorb_model._name} model and nH = {nH}.")
+            mylog.info(
+                f"Foreground galactic absorption: using the "
+                f"{absorb_model._name} model and nH = {nH}."
+            )
     abs_model_name = absorb_model._name if absorb_model else "none"
     if nH is None:
         nH = 0.0
@@ -458,27 +512,31 @@ def _project_photons(obs, photon_prefix, event_prefix, normal,
     else:
         observer = "external"
     if obs != observer:
-        which_func = {"external": "",
-                      "internal": "_allsky"}
-        raise RuntimeError(f"The function 'project_photons{which_func['obs']}' "
-                           f"does not work with '{observer}' photon lists!")
+        which_func = {"external": "", "internal": "_allsky"}
+        raise RuntimeError(
+            f"The function 'project_photons{which_func['obs']}' "
+            f"does not work with '{observer}' photon lists!"
+        )
 
     if observer == "internal" and isinstance(normal, str):
-        raise RuntimeError("Must specify a vector for 'normal' if you are "
-                           "doing an 'internal' observation!")
+        raise RuntimeError(
+            "Must specify a vector for 'normal' if you are "
+            "doing an 'internal' observation!"
+        )
 
     if sigma_pos is not None and data_type == "particles":
-        raise RuntimeError("The 'smooth_positions' argument should "
-                           "not be used with particle-based datasets!")
+        raise RuntimeError(
+            "The 'smooth_positions' argument should "
+            "not be used with particle-based datasets!"
+        )
 
     d = f["data"]
 
-    D_A = p["fid_d_a"][()]*1.0e3
+    D_A = p["fid_d_a"][()] * 1.0e3
 
     if d["energy"].size == 0:
 
-        mylog.warning("No photons are in file %s, so I am done.",
-                      photon_file)
+        mylog.warning("No photons are in file %s, so I am done.", photon_file)
         n_events = 0
 
     else:
@@ -507,8 +565,9 @@ def _project_photons(obs, photon_prefix, event_prefix, normal,
 
         de = fe.create_group("data")
         for field in event_fields:
-            de.create_dataset(field, data=np.zeros(init_chunk),
-                              maxshape=(None,), chunks=True)
+            de.create_dataset(
+                field, data=np.zeros(init_chunk), maxshape=(None,), chunks=True
+            )
 
         if isinstance(normal, str):
             norm = "xyz".index(normal)
@@ -532,26 +591,33 @@ def _project_photons(obs, photon_prefix, event_prefix, normal,
             eobs = d["energy"][start_e:end_e]
 
             if observer == "internal":
-                r = np.sqrt(x*x+y*y+z*z)
+                r = np.sqrt(x * x + y * y + z * z)
             else:
                 r = None
 
             if not no_shifting:
                 if observer == "internal":
-                    shift = -(d["vx"][start_c:end_c] * x +
-                              d["vy"][start_c:end_c] * y +
-                              d["vz"][start_c:end_c] * z ) / r
+                    shift = (
+                        -(
+                            d["vx"][start_c:end_c] * x
+                            + d["vy"][start_c:end_c] * y
+                            + d["vz"][start_c:end_c] * z
+                        )
+                        / r
+                    )
                 else:
                     if isinstance(normal, str):
                         shift = d[f"v{normal}"][start_c:end_c]
                     else:
-                        shift = (d["vx"][start_c:end_c]*z_hat[0] +
-                                 d["vy"][start_c:end_c]*z_hat[1] +
-                                 d["vz"][start_c:end_c]*z_hat[2])
-                doppler_shift(shift*scale_shift, n_ph, eobs)
+                        shift = (
+                            d["vx"][start_c:end_c] * z_hat[0]
+                            + d["vy"][start_c:end_c] * z_hat[1]
+                            + d["vz"][start_c:end_c] * z_hat[2]
+                        )
+                doppler_shift(shift * scale_shift, n_ph, eobs)
 
             if absorb_model is None:
-                det = np.ones(eobs.size, dtype='bool')
+                det = np.ones(eobs.size, dtype="bool")
                 num_det = eobs.size
             else:
                 det = absorb_model.absorb_photons(eobs, prng=prng)
@@ -564,29 +630,54 @@ def _project_photons(obs, photon_prefix, event_prefix, normal,
                     if data_type == "particles":
                         dx *= 0.5
 
-                    xsky, ysky, los = scatter_events(norm, prng, kernel,
-                                                     data_type, num_det, det, n_ph,
-                                                     x, y, z, dx, x_hat, y_hat, z_hat)
+                    xsky, ysky, los = scatter_events(
+                        norm,
+                        prng,
+                        kernel,
+                        data_type,
+                        num_det,
+                        det,
+                        n_ph,
+                        x,
+                        y,
+                        z,
+                        dx,
+                        x_hat,
+                        y_hat,
+                        z_hat,
+                    )
 
                     if data_type == "cells" and sigma_pos is not None:
-                        sigma = sigma_pos*np.repeat(dx, n_ph)[det]
-                        xsky += sigma*prng.normal(loc=0.0, scale=1.0, size=num_det)
-                        ysky += sigma*prng.normal(loc=0.0, scale=1.0, size=num_det)
+                        sigma = sigma_pos * np.repeat(dx, n_ph)[det]
+                        xsky += sigma * prng.normal(loc=0.0, scale=1.0, size=num_det)
+                        ysky += sigma * prng.normal(loc=0.0, scale=1.0, size=num_det)
 
                     xsky /= D_A
                     ysky /= D_A
 
                     if flat_sky:
-                        xsky = sky_center[0]-np.rad2deg(xsky)
-                        ysky = sky_center[1]+np.rad2deg(ysky)
+                        xsky = sky_center[0] - np.rad2deg(xsky)
+                        ysky = sky_center[1] + np.rad2deg(ysky)
                     else:
                         pixel_to_cel(xsky, ysky, sky_center)
 
                 elif observer == "internal":
 
-                    xsky, ysky, los = scatter_events_allsky(data_type, kernel, prng, num_det,
-                                                            det, n_ph, x, y, z, dx,
-                                                            x_hat, y_hat, z_hat)
+                    xsky, ysky, los = scatter_events_allsky(
+                        data_type,
+                        kernel,
+                        prng,
+                        num_det,
+                        det,
+                        n_ph,
+                        x,
+                        y,
+                        z,
+                        dx,
+                        x_hat,
+                        y_hat,
+                        z_hat,
+                    )
 
                 if e_size < n_events + num_det:
                     while n_events + num_det > e_size:
@@ -594,11 +685,11 @@ def _project_photons(obs, photon_prefix, event_prefix, normal,
                     for field in event_fields:
                         de[field].resize((e_size,))
 
-                de["xsky"][e_offset:e_offset+num_det] = xsky
-                de["ysky"][e_offset:e_offset+num_det] = ysky
-                de["eobs"][e_offset:e_offset+num_det] = eobs[det]
+                de["xsky"][e_offset : e_offset + num_det] = xsky
+                de["ysky"][e_offset : e_offset + num_det] = ysky
+                de["eobs"][e_offset : e_offset + num_det] = eobs[det]
                 if save_los:
-                    de["los"][e_offset:e_offset+num_det] = los
+                    de["los"][e_offset : e_offset + num_det] = los
 
                 n_events += num_det
                 e_offset = n_events
@@ -626,11 +717,22 @@ def _project_photons(obs, photon_prefix, event_prefix, normal,
     return all_nevents
 
 
-def project_photons(photon_prefix, event_prefix, normal, sky_center,
-                    absorb_model=None, nH=None, abund_table="angr",
-                    no_shifting=False, north_vector=None, 
-                    sigma_pos=None, flat_sky=False, kernel="top_hat", 
-                    save_los=False, prng=None):
+def project_photons(
+    photon_prefix,
+    event_prefix,
+    normal,
+    sky_center,
+    absorb_model=None,
+    nH=None,
+    abund_table="angr",
+    no_shifting=False,
+    north_vector=None,
+    sigma_pos=None,
+    flat_sky=False,
+    kernel="top_hat",
+    save_los=False,
+    prng=None,
+):
     r"""
     Projects photons onto an image plane given a line of sight, and
     stores them in an HDF5 dataset which contains an event list.
@@ -658,17 +760,17 @@ def project_photons(photon_prefix, event_prefix, normal, sky_center,
     nH : float, optional
         The foreground column density in units of 10^22 cm^{-2}. Only used
         if absorption is applied.
-    abund_table : string 
-        The abundance table to be used for abundances in the 
+    abund_table : string
+        The abundance table to be used for abundances in the
         absorption model (only used for TBabs). Default is set in the SOXS
         configuration file, the default for which is "angr".
         Built-in options are:
-        "angr" : from Anders E. & Grevesse N. (1989, Geochimica et 
+        "angr" : from Anders E. & Grevesse N. (1989, Geochimica et
         Cosmochimica Acta 53, 197)
-        "aspl" : from Asplund M., Grevesse N., Sauval A.J. & Scott 
+        "aspl" : from Asplund M., Grevesse N., Sauval A.J. & Scott
         P. (2009, ARAA, 47, 481)
         "feld" : from Feldman U. (1992, Physica Scripta, 46, 202)
-        "wilm" : from Wilms, Allen & McCray (2000, ApJ 542, 914 
+        "wilm" : from Wilms, Allen & McCray (2000, ApJ 542, 914
         except for elements not listed which are given zero abundance)
         "lodd" : from Lodders, K (2003, ApJ 591, 1220)
         "cl17.03" : the default abundance table in Cloudy 17.03
@@ -677,8 +779,8 @@ def project_photons(photon_prefix, event_prefix, normal, sky_center,
     north_vector : a sequence of floats
         A vector defining the "up" direction. This option sets the
         orientation of the plane of projection. If not set, an arbitrary
-        grid-aligned north_vector perpendicular to the normal is chosen. 
-        Ignored in the case where a particular axis (e.g., "x", "y", or 
+        grid-aligned north_vector perpendicular to the normal is chosen.
+        Ignored in the case where a particular axis (e.g., "x", "y", or
         "z") is explicitly specified.
     sigma_pos : float, optional
         Apply a gaussian smoothing operation to the sky positions of the
@@ -715,18 +817,38 @@ def project_photons(photon_prefix, event_prefix, normal, sky_center,
     ...                                   [30., 45.], absorb_model='tbabs',
     ...                                   nH=0.04)
     """
-    return _project_photons("external", photon_prefix, event_prefix, normal,
-                            sky_center, absorb_model=absorb_model, nH=nH,
-                            abund_table=abund_table, no_shifting=no_shifting, 
-                            north_vector=north_vector, sigma_pos=sigma_pos, 
-                            flat_sky=flat_sky, kernel=kernel, save_los=save_los, 
-                            prng=prng)
+    return _project_photons(
+        "external",
+        photon_prefix,
+        event_prefix,
+        normal,
+        sky_center,
+        absorb_model=absorb_model,
+        nH=nH,
+        abund_table=abund_table,
+        no_shifting=no_shifting,
+        north_vector=north_vector,
+        sigma_pos=sigma_pos,
+        flat_sky=flat_sky,
+        kernel=kernel,
+        save_los=save_los,
+        prng=prng,
+    )
 
 
-def project_photons_allsky(photon_prefix, event_prefix, normal,
-                           absorb_model=None, nH=None, abund_table="angr",
-                           no_shifting=False, center_vector=None,
-                           kernel="top_hat", save_los=False, prng=None):
+def project_photons_allsky(
+    photon_prefix,
+    event_prefix,
+    normal,
+    absorb_model=None,
+    nH=None,
+    abund_table="angr",
+    no_shifting=False,
+    center_vector=None,
+    kernel="top_hat",
+    save_los=False,
+    prng=None,
+):
     r"""
     Projects photons onto the sky sphere given a normal vector ("z" or "up" in
     spherical coordinates), and stores them in an HDF5 dataset which contains
@@ -745,25 +867,25 @@ def project_photons_allsky(photon_prefix, event_prefix, normal,
     normal : array-like
         The vector determining the "z" or "up" vector for the spherical coordinate
         system for the all-sky projection, something like [1.0, 2.0, -3.0]. It
-        will be normalized before use. 
+        will be normalized before use.
     absorb_model : string
         A model for foreground galactic absorption, to simulate the
-        absorption of events before being detected. Known options are "wabs" 
+        absorption of events before being detected. Known options are "wabs"
         and "tbabs".
     nH : float, optional
         The foreground column density in units of 10^22 cm^{-2}. Only used
         if absorption is applied.
-    abund_table : string 
-        The abundance table to be used for abundances in the 
+    abund_table : string
+        The abundance table to be used for abundances in the
         absorption model (only used for TBabs). Default is set in the SOXS
         configuration file, the default for which is "angr".
         Built-in options are:
-        "angr" : from Anders E. & Grevesse N. (1989, Geochimica et 
+        "angr" : from Anders E. & Grevesse N. (1989, Geochimica et
         Cosmochimica Acta 53, 197)
-        "aspl" : from Asplund M., Grevesse N., Sauval A.J. & Scott 
+        "aspl" : from Asplund M., Grevesse N., Sauval A.J. & Scott
         P. (2009, ARAA, 47, 481)
         "feld" : from Feldman U. (1992, Physica Scripta, 46, 202)
-        "wilm" : from Wilms, Allen & McCray (2000, ApJ 542, 914 
+        "wilm" : from Wilms, Allen & McCray (2000, ApJ 542, 914
         except for elements not listed which are given zero abundance)
         "lodd" : from Lodders, K (2003, ApJ 591, 1220)
         "cl17.03" : the default abundance table in Cloudy 17.03
@@ -794,8 +916,18 @@ def project_photons_allsky(photon_prefix, event_prefix, normal,
     >>> L = np.array([0.1,-0.2,0.3])
     >>> n_events = pyxsim.project_photons_allsky("my_photons.h5", "my_events.h5", L)
     """
-    return _project_photons("internal", photon_prefix, event_prefix, normal,
-                            [0.0, 0.0], absorb_model=absorb_model, nH=nH, 
-                            abund_table=abund_table, no_shifting=no_shifting, 
-                            kernel=kernel, save_los=save_los, north_vector=center_vector,
-                            prng=prng)
+    return _project_photons(
+        "internal",
+        photon_prefix,
+        event_prefix,
+        normal,
+        [0.0, 0.0],
+        absorb_model=absorb_model,
+        nH=nH,
+        abund_table=abund_table,
+        no_shifting=no_shifting,
+        kernel=kernel,
+        save_los=save_los,
+        north_vector=center_vector,
+        prng=prng,
+    )

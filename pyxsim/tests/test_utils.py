@@ -1,6 +1,7 @@
-from pyxsim.utils import parse_value
 from astropy.units import Quantity
 from yt import YTQuantity
+
+from pyxsim.utils import parse_value
 
 
 def test_parse_value():

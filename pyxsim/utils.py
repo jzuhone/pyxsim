@@ -1,11 +1,10 @@
-from unyt import unyt_array, unyt_quantity
-from astropy.units import Quantity
 import logging
-from more_itertools import always_iterable
-import numpy as np
-from soxs.constants import elem_names, \
-    atomic_weights, abund_tables
 
+import numpy as np
+from astropy.units import Quantity
+from more_itertools import always_iterable
+from soxs.constants import abund_tables, atomic_weights, elem_names
+from unyt import unyt_array, unyt_quantity
 
 pyxsimLogger = logging.getLogger("pyxsim")
 
@@ -18,7 +17,7 @@ formatter = logging.Formatter(ufstring)
 pyxsim_sh.setFormatter(formatter)
 # add the handler to the logger
 pyxsimLogger.addHandler(pyxsim_sh)
-pyxsimLogger.setLevel('INFO')
+pyxsimLogger.setLevel("INFO")
 pyxsimLogger.propagate = False
 
 mylog = pyxsimLogger
@@ -71,14 +70,17 @@ def validate_parameters(first, second, skip=None):
             if isinstance(v1, (str, bytes)) or isinstance(v2, (str, bytes)):
                 check_equal = v1 == v2
             else:
-                check_equal = np.allclose(np.array(v1), np.array(v2), rtol=0.0, atol=1.0e-10)
+                check_equal = np.allclose(
+                    np.array(v1), np.array(v2), rtol=0.0, atol=1.0e-10
+                )
             if not check_equal:
-                raise RuntimeError(f"The values for the parameter '{k1}' in the two inputs"
-                                   f" are not identical ({v1} vs. {v2})!")
+                raise RuntimeError(
+                    f"The values for the parameter '{k1}' in the two inputs"
+                    f" are not identical ({v1} vs. {v2})!"
+                )
 
 
-def merge_files(input_files, output_file, overwrite=False,
-                add_exposure_times=False):
+def merge_files(input_files, output_file, overwrite=False, add_exposure_times=False):
     r"""
     Helper function for merging PhotonList or EventList HDF5 files.
     Parameters
@@ -105,11 +107,15 @@ def merge_files(input_files, output_file, overwrite=False,
     add_exposure_times=False, the maximum exposure time will be used.
     """
     from collections import defaultdict
-    from pathlib import Path
+
     import h5py
+    from pathlib import Path
+
     if Path(output_file).exists() and not overwrite:
-        raise IOError(f"Cannot overwrite existing file {output_file}. "
-                      "If you want to do this, set overwrite=True.")
+        raise IOError(
+            f"Cannot overwrite existing file {output_file}. "
+            "If you want to do this, set overwrite=True."
+        )
 
     f_in = h5py.File(input_files[0], "r")
     f_out = h5py.File(output_file, "w")
@@ -154,9 +160,9 @@ def compute_elem_mass_fraction(elem, abund_table="angr"):
     if isinstance(elem, str):
         elem = elem_names.index(elem)
     atable = abund_tables[abund_table]
-    mZ = (atomic_weights[3:]*atable[3:]).sum()
-    mE = atomic_weights[elem]*atable[elem]
-    return mE/mZ
+    mZ = (atomic_weights[3:] * atable[3:]).sum()
+    mE = atomic_weights[elem] * atable[elem]
+    return mE / mZ
 
 
 def create_metal_fields(ds, metallicity_field, elements, abund_table):
@@ -178,11 +184,15 @@ def create_metal_fields(ds, metallicity_field, elements, abund_table):
         individual elements.
     """
     elements = ensure_list(elements)
+
     def make_metal_field(elem):
         fac = compute_elem_mass_fraction(elem, abund_table=abund_table)
+
         def _metal_field(field, data):
-            return fac*data[metallicity_field].to("dimensionless")
+            return fac * data[metallicity_field].to("dimensionless")
+
         return _metal_field
+
     mfields = []
     for elem in elements:
         func = make_metal_field(elem)
@@ -193,7 +203,7 @@ def create_metal_fields(ds, metallicity_field, elements, abund_table):
 
 
 def compute_H_abund(abund_table):
-    return atomic_weights[1]/(atomic_weights*abund_tables[abund_table]).sum()
+    return atomic_weights[1] / (atomic_weights * abund_tables[abund_table]).sum()
 
 
 class ParallelProgressBar:
