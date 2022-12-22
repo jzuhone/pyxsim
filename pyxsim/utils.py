@@ -75,7 +75,7 @@ def validate_parameters(first, second, skip=None):
                 getattr(getattr(v1, "dtype", None), "char", None) == "S"
                 or getattr(getattr(v2, "dtype", None), "char", None) == "S"
             ):
-                check_equal = np.char.equal(v1, v2)
+                check_equal = np.char.equal(v1, v2).all()
             else:
                 check_equal = np.allclose(
                     np.array(v1), np.array(v2), rtol=0.0, atol=1.0e-10
