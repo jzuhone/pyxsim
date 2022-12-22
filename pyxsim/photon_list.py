@@ -4,9 +4,9 @@ Classes for generating lists of photons
 import h5py
 import numpy as np
 from soxs.utils import parse_prng
+from tqdm.auto import tqdm
 from unyt.array import unyt_array
 from yt import __version__ as yt_version
-from yt.funcs import get_pbar
 from yt.utilities.cosmology import Cosmology
 from yt.utilities.orientation import Orientation
 from yt.utilities.parallel_tools.parallel_analysis_interface import (
@@ -599,7 +599,9 @@ def _project_photons(
 
         n_cells = d["num_photons"].size
 
-        pbar = get_pbar("Projecting photons from cells/particles", n_cells)
+        pbar = tqdm(
+            leave=True, total=n_cells, desc="Projecting photons from cells/particles "
+        )
 
         for start_c in range(0, n_cells, cell_chunk):
 
@@ -723,7 +725,7 @@ def _project_photons(
 
             pbar.update(end_c)
 
-        pbar.finish()
+        pbar.close()
 
         if e_size > n_events:
             for field in event_fields:
