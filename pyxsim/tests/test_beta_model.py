@@ -116,7 +116,7 @@ def do_beta_model(source, check_dir, axis="z", prng=None):
     shutil.rmtree(tmpdir)
 
 
-def test_vapec_beta_model():
+def test_vapec_beta_model(check_dir):
 
     bms = BetaModelSource()
 
