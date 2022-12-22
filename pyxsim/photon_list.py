@@ -3,6 +3,7 @@ Classes for generating lists of photons
 """
 import h5py
 import numpy as np
+from soxs import __version__ as soxs_version
 from soxs.utils import parse_prng
 from tqdm.auto import tqdm
 from unyt.array import unyt_array
@@ -322,6 +323,7 @@ def make_photons(
     info = f.create_group("info")
     info.attrs["yt_version"] = yt_version
     info.attrs["pyxsim_version"] = pyxsim_version
+    info.attrs["soxs_version"] = soxs_version
 
     # Parameters
 
@@ -558,6 +560,7 @@ def _project_photons(
         ie = fe.create_group("info")
         ie.attrs["pyxsim_version"] = pyxsim_version
         ie.attrs["yt_version"] = yt_version
+        ie.attrs["soxs_version"] = soxs_version
 
         pe = fe.create_group("parameters")
         pe.create_dataset("exp_time", data=float(p["fid_exp_time"][()]))
