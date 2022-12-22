@@ -337,7 +337,7 @@ def make_photons(
     p.create_dataset("observer", data=parameters["observer"])
     p.create_dataset("center", data=parameters["center"].d)
     p.create_dataset("bulk_velocity", data=parameters["bulk_velocity"].d)
-    p.create_dataset("velocity_fields", data=np.array(v_fields))
+    p.create_dataset("velocity_fields", data=np.array(v_fields).astype("S"))
 
     n_cells = 0
     n_photons = 0
