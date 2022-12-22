@@ -6,9 +6,10 @@ import numpy as np
 import yt
 from numpy.random import RandomState
 from numpy.testing import assert_array_equal
+from soxs.tests.utils import file_answer_testing
 
 from pyxsim import CIESourceModel, EventList, make_photons, merge_files, project_photons
-from pyxsim.tests.utils import file_answer_testing, hdf5_answer_testing
+from pyxsim.tests.utils import hdf5_answer_testing
 
 gslr = "GasSloshingLowRes/sloshing_low_res_hdf5_plt_cnt_0300"
 
