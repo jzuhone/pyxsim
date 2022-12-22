@@ -5,8 +5,6 @@ import tempfile
 import h5py
 import numpy as np
 from numpy.testing import assert_allclose
-from soxs import Spectrum
-from soxs.constants import sigma_to_fwhm
 from yt.units.yt_array import YTArray, YTQuantity
 from yt.utilities.cosmology import Cosmology
 from yt.utilities.physical_constants import clight
@@ -169,9 +167,8 @@ def test_line_emission_spectra():
 
     line_model = LineSourceModel(location, "dm_emission", sigma=sigma)
 
-    weight_std = lambda x, w: np.sqrt(
-        np.average((x - np.average(x, weights=w)) ** 2, weights=w)
-    )
+    def weight_std(x, w):
+        return np.sqrt(np.average((x - np.average(x, weights=w)) ** 2, weights=w))
 
     spec1 = line_model.make_spectrum(sphere, 1.0, 6.0, 5000)
     assert_allclose(np.average(spec1.emid.value, weights=spec1.flux.value), location.v)

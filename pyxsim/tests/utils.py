@@ -2,7 +2,6 @@ from numbers import Real
 
 import numpy as np
 from numpy.random import RandomState
-from soxs.tests.utils import file_answer_testing
 from yt.loaders import load_particles, load_uniform_grid
 from yt.utilities.physical_ratios import K_per_keV, cm_per_mpc, mass_hydrogen_grams
 

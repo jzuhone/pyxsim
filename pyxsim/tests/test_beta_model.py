@@ -9,7 +9,6 @@ import tempfile
 import numpy as np
 from numpy.testing import assert_allclose
 from soxs import ApecGenerator
-from soxs.events import write_spectrum
 from yt.utilities.cosmology import Cosmology
 from yt.utilities.physical_constants import clight
 
@@ -77,9 +76,7 @@ def do_beta_model(source, check_dir, axis="z", prng=None):
     Z_sim = source.Z
 
     thermal_model = CIESourceModel("apec", 0.1, 11.5, 20000, Z_sim, prng=prng)
-    n_photons, n_cells = make_photons(
-        "my_photons", sphere, redshift, A, exp_time, thermal_model
-    )
+    make_photons("my_photons", sphere, redshift, A, exp_time, thermal_model)
 
     D_A = cosmo.angular_diameter_distance(0.0, redshift).to_value("cm")
 
@@ -103,7 +100,7 @@ def do_beta_model(source, check_dir, axis="z", prng=None):
     sigma_sim = fac * float(v1.in_units("km/s"))
     mu_sim = -fac * float(v2.in_units("km/s"))
 
-    n_events = project_photons(
+    project_photons(
         "my_photons",
         "my_events",
         axis,
@@ -157,7 +154,7 @@ def test_vapec_beta_model(check_dir):
         "apec", 0.1, 11.5, 20000, ("gas", "metallicity"), var_elem=var_elem, prng=prng
     )
 
-    n_photons = make_photons("my_photons", sphere, redshift, A, exp_time, thermal_model)
+    make_photons("my_photons", sphere, redshift, A, exp_time, thermal_model)
 
     D_A = cosmo.angular_diameter_distance(0.0, redshift).to("cm")
 
@@ -165,7 +162,7 @@ def test_vapec_beta_model(check_dir):
     norm_sim *= 1.0e-14 / (4 * np.pi * D_A * D_A * (1.0 + redshift) * (1.0 + redshift))
     norm_sim = float(norm_sim.in_cgs())
 
-    n_events = project_photons(
+    project_photons(
         "my_photons",
         "my_events",
         "z",

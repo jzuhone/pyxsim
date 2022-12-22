@@ -24,4 +24,3 @@ Source Models API
     :members: make_spectrum
     :undoc-members:
     :exclude-members: setup_model, process_data, make_fluxf, cleanup_model
-

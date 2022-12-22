@@ -13,7 +13,7 @@ cdef extern from "math.h":
     double asin(double x) nogil
     double acos(double x) nogil
 
-    
+
 @cython.cdivision(True)
 @cython.boundscheck(False)
 @cython.wraparound(False)
@@ -82,7 +82,7 @@ def scatter_events(normal, prng, kernel, data_type,
                 theta = 2.0*np.pi*prng.uniform(low=0.0, high=1.0, size=num_det)
                 xsky = r*np.cos(theta)
                 ysky = r*np.sin(theta)
-    
+
         for i in range(num_cells):
             for j in range(n_ph[i]):
                 if det[n]:
@@ -104,9 +104,9 @@ def scatter_events(normal, prng, kernel, data_type,
                 n += 1
 
     else:
-    
+
         if data_type == "cells":
-            xsky, ysky, zsky = prng.uniform(low=-0.5, high=0.5, 
+            xsky, ysky, zsky = prng.uniform(low=-0.5, high=0.5,
                                             size=(3, num_det))
             for i in range(num_cells):
                 for j in range(n_ph[i]):
@@ -142,7 +142,7 @@ def scatter_events(normal, prng, kernel, data_type,
                         los[k] = x[i]*z_hat[0]+y[i]*z_hat[1]+z[i]*z_hat[2]
                         k += 1
                     n += 1
-    
+
     return xsky, ysky, los
 
 
@@ -164,7 +164,7 @@ def pixel_to_cel(np.ndarray[np.float64_t, ndim=1] xsky,
     cos_cy = cos(cy)
 
     for i in range(n):
-        
+
         D = atan(sqrt(xsky[i]*xsky[i] + ysky[i]*ysky[i]))
         B = atan2(-xsky[i], -ysky[i])
 

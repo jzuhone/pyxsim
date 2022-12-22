@@ -8,7 +8,7 @@ out on your own, using `sample datasets provided by the yt Project <http://yt-pr
 
 .. toctree::
     :maxdepth: 1
-        
+
     Thermal_Emission
     Advanced_Thermal_Emission
     More_Advanced_Thermal_Emission

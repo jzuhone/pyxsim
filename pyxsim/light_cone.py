@@ -149,7 +149,7 @@ class XrayLightCone(LightCone):
                 cosmology=ds.cosmology,
             )
             eprefix = f"{event_prefix}.lc{i}"
-            n_events = project_photons(
+            project_photons(
                 pprefix,
                 eprefix,
                 "xyz"[ax],

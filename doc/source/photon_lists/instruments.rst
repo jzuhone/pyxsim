@@ -3,11 +3,11 @@
 Producing Realistic Observations Using External Packages
 ========================================================
 
-If you want to produce a realistic simulation of a particular instrumental 
-configuration, pyXSIM provides options for exporting its event lists to 
+If you want to produce a realistic simulation of a particular instrumental
+configuration, pyXSIM provides options for exporting its event lists to
 external packages. The supported software packages are:
 
-* `MARX <https://space.mit.edu/ASC/MARX/>`_ 
+* `MARX <https://space.mit.edu/ASC/MARX/>`_
 * `SIMX <https://hea-www.cfa.harvard.edu/simx/>`_
 * `SIXTE <https://https://www.sternwarte.uni-erlangen.de/research/sixte/>`_
 * `SOXS <https://hea-www.cfa.harvard.edu/soxs>`_
@@ -15,7 +15,7 @@ external packages. The supported software packages are:
 MARX
 ----
 
-The MARX version needs to be at least 5.3.1. To use SIMPUT with MARX, one only 
+The MARX version needs to be at least 5.3.1. To use SIMPUT with MARX, one only
 needs to change the following lines in the ``marx.par`` file:
 
 .. code-block:: bash
@@ -47,7 +47,7 @@ pyXSIM:
     #!/bin/bash
     heainit
     simxinit
-    
+
     punlearn simx
     pset simx mode=hl
     pset simx Exposure=1.0e4
@@ -55,7 +55,7 @@ pyXSIM:
     pset simx MissionName=XraySurveyor InstrumentName=HDXI
     pset simx ScaleBkgnd=0.0
     pset simx RandomSeed=24
-    
+
     pset simx SimputFile=spiral_242959_noshift_xrs_simput.fits
     pset simx PointingRA=30.0 PointingDec=45.0
     pset simx OutputFileName=spiral_242959_noshift_xrs
@@ -73,16 +73,16 @@ pyXSIM:
 
     export HEADASNOQUERY=
     export HEADASPROMPT=/dev/null
-    
+
     . $HEADAS/headas-init.sh
-    
+
     base=sloshing_simput
     xmldir=$SIXTE/share/sixte/instruments/athena-wfi/wfi_wo_filter_15row
     xml0=${xmldir}/ld_wfi_ff_chip0.xml
     xml1=${xmldir}/ld_wfi_ff_chip1.xml
     xml2=${xmldir}/ld_wfi_ff_chip2.xml
     xml3=${xmldir}/ld_wfi_ff_chip3.xml
-    
+
     $SIXTE/bin/athenawfisim \
         XMLFile0=${xml0} XMLFile1=${xml1} XMLFile2=${xml2} XMLFile3=${xml3} \
         RA=30.05 Dec=45.04 \
@@ -91,11 +91,11 @@ pyXSIM:
         EvtFile=evt.fits \
         Exposure=6000.0 \
         clobber=yes
-    
+
     ftmerge \
         sim_chip0_evt.fits,sim_chip1_evt.fits,sim_chip2_evt.fits,sim_chip3_evt.fits \
         sim_combined_evt.fits clobber=yes
-    
+
     $SIXTE/bin/imgev \
         EvtFile=sim_combined_evt.fits \
         Image=img_sloshing.fits \

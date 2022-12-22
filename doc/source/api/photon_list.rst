@@ -3,7 +3,7 @@ Photon Lists API
 
 .. automodule:: pyxsim.photon_list
     :members:
-    :undoc-members: 
+    :undoc-members:
     :exclude-members: determine_fields, concatenate_photons, find_object_bounds
 
 .. automodule:: pyxsim.utils

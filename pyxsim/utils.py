@@ -39,13 +39,15 @@ def parse_value(value, default_units, ds=None):
 
 
 def isunitful(a):
+    from unyt.exceptions import UnitParseError
+
     if isinstance(a, (Quantity, unyt_array)):
         return True
     elif isinstance(a, tuple):
         try:
             unyt_array(a[0], a[1])
             return True
-        except:
+        except UnitParseError:
             pass
     return False
 
@@ -138,7 +140,7 @@ def merge_files(input_files, output_file, overwrite=False, add_exposure_times=Fa
     data = defaultdict(list)
     tot_exp_time = 0.0
 
-    for i, fn in enumerate(input_files):
+    for fn in input_files:
         with h5py.File(fn, "r") as f:
             if add_exposure_times:
                 tot_exp_time += f["/parameters"][exp_time_key][()]
@@ -209,10 +211,10 @@ def compute_H_abund(abund_table):
 class ParallelProgressBar:
     def __init__(self, title):
         self.title = title
-        mylog.info(f"Starting '{title}'")
+        mylog.info("Starting %s", title)
 
     def update(self, *args, **kwargs):
         return
 
     def close(self):
-        mylog.info(f"Finishing '{self.title}'")
+        mylog.info("Finishing %s", self.title)

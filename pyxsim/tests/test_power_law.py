@@ -5,7 +5,6 @@ import tempfile
 import numpy as np
 from numpy.testing import assert_allclose
 from soxs import Spectrum
-from soxs.events import write_spectrum
 from yt.units.yt_array import YTQuantity
 from yt.utilities.cosmology import Cosmology
 from yt.utilities.physical_constants import mp
@@ -61,15 +60,13 @@ def plaw_fit(alpha_sim, check_dir, prng=None):
         1.0, 0.01, 11.0, "hard_emission", alpha_sim, prng=prng
     )
 
-    n_photons, n_cells = make_photons(
-        "plaw_photons.h5", sphere, redshift, A, exp_time, plaw_model
-    )
+    make_photons("plaw_photons.h5", sphere, redshift, A, exp_time, plaw_model)
 
     D_A = cosmo.angular_diameter_distance(0.0, redshift).to_value("cm")
     dist_fac = 1.0 / (4.0 * np.pi * D_A * D_A * (1.0 + redshift) ** 3)
     norm_sim = float((sphere["hard_emission"]).sum() * dist_fac) * (1.0 + redshift)
 
-    n_events = project_photons(
+    project_photons(
         "plaw_photons.h5",
         "plaw_events.h5",
         "z",

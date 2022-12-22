@@ -65,7 +65,9 @@ class ThermalSpectralModel:
                 copy=False,
             )
         else:
-            vf = lambda kT: None
+
+            def vf(kT):
+                pass
 
         def _fluxf(kT):
             kT = self._Tconv(kT)
@@ -301,14 +303,14 @@ class CloudyCIESpectralModel(Atable1DSpectralModel):
 class IGMSpectralModel(ThermalSpectralModel):
     _logT = True
     r"""
-    A spectral model for a thermal plasma including photoionization and 
+    A spectral model for a thermal plasma including photoionization and
     resonant scattering from the CXB based on Khabibullin & Churazov 2019
-    (https://ui.adsabs.harvard.edu/abs/2019MNRAS.482.4972K/) and Churazov 
+    (https://ui.adsabs.harvard.edu/abs/2019MNRAS.482.4972K/) and Churazov
     et al. 2001 (https://ui.adsabs.harvard.edu/abs/2001MNRAS.323...93C/).
 
-    For temperatures higher than kT ~ 1.09 keV, a Cloudy-based CIE model 
-    is used to compute the spectrum. 
- 
+    For temperatures higher than kT ~ 1.09 keV, a Cloudy-based CIE model
+    is used to compute the spectrum.
+
     Assumes the abundance tables from Feldman 1992.
 
     Table data and README files can be found at

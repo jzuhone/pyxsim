@@ -75,8 +75,8 @@ class ThermalSourceModel(SourceModel):
         self.prng = parse_prng(prng)
         self.kT_min = kT_min
         self.kT_max = kT_max
-        mylog.info(f"kT_min = {kT_min} keV")
-        mylog.info(f"kT_max = {kT_max} keV")
+        mylog.info("kT_min = %g keV", kT_min)
+        mylog.info("kT_max = %g keV", kT_max)
         self.nH_min = nH_min
         self.nH_max = nH_max
         self.redshift = None
@@ -141,10 +141,10 @@ class ThermalSourceModel(SourceModel):
                             f"{m_units} for element {key}!"
                         )
         self.density_field = (ftype, "density")
-        mylog.info(f"Using emission measure field " f"'{self.emission_measure_field}'.")
-        mylog.info(f"Using temperature field " f"'{self.temperature_field}'.")
+        mylog.info("Using emission measure field '%s'.", self.emission_measure_field)
+        mylog.info("Using temperature field '%s'.", self.temperature_field)
         if self.nh_field is not None:
-            mylog.info(f"Using nH field '{self.nh_field}'.")
+            mylog.info("Using nH field '%s'.", self.nh_field)
         self.spectral_model.prepare_spectrum(redshift)
         if mode in ["photons", "spectrum"]:
             self.setup_pbar(data_source, self.temperature_field)

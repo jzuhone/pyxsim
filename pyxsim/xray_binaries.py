@@ -15,7 +15,7 @@ Papers used in this code:
 
 Gilfanov, M. 2004, MNRAS, 349, 146
 
-Mineo, S., Gilfanov, M., & Sunyaev, R. 2012, MNRAS, 419, 2095 
+Mineo, S., Gilfanov, M., & Sunyaev, R. 2012, MNRAS, 419, 2095
 """
 
 
@@ -186,8 +186,10 @@ def make_xrb_particles(
         sfr = (m[recent].sum() / sfr_time_range).to("Msun/yr").v
 
     mylog.info(
-        "%d star particles were formed in the last " % n_recent
-        + "%s for a SFR of %4.1f Msun/yr." % (sfr_time_range, sfr)
+        "%d star particles were formed in the last %s for a SFR of %4.1f Msun/yr.",
+        n_recent,
+        sfr_time_range,
+        sfr,
     )
 
     mtot = m.sum()
@@ -290,7 +292,7 @@ def make_xrb_particles(
 
         n_h = prng.poisson(lam=N_h * m / mtot)
 
-        mylog.info("Number of high-mass X-ray binaries: %s" % n_h.sum())
+        mylog.info("Number of high-mass X-ray binaries: %s", n_h.sum())
 
         for i, n in enumerate(n_h):
             if n > 0:

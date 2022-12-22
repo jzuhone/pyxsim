@@ -10,7 +10,7 @@ pyXSIM 4.x is compatible with Python 3.8+, and requires the following Python
 packages:
 
 - `yt <http://yt-project.org>`_ (version 4.1 or higher)
-- `soxs <http://hea-www.cfa.harvard.edu/~jzuhone/soxs>`_ (version 4.0.0 or 
+- `soxs <http://hea-www.cfa.harvard.edu/~jzuhone/soxs>`_ (version 4.0.0 or
   higher)
 - `NumPy <http://www.numpy.org>`_
 - `SciPy <http://www.scipy.org>`_
@@ -24,8 +24,8 @@ pyXSIM also has the following optional dependencies:
 Installing
 ----------
 
-pyXSIM can be installed in a few different ways. The simplest way is via the 
-conda package if you have the 
+pyXSIM can be installed in a few different ways. The simplest way is via the
+conda package if you have the
 `Anaconda Python Distribution <https://store.continuum.io/cshop/anaconda/>`_:
 
 .. code-block:: bash
@@ -35,7 +35,7 @@ conda package if you have the
 Note both the ``jzuhone`` and ``astropy`` channels are required. This will install all of
 the necessary dependencies.
 
-The second way to install pyXSIM is via pip. pip will attempt to download the 
+The second way to install pyXSIM is via pip. pip will attempt to download the
 dependencies and install them, if they are not already installed in your Python
 distribution:
 
@@ -43,11 +43,11 @@ distribution:
 
     [~]$ pip install pyxsim
 
-Alternatively, to install into your Python distribution from 
+Alternatively, to install into your Python distribution from
 `source <http://github.com/jzuhone/pyxsim>`_:
 
 .. code-block:: bash
-    
+
     [~]$ git clone http://github.com/jzuhone/pyxsim
     [~]$ cd pyxsim
-    [~]$ pip install . 
+    [~]$ pip install .

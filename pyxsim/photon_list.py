@@ -276,9 +276,10 @@ def make_photons(
     if observer == "external":
         if redshift > 0.0:
             mylog.info(
-                f"Cosmology: h = {cosmo.hubble_constant}, "
-                f"omega_matter = {cosmo.omega_matter}, "
-                f"omega_lambda = {cosmo.omega_lambda}"
+                "Cosmology: h = %g, omega_matter = %g, omega_lambda = %g",
+                cosmo.hubble_constant,
+                cosmo.omega_matter,
+                cosmo.omega_lambda,
             )
         else:
             mylog.info("Observing local source at distance %g.", D_A)
@@ -495,8 +496,9 @@ def _project_photons(
         absorb_model = absorb_model(nH, abund_table=abund_table)
         if comm.rank == 0:
             mylog.info(
-                f"Foreground galactic absorption: using the "
-                f"{absorb_model._name} model and nH = {nH}."
+                "Foreground galactic absorption: using the %s model and nH = %g.",
+                absorb_model._name,
+                nH,
             )
     abs_model_name = absorb_model._name if absorb_model else "none"
     if nH is None:
@@ -712,7 +714,7 @@ def _project_photons(
 
     all_nevents = comm.mpi_allreduce(n_events)
 
-    mylog.info(f"Detected {all_nevents} events.")
+    mylog.info("Detected %d events.", all_nevents)
 
     return all_nevents
 
