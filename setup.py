@@ -47,7 +47,7 @@ setup(
         "astropy>=4.0",
         "h5py>=3.0",
         "scipy",
-        "yt>=4.1.2",
+        "yt>=4.1.3",
         "soxs>=4.1.0",
         "tqdm",
     ],
