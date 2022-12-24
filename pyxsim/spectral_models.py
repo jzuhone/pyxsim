@@ -19,7 +19,7 @@ from pyxsim.lib.interpolate import interp1d_spec, interp1d_var_spec
 
 class SpectralInterpolator1D:
     def __init__(self, tbins, spec):
-        self.tbins = tbins.byteswap().newbyteorder("<").astype("float64")
+        self.tbins = tbins.astype("float64")
         self.spec = spec
         self.nchan = self.spec.shape[-1]
         self.var_elem = len(self.spec.shape) == 3
