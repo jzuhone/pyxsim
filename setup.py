@@ -48,7 +48,7 @@ setup(
         "h5py>=3.0",
         "scipy",
         "yt>=4.1.3",
-        "soxs>=4.1.0",
+        "soxs>=4.2.1",
         "tqdm",
     ],
     include_package_data=True,
