@@ -959,3 +959,47 @@ def project_photons_allsky(
         north_vector=center_vector,
         prng=prng,
     )
+
+
+class PhotonList:
+    def __init__(self, filespec):
+        """
+        Read a PhotonList from disk to get information about it.
+
+        Parameters
+        ----------
+        filespec : str
+            A filename, list of filenames, or globbable path
+            that yields a single or list of HDF5 files containing
+            event data.
+        """
+        from glob import glob
+
+        if filespec.endswith(".h5"):
+            filenames = glob(filespec)
+        elif isinstance(filespec, list):
+            if not np.all([fn.endswith(".h5") for fn in filespec]):
+                raise RuntimeError("Not all filenames are valid!")
+            filenames = filespec
+        else:
+            raise RuntimeError(f"Invalid PhotonList file spec: {filespec}")
+        self.filenames = filenames
+        self.filenames.sort()
+        self.parameters = {}
+        self.info = {}
+        self.num_photons = []
+        for i, fn in enumerate(self.filenames):
+            with h5py.File(fn, "r") as f:
+                p = f["parameters"]
+                info = f["info"]
+                self.num_events.append(f["data"]["energy"].size)
+                if i == 0:
+                    for field in p:
+                        if isinstance(p[field], (str, bytes)):
+                            self.parameters[field] = p[field].asstr()[()]
+                        else:
+                            self.parameters[field] = p[field][()]
+                    for k, v in info.attrs.items():
+                        self.info[k] = v
+        self.tot_num_photons = np.sum(self.num_photons)
+        self.observer = self.parameters.get("observer", "external")

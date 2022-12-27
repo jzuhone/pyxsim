@@ -8,7 +8,12 @@ except PackageNotFoundError:
 
 
 from pyxsim.event_list import EventList
-from pyxsim.photon_list import make_photons, project_photons, project_photons_allsky
+from pyxsim.photon_list import (
+    PhotonList,
+    make_photons,
+    project_photons,
+    project_photons_allsky,
+)
 from pyxsim.source_models import (
     CIESourceModel,
     IGMSourceModel,
