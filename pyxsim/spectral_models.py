@@ -14,25 +14,35 @@ from soxs.thermal_spectra import (
 from soxs.utils import parse_prng, regrid_spectrum
 from yt.units.yt_array import YTArray, YTQuantity
 
-from pyxsim.lib.interpolate import interp1d_spec, interp1d_var_spec
+from pyxsim.lib.interpolate import interp1d_spec
 
 
 class SpectralInterpolator1D:
-    def __init__(self, tbins, spec):
+    def __init__(self, tbins, cosmic_spec, metal_spec, var_spec):
         self.tbins = tbins.astype("float64")
-        self.spec = spec
-        self.nchan = self.spec.shape[-1]
-        self.var_elem = len(self.spec.shape) == 3
+        self.cosmic_spec = cosmic_spec
+        self.metal_spec = metal_spec
+        if var_spec is None:
+            self.var_spec = np.zeros((1, 1, 1))
+            self.do_var = False
+        else:
+            self.var_spec = var_spec
+            self.do_var = True
 
     def __call__(self, t_vals):
         x_i = (np.digitize(t_vals, self.tbins) - 1).astype("int32")
         if np.any((x_i == -1) | (x_i == len(self.tbins) - 1)):
             x_i = np.minimum(np.maximum(x_i, 0), len(self.tbins) - 2)
-        if self.var_elem:
-            s_vals = interp1d_var_spec(self.spec, t_vals, self.tbins, x_i)
-        else:
-            s_vals = interp1d_spec(self.spec, t_vals, self.tbins, x_i)
-        return s_vals
+        c_vals, m_vals, v_vals = interp1d_spec(
+            self.cosmic_spec,
+            self.metal_spec,
+            self.var_spec,
+            t_vals,
+            self.tbins,
+            x_i,
+            self.do_var,
+        )
+        return c_vals, m_vals, v_vals
 
 
 class ThermalSpectralModel:
@@ -49,12 +59,7 @@ class ThermalSpectralModel:
         Get the thermal emission spectrum given a temperature *kT* in keV.
         """
         kT = np.atleast_1d(self._Tconv(kT))
-        var_spec = None
-        cosmic_spec = self.cf(kT)
-        metal_spec = self.mf(kT)
-        if self.var_spec is not None:
-            var_spec = self.vf(kT)
-        return cosmic_spec, metal_spec, var_spec
+        return self.si(kT)
 
     def make_fluxf(self, emin, emax, energy=False):
         eidxs = (self.ebins[:-1] > emin) & (self.ebins[1:] < emax)
@@ -214,12 +219,9 @@ class TableCIEModel(ThermalSpectralModel):
         self.cosmic_spec = cosmic_spec
         self.metal_spec = metal_spec
         self.var_spec = var_spec
-        self.cf = SpectralInterpolator1D(self.Tvals, self.cosmic_spec)
-        self.mf = SpectralInterpolator1D(self.Tvals, self.metal_spec)
-        if var_spec is not None:
-            self.vf = SpectralInterpolator1D(self.Tvals, self.var_spec)
-        else:
-            self.vf = None
+        self.si = SpectralInterpolator1D(
+            self.Tvals, self.cosmic_spec, self.metal_spec, self.var_spec
+        )
 
 
 class Atable1DSpectralModel(ThermalSpectralModel):
@@ -245,12 +247,9 @@ class Atable1DSpectralModel(ThermalSpectralModel):
         if var_spec is not None:
             var_spec = 1.0e-14 * regrid_spectrum(self.ebins, ebins, var_spec)
         self.var_spec = var_spec
-        self.cf = SpectralInterpolator1D(self.Tvals, self.cosmic_spec)
-        self.mf = SpectralInterpolator1D(self.Tvals, self.metal_spec)
-        if var_spec is not None:
-            self.vf = SpectralInterpolator1D(self.Tvals, self.var_spec)
-        else:
-            self.vf = None
+        self.si = SpectralInterpolator1D(
+            self.Tvals, self.cosmic_spec, self.metal_spec, self.var_spec
+        )
 
 
 class MekalSpectralModel(Atable1DSpectralModel):
