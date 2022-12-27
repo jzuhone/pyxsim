@@ -726,7 +726,7 @@ def _project_photons(
 
             start_e = end_e
 
-            pbar.update(end_c)
+            pbar.update(end_c - start_c + 1)
 
         pbar.close()
 
