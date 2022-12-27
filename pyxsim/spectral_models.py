@@ -14,7 +14,7 @@ from soxs.thermal_spectra import (
 from soxs.utils import parse_prng, regrid_spectrum
 from yt.units.yt_array import YTArray, YTQuantity
 
-from pyxsim.lib.interpolate import interp1d_spec
+from pyxsim.lib.interpolate import interp1d_spec, interp2d_spec
 
 
 class SpectralInterpolator1D:
@@ -40,6 +40,41 @@ class SpectralInterpolator1D:
             t_vals,
             self.tbins,
             x_i,
+            self.do_var,
+        )
+        return c_vals, m_vals, v_vals
+
+
+class SpectralInterpolator2D:
+    def __init__(self, tbins, dbins, cosmic_spec, metal_spec, var_spec):
+        self.tbins = tbins.astype("float64")
+        self.dbins = dbins.astype("float64")
+        self.cosmic_spec = cosmic_spec
+        self.metal_spec = metal_spec
+        if var_spec is None:
+            self.var_spec = np.zeros((1, 1, 1))
+            self.do_var = False
+        else:
+            self.var_spec = var_spec
+            self.do_var = True
+
+    def __call__(self, t_vals, d_vals):
+        x_i = (np.digitize(t_vals, self.tbins) - 1).astype("int32")
+        if np.any((x_i == -1) | (x_i == len(self.tbins) - 1)):
+            x_i = np.minimum(np.maximum(x_i, 0), len(self.tbins) - 2)
+        y_i = (np.digitize(d_vals, self.dbins) - 1).astype("int32")
+        if np.any((y_i == -1) | (y_i == len(self.dbins) - 1)):
+            y_i = np.minimum(np.maximum(y_i, 0), len(self.dbins) - 2)
+        c_vals, m_vals, v_vals = interp2d_spec(
+            self.cosmic_spec,
+            self.metal_spec,
+            self.var_spec,
+            t_vals,
+            self.tbins,
+            x_i,
+            d_vals,
+            self.dbins,
+            y_i,
             self.do_var,
         )
         return c_vals, m_vals, v_vals
@@ -365,6 +400,9 @@ class IGMSpectralModel(ThermalSpectralModel):
             var_spec = 1.0e-14 * regrid_spectrum(self.ebins, ebins, var_spec)
         self.var_spec = var_spec
         self.cie_model.prepare_spectrum(zobs)
+        self.si = SpectralInterpolator2D(
+            self.Tvals, self.Dvals, self.cosmic_spec, self.metal_spec, self.var_spec
+        )
 
     def get_spectrum(self, kT, nH):
         kT = np.atleast_1d(kT)
@@ -398,33 +436,7 @@ class IGMSpectralModel(ThermalSpectralModel):
     def _get_spectrum_2d(self, kT, nH):
         lkT = np.atleast_1d(np.log10(kT * K_per_keV))
         lnH = np.atleast_1d(np.log10(nH))
-        tidxs = np.searchsorted(self.Tvals, lkT) - 1
-        didxs = np.searchsorted(self.Dvals, lnH) - 1
-        dT = (lkT - self.Tvals[tidxs]) / self.dTvals[tidxs]
-        dn = (lnH - self.Dvals[didxs]) / self.dDvals[didxs]
-        idx1 = np.ravel_multi_index((didxs + 1, tidxs + 1), (self.n_D, self.n_T))
-        idx2 = np.ravel_multi_index((didxs + 1, tidxs), (self.n_D, self.n_T))
-        idx3 = np.ravel_multi_index((didxs, tidxs + 1), (self.n_D, self.n_T))
-        idx4 = np.ravel_multi_index((didxs, tidxs), (self.n_D, self.n_T))
-        dx1 = dT * dn
-        dx2 = dn - dx1
-        dx3 = dT - dx1
-        dx4 = 1.0 + dx1 - dT - dn
-        cspec = dx1[:, np.newaxis] * self.cosmic_spec[idx1, :]
-        cspec += dx2[:, np.newaxis] * self.cosmic_spec[idx2, :]
-        cspec += dx3[:, np.newaxis] * self.cosmic_spec[idx3, :]
-        cspec += dx4[:, np.newaxis] * self.cosmic_spec[idx4, :]
-        mspec = dx1[:, np.newaxis] * self.metal_spec[idx1, :]
-        mspec += dx2[:, np.newaxis] * self.metal_spec[idx2, :]
-        mspec += dx3[:, np.newaxis] * self.metal_spec[idx3, :]
-        mspec += dx4[:, np.newaxis] * self.metal_spec[idx4, :]
-        if self.var_spec is not None:
-            vspec = dx1[np.newaxis, :, np.newaxis] * self.var_spec[:, idx1, :]
-            vspec += dx2[np.newaxis, :, np.newaxis] * self.var_spec[:, idx2, :]
-            vspec += dx3[np.newaxis, :, np.newaxis] * self.var_spec[:, idx3, :]
-            vspec += dx4[np.newaxis, :, np.newaxis] * self.var_spec[:, idx4, :]
-        else:
-            vspec = None
+        cspec, mspec, vspec = self.si(lkT, lnH)
         return cspec, mspec, vspec
 
     def make_fluxf(self, emin, emax, energy=False):
