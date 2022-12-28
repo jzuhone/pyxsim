@@ -494,6 +494,7 @@ def _project_photons(
     sky_center = ensure_numpy_array(sky_center)
 
     scale_shift = -1.0 / clight.to_value("km/s")
+    scale_shift2 = scale_shift * scale_shift
 
     if isinstance(absorb_model, str):
         if absorb_model not in absorb_models:
@@ -625,7 +626,7 @@ def _project_photons(
 
             if not no_shifting:
                 if observer == "internal":
-                    shift = (
+                    vn = (
                         -(
                             d["vx"][start_c:end_c] * x
                             + d["vy"][start_c:end_c] * y
@@ -635,14 +636,19 @@ def _project_photons(
                     )
                 else:
                     if isinstance(normal, str):
-                        shift = d[f"v{normal}"][start_c:end_c]
+                        vn = d[f"v{normal}"][start_c:end_c]
                     else:
-                        shift = (
+                        vn = (
                             d["vx"][start_c:end_c] * z_hat[0]
                             + d["vy"][start_c:end_c] * z_hat[1]
                             + d["vz"][start_c:end_c] * z_hat[2]
                         )
-                doppler_shift(shift * scale_shift, n_ph, eobs)
+                v2 = (
+                    d["vx"][start_c:end_c] * d["vx"][start_c:end_c]
+                    + d["vy"][start_c:end_c] * d["vy"][start_c:end_c]
+                    + d["vz"][start_c:end_c] * d["vz"][start_c:end_c]
+                )
+                doppler_shift(vn * scale_shift, v2 * scale_shift2, n_ph, eobs)
 
             if absorb_model is None:
                 det = np.ones(eobs.size, dtype="bool")

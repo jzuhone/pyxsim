@@ -17,7 +17,8 @@ cdef extern from "math.h":
 @cython.cdivision(True)
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def doppler_shift(np.ndarray[np.float64_t, ndim=1] shift,
+def doppler_shift(np.ndarray[np.float64_t, ndim=1] beta_n,
+                  np.ndarray[np.float64_t, ndim=1] beta2,
                   np.ndarray[np.int64_t, ndim=1] n_ph,
                   np.ndarray[np.float64_t, ndim=1] eobs):
 
@@ -27,7 +28,7 @@ def doppler_shift(np.ndarray[np.float64_t, ndim=1] shift,
 
     k = 0
     for i in range(num_cells):
-        shft = sqrt((1.-shift[i])/(1.+shift[i]))
+        shft = (1.-beta_n[i])/sqrt(1.-beta2[i])
         for j in range(n_ph[i]):
             eobs[k] = eobs[k] * shft
             k += 1
