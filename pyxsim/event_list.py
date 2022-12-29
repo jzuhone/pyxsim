@@ -224,7 +224,7 @@ class EventList:
         self, imagefile, fov, nx, emin=None, emax=None, overwrite=False
     ):
         r"""
-        Generate a image by binning X-ray counts and write it to a FITS file.
+        Generate an image by binning X-ray counts and write it to a FITS file.
 
         Parameters
         ----------
@@ -290,8 +290,8 @@ class EventList:
 
     def write_spectrum(self, specfile, emin, emax, nchan, overwrite=False):
         r"""
-        Bin event energies into a spectrum and write it to a FITS binary table.
-        This is for an *unconvolved* spectrum.
+        Bin observer-frame event energies into a spectrum and write it to
+        a FITS binary table. This is for an *unconvolved* spectrum.
 
         Parameters
         ----------

@@ -970,7 +970,8 @@ def project_photons_allsky(
 class PhotonList:
     def __init__(self, filespec):
         """
-        Read a PhotonList from disk to get information about it.
+        Read a PhotonList from disk to get information about it
+        or to export to other formats.
 
         Parameters
         ----------
@@ -998,7 +999,7 @@ class PhotonList:
             with h5py.File(fn, "r") as f:
                 p = f["parameters"]
                 info = f["info"]
-                self.num_events.append(f["data"]["energy"].size)
+                self.num_photons.append(f["data"]["energy"].size)
                 if i == 0:
                     for field in p:
                         if isinstance(p[field], (str, bytes)):
