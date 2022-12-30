@@ -473,6 +473,15 @@ class IGMSourceModel(ThermalSourceModel):
         "invert_cdf": Invert the cumulative distribution function of the spectrum.
         "accept_reject": Acceptance-rejection method using the spectrum.
         The first method should be sufficient for most cases.
+    model_res : string, optional
+        The resolution of the IGM tables to use in the calculations.
+        Options are:
+        "lo": Tables computed from Cloudy using a continuum resolution
+        of 0.1 with a range of 0.05 to 10 keV.
+        "hi": Tables computed from Cloudy using enhanced continuum
+        resolution of 0.025 with a range of 0.05 to 10 keV. Excellent
+        energy resolution, but may be expensive to evaluate.
+        Default: "lo"
     prng : integer or :class:`~numpy.random.RandomState` object
         A pseudo-random number generator. Typically will only be specified
         if you have a reason to generate the same set of random numbers,
@@ -624,6 +633,15 @@ class CIESourceModel(ThermalSourceModel):
         "lodd" : from Lodders, K (2003, ApJ 591, 1220)
         "feld" : from Feldman U. (1992, Physica Scripta, 46, 202)
         "cl17.03" : the abundance table used in Cloudy v17.03.
+    model_res : string, optional
+        The resolution of the Cloudy CIE tables to use in the calculations.
+        Options are:
+        "lo": Tables computed from Cloudy using a continuum resolution
+        of 0.1 with a range of 0.05 to 10 keV.
+        "hi": Tables computed from Cloudy using enhanced continuum
+        resolution of 0.025 with a range of 0.05 to 10 keV. Excellent
+        energy resolution, but may be expensive to evaluate.
+        Default: "lo"
     prng : integer or :class:`~numpy.random.RandomState` object
         A pseudo-random number generator. Typically will only be specified
         if you have a reason to generate the same set of random numbers,
@@ -692,7 +710,11 @@ class CIESourceModel(ThermalSourceModel):
                 )
                 abund_table = "feld"
             spectral_model = CloudyCIESpectralModel(
-                emin, emax, nbins, binscale=binscale, var_elem=var_elem_keys, 
+                emin,
+                emax,
+                nbins,
+                binscale=binscale,
+                var_elem=var_elem_keys,
                 model_res=model_res,
             )
         super().__init__(
