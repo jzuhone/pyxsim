@@ -1010,3 +1010,75 @@ class PhotonList:
                         self.info[k] = v
         self.tot_num_photons = np.sum(self.num_photons)
         self.observer = self.parameters.get("observer", "external")
+
+    def write_spectrum(self, specfile, emin, emax, nchan, overwrite=False):
+        """
+        Bin photon energies into a spectrum and write it to a FITS binary
+        table. This is for an *unconvolved* spectrum.
+
+        Parameters
+        ----------
+        specfile : string
+            The name of the FITS file to be written.
+        emin : float
+            The minimum energy of the spectral bins in keV.
+        emax : float
+            The maximum energy of the spectral bins in keV.
+        nchan : integer
+            The number of channels.
+        overwrite : boolean, optional
+            Set to True to overwrite a previous file.
+        """
+        from astropy.io import fits
+
+        spec = np.zeros(nchan)
+        ebins = np.linspace(emin, emax, nchan + 1, endpoint=True)
+        emid = 0.5 * (ebins[1:] + ebins[:-1])
+
+        for fn in self.filenames:
+            with h5py.File(fn, "r") as f:
+                d = f["data"]
+                spec += np.histogram(d["energy"][:], bins=ebins)[0]
+
+        col1 = fits.Column(
+            name="CHANNEL", format="1J", array=np.arange(nchan).astype("int32") + 1
+        )
+        col2 = fits.Column(name="ENERGY", format="1D", array=emid.astype("float64"))
+        col3 = fits.Column(name="COUNTS", format="1J", array=spec.astype("int32"))
+        col4 = fits.Column(
+            name="COUNT_RATE", format="1D", array=spec / self.parameters["exp_time"]
+        )
+
+        coldefs = fits.ColDefs([col1, col2, col3, col4])
+
+        tbhdu = fits.BinTableHDU.from_columns(coldefs)
+        tbhdu.name = "SPECTRUM"
+
+        tbhdu.header["DETCHANS"] = spec.shape[0]
+        tbhdu.header["TOTCTS"] = spec.sum()
+        tbhdu.header["EXPOSURE"] = self.parameters["exp_time"]
+        tbhdu.header["LIVETIME"] = self.parameters["exp_time"]
+        tbhdu.header["CONTENT"] = "pi"
+        tbhdu.header["HDUCLASS"] = "OGIP"
+        tbhdu.header["HDUCLAS1"] = "SPECTRUM"
+        tbhdu.header["HDUCLAS2"] = "TOTAL"
+        tbhdu.header["HDUCLAS3"] = "TYPE:I"
+        tbhdu.header["HDUCLAS4"] = "COUNT"
+        tbhdu.header["HDUVERS"] = "1.1.0"
+        tbhdu.header["HDUVERS1"] = "1.1.0"
+        tbhdu.header["CHANTYPE"] = "pi"
+        tbhdu.header["BACKFILE"] = "none"
+        tbhdu.header["CORRFILE"] = "none"
+        tbhdu.header["POISSERR"] = True
+        tbhdu.header["RESPFILE"] = "none"
+        tbhdu.header["ANCRFILE"] = "none"
+        tbhdu.header["MISSION"] = "none"
+        tbhdu.header["TELESCOP"] = "none"
+        tbhdu.header["INSTRUME"] = "none"
+        tbhdu.header["AREASCAL"] = 1.0
+        tbhdu.header["CORRSCAL"] = 0.0
+        tbhdu.header["BACKSCAL"] = 1.0
+
+        hdulist = fits.HDUList([fits.PrimaryHDU(), tbhdu])
+
+        hdulist.writeto(specfile, overwrite=overwrite)
