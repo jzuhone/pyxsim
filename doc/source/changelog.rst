@@ -3,6 +3,20 @@
 ChangeLog
 =========
 
+Version 4.1.0
+-------------
+
+This version of pyXSIM adds new features and improvements.
+
+* Installation and use on Windows 64-bit platforms is now supported.
+* Generating photons from thermal emission models should be somewhat faster
+  (sometimes up to 50% faster) thanks to more efficient spectral interpolation
+  routines.
+* Much more information about the parameters used to create photon lists and event
+  lists are stored in the HDF5 files, as well as the versions of yt, pyXSIM, and SOXS
+  used to create them.
+* The minimum version of yt has been bumped up to 4.1.3.
+
 Version 4.0.1
 -------------
 
