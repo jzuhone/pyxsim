@@ -730,9 +730,9 @@ def _project_photons(
 
                 f.flush()
 
-            start_e = end_e
-
             pbar.update(end_c - start_c + 1)
+
+            start_e = end_e
 
         pbar.close()
 
