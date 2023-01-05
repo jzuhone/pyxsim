@@ -324,6 +324,8 @@ def make_photons(
     info.attrs["yt_version"] = yt_version
     info.attrs["pyxsim_version"] = pyxsim_version
     info.attrs["soxs_version"] = soxs_version
+    info.attrs["dataset"] = str(data_source.ds)
+    info.attrs["data_source"] = str(data_source)
 
     # Parameters
 
@@ -562,6 +564,7 @@ def _project_photons(
         ie.attrs["pyxsim_version"] = pyxsim_version
         ie.attrs["yt_version"] = yt_version
         ie.attrs["soxs_version"] = soxs_version
+        ie.attrs["photon_file"] = photon_file
 
         pe = fe.create_group("parameters")
         pe.create_dataset("exp_time", data=float(p["fid_exp_time"][()]))
