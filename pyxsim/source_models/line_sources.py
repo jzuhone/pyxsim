@@ -74,9 +74,26 @@ class LineSourceModel(SourceModel):
         else:
             ds = data_source.ds
         self.scale_factor = 1.0 / (1.0 + redshift)
-        self.ftype = ds._get_field_info(self.emission_field).name[0]
+        self.emission_field = ds._get_field_info(self.emission_field).name
+        if not isinstance(self.sigma, Number) and self.sigma is not None:
+            self.sigma = ds._get_field_info(self.sigma).name
+            if self.emission_field[0] != self.sigma[0]:
+                raise ValueError(
+                    f"The 'emission_field' {self.emission_field} and the 'sigma' field {self.sigma} do not have the same field type!"
+                )
+        self.ftype = self.emission_field[0]
         if mode == "spectrum":
             self.setup_pbar(data_source, self.emission_field)
+
+    def __repr__(self):
+        rets = [
+            "LineSourceModel(\n",
+            f"    e0={self.e0}\n",
+            f"    emission_field={self.emission_field}\n",
+            f"    sigma={self.sigma}\n",
+            ")",
+        ]
+        return "".join(rets)
 
     def cleanup_model(self, mode):
         if mode == "spectrum":

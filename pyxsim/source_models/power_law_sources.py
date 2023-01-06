@@ -1,3 +1,5 @@
+from numbers import Number
+
 import numpy as np
 from soxs.utils import parse_prng
 from yt.data_objects.static_output import Dataset
@@ -57,9 +59,28 @@ class PowerLawSourceModel(SourceModel):
         else:
             ds = data_source.ds
         self.scale_factor = 1.0 / (1.0 + redshift)
-        self.ftype = ds._get_field_info(self.emission_field).name[0]
+        self.emission_field = ds._get_field_info(self.emission_field).name
+        if not isinstance(self.alpha, Number):
+            self.alpha = ds._get_field_info(self.alpha).name
+            if self.emission_field[0] != self.alpha[0]:
+                raise ValueError(
+                    f"The 'emission_field' {self.emission_field} and the 'alpha' field {self.alpha} do not have the same field type!"
+                )
+        self.ftype = self.emission_field[0]
         if mode == "spectrum":
             self.setup_pbar(data_source, self.emission_field)
+
+    def __repr__(self):
+        rets = [
+            "PowerLawSourceModel(\n",
+            f"    e0={self.e0}\n",
+            f"    emin={self.emin}\n",
+            f"    emax={self.emax}\n",
+            f"    emission_field={self.emission_field}\n",
+            f"    alpha={self.alpha}\n",
+            ")",
+        ]
+        return "".join(rets)
 
     def cleanup_model(self, mode):
         if mode == "spectrum":
