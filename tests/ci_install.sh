@@ -27,7 +27,12 @@ fi
 
 PYVER=`python --version`
 
-conda install --yes numpy pytest pip h5py astropy nose cython scipy yt soxs
+conda install --yes numpy pytest pip h5py astropy nose cython scipy yt
+git clone https://github.com/lynx-x-ray-observatory/soxs
+cd soxs
+git checkout soxs-4.3
+pip install .
+cd ..
 
 if [[ ${mode} == "wheels" ]]; then
   conda install --yes wheel setuptools
