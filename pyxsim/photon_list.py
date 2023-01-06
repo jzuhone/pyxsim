@@ -326,6 +326,7 @@ def make_photons(
     info.attrs["soxs_version"] = soxs_version
     info.attrs["dataset"] = str(data_source.ds)
     info.attrs["data_source"] = str(data_source)
+    info.attrs["source_model"] = repr(source_model)
 
     # Parameters
 
