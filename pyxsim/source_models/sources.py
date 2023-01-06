@@ -2,7 +2,7 @@ import numpy as np
 from soxs.spectra import CountRateSpectrum, Spectrum
 from soxs.utils import parse_prng
 from tqdm.auto import tqdm
-from yt.units.yt_array import YTQuantity
+from unyt.array import unyt_quantity
 from yt.utilities.cosmology import Cosmology
 from yt.utilities.parallel_tools.parallel_analysis_interface import (
     communication_system,
@@ -12,7 +12,7 @@ from yt.utilities.parallel_tools.parallel_analysis_interface import (
 
 from pyxsim.utils import ParallelProgressBar, parse_value
 
-cm2_per_kpc2 = YTQuantity(1.0, "kpc**2").to_value("cm**2")
+cm2_per_kpc2 = unyt_quantity(1.0, "kpc**2").to_value("cm**2")
 
 comm = communication_system.communicators[-1]
 

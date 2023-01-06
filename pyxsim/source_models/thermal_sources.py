@@ -4,8 +4,8 @@ import numpy as np
 from more_itertools import chunked
 from soxs.constants import abund_tables, atomic_weights, elem_names, metal_elem
 from soxs.utils import parse_prng, regrid_spectrum
+from unyt.array import unyt_quantity
 from yt.data_objects.static_output import Dataset
-from yt.units.yt_array import YTQuantity
 from yt.utilities.exceptions import YTFieldNotFound
 
 from pyxsim.source_models.sources import SourceModel
@@ -59,11 +59,11 @@ class ThermalSourceModel(SourceModel):
         self.var_elem = var_elem
         self.var_elem_keys = var_elem_keys
         if max_density is not None:
-            if not isinstance(max_density, YTQuantity):
+            if not isinstance(max_density, unyt_quantity):
                 if isinstance(max_density, tuple):
-                    max_density = YTQuantity(max_density[0], max_density[1])
+                    max_density = unyt_quantity(max_density[0], max_density[1])
                 else:
-                    max_density = YTQuantity(max_density, "g/cm**3")
+                    max_density = unyt_quantity(max_density, "g/cm**3")
         self.temperature_field = temperature_field
         self.emission_measure_field = emission_measure_field
         self.density_field = None  # Will be determined later

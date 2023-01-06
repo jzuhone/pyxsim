@@ -3,8 +3,8 @@ from numbers import Number
 import numpy as np
 from scipy.stats import norm
 from soxs.utils import parse_prng
+from unyt.array import unyt_quantity
 from yt.data_objects.static_output import Dataset
-from yt.units.yt_array import YTQuantity
 from yt.utilities.physical_constants import clight
 
 from pyxsim.lib.spectra import line_spectrum
@@ -75,7 +75,10 @@ class LineSourceModel(SourceModel):
             ds = data_source.ds
         self.scale_factor = 1.0 / (1.0 + redshift)
         self.emission_field = ds._get_field_info(self.emission_field).name
-        if not isinstance(self.sigma, Number) and self.sigma is not None:
+        if (
+            not isinstance(self.sigma, (Number, unyt_quantity))
+            and self.sigma is not None
+        ):
             self.sigma = ds._get_field_info(self.sigma).name
             if self.emission_field[0] != self.sigma[0]:
                 raise ValueError(
@@ -171,7 +174,7 @@ class LineSourceModel(SourceModel):
 
             energies = self.e0 * np.ones(number_of_photons.sum())
 
-            if isinstance(self.sigma, YTQuantity):
+            if isinstance(self.sigma, unyt_quantity):
                 dE = (
                     self.prng.normal(
                         loc=0.0, scale=float(self.sigma), size=number_of_photons.sum()
@@ -215,7 +218,7 @@ class LineSourceModel(SourceModel):
                 if mode == "energy_field":
                     fac *= self.e0
             else:
-                if isinstance(self.sigma, YTQuantity):
+                if isinstance(self.sigma, unyt_quantity):
                     sigma = self.sigma.value
                 else:
                     sigma = (chunk[self.sigma] * self.e0 / clight).to_value("keV")
@@ -237,7 +240,7 @@ class LineSourceModel(SourceModel):
             ee = ebins * inv_sf - self.e0.value
             de = np.diff(ebins * inv_sf)
 
-            if isinstance(self.sigma, YTQuantity):
+            if isinstance(self.sigma, unyt_quantity):
                 xtmp = ee / self.sigma.value
                 ret = np.interp(xtmp, gx, gcdf)
                 spec = norm_field.d.sum() * (ret[1:] - ret[:-1]) / de
