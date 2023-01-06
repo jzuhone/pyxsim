@@ -192,10 +192,9 @@ class ThermalSourceModel(SourceModel):
             fields.append(self.h_fraction)
         ftypes = np.array([f[0] for f in fields])
         if not np.all(ftypes == ftype):
-            msg = f"Not all fields have the same field type {ftype}! Fields used:\n"
-            for field in fields:
-                msg += f"'{field}'\n"
-            raise ValueError(msg)
+            mylog.warning(
+                "Not all fields have the same field type! Fields used: %s", fields
+            )
         self.density_field = (ftype, "density")
         mylog.info("Using emission measure field '%s'.", self.emission_measure_field)
         mylog.info("Using temperature field '%s'.", self.temperature_field)

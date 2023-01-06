@@ -9,7 +9,7 @@ from yt.utilities.physical_constants import clight
 
 from pyxsim.lib.spectra import line_spectrum
 from pyxsim.source_models.sources import SourceModel
-from pyxsim.utils import isunitful, parse_value
+from pyxsim.utils import isunitful, mylog, parse_value
 
 gx = np.linspace(-6, 6, 2400)
 gcdf = norm.cdf(gx)
@@ -81,8 +81,10 @@ class LineSourceModel(SourceModel):
         ):
             self.sigma = ds._get_field_info(self.sigma).name
             if self.emission_field[0] != self.sigma[0]:
-                raise ValueError(
-                    f"The 'emission_field' {self.emission_field} and the 'sigma' field {self.sigma} do not have the same field type!"
+                mylog.warning(
+                    "The 'emission_field' %s and the 'sigma' field %s do not have the same field type!",
+                    self.emission_field,
+                    self.sigma,
                 )
         self.ftype = self.emission_field[0]
         if mode == "spectrum":

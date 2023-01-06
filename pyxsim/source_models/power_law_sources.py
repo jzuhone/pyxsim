@@ -6,7 +6,7 @@ from yt.data_objects.static_output import Dataset
 
 from pyxsim.lib.spectra import power_law_spectrum
 from pyxsim.source_models.sources import SourceModel
-from pyxsim.utils import parse_value
+from pyxsim.utils import mylog, parse_value
 
 
 class PowerLawSourceModel(SourceModel):
@@ -63,8 +63,10 @@ class PowerLawSourceModel(SourceModel):
         if not isinstance(self.alpha, Number):
             self.alpha = ds._get_field_info(self.alpha).name
             if self.emission_field[0] != self.alpha[0]:
-                raise ValueError(
-                    f"The 'emission_field' {self.emission_field} and the 'alpha' field {self.alpha} do not have the same field type!"
+                mylog.warning(
+                    "The 'emission_field' %s and the 'alpha' field %s do not have the same field type!",
+                    self.emission_field,
+                    self.alpha,
                 )
         self.ftype = self.emission_field[0]
         if mode == "spectrum":
