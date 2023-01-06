@@ -49,9 +49,9 @@ def test_sloshing(answer_store, answer_dir):
 
     events1 = EventList("events1.h5")
 
-    events1.write_fits_file("test_events.fits", (20.0, "arcmin"), 1024)
-    events1.write_spectrum("test_spec.fits", 0.2, 10.0, 2000)
-    events1.write_fits_image("test_img.fits", (20.0, "arcmin"), 1024)
+    events1.write_fits_file("test_events.fits", (20.0, "arcmin"), 1024, overwrite=True)
+    events1.write_spectrum("test_spec.fits", 0.2, 10.0, 2000, overwrite=True)
+    events1.write_fits_image("test_img.fits", (20.0, "arcmin"), 1024, overwrite=True)
 
     file_answer_testing("EVENTS", "test_events.fits", answer_store, answer_dir)
     file_answer_testing("SPECTRUM", "test_spec.fits", answer_store, answer_dir)
@@ -69,8 +69,8 @@ def test_sloshing(answer_store, answer_dir):
         prng=prng,
     )
 
-    merge_files(["photons1.h5", "photons2.h5"], "photons.h5")
-    merge_files(["events1.h5", "events2.h5"], "events.h5")
+    merge_files(["photons1.h5", "photons2.h5"], "photons.h5", overwrite=True)
+    merge_files(["events1.h5", "events2.h5"], "events.h5", overwrite=True)
 
     with h5py.File("photons.h5", "r") as f, h5py.File(
         "photons1.h5", "r"
