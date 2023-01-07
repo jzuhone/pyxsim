@@ -129,6 +129,46 @@ or a regular expression which can be used to infer the filenames:
 
     events = pyxsim.EventList("my_events*.h5")
 
+The parameters used in the run to produce the event list are stored in a
+``parameters`` dictionary:
+
+.. code-block:: python
+
+    print(events.parameters)
+
+.. code-block:: pycon
+
+    {'absoption_model': 'wabs',
+     'abund_table': 'angr',
+     'area': 500.0,
+     'exp_time': 100000.0,
+     'flat_sky': 0,
+     'kernel': 'top_hat',
+     'nH': 0.02,
+     'no_shifting': 0,
+     'normal': 'x',
+     'observer': 'external',
+     'sky_center': array([30., 45.])}
+
+and other pertinent information used in the production of the event list can
+be found in the attached ``info`` dictionary:
+
+.. code-block:: python
+
+    print(events.info)
+
+.. code-block:: pycon
+
+    {'photon_file': 'plaw_photons.h5',
+     'pyxsim_version': '4.1b1.dev29+g1c09873.d20221228',
+     'soxs_version': 'soxs-4.2.2.dev22+gd56e1b4',
+     'yt_version': '4.2.dev0'}
+
+If this event list file has originated from merged event lists, then there
+will be multiple instances of each piece of information, numbered by the
+file, e.g. ``"soxs_version_0"``, ``"soxs_version_1"``, and so on. The original
+files used to make the merge will be stored in the key ``"original_files"``.
+
 .. _simput:
 
 SIMPUT

@@ -6,16 +6,30 @@ ChangeLog
 Version 4.1.0
 -------------
 
-This version of pyXSIM adds new features and improvements.
+This version of pyXSIM adds new features and improvements, as well as a bug fix.
 
 * Installation and use on Windows 64-bit platforms is now supported.
 * Generating photons from thermal emission models should be somewhat faster
   (sometimes up to 50% faster) thanks to more efficient spectral interpolation
   routines.
+* A new class for reading information about and creating spectra from photon lists,
+  :class:`~pyxsim.photon_list.PhotonList`, has been added. See :ref:`photon-list-class`
+  for more details.
 * Much more information about the parameters used to create photon lists and event
   lists are stored in the HDF5 files, as well as the versions of yt, pyXSIM, and SOXS
-  used to create them.
+  used to create them. This info can be obtained from the
+  :class:`~pyxsim.event_list.EventList` class, as well as the new
+  :class:`~pyxsim.photon_list.PhotonList` class.
+* The calculation of the Doppler shifting of photons from particle or cell velocities
+  was incorrect for velocities in the relativistic regime and has been fixed. This did
+  not affect anyone working in the Newtonian regime.
 * The minimum version of yt has been bumped up to 4.1.3.
+* The minimum version of SOXS has been bumped up to 4.3.0.
+* This version of pyXSIM uses the new versions of the spectral models for the Cloudy CIE
+  and IGM models provided in SOXS. See the information about them `here <http://hea-www.cfa.harvard.edu/soxs/users_guide/thermal_spectra.html#cloudy-cie-spectrum-generators>`_
+  and `here <http://hea-www.cfa.harvard.edu/soxs/users_guide/thermal_spectra.html#igm-spectrum-generators>`_.
+
+
 
 Version 4.0.1
 -------------

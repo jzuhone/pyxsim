@@ -154,3 +154,93 @@ exposure time between the files.
     from pyxsim import merge_files
     merge_files(["photons_0.h5","photons_1.h5","photons_3.h5"], "photons.h5",
                 overwrite=True, add_exposure_times=True)
+
+
+.. _photon-list-class:
+
+The ``PhotonList`` Class
+------------------------
+
+Generated photons stored to an HDF5 file can be examined with the
+:class:`~pyxsim.photon_list.PhotonList` class. Currently, this class can be
+used to examine parameters of a photon list in the ``parameters`` dictionary:
+
+.. code-block:: python
+
+    photons = pyxsim.PhotonList("therm_photons.h5")
+    print(photons.parameters)
+
+.. code-block:: pycon
+
+    {'bulk_velocity': array([0., 0., 0.]),
+     'center': array([0., 0., 0.]),
+     'data_type': 'cells',
+     'fid_area': 500.0,
+     'fid_d_a': 122.21820987067642,
+     'fid_exp_time': 100000.0,
+     'fid_redshift': 0.03,
+     'hubble': 0.71,
+     'observer': 'external',
+     'omega_lambda': 0.73,
+     'omega_matter': 0.27,
+     'velocity_fields': array([[b'gas', b'velocity_x'],
+            [b'gas', b'velocity_y'],
+            [b'gas', b'velocity_z']], dtype='|S10')}
+
+as well as other pertinent information in the ``info`` dictionary:
+
+.. code-block:: python
+
+    print(photons.info)
+
+.. code-block:: pycon
+
+    {'data_source': 'YTSphere (UniformGridData): , center=[0. 0. 0.] cm, radius=1.5428387904811624e+24 cm',
+     'dataset': 'UniformGridData',
+     'pyxsim_version': '4.1b1.dev29+g1c09873.d20221228',
+     'source_model': "CIESourceModel(
+                          model=apec
+                          emin=1 keV
+                          emax=80.0 keV
+                          nbins=5000
+                          Zmet=0.3
+                          binscale=linear
+                          temperature_field=('gas', 'temperature')
+                          emission_measure_field=('gas', 'emission_measure')
+                          kT_min=0.025
+                          kT_max=64.0
+                          method=invert_cdf
+                          model_vers=3.0.9
+                          max_density=None
+                          abund_table=angr
+                          h_fraction=0.7065215023571868
+                          var_elem={}
+                          nolines=False
+                          thermal_broad=True
+                      )",
+     'soxs_version': '4.2.1',
+     'yt_version': '4.2.dev0'}
+
+If this photon list file has originated from merged photon lists, then there
+will be multiple instances of each piece of information, numbered by the
+file, e.g. ``"soxs_version_0"``, ``"soxs_version_1"``, and so on. The original
+files used to make the merge will be stored in the key ``"original_files"``.
+
+Spectra
+=======
+
+To produce a spectrum binned on energy, call
+:meth:`~pyxsim.photon_list.PhotonList.write_spectrum`.
+
+.. code-block:: python
+
+    specfile = "myspec.fits" # filename to write to
+    emin = 0.1 # minimum energy of spectrum
+    emax = 10.0 # maximum energy of spectrum
+    nchan = 2000 # number of bins in spectrum
+    photons.write_spectrum(specfile, emin, emax, nchan, overwrite=False)
+
+This bins the photon energies using the ``emin``, ``emax``, and
+``nchan`` arguments into a histogram which will be written to the file as a
+spectrum. As usual, the ``overwrite`` argument determines whether or not a file
+can be overwritten.

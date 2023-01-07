@@ -677,6 +677,13 @@ class CIESourceModel(ThermalSourceModel):
         The version identifier string for the model files, e.g.
         "2.0.2", if supported by the model. Currently only supported by
         "apec", "spex", and "cloudy". Default depends on the model being used.
+        If "cloudy", the options are:
+        "4_lo": Tables computed from Cloudy using a continuum resolution
+        of 0.1 with a range of 0.05 to 10 keV.
+        "4_hi": Tables computed from Cloudy using enhanced continuum
+        resolution of 0.025 with a range of 0.05 to 10 keV. Excellent
+        energy resolution, but may be expensive to evaluate. Default for
+        "cloudy" is "4_lo".
     nolines : boolean, optional
         Turn off lines entirely for generating emission. Only available
         for "apec" or "spex". Default: False
