@@ -243,6 +243,8 @@ class TableCIEModel(ThermalSpectralModel):
         self.Tvals = self.cgen.Tvals[self.idx_min : self.idx_max]
         self.nT = self.Tvals.size
         self.dTvals = np.diff(self.Tvals)
+        self.model_vers = self.cgen.model_vers
+        self.model_root = self.cgen.model_root
 
     def prepare_spectrum(self, zobs):
         """
@@ -304,12 +306,26 @@ class MekalSpectralModel(Atable1DSpectralModel):
 
 
 class CloudyCIESpectralModel(Atable1DSpectralModel):
-    def __init__(self, emin, emax, nbins, binscale="linear", var_elem=None):
+    def __init__(
+        self,
+        emin,
+        emax,
+        nbins,
+        binscale="linear",
+        var_elem=None,
+        model_vers=None,
+    ):
         cgen = CloudyCIEGenerator(
-            emin, emax, nbins, binscale=binscale, var_elem=var_elem
+            emin,
+            emax,
+            nbins,
+            binscale=binscale,
+            var_elem=var_elem,
+            model_vers=model_vers,
         )
         super().__init__(cgen)
         self.var_ion_names = []
+        self.model_vers = cgen.model_vers
 
 
 class IGMSpectralModel(ThermalSpectralModel):
@@ -357,6 +373,7 @@ class IGMSpectralModel(ThermalSpectralModel):
         resonant_scattering=False,
         cxb_factor=0.5,
         var_elem=None,
+        model_vers=None,
     ):
         self.igen = IGMGenerator(
             emin,
@@ -366,6 +383,7 @@ class IGMSpectralModel(ThermalSpectralModel):
             resonant_scattering=resonant_scattering,
             cxb_factor=cxb_factor,
             var_elem=var_elem,
+            model_vers=model_vers,
         )
         self.ebins = self.igen.ebins
         self.emid = self.igen.emid
@@ -385,8 +403,14 @@ class IGMSpectralModel(ThermalSpectralModel):
         self.n_D = self.igen.n_D
         self.binscale = self.igen.binscale
         self.cie_model = CloudyCIESpectralModel(
-            emin, emax, nbins, binscale=self.binscale, var_elem=self.var_elem
+            emin,
+            emax,
+            nbins,
+            binscale=self.binscale,
+            var_elem=self.var_elem,
+            model_vers=model_vers,
         )
+        self.model_vers = self.igen.model_vers
 
     def prepare_spectrum(self, zobs):
         """

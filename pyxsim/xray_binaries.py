@@ -43,7 +43,6 @@ def convert_bands(ind, emin_a, emax_a, emin_b, emax_b):
 
 # Spectral indices for both types of XRBs
 
-
 alpha_lmxb = 1.56
 alpha_hmxb = 2.0
 
@@ -111,7 +110,6 @@ def lmxb_cdf(L):
 
 
 # HMXB distribution function from Mineo et al. 2012
-
 
 chi = 1.49
 gamma1 = 1.58

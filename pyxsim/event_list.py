@@ -42,14 +42,15 @@ class EventList:
         for i, fn in enumerate(self.filenames):
             with h5py.File(fn, "r") as f:
                 p = f["parameters"]
+                info = f["info"]
                 self.num_events.append(f["data"]["xsky"].size)
                 if i == 0:
                     for field in p:
-                        if isinstance(p[field], (str, bytes)):
+                        if isinstance(p[field][()], (str, bytes)):
                             self.parameters[field] = p[field].asstr()[()]
                         else:
                             self.parameters[field] = p[field][()]
-                    for k, v in f["info"].attrs.items():
+                    for k, v in info.attrs.items():
                         self.info[k] = v
         self.tot_num_events = np.sum(self.num_events)
         self.observer = self.parameters.get("observer", "external")

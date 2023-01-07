@@ -145,7 +145,9 @@ def merge_files(input_files, output_file, overwrite=False, add_exposure_times=Fa
     data = defaultdict(list)
     tot_exp_time = 0.0
 
-    for fn in input_files:
+    info = f_out.create_group("info")
+
+    for i, fn in enumerate(input_files):
         with h5py.File(fn, "r") as f:
             if add_exposure_times:
                 tot_exp_time += f["/parameters"][exp_time_key][()]
@@ -153,6 +155,10 @@ def merge_files(input_files, output_file, overwrite=False, add_exposure_times=Fa
                 tot_exp_time = max(tot_exp_time, f["/parameters"][exp_time_key][()])
             for key in f["/data"]:
                 data[key].append(f["/data"][key][:])
+            for key, value in f["info"].attrs.items():
+                info.attrs[f"{key}_{i}"] = value
+
+    info.attrs["original_files"] = input_files
 
     p_out[exp_time_key] = tot_exp_time
 

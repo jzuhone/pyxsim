@@ -1,9 +1,11 @@
+from numbers import Number
+
 import numpy as np
 from more_itertools import chunked
 from soxs.constants import abund_tables, atomic_weights, elem_names, metal_elem
 from soxs.utils import parse_prng, regrid_spectrum
+from unyt.array import unyt_quantity
 from yt.data_objects.static_output import Dataset
-from yt.units.yt_array import YTQuantity
 from yt.utilities.exceptions import YTFieldNotFound
 
 from pyxsim.source_models.sources import SourceModel
@@ -57,11 +59,11 @@ class ThermalSourceModel(SourceModel):
         self.var_elem = var_elem
         self.var_elem_keys = var_elem_keys
         if max_density is not None:
-            if not isinstance(max_density, YTQuantity):
+            if not isinstance(max_density, unyt_quantity):
                 if isinstance(max_density, tuple):
-                    max_density = YTQuantity(max_density[0], max_density[1])
+                    max_density = unyt_quantity(max_density[0], max_density[1])
                 else:
-                    max_density = YTQuantity(max_density, "g/cm**3")
+                    max_density = unyt_quantity(max_density, "g/cm**3")
         self.temperature_field = temperature_field
         self.emission_measure_field = emission_measure_field
         self.density_field = None  # Will be determined later
@@ -92,6 +94,36 @@ class ThermalSourceModel(SourceModel):
         self.emid = self.spectral_model.emid
         self.bin_edges = np.log10(self.ebins) if self.binscale == "log" else self.ebins
         self.nbins = self.emid.size
+        self.model_vers = self.spectral_model.model_vers
+
+    def _prep_repr(self):
+        class_name = self.__class__.__name__
+        strs = {
+            "emin": self.emin,
+            "emax": self.emax,
+            "nbins": self.nbins,
+            "Zmet": self.Zmet,
+            "binscale": self.binscale,
+            "temperature_field": self.temperature_field,
+            "emission_measure_field": self.emission_measure_field,
+            "kT_min": self.kT_min,
+            "kT_max": self.kT_max,
+            "method": self.method,
+            "model_vers": self.spectral_model.model_vers,
+            "max_density": self.max_density,
+            "abund_table": self.abund_table,
+            "h_fraction": self.h_fraction,
+            "var_elem": self.var_elem,
+        }
+        return class_name, strs
+
+    def __repr__(self):
+        class_name, strs = self._prep_repr()
+        ret = f"{class_name}(\n"
+        for key, value in strs.items():
+            ret += f"    {key}={value}\n"
+        ret += ")\n"
+        return ret
 
     def setup_model(self, mode, data_source, redshift):
         if isinstance(data_source, Dataset):
@@ -99,7 +131,10 @@ class ThermalSourceModel(SourceModel):
         else:
             ds = data_source.ds
         try:
-            ftype = ds._get_field_info(self.emission_measure_field).name[0]
+            self.emission_measure_field = ds._get_field_info(
+                self.emission_measure_field
+            ).name
+            ftype = self.emission_measure_field[0]
         except YTFieldNotFound:
             raise RuntimeError(
                 f"The {self.emission_measure_field} field is not "
@@ -108,10 +143,15 @@ class ThermalSourceModel(SourceModel):
                 "default_species_fields='ionized' in the call "
                 "to yt.load()."
             )
+        self.temperature_field = ds._get_field_info(self.temperature_field).name
+        fields = [self.emission_measure_field, self.temperature_field]
         self.ftype = ftype
         self.redshift = redshift
-        if not self._nei and not isinstance(self.Zmet, float):
-            Z_units = str(ds._get_field_info(self.Zmet).units)
+        if not self._nei and not isinstance(self.Zmet, Number):
+            zfield = ds._get_field_info(self.Zmet)
+            Z_units = str(zfield.units)
+            self.Zmet = zfield.name
+            fields.append(self.Zmet)
             if Z_units in ["dimensionless", "", "code_metallicity"]:
                 Zsum = (self.atable * atomic_weights)[metal_elem].sum()
                 self.Zconvert = atomic_weights[1] / Zsum
@@ -119,17 +159,21 @@ class ThermalSourceModel(SourceModel):
                 self.Zconvert = 1.0
             else:
                 raise RuntimeError(
-                    f"I don't understand metallicity " f"units of {Z_units}!"
+                    f"I don't understand metallicity units of {Z_units}!"
                 )
         if self.num_var_elem > 0:
-            for key, value in self.var_elem.items():
-                if not isinstance(value, float):
+            for key in self.var_elem:
+                value = self.var_elem[key]
+                if not isinstance(value, Number):
                     if "^" in key:
                         elem = key.split("^")[0]
                     else:
                         elem = key
                     n_elem = elem_names.index(elem)
-                    m_units = str(ds._get_field_info(value).units)
+                    vfield = ds._get_field_info(value)
+                    fields.append(vfield.name)
+                    m_units = str(vfield.units)
+                    self.var_elem[key] = vfield.name
                     if m_units in ["dimensionless", "", "code_metallicity"]:
                         m = self.atable[n_elem] * atomic_weights[n_elem]
                         self.mconvert[key] = atomic_weights[1] / m
@@ -140,6 +184,17 @@ class ThermalSourceModel(SourceModel):
                             f"I don't understand units of "
                             f"{m_units} for element {key}!"
                         )
+        if self.nh_field is not None:
+            self.nh_field = ds._get_field_info(self.nh_field).name
+            fields.append(self.nh_field)
+        if not isinstance(self.h_fraction, Number):
+            self.h_fraction = ds._get_field_info(self.h_fraction).name
+            fields.append(self.h_fraction)
+        ftypes = np.array([f[0] for f in fields])
+        if not np.all(ftypes == ftype):
+            mylog.warning(
+                "Not all fields have the same field type! Fields used: %s", fields
+            )
         self.density_field = (ftype, "density")
         mylog.info("Using emission measure field '%s'.", self.emission_measure_field)
         mylog.info("Using temperature field '%s'.", self.temperature_field)
@@ -247,7 +302,7 @@ class ThermalSourceModel(SourceModel):
         else:
             nH = None
 
-        if isinstance(self.h_fraction, float):
+        if isinstance(self.h_fraction, Number):
             X_H = self.h_fraction
         else:
             X_H = np.ravel(chunk[self.h_fraction].d)[cut]
@@ -257,7 +312,7 @@ class ThermalSourceModel(SourceModel):
             elem_keys = self.var_ion_keys
         else:
             elem_keys = self.var_elem_keys
-            if isinstance(self.Zmet, float):
+            if isinstance(self.Zmet, Number):
                 metalZ = self.Zmet * np.ones(num_cells)
             else:
                 mZ = chunk[self.Zmet]
@@ -271,7 +326,7 @@ class ThermalSourceModel(SourceModel):
             elemZ = np.zeros((self.num_var_elem, num_cells))
             for j, key in enumerate(elem_keys):
                 value = self.var_elem[key]
-                if isinstance(value, float):
+                if isinstance(value, Number):
                     elemZ[j, :] = value
                 else:
                     eZ = chunk[value]
@@ -430,11 +485,13 @@ class IGMSourceModel(ThermalSourceModel):
         The scale of the energy binning: "linear" or "log".
         Default: "linear"
     resonant_scattering : boolean, optional
-        Whether or not to include the effects of resonant scattering
+        Whether to include the effects of resonant scattering
         from CXB photons. Default: False
     cxb_factor : float, optional
         The fraction of the CXB photons that are resonant scattered to enhance
         the lines. Default: 0.5
+    model_vers : string, optional
+        The version identifier string for the model files, "3" or "4".
     nh_field : string or (ftype, fname) tuple, optional
         The yt hydrogen nuclei density field (meaning all hydrogen, ionized or not)
         to use for the model. Must have units of cm**-3.
@@ -471,6 +528,15 @@ class IGMSourceModel(ThermalSourceModel):
         "invert_cdf": Invert the cumulative distribution function of the spectrum.
         "accept_reject": Acceptance-rejection method using the spectrum.
         The first method should be sufficient for most cases.
+    model_vers : string, optional
+        The version of the IGM tables to use in the calculations.
+        Options are:
+        "4_lo": Tables computed from Cloudy using a continuum resolution
+        of 0.1 with a range of 0.05 to 10 keV.
+        "4_hi": Tables computed from Cloudy using enhanced continuum
+        resolution of 0.025 with a range of 0.05 to 10 keV. Excellent
+        energy resolution, but may be expensive to evaluate.
+        Default: "4_lo"
     prng : integer or :class:`~numpy.random.RandomState` object
         A pseudo-random number generator. Typically will only be specified
         if you have a reason to generate the same set of random numbers,
@@ -498,6 +564,7 @@ class IGMSourceModel(ThermalSourceModel):
         max_density=None,
         var_elem=None,
         method="invert_cdf",
+        model_vers="4_lo",
         prng=None,
     ):
         var_elem_keys = list(var_elem.keys()) if var_elem else None
@@ -509,6 +576,7 @@ class IGMSourceModel(ThermalSourceModel):
             resonant_scattering=resonant_scattering,
             cxb_factor=cxb_factor,
             var_elem=var_elem_keys,
+            model_vers=model_vers,
         )
         nH_min = 10 ** spectral_model.Dvals[0]
         nH_max = 10 ** spectral_model.Dvals[-1]
@@ -533,6 +601,14 @@ class IGMSourceModel(ThermalSourceModel):
             emission_measure_field=emission_measure_field,
         )
         self.nh_field = nh_field
+        self.resonant_scattering = resonant_scattering
+        self.cxb_factor = cxb_factor
+
+    def _prep_repr(self):
+        class_name, strs = super()._prep_repr()
+        strs["resonant_scattering"] = self.resonant_scattering
+        strs["cxb_factor"] = self.cxb_factor
+        return class_name, strs
 
 
 class CIESourceModel(ThermalSourceModel):
@@ -592,7 +668,7 @@ class CIESourceModel(ThermalSourceModel):
         "accept_reject": Acceptance-rejection method using the spectrum.
         The first method should be sufficient for most cases.
     thermal_broad : boolean, optional
-        Whether or not the spectral lines should be thermally
+        Whether the spectral lines should be thermally
         broadened. Only available for "apec" or "spex". Default: True
     model_root : string, optional
         The directory root where the model files are stored. If not provided,
@@ -600,7 +676,14 @@ class CIESourceModel(ThermalSourceModel):
     model_vers : string, optional
         The version identifier string for the model files, e.g.
         "2.0.2", if supported by the model. Currently only supported by
-        "apec" and "spex". Default depends on the model being used.
+        "apec", "spex", and "cloudy". Default depends on the model being used.
+        If "cloudy", the options are:
+        "4_lo": Tables computed from Cloudy using a continuum resolution
+        of 0.1 with a range of 0.05 to 10 keV.
+        "4_hi": Tables computed from Cloudy using enhanced continuum
+        resolution of 0.025 with a range of 0.05 to 10 keV. Excellent
+        energy resolution, but may be expensive to evaluate. Default for
+        "cloudy" is "4_lo".
     nolines : boolean, optional
         Turn off lines entirely for generating emission. Only available
         for "apec" or "spex". Default: False
@@ -621,7 +704,7 @@ class CIESourceModel(ThermalSourceModel):
         "feld" : from Feldman U. (1992, Physica Scripta, 46, 202)
         "cl17.03" : the abundance table used in Cloudy v17.03.
     prng : integer or :class:`~numpy.random.RandomState` object
-        A pseudo-random number generator. Typically will only be specified
+        A pseudo-random number generator. Typically, will only be specified
         if you have a reason to generate the same set of random numbers,
         such as for a test. Default is to use the :mod:`numpy.random` module.
 
@@ -687,8 +770,14 @@ class CIESourceModel(ThermalSourceModel):
                 )
                 abund_table = "feld"
             spectral_model = CloudyCIESpectralModel(
-                emin, emax, nbins, binscale=binscale, var_elem=var_elem_keys
+                emin,
+                emax,
+                nbins,
+                binscale=binscale,
+                var_elem=var_elem_keys,
+                model_vers=model_vers,
             )
+        self.model = model
         super().__init__(
             spectral_model,
             emin,
@@ -709,6 +798,16 @@ class CIESourceModel(ThermalSourceModel):
         )
         self.var_elem_keys = self.spectral_model.var_elem_names
         self.var_ion_keys = self.spectral_model.var_ion_names
+        self.nolines = nolines
+        self.thermal_broad = thermal_broad
+
+    def _prep_repr(self):
+        class_name, super_strs = super()._prep_repr()
+        strs = {"model": self.model}
+        strs.update(super_strs)
+        strs["nolines"] = self.nolines
+        strs["thermal_broad"] = self.thermal_broad
+        return class_name, strs
 
 
 class NEISourceModel(CIESourceModel):
@@ -857,3 +956,9 @@ class NEISourceModel(CIESourceModel):
             abund_table=abund_table,
             prng=prng,
         )
+
+    def _prep_repr(self):
+        class_name, strs = super()._prep_repr()
+        strs.pop("model")
+        strs.pop("Zmet")
+        return class_name, strs

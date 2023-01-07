@@ -114,7 +114,7 @@ parameters which can be set:
   provided, a default location known to pyXSIM is used.
 * ``model_vers``: The version identifier string for the model files, e.g.
   "2.0.2". The default depends on the model used. Currently only implemented
-  for the ``"apec"`` or ``"spex"`` models.
+  for the ``"apec"``, ``"spex"``, or ``"cloudy"`` models.
 * ``var_elem``: Optionally used to specify the abundances of specific elements,
   whether via floating-point numbers or yt fields. A dictionary of elements and
   values should be specified. See :ref:`var-abund` below for more details.
@@ -414,6 +414,14 @@ fixed at abundance table value, and all higher elements up Zn to included in
 * ``var_elem``: Optionally used to specify the abundances of specific elements,
   whether via floating-point numbers or yt fields. A dictionary of elements and
   values should be specified. See :ref:`var-abund` below for more details.
+* ``model_vers``: The version of the IGM tables to use in the calculations.
+  Options are:
+  "4_lo": Tables computed from Cloudy using a continuum resolution of 0.1 with
+  a range of 0.05 to 10 keV.
+  "4_hi": Tables computed from Cloudy using enhanced continuum resolution of
+  0.025 with a range of 0.05 to 10 keV. Excellent energy resolution, but may be
+  expensive to evaluate.
+  Default: "4_lo"
 * ``prng``: A pseudo-random number generator. Typically will only be specified
   if you have a reason to generate the same set of random numbers, such as for a
   test or a comparison. Default is the :mod:`numpy.random` module, but a

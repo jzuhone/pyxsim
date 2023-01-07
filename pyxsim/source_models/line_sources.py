@@ -3,13 +3,13 @@ from numbers import Number
 import numpy as np
 from scipy.stats import norm
 from soxs.utils import parse_prng
+from unyt.array import unyt_quantity
 from yt.data_objects.static_output import Dataset
-from yt.units.yt_array import YTQuantity
 from yt.utilities.physical_constants import clight
 
 from pyxsim.lib.spectra import line_spectrum
 from pyxsim.source_models.sources import SourceModel
-from pyxsim.utils import isunitful, parse_value
+from pyxsim.utils import isunitful, mylog, parse_value
 
 gx = np.linspace(-6, 6, 2400)
 gcdf = norm.cdf(gx)
@@ -74,9 +74,31 @@ class LineSourceModel(SourceModel):
         else:
             ds = data_source.ds
         self.scale_factor = 1.0 / (1.0 + redshift)
-        self.ftype = ds._get_field_info(self.emission_field).name[0]
+        self.emission_field = ds._get_field_info(self.emission_field).name
+        if (
+            not isinstance(self.sigma, (Number, unyt_quantity))
+            and self.sigma is not None
+        ):
+            self.sigma = ds._get_field_info(self.sigma).name
+            if self.emission_field[0] != self.sigma[0]:
+                mylog.warning(
+                    "The 'emission_field' %s and the 'sigma' field %s do not have the same field type!",
+                    self.emission_field,
+                    self.sigma,
+                )
+        self.ftype = self.emission_field[0]
         if mode == "spectrum":
             self.setup_pbar(data_source, self.emission_field)
+
+    def __repr__(self):
+        rets = [
+            "LineSourceModel(\n",
+            f"    e0={self.e0}\n",
+            f"    emission_field={self.emission_field}\n",
+            f"    sigma={self.sigma}\n",
+            ")",
+        ]
+        return "".join(rets)
 
     def cleanup_model(self, mode):
         if mode == "spectrum":
@@ -154,7 +176,7 @@ class LineSourceModel(SourceModel):
 
             energies = self.e0 * np.ones(number_of_photons.sum())
 
-            if isinstance(self.sigma, YTQuantity):
+            if isinstance(self.sigma, unyt_quantity):
                 dE = (
                     self.prng.normal(
                         loc=0.0, scale=float(self.sigma), size=number_of_photons.sum()
@@ -198,7 +220,7 @@ class LineSourceModel(SourceModel):
                 if mode == "energy_field":
                     fac *= self.e0
             else:
-                if isinstance(self.sigma, YTQuantity):
+                if isinstance(self.sigma, unyt_quantity):
                     sigma = self.sigma.value
                 else:
                     sigma = (chunk[self.sigma] * self.e0 / clight).to_value("keV")
@@ -220,7 +242,7 @@ class LineSourceModel(SourceModel):
             ee = ebins * inv_sf - self.e0.value
             de = np.diff(ebins * inv_sf)
 
-            if isinstance(self.sigma, YTQuantity):
+            if isinstance(self.sigma, unyt_quantity):
                 xtmp = ee / self.sigma.value
                 ret = np.interp(xtmp, gx, gcdf)
                 spec = norm_field.d.sum() * (ret[1:] - ret[:-1]) / de
