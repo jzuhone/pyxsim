@@ -1006,7 +1006,7 @@ class PhotonList:
                 self.num_photons.append(f["data"]["energy"].size)
                 if i == 0:
                     for field in p:
-                        if isinstance(p[field], (str, bytes)):
+                        if isinstance(p[field][()], (str, bytes)):
                             self.parameters[field] = p[field].asstr()[()]
                         else:
                             self.parameters[field] = p[field][()]
@@ -1050,7 +1050,7 @@ class PhotonList:
         col2 = fits.Column(name="ENERGY", format="1D", array=emid.astype("float64"))
         col3 = fits.Column(name="COUNTS", format="1J", array=spec.astype("int32"))
         col4 = fits.Column(
-            name="COUNT_RATE", format="1D", array=spec / self.parameters["exp_time"]
+            name="COUNT_RATE", format="1D", array=spec / self.parameters["fid_exp_time"]
         )
 
         coldefs = fits.ColDefs([col1, col2, col3, col4])
@@ -1060,8 +1060,8 @@ class PhotonList:
 
         tbhdu.header["DETCHANS"] = spec.shape[0]
         tbhdu.header["TOTCTS"] = spec.sum()
-        tbhdu.header["EXPOSURE"] = self.parameters["exp_time"]
-        tbhdu.header["LIVETIME"] = self.parameters["exp_time"]
+        tbhdu.header["EXPOSURE"] = self.parameters["fid_exp_time"]
+        tbhdu.header["LIVETIME"] = self.parameters["fid_exp_time"]
         tbhdu.header["CONTENT"] = "pi"
         tbhdu.header["HDUCLASS"] = "OGIP"
         tbhdu.header["HDUCLAS1"] = "SPECTRUM"
