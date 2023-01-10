@@ -378,6 +378,7 @@ class ThermalSourceModel(SourceModel):
                     tot_spec += np.sum(
                         elemZ[:, ibegin:iend, np.newaxis] * vspec, axis=0
                     )
+                np.clip(tot_spec, 0.0, None, out=tot_spec)
 
                 if mode == "photons":
 
