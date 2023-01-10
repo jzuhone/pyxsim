@@ -9,17 +9,17 @@ Dependencies
 pyXSIM 4.x is compatible with Python 3.8+, and requires the following Python
 packages:
 
-- `yt <http://yt-project.org>`_ (version 4.1 or higher)
-- `soxs <http://hea-www.cfa.harvard.edu/~jzuhone/soxs>`_ (version 4.0.0 or
+- `yt <https://yt-project.org>`_ (version 4.1.3 or higher)
+- `soxs <http://hea-www.cfa.harvard.edu/soxs>`_ (version 4.3.0 or
   higher)
-- `NumPy <http://www.numpy.org>`_
-- `SciPy <http://www.scipy.org>`_
-- `AstroPy <http://www.astropy.org>`_
-- `h5py <http://www.h5py.org>`_
+- `NumPy <https://www.numpy.org>`_
+- `SciPy <https://www.scipy.org>`_
+- `AstroPy <https://www.astropy.org>`_
+- `h5py <https://www.h5py.org>`_
 
 pyXSIM also has the following optional dependencies:
 
-- `mpi4py <http://pythonhosted.org/mpi4py/>`_ (for running in parallel)
+- `mpi4py <https://mpi4py.readthedocs.io/en/stable/>`_ (for running in parallel)
 
 Installing
 ----------
