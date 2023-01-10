@@ -37,7 +37,7 @@ pyXSIM can be installed in a few different ways. The simplest way is via the con
 you have the [Anaconda Python Distribution](https://store.continuum.io/cshop/anaconda/):
 
 ```
-[~]$ conda install -c jzuhone pyxsim
+[~]$ conda install -c conda-forge pyxsim
 ```
 
 The second way to install pyXSIM is via pip. pip will attempt to download the dependencies and
