@@ -3,6 +3,14 @@
 ChangeLog
 =========
 
+Version 4.1.1
+-------------
+
+This version of pyXSIM fixes a bug in the
+:class:`~pyxsim.source_models.thermal_sources.IGMSourceModel` where low density,
+low temperature, and low metallicity plasmas would sometimes result in spectra with
+negative values.
+
 Version 4.1.0
 -------------
 
