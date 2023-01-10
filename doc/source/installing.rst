@@ -6,7 +6,7 @@ Installing pyXSIM
 Dependencies
 ------------
 
-pyXSIM 4.x is compatible with Python 3.8+, and requires the following Python
+pyXSIM 4.x is compatible with Python 3.9+, and requires the following Python
 packages:
 
 - `yt <https://yt-project.org>`_ (version 4.1.3 or higher)
@@ -30,10 +30,9 @@ conda package if you have the
 
 .. code-block:: bash
 
-    [~]$ conda install -c jzuhone -c astropy pyxsim
+    [~]$ conda install -c conda-forge pyxsim
 
-Note both the ``jzuhone`` and ``astropy`` channels are required. This will install all of
-the necessary dependencies.
+This will install all of the necessary dependencies.
 
 The second way to install pyXSIM is via pip. pip will attempt to download the
 dependencies and install them, if they are not already installed in your Python
