@@ -44,6 +44,9 @@ following parameters:
   :ref:`solar-abund-tables`.
 * ``no_shifting`` (optional): If set to True, the photon energies will not be
   velocity Doppler shifted. Default False.
+* ``center_vector`` (optional): A vector defining what direction will be placed at
+  the center of the lat/lon coordinate system. If not set, an arbitrary
+  grid-aligned center_vector perpendicular to the normal is chosen.
 * ``save_los`` (optional): If ``True``, save the line-of-sight positions along
   the radial direction in units of kpc to the events list. Default: ``False``.
 * ``prng`` (optional): An integer seed, pseudo-random number generator,

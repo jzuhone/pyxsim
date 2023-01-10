@@ -31,6 +31,9 @@ This version of pyXSIM adds new features and improvements, as well as a bug fix.
 * The calculation of the Doppler shifting of photons from particle or cell velocities
   was incorrect for velocities in the relativistic regime and has been fixed. This did
   not affect anyone working in the Newtonian regime.
+* All-sky projections can now utilize a ``center_vector`` which decides what position
+  in the dataset the center of the sky coordinate system points to. See :ref:`allsky`
+  for more details.
 * The minimum version of yt has been bumped up to 4.1.3.
 * The minimum version of SOXS has been bumped up to 4.3.0.
 * This version of pyXSIM uses the new versions of the spectral models for the Cloudy CIE
