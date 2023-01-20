@@ -116,6 +116,7 @@ def make_photons(
     velocity_fields=None,
     bulk_velocity=None,
     observer="external",
+    fields_to_keep=None,
 ):
     r"""
     Write a photon list dataset to disk from a yt data source and assuming a
@@ -310,6 +311,12 @@ def make_photons(
     if velocity_fields is not None:
         v_fields = velocity_fields
 
+    fields_store = []
+    if fields_to_keep is not None:
+        for field in fields_to_keep:
+            fd = ds._get_field_info(field)
+            fields_store.append(fd.name)
+
     if p_fields[0] == ("index", "x"):
         parameters["data_type"] = "cells"
     else:
@@ -352,6 +359,9 @@ def make_photons(
     p_size = init_chunk
 
     cell_fields = ["x", "y", "z", "vx", "vy", "vz", "num_photons", "dx"]
+    if len(fields_store) > 0:
+        for field in fields_store:
+            cell_fields.append(field[1])
 
     d = f.create_group("data")
     for field in cell_fields + ["energy"]:
@@ -417,6 +427,9 @@ def make_photons(
                 d["dx"][c_offset : c_offset + chunk_nc] = chunk[w_field][idxs].to_value(
                     "kpc"
                 )
+
+            for field in fields_store:
+                d[field[1]][c_offset : c_offset + chunk_nc] = chunk[field][idxs]
 
             n_cells += chunk_nc
             n_photons += chunk_nph
