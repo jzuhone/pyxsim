@@ -219,6 +219,11 @@ def compute_H_abund(abund_table):
     return atomic_weights[1] / (atomic_weights * abund_tables[abund_table]).sum()
 
 
+def compute_zsolar(abund_table):
+    elems = atomic_weights * abund_tables[abund_table]
+    return elems[3:].sum() / elems.sum()
+
+
 class ParallelProgressBar:
     def __init__(self, title):
         self.title = title

@@ -21,4 +21,9 @@ from pyxsim.source_models import (
     NEISourceModel,
     PowerLawSourceModel,
 )
-from pyxsim.utils import compute_elem_mass_fraction, create_metal_fields, merge_files
+from pyxsim.utils import (
+    compute_elem_mass_fraction,
+    compute_zsolar,
+    create_metal_fields,
+    merge_files,
+)
