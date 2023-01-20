@@ -7,8 +7,11 @@ doc/source/*.fits
 doc/source/cookbook/*.fits
 doc/source/cookbook/*.h5
 doc/source/cookbook/*.reg
+doc/source/.ipynb_checkpoints
+doc/source/cookbook/.ipynb_checkpoints
 build
 dist
 sky_functions.c
 spectra.c
 interpolate.c
+.idea
