@@ -36,18 +36,21 @@ class EventList:
             filenames = filespec
         else:
             raise RuntimeError(f"Invalid EventList file spec: {filespec}")
-        self.filenames = filenames
-        self.filenames.sort()
+        filenames.sort()
         self.parameters = {}
         self.info = {}
         self.num_events = []
-        self.num_files = len(self.filenames)
-        for i, fn in enumerate(self.filenames):
+        self.filenames = []
+        get_params = True
+        for fn in filenames:
             with h5py.File(fn, "r") as f:
+                n_events = f["data"]["xsky"].size
+                if n_events == 0:
+                    continue
                 p = f["parameters"]
                 info = f["info"]
                 self.num_events.append(f["data"]["xsky"].size)
-                if i == 0:
+                if get_params:
                     for field in p:
                         if isinstance(p[field][()], (str, bytes)):
                             self.parameters[field] = p[field].asstr()[()]
@@ -55,6 +58,9 @@ class EventList:
                             self.parameters[field] = p[field][()]
                     for k, v in info.attrs.items():
                         self.info[k] = v
+                    get_params = False
+                self.filenames.append(fn)
+        self.num_files = len(self.filenames)
         self.tot_num_events = np.sum(self.num_events)
         self.observer = self.parameters.get("observer", "external")
 
