@@ -5,7 +5,6 @@ from pyxsim.spectral_models import IGMSpectralModel, TableCIEModel
 
 
 def test_apec():
-
     amod = TableCIEModel("apec", 0.1, 10.0, 10000, 1.0, 10.0, thermal_broad=True)
     amod.prepare_spectrum(0.2)
 
@@ -34,7 +33,6 @@ def test_apec():
 
 
 def test_igm():
-
     imod = IGMSpectralModel(0.2, 3.0, 1000)
     imod.prepare_spectrum(0.05)
 

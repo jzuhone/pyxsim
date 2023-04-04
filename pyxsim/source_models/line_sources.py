@@ -154,13 +154,11 @@ class LineSourceModel(SourceModel):
         return {"emin": emin, "emax": emax}
 
     def process_data(self, mode, chunk, spectral_norm, fluxf=None, ebins=None):
-
         num_cells = len(chunk[self.emission_field])
 
         norm_field = chunk[self.emission_field]
 
         if mode == "photons":
-
             F = norm_field * spectral_norm * self.scale_factor
             if self.observer == "internal":
                 pos = np.array(
@@ -209,7 +207,6 @@ class LineSourceModel(SourceModel):
             return ncells, number_of_photons[active_cells], active_cells, energies
 
         elif mode in ["photon_field", "energy_field"]:
-
             xlo = fluxf["emin"].v - self.e0.value
             xhi = fluxf["emax"].v - self.e0.value
             if self.sigma is None:
@@ -237,7 +234,6 @@ class LineSourceModel(SourceModel):
             return fac * norm_field
 
         elif mode == "spectrum":
-
             inv_sf = 1.0 / self.scale_factor
             ee = ebins * inv_sf - self.e0.value
             de = np.diff(ebins * inv_sf)

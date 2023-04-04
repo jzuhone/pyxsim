@@ -20,7 +20,6 @@ def test_power_law(check_dir):
 
 
 def plaw_fit(alpha_sim, check_dir, prng=None):
-
     tmpdir = tempfile.mkdtemp()
     curdir = os.getcwd()
     os.chdir(tmpdir)
@@ -144,7 +143,6 @@ def test_power_law_fields():
 
 
 def test_power_law_spectrum():
-
     cosmo = Cosmology()
 
     bms = BetaModelSource()

@@ -256,7 +256,6 @@ class ThermalSourceModel(SourceModel):
         return self.spectral_model.make_fluxf(emin, emax, energy=energy)
 
     def process_data(self, mode, chunk, spectral_norm, fluxf=None):
-
         spec = np.zeros(self.nbins)
 
         orig_shape = chunk[self.temperature_field].shape
@@ -355,7 +354,6 @@ class ThermalSourceModel(SourceModel):
         idxs = np.where(cut)[0]
 
         for ck in chunked(range(num_cells), 100):
-
             ibegin = ck[0]
             iend = ck[-1] + 1
             nck = iend - ibegin
@@ -365,7 +363,6 @@ class ThermalSourceModel(SourceModel):
             kTi = kT[ibegin:iend]
 
             if mode in ["photons", "spectrum"]:
-
                 if self._density_dependence:
                     nHi = nH[ibegin:iend]
                     cspec, mspec, vspec = self.spectral_model.get_spectrum(kTi, nHi)
@@ -381,7 +378,6 @@ class ThermalSourceModel(SourceModel):
                 np.clip(tot_spec, 0.0, None, out=tot_spec)
 
                 if mode == "photons":
-
                     spec_sum = tot_spec.sum(axis=-1)
                     cell_norm = spec_sum * cnm
 
@@ -414,13 +410,11 @@ class ThermalSourceModel(SourceModel):
                     start_e = end_e
 
                 elif mode == "spectrum":
-
                     spec += np.sum(tot_spec * cnm[:, np.newaxis], axis=0)
 
                 self.pbar.update(nck)
 
             else:
-
                 if self._density_dependence:
                     nHi = nH[ibegin:iend]
                     cflux, mflux, vflux = fluxf(kTi, nHi)

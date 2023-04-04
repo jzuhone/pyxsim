@@ -237,7 +237,6 @@ def make_xrb_particles(
     ap = []
 
     if N_l > 0.0:
-
         F_l = np.zeros(nbins + 1)
         for i in range(1, nbins + 1):
             F_l[i] = lmxb_cdf(Lbins[i])
@@ -281,7 +280,6 @@ def make_xrb_particles(
                 ap.append(np.array([alpha_lmxb] * n))
 
     if N_h > 0.0:
-
         F_h = np.zeros(nbins + 1)
         for i in range(1, nbins + 1):
             F_h[i] = hmxb_cdf(Lbins[i])

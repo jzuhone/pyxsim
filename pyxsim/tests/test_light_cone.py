@@ -9,7 +9,6 @@ from pyxsim.tests.utils import hdf5_answer_testing
 
 @importorskip("yt_astro_analysis")
 def test_light_cone(answer_store, answer_dir):
-
     from pyxsim.light_cone import XrayLightCone
 
     prng = RandomState(0x4D3D3D3)

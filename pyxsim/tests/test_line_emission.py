@@ -17,7 +17,6 @@ m_chi = YTQuantity(10.0, "GeV").to_equivalent("g", "mass_energy")
 
 
 def test_line_emission():
-
     tmpdir = tempfile.mkdtemp()
     curdir = os.getcwd()
     os.chdir(tmpdir)
@@ -85,7 +84,6 @@ def test_line_emission():
 
 
 def test_line_emission_fields():
-
     bms = BetaModelSource()
     ds = bms.ds
 
@@ -141,7 +139,6 @@ def test_line_emission_fields():
 
 
 def test_line_emission_spectra():
-
     cosmo = Cosmology()
 
     bms = BetaModelSource()

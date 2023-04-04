@@ -23,7 +23,6 @@ gslr = "GasSloshingLowRes/sloshing_low_res_hdf5_plt_cnt_0300"
 
 
 def test_sloshing(answer_store, answer_dir):
-
     prng = RandomState(0x4D3D3D3)
 
     ds = yt.load(gslr, default_species_fields="ionized")
