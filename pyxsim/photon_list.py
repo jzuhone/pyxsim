@@ -663,10 +663,10 @@ def _project_photons(
 
             if absorb_model is None:
                 det = np.ones(eobs.size, dtype="bool")
-                num_det = eobs.size
+                num_det = np.int64(eobs.size)
             else:
                 det = absorb_model.absorb_photons(eobs, prng=prng)
-                num_det = det.sum()
+                num_det = np.int64(det.sum())
 
             if num_det > 0:
                 if observer == "external":

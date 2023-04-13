@@ -38,7 +38,7 @@ def doppler_shift(np.ndarray[np.float64_t, ndim=1] beta_n,
 @cython.boundscheck(False)
 @cython.wraparound(False)
 def scatter_events(normal, prng, kernel, data_type,
-                   int num_det,
+                   np.int64_t num_det,
                    np.ndarray[np.uint8_t, cast=True] det,
                    np.ndarray[np.int64_t, ndim=1] n_ph,
                    np.ndarray[np.float64_t, ndim=1] x,
@@ -182,7 +182,7 @@ def pixel_to_cel(np.ndarray[np.float64_t, ndim=1] xsky,
 @cython.cdivision(True)
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def scatter_events_allsky(data_type, kernel, prng, int num_det,
+def scatter_events_allsky(data_type, kernel, prng, np.int64_t num_det,
                           np.ndarray[np.uint8_t, cast=True] det,
                           np.ndarray[np.int64_t, ndim=1] n_ph,
                           np.ndarray[np.float64_t, ndim=1] x,
