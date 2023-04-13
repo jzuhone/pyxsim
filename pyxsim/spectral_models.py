@@ -279,10 +279,16 @@ class Atable1DSpectralModel(ThermalSpectralModel):
     def prepare_spectrum(self, zobs):
         eidxs, ne, ebins, emid, de = self.sgen._get_energies(zobs)
         cosmic_spec, metal_spec, var_spec = self.sgen._get_table(ne, eidxs, zobs)
-        self.cosmic_spec = 1.0e-14 * regrid_spectrum(self.ebins, ebins, cosmic_spec)
-        self.metal_spec = 1.0e-14 * regrid_spectrum(self.ebins, ebins, metal_spec)
+        self.cosmic_spec = 1.0e-14 * regrid_spectrum(
+            self.ebins, ebins, cosmic_spec, clip_neg=False
+        )
+        self.metal_spec = 1.0e-14 * regrid_spectrum(
+            self.ebins, ebins, metal_spec, clip_neg=False
+        )
         if var_spec is not None:
-            var_spec = 1.0e-14 * regrid_spectrum(self.ebins, ebins, var_spec)
+            var_spec = 1.0e-14 * regrid_spectrum(
+                self.ebins, ebins, var_spec, clip_neg=False
+            )
         self.var_spec = var_spec
         self.si = SpectralInterpolator1D(
             self.Tvals, self.cosmic_spec, self.metal_spec, self.var_spec
@@ -418,10 +424,16 @@ class IGMSpectralModel(ThermalSpectralModel):
         """
         eidxs, ne, ebins, emid, de = self.igen._get_energies(zobs)
         cosmic_spec, metal_spec, var_spec = self.igen._get_table(ne, eidxs, zobs)
-        self.cosmic_spec = 1.0e-14 * regrid_spectrum(self.ebins, ebins, cosmic_spec)
-        self.metal_spec = 1.0e-14 * regrid_spectrum(self.ebins, ebins, metal_spec)
+        self.cosmic_spec = 1.0e-14 * regrid_spectrum(
+            self.ebins, ebins, cosmic_spec, clip_neg=False
+        )
+        self.metal_spec = 1.0e-14 * regrid_spectrum(
+            self.ebins, ebins, metal_spec, clip_neg=False
+        )
         if var_spec is not None:
-            var_spec = 1.0e-14 * regrid_spectrum(self.ebins, ebins, var_spec)
+            var_spec = 1.0e-14 * regrid_spectrum(
+                self.ebins, ebins, var_spec, clip_neg=False
+            )
         self.var_spec = var_spec
         self.cie_model.prepare_spectrum(zobs)
         self.si = SpectralInterpolator2D(
