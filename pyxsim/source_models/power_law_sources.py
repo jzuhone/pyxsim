@@ -138,7 +138,6 @@ class PowerLawSourceModel(SourceModel):
         return {"emin": emin, "emax": emax}
 
     def process_data(self, mode, chunk, spectral_norm, fluxf=None, ebins=None):
-
         num_cells = len(chunk[self.emission_field])
 
         if isinstance(self.alpha, float):
@@ -154,7 +153,6 @@ class PowerLawSourceModel(SourceModel):
             ef = fluxf["emax"].v
 
         if mode in ["photons", "photon_field"]:
-
             norm_fac = ef ** (1.0 - alpha) - ei ** (1.0 - alpha)
             norm_fac[alpha == 1] = np.log(ef / ei)
             norm_fac *= self.e0.v**alpha
@@ -163,7 +161,6 @@ class PowerLawSourceModel(SourceModel):
                 norm[alpha != 1] /= 1.0 - alpha[alpha != 1]
 
             if mode == "photons":
-
                 norm *= spectral_norm * self.scale_factor
 
                 if self.observer == "internal":
@@ -205,18 +202,15 @@ class PowerLawSourceModel(SourceModel):
                 )
 
             elif mode == "photon_field":
-
                 return norm
 
         elif mode == "energy_field":
-
             norm_fac = ef ** (2.0 - alpha) - ei ** (2.0 - alpha)
             norm_fac *= self.e0.v**alpha / (2.0 - alpha)
 
             return norm_fac * chunk[self.emission_field].d
 
         elif mode == "spectrum":
-
             inv_sf = 1.0 / self.scale_factor
             emid = 0.5 * (ebins[1:] + ebins[:-1]) * inv_sf / self.e0.v
 

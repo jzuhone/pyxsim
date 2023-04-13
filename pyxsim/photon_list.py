@@ -380,11 +380,9 @@ def make_photons(
     f.flush()
 
     for chunk in parallel_objects(data_source.chunks([], "io")):
-
         chunk_data = source_model.process_data("photons", chunk, spectral_norm)
 
         if chunk_data is not None:
-
             chunk_nc, number_of_photons, idxs, energies = chunk_data
 
             chunk_nph = np.sum(number_of_photons)
@@ -476,7 +474,6 @@ def _project_photons(
     save_los=False,
     prng=None,
 ):
-
     from yt.funcs import ensure_numpy_array
 
     prng = parse_prng(prng)
@@ -566,12 +563,10 @@ def _project_photons(
     D_A = p["fid_d_a"][()] * 1.0e3
 
     if d["energy"].size == 0:
-
         mylog.warning("No photons are in file %s, so I am done.", photon_file)
         n_events = 0
 
     else:
-
         fe = h5py.File(event_file, "w")
 
         ie = fe.create_group("info")
@@ -625,7 +620,6 @@ def _project_photons(
         )
 
         for start_c in range(0, n_cells, cell_chunk):
-
             end_c = min(start_c + cell_chunk, n_cells)
 
             n_ph = d["num_photons"][start_c:end_c]
@@ -675,9 +669,7 @@ def _project_photons(
                 num_det = det.sum()
 
             if num_det > 0:
-
                 if observer == "external":
-
                     if data_type == "particles":
                         dx *= 0.5
 
@@ -713,7 +705,6 @@ def _project_photons(
                         pixel_to_cel(xsky, ysky, sky_center)
 
                 elif observer == "internal":
-
                     xsky, ysky, los = scatter_events_allsky(
                         data_type,
                         kernel,

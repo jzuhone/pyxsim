@@ -8,7 +8,6 @@ from pyxsim.lib.sky_functions import pixel_to_cel
 
 
 def test_pixel_to_cel():
-
     prng = RandomState(24)
 
     n_evt = 100000

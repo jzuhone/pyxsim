@@ -55,7 +55,6 @@ def test_particle_beta_model_offaxis(check_dir):
 
 
 def do_beta_model(source, check_dir, axis="z", prng=None):
-
     tmpdir = tempfile.mkdtemp()
     curdir = os.getcwd()
     os.chdir(tmpdir)
@@ -125,7 +124,6 @@ def do_beta_model(source, check_dir, axis="z", prng=None):
 
 
 def test_vapec_beta_model(check_dir):
-
     bms = BetaModelSource()
 
     tmpdir = tempfile.mkdtemp()
