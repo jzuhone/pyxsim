@@ -22,7 +22,7 @@ from pyxsim.tests.utils import hdf5_answer_testing
 gslr = "GasSloshingLowRes/sloshing_low_res_hdf5_plt_cnt_0300"
 
 
-def test_sloshing(answer_store, answer_dir):
+def test_sloshing(answer_store):
     prng = RandomState(0x4D3D3D3)
 
     ds = yt.load(gslr, default_species_fields="ionized")
@@ -40,7 +40,7 @@ def test_sloshing(answer_store, answer_dir):
         "photons1", sphere, redshift, A, exp_time, thermal_model
     )
 
-    hdf5_answer_testing("photons1.h5", answer_store, answer_dir)
+    hdf5_answer_testing("photons1.h5", answer_store)
 
     n_events1 = project_photons(
         "photons1",
@@ -52,7 +52,7 @@ def test_sloshing(answer_store, answer_dir):
         prng=prng,
     )
 
-    hdf5_answer_testing("events1.h5", answer_store, answer_dir)
+    hdf5_answer_testing("events1.h5", answer_store)
 
     events1 = EventList("events1.h5")
 
