@@ -88,8 +88,9 @@ def validate_parameters(first, second, skip=None):
 
 
 def merge_files(input_files, output_file, overwrite=False, add_exposure_times=False):
-    r"""
+    """
     Helper function for merging PhotonList or EventList HDF5 files.
+
     Parameters
     ----------
     input_files : list of strings
@@ -97,16 +98,18 @@ def merge_files(input_files, output_file, overwrite=False, add_exposure_times=Fa
     output_file : string
         Name of the merged file to be outputted.
     overwrite : boolean, default False
-        If a the output file already exists, set this to True to
+        If the output file already exists, set this to True to
         overwrite it.
     add_exposure_times : boolean, default False
         If set to True, exposure times will be added together. Otherwise,
         the exposure times of all of the files must be the same.
+
     Examples
     --------
     >>> from pyxsim import merge_files
     >>> merge_files(["events_0.h5","events_1.h5","events_3.h5"], "events.h5",
     ...             overwrite=True, add_exposure_times=True)
+
     Notes
     -----
     Currently, to merge files it is mandated that all of the parameters have the

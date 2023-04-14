@@ -10,7 +10,7 @@ from pyxsim.utils import mylog, parse_value
 
 
 class PowerLawSourceModel(SourceModel):
-    r"""
+    """
     Initialize a source model from a power-law spectrum.
 
     Parameters
