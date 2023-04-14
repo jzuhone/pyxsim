@@ -8,6 +8,8 @@ distribution of cell or particle positions, velocities, and photon energies
 within each cell or particle. Once created, it be used to generated simulated
 X-ray events from a particular line of sight.
 
+.. _generate_new:
+
 Generating a New Photon List from a Data Source
 -----------------------------------------------
 
@@ -75,6 +77,9 @@ The arguments taken by :func:`~pyxsim.photon_list.make_photons` are as follows:
   sky, or the observer is "internal" and a spherical projection is assumed.
   Default is "external". For more details on the "internal" observing mode see
   :ref:`allsky`.
+* ``fields_to_keep`` (optional): A list of fields to add to the HDF5 photon
+  list in addition to the cell or particle positions, velocities, and sizes.
+  Default: None
 
 As an example, we'll assume we have created a ``source_model`` representing the
 thermal emission from the plasma (see :ref:`source-models` for more details on
@@ -130,11 +135,26 @@ fields, you can specify them using the ``velocity_fields`` keyword argument:
 
 .. code-block:: python
 
-    vfields = ["velx", "vely", "velz"]
+    vfields = [("flash", "velx"), ("flash", "vely"), ("flash", "velz")]
     n_photons, n_cells = pyxsim.make_photons("my_photons", sp, redshift, area,
                                              exp_time, source_model,
                                              center=center, dist=(4., "kpc"),
                                              velocity_fields=vfields)
+
+We can also add other fields to the file using the ``fields_to_keep`` option,
+which will not be used for photon projection in later steps but can be used for
+diagnostic and/or analysis purposes. These represent the fields at the positions
+where photons have been generated from. For example, to add density and
+temperature fields to the file:
+
+.. code-block:: python
+
+    fields_to_keep = [("gas", "density"), ("gas", "temperature")]
+    n_photons, n_cells = pyxsim.make_photons("my_photons", sp, redshift, area,
+                                             exp_time, source_model,
+                                             center=center, dist=(4., "kpc"),
+                                             fields_to_keep=fields_to_keep)
+
 
 Merging Photon Lists
 --------------------

@@ -3,6 +3,20 @@
 ChangeLog
 =========
 
+Version 4.2.0
+-------------
+
+This version of pyXSIM contains one new feature and a critical bugfix.
+
+* A bug introduced upstream in SOXS 4.4.0 caused normalization of emission and
+  spectra in the :class:`~pyxsim.source_models.thermal_sources.IGMSourceModel`
+  to be incorrect. This is fixed in SOXS 4.5.1 and this version requires that
+  version of SOXS to work correctly.
+* The function :func:`~pyxsim.photon_list.make_photons` now has a ``fields_to_keep``
+  option that allows one to store fields other than the positions, velocities, and
+  sizes of cells or particles to the photon list HDF5 file. See :ref:`generate_new`
+  for more details.
+
 Version 4.1.1
 -------------
 

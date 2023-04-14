@@ -172,6 +172,14 @@ def make_photons(
         A 3-element array or list specifying the local velocity frame of
         reference. If not a :class:`~yt.units.yt_array.YTArray`, it is assumed
         to have units of km/s. Default: [0.0, 0.0, 0.0] km/s.
+    observer : string, optional
+        Controls whether the source is at a large distance, in which case
+        the observer sits far outside the source ("external"), or if the
+        observer is inside the X-ray-emitting source ("internal"), such as a
+        galaxy. Default: "external"
+    fields_to_keep : list of tuples
+        A list of fields to add to the HDF5 photon list in addition to the cell
+        or particle positions, velocities, and sizes. Default: None
 
     Returns
     -------
@@ -180,13 +188,16 @@ def make_photons(
 
     Examples
     --------
-    >>> thermal_model = pyxsim.CIESourceModel(0.1, 10.0, 1000, 0.3)
+    >>> thermal_model = pyxsim.CIESourceModel("apec", 0.1, 10.0, 1000, 0.3)
     >>> redshift = 0.05
     >>> area = 6000.0 # assumed here in cm**2
-    >>> time = 2.0e5 # assumed here in seconds
+    >>> exp_time = 2.0e5 # assumed here in seconds
     >>> sp = ds.sphere("c", (500., "kpc"))
-    >>> n_photons, n_cells = pyxsim.make_photons(sp, redshift, area,
-    ...                                          time, thermal_model)
+    >>> fields_to_keep = [("gas", "density"), ("gas", "temperature")]
+    >>> n_photons, n_cells = pyxsim.make_photons(
+    ...     sp, redshift, area, exp_time, thermal_model,
+    ...     fields_to_keep=fields_to_keep
+    ... )
     """
     ds = data_source.ds
 
