@@ -21,6 +21,14 @@ if [[ ${mode} == "testing" ]]; then
     echo "[yt]" > $HOME/.config/yt/yt.toml
     echo "test_data_dir = \"${PWD}\"" >> $HOME/.config/yt/yt.toml
     cat $HOME/.config/yt/yt.toml
+
+    # Set location of SOXS data
+    mkdir -p $HOME/.config/soxs
+    echo "[soxs]" > $HOME/.config/soxs/soxs.cfg
+    echo "soxs_data_dir = ${GITHUB_WORKSPACE}/soxs_data" >> $HOME/.config/soxs/soxs.cfg
+    echo "soxs_answer_dir = ${GITHUB_WORKSPACE}/${ANSWER_VER}" >> $HOME/.config/soxs/soxs.cfg
+    cat $HOME/.config/soxs/soxs.cfg
+
 fi
 
 # Install dependencies using conda

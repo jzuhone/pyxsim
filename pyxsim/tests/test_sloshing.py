@@ -60,8 +60,8 @@ def test_sloshing(answer_store, answer_dir):
     events1.write_spectrum("test_spec.fits", 0.2, 10.0, 2000, overwrite=True)
     events1.write_fits_image("test_img.fits", (20.0, "arcmin"), 1024, overwrite=True)
 
-    file_answer_testing("EVENTS", "test_events.fits", answer_store, answer_dir)
-    file_answer_testing("SPECTRUM", "test_spec.fits", answer_store, answer_dir)
+    file_answer_testing("EVENTS", "test_events.fits", answer_store)
+    file_answer_testing("SPECTRUM", "test_spec.fits", answer_store)
 
     n_photons2, n_cells2 = make_photons(
         "photons2", sphere, redshift, A, exp_time, thermal_model

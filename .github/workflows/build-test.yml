@@ -50,4 +50,4 @@ jobs:
                   mode: testing
               run: source ./tests/ci_install.sh
             - name: Run Tests
-              run: py.test -vv pyxsim/tests --answer_dir=$PWD/$ANSWER_VER
+              run: py.test -vv pyxsim/tests
