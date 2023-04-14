@@ -49,7 +49,7 @@ setup(
         "scipy",
         "yt>=4.1.3",
         "unyt>=2.9.3",
-        "soxs>=4.2.1",
+        "soxs>=4.5.1",
         "tqdm",
     ],
     include_package_data=True,
