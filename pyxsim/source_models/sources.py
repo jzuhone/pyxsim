@@ -163,6 +163,12 @@ class SourceModel:
             emiss_name[1].replace("emissivity", "photon_emissivity"),
         )
 
+        count_rate_name = (
+            ftype,
+            phot_emiss_name[1].replace("emissivity", "count_rate"),
+        )
+        count_rate_dname = lum_dname.replace("\rm{{L}}", "\rm{{R}}")
+
         efluxf = self.make_fluxf(emin, emax, energy=True)
 
         def _luminosity_field(field, data):
@@ -211,7 +217,22 @@ class SourceModel:
             force_override=force_override,
         )
 
-        return [emiss_name, lum_name, phot_emiss_name]
+        def _count_rate_field(field, data):
+            return data.ds.arr(
+                self.process_data("photon_field", data, spectral_norm, fluxf=pfluxf),
+                "photons/s",
+            )
+
+        ds.add_field(
+            count_rate_name,
+            function=_count_rate_field,
+            display_name=count_rate_dname,
+            sampling_type="local",
+            units="photons/s",
+            force_override=force_override,
+        )
+
+        return [emiss_name, lum_name, phot_emiss_name, count_rate_name]
 
     def make_intensity_fields(
         self,
