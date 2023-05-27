@@ -207,8 +207,10 @@ def make_photons(
 
     if comm.size > 1:
         photon_file = f"{photon_prefix}.{comm.rank:04d}.h5"
+        photon_files = [f"{photon_prefix}.{i:04d}.h5" for i in range(comm.size)]
     else:
         photon_file = f"{photon_prefix}.h5"
+        photon_files = [photon_file]
 
     if parameters is None:
         parameters = {}
@@ -346,6 +348,7 @@ def make_photons(
     info.attrs["dataset"] = str(data_source.ds)
     info.attrs["data_source"] = str(data_source)
     info.attrs["source_model"] = repr(source_model)
+    info.attrs["filenames"] = photon_files
 
     # Parameters
 
@@ -512,9 +515,11 @@ def _project_photons(
     if comm.size > 1:
         photon_file = f"{photon_prefix}.{comm.rank:04d}.h5"
         event_file = f"{event_prefix}.{comm.rank:04d}.h5"
+        event_files = [f"{event_prefix}.{i:04d}.h5" for i in range(comm.size)]
     else:
         photon_file = f"{photon_prefix}.h5"
         event_file = f"{event_prefix}.h5"
+        event_files = [event_file]
 
     sky_center = ensure_numpy_array(sky_center)
 
@@ -586,6 +591,7 @@ def _project_photons(
         ie.attrs["yt_version"] = yt_version
         ie.attrs["soxs_version"] = soxs_version
         ie.attrs["photon_file"] = photon_file
+        ie.attrs["filenames"] = event_files
 
         exp_time = float(p["fid_exp_time"][()])
         area = float(p["fid_area"][()])

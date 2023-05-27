@@ -29,7 +29,15 @@ class EventList:
         from glob import glob
 
         if filespec.endswith(".h5"):
-            filenames = glob(filespec)
+            try:
+                with h5py.File(filespec, "r") as f:
+                    if "filenames" in f["info"].attrs:
+                        filenames = list(f["info"].attrs["filenames"])
+                    else:
+                        filenames = glob(filespec)
+            except OSError:
+                # Old way of doing things
+                filenames = glob(filespec)
         elif isinstance(filespec, list):
             if not np.all([fn.endswith(".h5") for fn in filespec]):
                 raise RuntimeError("Not all filenames are valid!")
