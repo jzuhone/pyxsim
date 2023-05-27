@@ -112,7 +112,7 @@ class SourceModel:
             spec_class = CountRateSpectrum
         return spec_class(ebins, spec)
 
-    def make_source_fields(self, ds, emin, emax, force_override=False):
+    def make_source_fields(self, ds, emin, emax, force_override=False, band_name=None):
         """
         Make the following fields in the rest frame of the
         source within a specific energy band for a dataset in yt:
@@ -137,6 +137,9 @@ class SourceModel:
         force_override : boolean, optional
             If True, override a pre-existing field with the same name.
             Default: False
+        band_name : string, optional
+            The name to give to the energy band in the field. If None,
+            it is set to "{emin}_{emax}_keV". Default: None
 
         Returns
         -------
@@ -152,8 +155,11 @@ class SourceModel:
 
         ftype = self.ftype
 
-        emiss_name = (ftype, f"xray_emissivity_{emin.value}_{emax.value}_keV")
-        emiss_dname = rf"\epsilon_{{X}} ({emin.value}-{emax.value} keV)"
+        if band_name is None:
+            band_name = f"{emin.value}_{emax.value}_keV"
+
+        emiss_name = (ftype, f"xray_emissivity_{band_name}")
+        emiss_dname = rf"\epsilon_{{X}} ({emin.value:.2f}-{emax.value:.2f} keV)"
 
         lum_name = (ftype, emiss_name[1].replace("emissivity", "luminosity"))
         lum_dname = emiss_dname.replace(r"\epsilon", r"\rm{{L}}")
@@ -243,6 +249,7 @@ class SourceModel:
         dist=None,
         cosmology=None,
         force_override=True,
+        band_name=None,
     ):
         """
         Make the following fields in the observer frame within a
@@ -275,6 +282,12 @@ class SourceModel:
             Cosmological information. If not supplied, we try to get the
             cosmology from the dataset. Otherwise, LCDM with the default yt
             parameters is assumed.
+        force_override : boolean, optional
+            If True, override a pre-existing field with the same name.
+            Default: False
+        band_name : string, optional
+            The name to give to the energy band in the field. If None,
+            it is set to "{emin}_{emax}_keV". Default: None
 
         Returns
         -------
@@ -301,8 +314,11 @@ class SourceModel:
         emin_src = emin * (1.0 + redshift)
         emax_src = emax * (1.0 + redshift)
 
-        ei_name = (ftype, f"xray_intensity_{emin.value}_{emax.value}_keV")
-        ei_dname = rf"I_{{X}} ({emin.value}-{emax.value} keV)"
+        if band_name is None:
+            band_name = f"{emin.value}_{emax.value}_keV"
+
+        ei_name = (ftype, f"xray_intensity_{band_name}")
+        ei_dname = rf"I_{{X}} ({emin.value:.2f}-{emax.value:.2f} keV)"
 
         eif = self.make_fluxf(emin_src, emax_src, energy=True)
 
