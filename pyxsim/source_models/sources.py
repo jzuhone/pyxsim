@@ -207,22 +207,6 @@ class SourceModel:
 
         pfluxf = self.make_fluxf(emin, emax, energy=False)
 
-        def _photon_emissivity_field(field, data):
-            ret = data.ds.arr(
-                self.process_data("photon_field", data, spectral_norm, fluxf=pfluxf),
-                "photons/s",
-            )
-            return ret * data[ftype, "density"] / data[ftype, "mass"]
-
-        ds.add_field(
-            phot_emiss_name,
-            function=_photon_emissivity_field,
-            display_name=emiss_dname,
-            sampling_type="local",
-            units="photons/cm**3/s",
-            force_override=force_override,
-        )
-
         def _count_rate_field(field, data):
             return data.ds.arr(
                 self.process_data("photon_field", data, spectral_norm, fluxf=pfluxf),
@@ -235,6 +219,19 @@ class SourceModel:
             display_name=count_rate_dname,
             sampling_type="local",
             units="photons/s",
+            force_override=force_override,
+        )
+
+        def _photon_emissivity_field(field, data):
+            ret = data[count_rate_name]
+            return ret * data[ftype, "density"] / data[ftype, "mass"]
+
+        ds.add_field(
+            phot_emiss_name,
+            function=_photon_emissivity_field,
+            display_name=emiss_dname,
+            sampling_type="local",
+            units="photons/cm**3/s",
             force_override=force_override,
         )
 
