@@ -31,7 +31,7 @@ class EventList:
         if filespec.endswith(".h5"):
             try:
                 with h5py.File(filespec, "r") as f:
-                    if "filenames" in f["info"].attrs:
+                    if "info" in f and "filenames" in f["info"].attrs:
                         filenames = list(f["info"].attrs["filenames"])
                     else:
                         filenames = glob(filespec)
@@ -56,7 +56,6 @@ class EventList:
                 if n_events == 0:
                     continue
                 p = f["parameters"]
-                info = f["info"]
                 self.num_events.append(f["data"]["xsky"].size)
                 if get_params:
                     for field in p:
@@ -64,8 +63,9 @@ class EventList:
                             self.parameters[field] = p[field].asstr()[()]
                         else:
                             self.parameters[field] = p[field][()]
-                    for k, v in info.attrs.items():
-                        self.info[k] = v
+                    if "info" in f:
+                        for k, v in f["info"].attrs.items():
+                            self.info[k] = v
                     get_params = False
                 self.filenames.append(fn)
         self.num_files = len(self.filenames)
