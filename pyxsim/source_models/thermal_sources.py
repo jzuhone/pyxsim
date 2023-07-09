@@ -282,6 +282,16 @@ class ThermalSourceModel(SourceModel):
 
         cell_nrm = np.ravel(chunk[self.emission_measure_field].d * spectral_norm)
 
+        if self.nh_field is not None:
+            nH = np.ravel(chunk[self.nh_field].d)
+        else:
+            nH = None
+
+        if isinstance(self.h_fraction, Number):
+            X_H = self.h_fraction
+        else:
+            X_H = np.ravel(chunk[self.h_fraction].d)
+
         num_cells = cut.sum()
 
         if mode in ["photons", "spectrum"]:
@@ -291,20 +301,26 @@ class ThermalSourceModel(SourceModel):
             else:
                 self.pbar.update(orig_ncells - num_cells)
         elif num_cells == 0:
+            # Here, we have no active cells, and so we
+            # return an array of zeros with the original shape.
+            # But yt needs to know that we may depend on the metallicity
+            # or abundance fields, so we check for that here. Very hacky!
+            if not isinstance(self.Zmet, Number):
+                chunk[self.Zmet]
+            if self.num_var_elem > 0:
+                elem_keys = self.var_ion_keys if self._nei else self.var_elem_keys
+                for key in elem_keys:
+                    value = self.var_elem[key]
+                    if not isinstance(value, Number):
+                        chunk[value]
             return np.zeros(orig_shape)
 
         kT = kT[cut]
         cell_nrm = cell_nrm[cut]
-
-        if self.nh_field is not None:
-            nH = np.ravel(chunk[self.nh_field].d)[cut]
-        else:
-            nH = None
-
-        if isinstance(self.h_fraction, Number):
-            X_H = self.h_fraction
-        else:
-            X_H = np.ravel(chunk[self.h_fraction].d)[cut]
+        if nH is not None:
+            nH = nH[cut]
+        if not isinstance(X_H, Number):
+            X_H = X_H[cut]
 
         if self._nei:
             metalZ = np.zeros(num_cells)
