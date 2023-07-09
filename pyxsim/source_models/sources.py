@@ -237,6 +237,17 @@ class SourceModel:
 
         return [emiss_name, lum_name, phot_emiss_name, count_rate_name]
 
+    def make_line_fields(self, ds, e0, de, line_name, force_override=False):
+        e0 = parse_value(e0, "keV")
+        de = parse_value(de, "keV")
+
+        emin = e0 - 0.5 * de
+        emax = e0 + 0.5 * de
+
+        return self.make_source_fields(
+            ds, emin, emax, band_name=line_name, force_override=force_override
+        )
+
     def make_intensity_fields(
         self,
         ds,
