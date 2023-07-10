@@ -3,6 +3,17 @@
 ChangeLog
 =========
 
+Version 4.2.1
+-------------
+
+This version of pyXSIM contains two bugfixes.
+
+* A bug that sometimes prevented X-ray emission fields from being created
+  in yt using thermal source models if a spatially varying metallicity field
+  was used has been fixed.
+* A bug that prevented luminosity field names from being displayed correctly in
+  yt plots has been fixed.
+
 Version 4.2.0
 -------------
 
