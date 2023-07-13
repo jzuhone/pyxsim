@@ -301,7 +301,7 @@ def make_photons(
     else:
         mylog.info("The observer is internal to the source.")
 
-    local_exp_time = parameters["fid_exp_time"].v
+    local_exp_time = parameters["fid_exp_time"].to_value("s")
     D_A = parameters["fid_d_a"].to_value("cm")
     dist_fac = 1.0 / (4.0 * np.pi)
     if observer == "external":
@@ -355,7 +355,7 @@ def make_photons(
     p.create_dataset("hubble", data=parameters["hubble"])
     p.create_dataset("omega_matter", data=parameters["omega_matter"])
     p.create_dataset("omega_lambda", data=parameters["omega_lambda"])
-    p.create_dataset("fid_d_a", data=float(parameters["fid_d_a"]))
+    p.create_dataset("fid_d_a", data=parameters["fid_d_a"].to_value("Mpc"))
     p.create_dataset("data_type", data=parameters["data_type"])
     p.create_dataset("observer", data=parameters["observer"])
     p.create_dataset("center", data=parameters["center"].d)
@@ -571,7 +571,7 @@ def _project_photons(
 
     d = f["data"]
 
-    D_A = p["fid_d_a"][()] * 1.0e3
+    D_A = p["fid_d_a"][()] * 1.0e3  # assumes that the value from the file is in Mpc
 
     if d["energy"].size == 0:
         mylog.warning("No photons are in file %s, so I am done.", photon_file)
