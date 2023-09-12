@@ -123,18 +123,20 @@ class SourceModel:
         f"xray_count_rate_{emin}_{emax}_keV" (in photons/s)
 
         where "emin" and "emax" are the bounds of the energy band
-        as described below.
+        as described below. In this case, emin and emax are the bounds
+        of the energy in the source frame.
+
 
         Parameters
         ----------
         ds : :class:`~yt.data_objects.static_output.Dataset`
             The loaded yt dataset to make the fields for.
         emin : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
-            The minimum energy in the band. If a float, it is assumed to be
-            in keV.
+            The minimum energy in the band in the source frame.
+            If a float, it is assumed to be in keV.
         emax : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
-            The minimum energy in the band. If a float, it is assumed to be
-            in keV.
+            The minimum energy in the band in the source frame.
+            If a float, it is assumed to be in keV.
         force_override : boolean, optional
             If True, override a pre-existing field with the same name.
             Default: False
@@ -248,15 +250,18 @@ class SourceModel:
         f"xray_photon_emissivity_{line_name}" (in photons/cm**3/s)
         f"xray_count_rate_{emin}_{line_name}" (in photons/s)
 
+        In this case, e0 and de are in the source frame.
+
         Parameters
         ----------
         ds : :class:`~yt.data_objects.static_output.Dataset`
             The loaded yt dataset to make the fields for.
         e0 : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
-            The line centroid. If a float, it is assumed to be in keV.
+            The line centroid in the source frame. If a float, it is
+            assumed to be in keV.
         de : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
-            The width of the band. If a float, it is assumed to be
-            in keV.
+            The width of the band in the source frame. If a float, it is
+            assumed to be in keV.
         band_name : string
             The suffix of the field name for the line. Logical names are
             "O_VII", "O_VIII", "Ne_IX", etc.
@@ -296,19 +301,21 @@ class SourceModel:
         f"xray_intensity_{emin}_{emax}_keV" (in erg/cm**3/s/arcsec**2)
         f"xray_photon_intensity_{emin}_{emax}_keV" (in photons/cm**3/s/arcsec**2)
 
-        where "emin" and "emax" are the bounds of the energy band
-        as described below.
+        where "emin" and "emax" are the bounds of the energy band as
+        described below. These should mainly be used for projections.
+        In this case, emin and emax are the bounds of the energy in the
+        observer frame.
 
         Parameters
         ----------
         ds : :class:`~yt.data_objects.static_output.Dataset`
             The loaded yt dataset to make the fields for.
         emin : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
-            The minimum energy in the band. If a float, it is assumed to be
-            in keV.
+            The minimum energy in the band in the observer frame. If a float,
+            it is assumed to be in keV.
         emax : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
-            The minimum energy in the band. If a float, it is assumed to be
-            in keV.
+            The maximum energy in the band in the observer frame. If a float,
+            it is assumed to be in keV.
         redshift : float, optional
             The redshift of the source. Default: 0.0
         dist : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
@@ -420,15 +427,19 @@ class SourceModel:
         f"xray_intensity_{line_name}" (in erg/cm**3/s/arcsec**2)
         f"xray_photon_intensity_{line_name}" (in photons/cm**3/s/arcsec**2)
 
+        These should mainly be used for projections. In this case, e0 and de
+        are in the observer frame.
+
         Parameters
         ----------
         ds : :class:`~yt.data_objects.static_output.Dataset`
             The loaded yt dataset to make the fields for.
         e0 : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
-            The line centroid. If a float, it is assumed to be in keV.
+            The line centroid in the observer frame. If a float, it is
+            assumed to be in keV.
         de : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
-            The width of the band. If a float, it is assumed to be
-            in keV.
+            The width of the band in the observer frame. If a float,
+            it is assumed to be in keV.
         band_name : string
             The suffix of the field name for the line. Logical names are
             "O_VII", "O_VIII", "Ne_IX", etc.
