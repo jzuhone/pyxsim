@@ -238,7 +238,36 @@ class SourceModel:
 
         return [emiss_name, lum_name, phot_emiss_name, count_rate_name]
 
-    def make_line_fields(self, ds, e0, de, line_name, force_override=False):
+    def make_line_source_fields(self, ds, e0, de, line_name, force_override=False):
+        """
+        Make a list of source fields for a very small bandpass,
+        essentially covering a line. The fields are of the form:
+
+        f"xray_emissivity_{line_name}" (in erg/cm**3/s)
+        f"xray_luminosity_{line_name}" (in erg/s)
+        f"xray_photon_emissivity_{line_name}" (in photons/cm**3/s)
+        f"xray_count_rate_{emin}_{line_name}" (in photons/s)
+
+        Parameters
+        ----------
+        ds : :class:`~yt.data_objects.static_output.Dataset`
+            The loaded yt dataset to make the fields for.
+        e0 : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
+            The line centroid. If a float, it is assumed to be in keV.
+        de : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
+            The width of the band. If a float, it is assumed to be
+            in keV.
+        band_name : string
+            The suffix of the field name for the line. Logical names are
+            "O_VII", "O_VIII", "Ne_IX", etc.
+        force_override : boolean, optional
+            If True, override a pre-existing field with the same name.
+            Default: False
+
+        Returns
+        -------
+        The list of fields which are generated.
+        """
         e0 = parse_value(e0, "keV")
         de = parse_value(de, "keV")
 
@@ -372,3 +401,69 @@ class SourceModel:
         )
 
         return [ei_name, i_name]
+
+    def make_line_intensity_fields(
+        self,
+        ds,
+        e0,
+        de,
+        line_name,
+        redshift=0.0,
+        dist=None,
+        cosmology=None,
+        force_override=False,
+    ):
+        """
+        Make a list of intensity fields for a very small bandpass,
+        essentially covering a line. The fields are of the form:
+
+        f"xray_intensity_{line_name}" (in erg/cm**3/s/arcsec**2)
+        f"xray_photon_intensity_{line_name}" (in photons/cm**3/s/arcsec**2)
+
+        Parameters
+        ----------
+        ds : :class:`~yt.data_objects.static_output.Dataset`
+            The loaded yt dataset to make the fields for.
+        e0 : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
+            The line centroid. If a float, it is assumed to be in keV.
+        de : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
+            The width of the band. If a float, it is assumed to be
+            in keV.
+        band_name : string
+            The suffix of the field name for the line. Logical names are
+            "O_VII", "O_VIII", "Ne_IX", etc.
+        redshift : float, optional
+            The redshift of the source. Default: 0.0
+        dist : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
+            The angular diameter distance, used for nearby sources. This may be
+            optionally supplied instead of it being determined from the
+            *redshift* and given *cosmology*. If units are not specified, it is
+            assumed to be in kpc. To use this, the redshift must be set to zero.
+        cosmology : :class:`~yt.utilities.cosmology.Cosmology`, optional
+            Cosmological information. If not supplied, we try to get the
+            cosmology from the dataset. Otherwise, LCDM with the default yt
+            parameters is assumed.
+        force_override : boolean, optional
+            If True, override a pre-existing field with the same name.
+            Default: False
+
+        Returns
+        -------
+        The list of fields which are generated.
+        """
+        e0 = parse_value(e0, "keV")
+        de = parse_value(de, "keV")
+
+        emin = e0 - 0.5 * de
+        emax = e0 + 0.5 * de
+
+        return self.make_intensity_fields(
+            ds,
+            emin,
+            emax,
+            redshift=redshift,
+            dist=dist,
+            cosmology=cosmology,
+            band_name=line_name,
+            force_override=force_override,
+        )
