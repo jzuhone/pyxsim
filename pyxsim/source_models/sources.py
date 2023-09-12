@@ -120,6 +120,7 @@ class SourceModel:
         f"xray_emissivity_{emin}_{emax}_keV" (in erg/cm**3/s)
         f"xray_luminosity_{emin}_{emax}_keV" (in erg/s)
         f"xray_photon_emissivity_{emin}_{emax}_keV" (in photons/cm**3/s)
+        f"xray_count_rate_{emin}_{emax}_keV" (in photons/s)
 
         where "emin" and "emax" are the bounds of the energy band
         as described below.

@@ -3,6 +3,28 @@
 ChangeLog
 =========
 
+Version 4.3.0
+-------------
+
+This version of pyXSIM contains new features.
+
+* In conjunction with SOXS 4.6.0, it is now possible to pass an HDF5 events file
+  created by :func:`~pyxsim.photon_list.project_photons` directly to the SOXS
+  instrument simulator for use in event simulation.
+* The method :meth:`~pyxsim.sources.SourceModel.make_source_fields` now returns
+  a fourth field, which is the X-ray "count rate" in photons/s. See :ref:`xray-fields`
+  for more details.
+* It is now possible to change the field names supplied by
+  :meth:`~pyxsim.sources.SourceModel.make_source_fields` and
+  :meth:`~pyxsim.sources.SourceModel.make_intensity_fields` if one desires to by
+  supplying a value for the optional ``band_name`` keyword argument. If specified,
+  this argument will replace the ``"{emin}_{emax}_keV`` part of the field name. See
+  :ref:`xray-fields` for more details.
+* For thermal emission sources, is is now possible to supply a ``min_entropy``
+  parameter, which will set a minimum entropy for the gas cells or particles to
+  be considered in the emission calculation. See :ref:`thermal-sources` for more
+  details.
+
 Version 4.2.1
 -------------
 

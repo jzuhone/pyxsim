@@ -49,13 +49,15 @@ The fields are created for the :class:`~yt.data_objects.static_output.Dataset`
 
     [('gas', 'xray_emissivity_0.5_7.0_keV'),
      ('gas', 'xray_luminosity_0.5_7.0_keV'),
-     ('gas', 'xray_photon_emissivity_0.5_7.0_keV')]
+     ('gas', 'xray_photon_emissivity_0.5_7.0_keV'),
+     ('gas', 'xray_count_rate_0.5_7.0_keV')]
 
-Three fields have been created--one for the X-ray emissivity in the chosen band in
+Four fields have been created--one for the X-ray emissivity in the chosen band in
 :math:`\rm{erg}~\rm{cm}^{-3}~\rm{s}^{-1}`, another for the X-ray luminosity in the
-chosen band in :math:`\rm{erg}~\rm{s}^{-1}`, and another for the X-ray photon
-emissivity in :math:`\rm{photon}~\rm{cm}^{-3}~\rm{s}^{-1}`. These fields exist in
-the same way as any other field in yt, and can be used in the same ways.
+chosen band in :math:`\rm{erg}~\rm{s}^{-1}`, another for the X-ray photon
+emissivity in :math:`\rm{photon}~\rm{cm}^{-3}~\rm{s}^{-1}`, and another for the X-ray
+photon count rate in :math:`\rm{photon}~\rm{s}^{-1}`. These fields exist in the same
+way as any other field in yt, and can be used in the same ways.
 
 Querying emissivity values in a sphere:
 
@@ -83,10 +85,27 @@ Projecting the photon emissivity along a sight line:
 
 .. code-block:: python
 
-    prj = yt.ProjectionPlot(ds, "z", xray_fields[-1], width=(0.5, "Mpc"))
+    prj = yt.ProjectionPlot(ds, "z", xray_fields[-2], width=(0.5, "Mpc"))
     prj.save()
 
 .. image:: _images/projected_emiss.png
+
+It is possible if one desires to adjust the names for the fields that are
+created using the ``band_name`` keyword argument. If specified, this argument
+will replace the ``"{emin}_{emax}_keV`` part of the field name with the string
+given in ``band_name``:
+
+.. code-block:: python
+
+    xray_fields = source_model.make_source_fields(ds, 0.5, 7.0, band_name="broad")
+    print(xray_fields)
+
+.. code-block:: pycon
+
+    [('gas', 'xray_emissivity_broad'),
+     ('gas', 'xray_luminosity_broad'),
+     ('gas', 'xray_photon_emissivity_broad'),
+     ('gas', 'xray_count_rate_broad')]
 
 Intensity Fields
 ----------------
@@ -162,6 +181,9 @@ These can be used to make projections:
     prj.save()
 
 .. image:: _images/projected_intensity.png
+
+As with the source fields, it is possible to adjust the names for the fields that
+are produced by passing in the ``band_name`` keyword argument.
 
 .. note::
 
