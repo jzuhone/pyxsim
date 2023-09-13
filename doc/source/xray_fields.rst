@@ -190,3 +190,27 @@ are produced by passing in the ``band_name`` keyword argument.
     At this time, Doppler-shifting of photon energies by motions of the emitting
     material is not available for the creation of intensity fields in this mode,
     but it will be available in a future release.
+
+.. _line-fields:
+
+Line Fields
+-----------
+
+At times it may be more convenient to specify a source or intensity field based
+on a very narrow bandpass around a line centroid. For this, pyXSIM provides the
+:meth:`~pyxsim.sources.SourceModel.make_line_source_fields`
+and :meth:`~pyxsim.sources.SourceModel.make_line_intensity_fields` methods. These
+are essentially just wrappers around :meth:`~pyxsim.sources.SourceModel.make_source_fields`
+and :meth:`~pyxsim.sources.SourceModel.make_intensity_fields` which allow one
+to specify a narrow bandpass around a line centroid and give it a specific name:
+
+.. code-block:: python
+
+    src_fields = source_model.make_line_source_fields(
+        ds, (0.561, "keV"), (2, "eV"), "O_VII"
+    )
+    I_fields = source_model.make_line_intensity_fields(
+        ds, (0.64752, "keV"), (3.0, "eV"), "O_VIII", redshift=0.01
+    )
+
+Otherwise, the properties of the fields are the same as their broader counterparts.
