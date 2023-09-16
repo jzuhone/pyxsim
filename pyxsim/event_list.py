@@ -6,7 +6,9 @@ import os
 import astropy.wcs as pywcs
 import h5py
 import numpy as np
+from astropy.coordinates import SkyCoord
 from astropy.io import fits
+from soxs.constants import erg_per_keV
 
 from pyxsim.utils import mylog, parse_value
 
@@ -27,31 +29,46 @@ class EventList:
         from glob import glob
 
         if filespec.endswith(".h5"):
-            filenames = glob(filespec)
+            try:
+                with h5py.File(filespec, "r") as f:
+                    if "info" in f and "filenames" in f["info"].attrs:
+                        filenames = list(f["info"].attrs["filenames"])
+                    else:
+                        filenames = glob(filespec)
+            except OSError:
+                # Old way of doing things
+                filenames = glob(filespec)
         elif isinstance(filespec, list):
             if not np.all([fn.endswith(".h5") for fn in filespec]):
                 raise RuntimeError("Not all filenames are valid!")
             filenames = filespec
         else:
             raise RuntimeError(f"Invalid EventList file spec: {filespec}")
-        self.filenames = filenames
-        self.filenames.sort()
+        filenames.sort()
         self.parameters = {}
         self.info = {}
         self.num_events = []
-        for i, fn in enumerate(self.filenames):
+        self.filenames = []
+        get_params = True
+        for fn in filenames:
             with h5py.File(fn, "r") as f:
+                n_events = f["data"]["xsky"].size
+                if n_events == 0:
+                    continue
                 p = f["parameters"]
-                info = f["info"]
                 self.num_events.append(f["data"]["xsky"].size)
-                if i == 0:
+                if get_params:
                     for field in p:
                         if isinstance(p[field][()], (str, bytes)):
                             self.parameters[field] = p[field].asstr()[()]
                         else:
                             self.parameters[field] = p[field][()]
-                    for k, v in info.attrs.items():
-                        self.info[k] = v
+                    if "info" in f:
+                        for k, v in f["info"].attrs.items():
+                            self.info[k] = v
+                    get_params = False
+                self.filenames.append(fn)
+        self.num_files = len(self.filenames)
         self.tot_num_events = np.sum(self.num_events)
         self.observer = self.parameters.get("observer", "external")
 
@@ -160,6 +177,32 @@ class EventList:
 
         fits.HDUList(hdulist).writeto(fitsfile, overwrite=overwrite)
 
+    def get_data(self, i):
+        with h5py.File(self.filenames[i]) as f:
+            d = f["data"]
+            if self.num_events[i] > 0:
+                if self.observer == "internal":
+                    c = SkyCoord(
+                        d["xsky"][()], d["ysky"][()], unit="deg", frame="galactic"
+                    )
+                    ra = c.icrs.ra.value
+                    dec = c.icrs.dec.value
+                else:
+                    ra = d["xsky"][()]
+                    dec = d["ysky"][()]
+                energy = d["eobs"][()]
+                flux = (
+                    np.sum(energy * erg_per_keV)
+                    / self.parameters["exp_time"]
+                    / self.parameters["area"]
+                )
+            else:
+                ra = np.array([])
+                dec = np.array([])
+                energy = np.array([])
+                flux = 0.0
+        return ra, dec, energy, flux
+
     def write_to_simput(self, prefix, overwrite=False):
         r"""
         Write events to a SIMPUT catalog that may be utilized by various
@@ -174,8 +217,6 @@ class EventList:
         overwrite : boolean, optional
             Set to True to overwrite previous files.
         """
-        import unyt as u
-        from astropy.coordinates import SkyCoord
         from soxs.simput import SimputCatalog, SimputPhotonList
 
         simput_file = f"{prefix}_simput.fits"
@@ -188,38 +229,21 @@ class EventList:
             else:
                 phlist_file = f"{prefix}_phlist.{i:04d}.fits"
                 name = f"{os.path.basename(prefix)}.{i:04d}"
-            with h5py.File(fn, "r") as f:
-                d = f["data"]
-                if d["eobs"].shape[0] > 0:
-                    flux = (
-                        np.sum(d["eobs"][()] * u.keV).to_value("erg")
-                        / self.parameters["exp_time"]
-                        / self.parameters["area"]
+            ra, dec, energy, flux = self.get_data(i)
+            if ra.size > 0:
+                src = SimputPhotonList(ra, dec, energy, flux, name=name)
+                if begin_cat:
+                    cat = SimputCatalog.from_source(
+                        simput_file,
+                        src,
+                        src_filename=phlist_file,
+                        overwrite=overwrite,
                     )
-
-                    if self.observer == "internal":
-                        c = SkyCoord(
-                            d["xsky"][()], d["ysky"][()], unit="deg", frame="galactic"
-                        )
-                        ra = c.icrs.ra.value
-                        dec = c.icrs.dec.value
-                    else:
-                        ra = d["xsky"][()]
-                        dec = d["ysky"][()]
-                    src = SimputPhotonList(ra, dec, d["eobs"][()], flux, name=name)
-
-                    if begin_cat:
-                        cat = SimputCatalog.from_source(
-                            simput_file,
-                            src,
-                            src_filename=phlist_file,
-                            overwrite=overwrite,
-                        )
-                        begin_cat = False
-                    else:
-                        cat.append(src, src_filename=phlist_file, overwrite=overwrite)
+                    begin_cat = False
                 else:
-                    mylog.warning("No events found in file %s, so skipping.", fn)
+                    cat.append(src, src_filename=phlist_file, overwrite=overwrite)
+            else:
+                mylog.warning("No events found in file %s, so skipping.", fn)
 
     def write_fits_image(
         self, imagefile, fov, nx, emin=None, emax=None, overwrite=False

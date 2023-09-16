@@ -105,21 +105,28 @@ pyXSIM:
         CDELT1=-6.207043e-04 CDELT2=6.207043e-04 history=true \
         clobber=yes
 
+.. _instr-soxs:
+
 SOXS
 ----
 
-Here is an example set of SOXS commands that uses a SIMPUT catalog made with
-pyXSIM:
+As of pyXSIM 4.3.0 and SOXS 4.6.0, the SOXS :func:`~soxs.instrument.instrument_simulator`
+can accept pyXSIM event list files in the HDF5 format as input, bypassing the need
+for a SIMPUT catalog, although you can still use one if you wish.
+
+Here is an example set of SOXS commands which uses an event list created by pyXSIM,
+using either the HDF5 event file or the SIMPUT catalog:
 
 .. code-block:: python
 
     import soxs
-    simput_file = "snr_simput.fits" # SIMPUT file to be read
+    input_file = "snr_events.h5" # pyXSIM event list file to be read
+    #input_file = "snr_simput.fits" # SIMPUT file to be read
     out_file = "evt_mucal.fits" # event file to be written
     exp_time = 30000. # The exposure time in seconds
-    instrument = "mucal" # short name for instrument to be used
+    instrument = "lem_2.3eV" # short name for instrument to be used
     sky_center = [30., 45.] # RA, Dec of pointing in degrees
-    soxs.instrument_simulator(simput_file, out_file, exp_time, instrument,
+    soxs.instrument_simulator(input_file, out_file, exp_time, instrument,
                               sky_center, overwrite=True)
 
 Refer to the relevant documentation for all of those packages for more details,

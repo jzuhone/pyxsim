@@ -4,6 +4,7 @@ Classes for generating lists of photons
 import h5py
 import numpy as np
 from soxs import __version__ as soxs_version
+from soxs.constants import erg_per_keV
 from soxs.utils import parse_prng
 from tqdm.auto import tqdm
 from unyt.array import unyt_array
@@ -206,8 +207,10 @@ def make_photons(
 
     if comm.size > 1:
         photon_file = f"{photon_prefix}.{comm.rank:04d}.h5"
+        photon_files = [f"{photon_prefix}.{i:04d}.h5" for i in range(comm.size)]
     else:
         photon_file = f"{photon_prefix}.h5"
+        photon_files = [photon_file]
 
     if parameters is None:
         parameters = {}
@@ -345,6 +348,7 @@ def make_photons(
     info.attrs["dataset"] = str(data_source.ds)
     info.attrs["data_source"] = str(data_source)
     info.attrs["source_model"] = repr(source_model)
+    info.attrs["filenames"] = photon_files
 
     # Parameters
 
@@ -511,9 +515,11 @@ def _project_photons(
     if comm.size > 1:
         photon_file = f"{photon_prefix}.{comm.rank:04d}.h5"
         event_file = f"{event_prefix}.{comm.rank:04d}.h5"
+        event_files = [f"{event_prefix}.{i:04d}.h5" for i in range(comm.size)]
     else:
         photon_file = f"{photon_prefix}.h5"
         event_file = f"{event_prefix}.h5"
+        event_files = [event_file]
 
     sky_center = ensure_numpy_array(sky_center)
 
@@ -585,10 +591,14 @@ def _project_photons(
         ie.attrs["yt_version"] = yt_version
         ie.attrs["soxs_version"] = soxs_version
         ie.attrs["photon_file"] = photon_file
+        ie.attrs["filenames"] = event_files
+
+        exp_time = float(p["fid_exp_time"][()])
+        area = float(p["fid_area"][()])
 
         pe = fe.create_group("parameters")
-        pe.create_dataset("exp_time", data=float(p["fid_exp_time"][()]))
-        pe.create_dataset("area", data=float(p["fid_area"][()]))
+        pe.create_dataset("exp_time", data=exp_time)
+        pe.create_dataset("area", data=area)
         pe.create_dataset("sky_center", data=sky_center)
         pe.create_dataset("observer", data=observer)
         pe.create_dataset("no_shifting", data=int(no_shifting))
@@ -629,6 +639,10 @@ def _project_photons(
         pbar = tqdm(
             leave=True, total=n_cells, desc="Projecting photons from cells/particles "
         )
+
+        flux = 0.0
+        emin = 1.0e99
+        emax = -1.0e99
 
         for start_c in range(0, n_cells, cell_chunk):
             end_c = min(start_c + cell_chunk, n_cells)
@@ -741,6 +755,10 @@ def _project_photons(
                 de["xsky"][e_offset : e_offset + num_det] = xsky
                 de["ysky"][e_offset : e_offset + num_det] = ysky
                 de["eobs"][e_offset : e_offset + num_det] = eobs[det]
+                flux += eobs[det].sum()
+                emin = min(eobs[det].min(), emin)
+                emax = max(eobs[det].max(), emax)
+
                 if save_los:
                     de["los"][e_offset : e_offset + num_det] = los
 
@@ -758,6 +776,12 @@ def _project_photons(
         if e_size > n_events:
             for field in event_fields:
                 de[field].resize((n_events,))
+
+        flux *= erg_per_keV / exp_time / area
+
+        pe.create_dataset("flux", data=flux)
+        pe.create_dataset("emin", data=emin)
+        pe.create_dataset("emax", data=emax)
 
         fe.close()
 

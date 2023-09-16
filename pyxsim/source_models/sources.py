@@ -112,7 +112,7 @@ class SourceModel:
             spec_class = CountRateSpectrum
         return spec_class(ebins, spec)
 
-    def make_source_fields(self, ds, emin, emax, force_override=False):
+    def make_source_fields(self, ds, emin, emax, force_override=False, band_name=None):
         """
         Make the following fields in the rest frame of the
         source within a specific energy band for a dataset in yt:
@@ -120,23 +120,29 @@ class SourceModel:
         f"xray_emissivity_{emin}_{emax}_keV" (in erg/cm**3/s)
         f"xray_luminosity_{emin}_{emax}_keV" (in erg/s)
         f"xray_photon_emissivity_{emin}_{emax}_keV" (in photons/cm**3/s)
+        f"xray_count_rate_{emin}_{emax}_keV" (in photons/s)
 
         where "emin" and "emax" are the bounds of the energy band
-        as described below.
+        as described below. In this case, emin and emax are the bounds
+        of the energy in the source frame.
+
 
         Parameters
         ----------
         ds : :class:`~yt.data_objects.static_output.Dataset`
             The loaded yt dataset to make the fields for.
         emin : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
-            The minimum energy in the band. If a float, it is assumed to be
-            in keV.
+            The minimum energy in the band in the source frame.
+            If a float, it is assumed to be in keV.
         emax : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
-            The minimum energy in the band. If a float, it is assumed to be
-            in keV.
+            The minimum energy in the band in the source frame.
+            If a float, it is assumed to be in keV.
         force_override : boolean, optional
             If True, override a pre-existing field with the same name.
             Default: False
+        band_name : string, optional
+            The name to give to the energy band in the field. If None,
+            it is set to "{emin}_{emax}_keV". Default: None
 
         Returns
         -------
@@ -152,8 +158,11 @@ class SourceModel:
 
         ftype = self.ftype
 
-        emiss_name = (ftype, f"xray_emissivity_{emin.value}_{emax.value}_keV")
-        emiss_dname = rf"\epsilon_{{X}} ({emin.value}-{emax.value} keV)"
+        if band_name is None:
+            band_name = f"{emin.value}_{emax.value}_keV"
+
+        emiss_name = (ftype, f"xray_emissivity_{band_name}")
+        emiss_dname = rf"\epsilon_{{X}} ({emin.value:.2f}-{emax.value:.2f} keV)"
 
         lum_name = (ftype, emiss_name[1].replace("emissivity", "luminosity"))
         lum_dname = emiss_dname.replace(r"\epsilon", r"\rm{{L}}")
@@ -162,6 +171,12 @@ class SourceModel:
             ftype,
             emiss_name[1].replace("emissivity", "photon_emissivity"),
         )
+
+        count_rate_name = (
+            ftype,
+            phot_emiss_name[1].replace("emissivity", "count_rate"),
+        )
+        count_rate_dname = lum_dname.replace("\rm{{L}}", "\rm{{R}}")
 
         efluxf = self.make_fluxf(emin, emax, energy=True)
 
@@ -195,11 +210,23 @@ class SourceModel:
 
         pfluxf = self.make_fluxf(emin, emax, energy=False)
 
-        def _photon_emissivity_field(field, data):
-            ret = data.ds.arr(
+        def _count_rate_field(field, data):
+            return data.ds.arr(
                 self.process_data("photon_field", data, spectral_norm, fluxf=pfluxf),
                 "photons/s",
             )
+
+        ds.add_field(
+            count_rate_name,
+            function=_count_rate_field,
+            display_name=count_rate_dname,
+            sampling_type="local",
+            units="photons/s",
+            force_override=force_override,
+        )
+
+        def _photon_emissivity_field(field, data):
+            ret = data[count_rate_name]
             return ret * data[ftype, "density"] / data[ftype, "mass"]
 
         ds.add_field(
@@ -211,7 +238,50 @@ class SourceModel:
             force_override=force_override,
         )
 
-        return [emiss_name, lum_name, phot_emiss_name]
+        return [emiss_name, lum_name, phot_emiss_name, count_rate_name]
+
+    def make_line_source_fields(self, ds, e0, de, line_name, force_override=False):
+        """
+        Make a list of source fields for a very small bandpass,
+        essentially covering a line. The fields are of the form:
+
+        f"xray_emissivity_{line_name}" (in erg/cm**3/s)
+        f"xray_luminosity_{line_name}" (in erg/s)
+        f"xray_photon_emissivity_{line_name}" (in photons/cm**3/s)
+        f"xray_count_rate_{emin}_{line_name}" (in photons/s)
+
+        In this case, e0 and de are in the source frame.
+
+        Parameters
+        ----------
+        ds : :class:`~yt.data_objects.static_output.Dataset`
+            The loaded yt dataset to make the fields for.
+        e0 : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
+            The line centroid in the source frame. If a float, it is
+            assumed to be in keV.
+        de : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
+            The width of the band in the source frame. If a float, it is
+            assumed to be in keV.
+        band_name : string
+            The suffix of the field name for the line. Logical names are
+            "O_VII", "O_VIII", "Ne_IX", etc.
+        force_override : boolean, optional
+            If True, override a pre-existing field with the same name.
+            Default: False
+
+        Returns
+        -------
+        The list of fields which are generated.
+        """
+        e0 = parse_value(e0, "keV")
+        de = parse_value(de, "keV")
+
+        emin = e0 - 0.5 * de
+        emax = e0 + 0.5 * de
+
+        return self.make_source_fields(
+            ds, emin, emax, band_name=line_name, force_override=force_override
+        )
 
     def make_intensity_fields(
         self,
@@ -222,6 +292,7 @@ class SourceModel:
         dist=None,
         cosmology=None,
         force_override=True,
+        band_name=None,
     ):
         """
         Make the following fields in the observer frame within a
@@ -230,19 +301,21 @@ class SourceModel:
         f"xray_intensity_{emin}_{emax}_keV" (in erg/cm**3/s/arcsec**2)
         f"xray_photon_intensity_{emin}_{emax}_keV" (in photons/cm**3/s/arcsec**2)
 
-        where "emin" and "emax" are the bounds of the energy band
-        as described below.
+        where "emin" and "emax" are the bounds of the energy band as
+        described below. These should mainly be used for projections.
+        In this case, emin and emax are the bounds of the energy in the
+        observer frame.
 
         Parameters
         ----------
         ds : :class:`~yt.data_objects.static_output.Dataset`
             The loaded yt dataset to make the fields for.
         emin : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
-            The minimum energy in the band. If a float, it is assumed to be
-            in keV.
+            The minimum energy in the band in the observer frame. If a float,
+            it is assumed to be in keV.
         emax : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
-            The minimum energy in the band. If a float, it is assumed to be
-            in keV.
+            The maximum energy in the band in the observer frame. If a float,
+            it is assumed to be in keV.
         redshift : float, optional
             The redshift of the source. Default: 0.0
         dist : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
@@ -254,6 +327,12 @@ class SourceModel:
             Cosmological information. If not supplied, we try to get the
             cosmology from the dataset. Otherwise, LCDM with the default yt
             parameters is assumed.
+        force_override : boolean, optional
+            If True, override a pre-existing field with the same name.
+            Default: False
+        band_name : string, optional
+            The name to give to the energy band in the field. If None,
+            it is set to "{emin}_{emax}_keV". Default: None
 
         Returns
         -------
@@ -280,8 +359,11 @@ class SourceModel:
         emin_src = emin * (1.0 + redshift)
         emax_src = emax * (1.0 + redshift)
 
-        ei_name = (ftype, f"xray_intensity_{emin.value}_{emax.value}_keV")
-        ei_dname = rf"I_{{X}} ({emin.value}-{emax.value} keV)"
+        if band_name is None:
+            band_name = f"{emin.value}_{emax.value}_keV"
+
+        ei_name = (ftype, f"xray_intensity_{band_name}")
+        ei_dname = rf"I_{{X}} ({emin.value:.2f}-{emax.value:.2f} keV)"
 
         eif = self.make_fluxf(emin_src, emax_src, energy=True)
 
@@ -326,3 +408,73 @@ class SourceModel:
         )
 
         return [ei_name, i_name]
+
+    def make_line_intensity_fields(
+        self,
+        ds,
+        e0,
+        de,
+        line_name,
+        redshift=0.0,
+        dist=None,
+        cosmology=None,
+        force_override=False,
+    ):
+        """
+        Make a list of intensity fields for a very small bandpass,
+        essentially covering a line. The fields are of the form:
+
+        f"xray_intensity_{line_name}" (in erg/cm**3/s/arcsec**2)
+        f"xray_photon_intensity_{line_name}" (in photons/cm**3/s/arcsec**2)
+
+        These should mainly be used for projections. In this case, e0 and de
+        are in the observer frame.
+
+        Parameters
+        ----------
+        ds : :class:`~yt.data_objects.static_output.Dataset`
+            The loaded yt dataset to make the fields for.
+        e0 : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
+            The line centroid in the observer frame. If a float, it is
+            assumed to be in keV.
+        de : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
+            The width of the band in the observer frame. If a float,
+            it is assumed to be in keV.
+        band_name : string
+            The suffix of the field name for the line. Logical names are
+            "O_VII", "O_VIII", "Ne_IX", etc.
+        redshift : float, optional
+            The redshift of the source. Default: 0.0
+        dist : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
+            The angular diameter distance, used for nearby sources. This may be
+            optionally supplied instead of it being determined from the
+            *redshift* and given *cosmology*. If units are not specified, it is
+            assumed to be in kpc. To use this, the redshift must be set to zero.
+        cosmology : :class:`~yt.utilities.cosmology.Cosmology`, optional
+            Cosmological information. If not supplied, we try to get the
+            cosmology from the dataset. Otherwise, LCDM with the default yt
+            parameters is assumed.
+        force_override : boolean, optional
+            If True, override a pre-existing field with the same name.
+            Default: False
+
+        Returns
+        -------
+        The list of fields which are generated.
+        """
+        e0 = parse_value(e0, "keV")
+        de = parse_value(de, "keV")
+
+        emin = e0 - 0.5 * de
+        emax = e0 + 0.5 * de
+
+        return self.make_intensity_fields(
+            ds,
+            emin,
+            emax,
+            redshift=redshift,
+            dist=dist,
+            cosmology=cosmology,
+            band_name=line_name,
+            force_override=force_override,
+        )

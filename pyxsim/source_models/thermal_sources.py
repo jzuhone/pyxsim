@@ -34,6 +34,7 @@ class ThermalSourceModel(SourceModel):
         kT_max=64.0,
         var_elem=None,
         max_density=None,
+        min_entropy=None,
         method="invert_cdf",
         abund_table="angr",
         prng=None,
@@ -64,11 +65,18 @@ class ThermalSourceModel(SourceModel):
                     max_density = unyt_quantity(max_density[0], max_density[1])
                 else:
                     max_density = unyt_quantity(max_density, "g/cm**3")
+        if min_entropy is not None:
+            if not isinstance(min_entropy, unyt_quantity):
+                if isinstance(min_entropy, tuple):
+                    min_entropy = unyt_quantity(min_entropy[0], min_entropy[1])
+                else:
+                    min_entropy = unyt_quantity(min_entropy, "keV*cm**2")
         self.temperature_field = temperature_field
         self.emission_measure_field = emission_measure_field
         self.density_field = None  # Will be determined later
         self.nh_field = None  # Will be set by the subclass
         self.max_density = max_density
+        self.min_entropy = min_entropy
         self.tot_num_cells = 0  # Will be determined later
         self.ftype = "gas"
         self.binscale = binscale
@@ -111,6 +119,7 @@ class ThermalSourceModel(SourceModel):
             "method": self.method,
             "model_vers": self.spectral_model.model_vers,
             "max_density": self.max_density,
+            "min_entropy": self.min_entropy,
             "abund_table": self.abund_table,
             "h_fraction": self.h_fraction,
             "var_elem": self.var_elem,
@@ -196,6 +205,7 @@ class ThermalSourceModel(SourceModel):
                 "Not all fields have the same field type! Fields used: %s", fields
             )
         self.density_field = (ftype, "density")
+        self.entropy_field = (ftype, "entropy")
         mylog.info("Using emission measure field '%s'.", self.emission_measure_field)
         mylog.info("Using temperature field '%s'.", self.temperature_field)
         if self.nh_field is not None:
@@ -277,6 +287,8 @@ class ThermalSourceModel(SourceModel):
 
         if self.max_density is not None:
             cut &= np.ravel(chunk[self.density_field]) < self.max_density
+        if self.min_entropy is not None:
+            cut &= np.ravel(chunk[self.entropy_field]) > self.min_entropy
         kT = np.ravel(chunk[self.temperature_field].to_value("keV", "thermal"))
         cut &= (kT >= self.kT_min) & (kT <= self.kT_max)
 
@@ -528,6 +540,10 @@ class IGMSourceModel(ThermalSourceModel):
         The maximum density of the cells or particles to use when generating
         photons. If a float, the units are assumed to be g/cm**3.
         Default: None, meaning no maximum density.
+    min_entropy : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
+        The minimum entropy of the cells or particles to use when generating
+        photons. If a float, the units are assumed to be keV*cm**2.
+        Default: None, meaning no minimum entropy.
     var_elem : dictionary, optional
         Elements that should be allowed to vary freely from the single abundance
         parameter. Each dictionary value, specified by the abundance symbol,
@@ -573,6 +589,7 @@ class IGMSourceModel(ThermalSourceModel):
         kT_min=0.00431,
         kT_max=64.0,
         max_density=None,
+        min_entropy=None,
         var_elem=None,
         method="invert_cdf",
         model_vers="4_lo",
@@ -604,6 +621,7 @@ class IGMSourceModel(ThermalSourceModel):
             nH_max=nH_max,
             var_elem=var_elem,
             max_density=max_density,
+            min_entropy=min_entropy,
             method=method,
             abund_table="feld",
             prng=prng,
@@ -666,6 +684,10 @@ class CIESourceModel(ThermalSourceModel):
         The maximum density of the cells or particles to use when generating
         photons. If a float, the units are assumed to be g/cm**3.
         Default: None, meaning no maximum density.
+    min_entropy : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
+        The minimum entropy of the cells or particles to use when generating
+        photons. If a float, the units are assumed to be keV*cm**2.
+        Default: None, meaning no minimum entropy.
     var_elem : dictionary, optional
         Elements that should be allowed to vary freely from the single abundance
         parameter. Each dictionary value, specified by the abundance symbol,
@@ -742,6 +764,7 @@ class CIESourceModel(ThermalSourceModel):
         kT_min=0.025,
         kT_max=64.0,
         max_density=None,
+        min_entropy=None,
         var_elem=None,
         method="invert_cdf",
         thermal_broad=True,
@@ -800,6 +823,7 @@ class CIESourceModel(ThermalSourceModel):
             kT_max=kT_max,
             var_elem=var_elem,
             max_density=max_density,
+            min_entropy=min_entropy,
             method=method,
             abund_table=abund_table,
             prng=prng,
@@ -866,6 +890,10 @@ class NEISourceModel(CIESourceModel):
         The maximum density of the cells or particles to use when generating
         photons. If a float, the units are assumed to be g/cm**3.
         Default: None, meaning no maximum density.
+    min_entropy : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
+        The minimum entropy of the cells or particles to use when generating
+        photons. If a float, the units are assumed to be keV*cm**2.
+        Default: None, meaning no minimum entropy.
     method : string, optional
         The method used to generate the photon energies from the spectrum:
         "invert_cdf": Invert the cumulative distribution function of the spectrum.
@@ -937,6 +965,7 @@ class NEISourceModel(CIESourceModel):
         kT_min=0.025,
         kT_max=64.0,
         max_density=None,
+        min_entropy=None,
         method="invert_cdf",
         thermal_broad=True,
         model_root=None,
@@ -958,6 +987,7 @@ class NEISourceModel(CIESourceModel):
             kT_min=kT_min,
             kT_max=kT_max,
             max_density=max_density,
+            min_entropy=min_entropy,
             var_elem=var_elem,
             method=method,
             thermal_broad=thermal_broad,

@@ -100,8 +100,14 @@ parameters which can be set:
 * ``kT_max``: The maximum temperature in units of keV. Default is 64.0.
 * ``max_density``: The maximum mass density of the cells or particles to use
   when generating photons. If a float, the units are assumed to be g/cm**3.
-  can also be a ``YTQuantity`` or a float, string tuple such as
+  It can also be a ``YTQuantity`` or a float, string tuple such as
   ``(5.0e-25, "g/cm**3")`` Default: None, meaning no maximum density.
+* ``min_entropy``: The minimum entropy of the cells or particles to use when
+  generating photons. By "entropy" we here mean :math:`S = k_BTn_e^{-2/3}`, where
+  :math:`k_BT` is the gas temperature and :math:`n_e` is the electron number
+  density. If a float, the units are assumed to be keV*cm**2. It can also be a
+``YTQuantity`` or a float, string tuple such as ``(10.0, "keV*cm**2")`` Default:
+  None, meaning no minimum entropy.
 * ``method``: The method used to generate the photon energies from the spectrum.
   Either ``"invert_cdf"``,
   which inverts the cumulative distribution function of the spectrum, or
@@ -406,6 +412,12 @@ fixed at abundance table value, and all higher elements up Zn to included in
   when generating photons. If a float, the units are assumed to be g/cm**3.
   can also be a ``YTQuantity`` or a float, string tuple such as
   ``(5.0e-25, "g/cm**3")`` Default: None, meaning no maximum density.
+* ``min_entropy``: The minimum entropy of the cells or particles to use when
+  generating photons. By "entropy" we here mean :math:`S = k_BTn_e^{-2/3}`, where
+  :math:`k_BT` is the gas temperature and :math:`n_e` is the electron number
+  density. If a float, the units are assumed to be keV*cm**2. It can also be a
+  ``YTQuantity`` or a float, string tuple such as ``(10.0, "keV*cm**2")`` Default:
+  None, meaning no minimum entropy.
 * ``method``: The method used to generate the photon energies from the spectrum.
   Either ``"invert_cdf"``,
   which inverts the cumulative distribution function of the spectrum, or
@@ -495,6 +507,16 @@ to specify a maximum density above which no emission should be calculated with t
         source_model = pyxsim.IGMSourceModel(0.1, 5.0, 1000,
                                              ("gas","metallicity"),
                                              max_density=(5.0e-25, "g/cm**3"),
+                                             binscale="log")
+
+Or to specify a minimum entropy below which no emission should be calculated, with
+the ``min_entropy`` keyword argument:
+
+.. code-block:: python
+
+        source_model = pyxsim.IGMSourceModel(0.1, 5.0, 1000,
+                                             ("gas","metallicity"),
+                                             max_density=(10.0, "keV*cm**2"),
                                              binscale="log")
 
 yt-based Filtering
