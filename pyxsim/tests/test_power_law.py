@@ -118,24 +118,28 @@ def test_power_law_fields():
     src_fields1 = plaw_model1.make_source_fields(ds, 0.5, 7.0)
 
     plum0 = -norm * (7.0**-0.1 - 0.5**-0.1) / 0.1
-    plum1 = (sphere[src_fields1[-1]] * sphere["cell_volume"]).sum().v
+    plum1 = (sphere[src_fields1[-2]] * sphere["cell_volume"]).sum().v
+    plumr = sphere[src_fields1[-1]].sum().to_value("photons/s")
     assert_allclose(plum0, plum1)
+    assert_allclose(plum0, plumr)
 
     elum0 = norm * (7.0**0.9 - 0.5**0.9) / 0.9
     elum1 = sphere[src_fields1[1]].sum().to_value("keV/s")
     assert_allclose(elum0, elum1)
 
     del sphere[src_fields1[-1]]
+    del sphere[src_fields1[-2]]
     del sphere[src_fields1[1]]
 
     alpha2 = 1.0
     plaw_model2 = PowerLawSourceModel(1.0, 0.01, 11.0, "hard_emission", alpha2)
 
     src_fields2 = plaw_model2.make_source_fields(ds, 0.5, 7.0, force_override=True)
-
     plum2 = norm * np.log(7.0 / 0.5)
-    plum3 = (sphere[src_fields2[-1]] * sphere["cell_volume"]).sum().v
+    plum3 = (sphere[src_fields2[-2]] * sphere["cell_volume"]).sum().v
+    plum4 = sphere[src_fields2[-1]].sum().to_value("photons/s")
     assert_allclose(plum2, plum3)
+    assert_allclose(plum2, plum4)
 
     elum2 = norm * (7.0 - 0.5)
     elum3 = sphere[src_fields2[1]].sum().to_value("keV/s")

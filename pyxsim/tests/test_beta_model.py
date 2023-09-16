@@ -217,7 +217,8 @@ def test_beta_model_fields():
 
     xray_fields = thermal_model.make_source_fields(ds, 0.5, 7.0)
     lum1 = sphere.sum(xray_fields[1]).value
-    plum1 = (sphere[xray_fields[-1]] * sphere["cell_volume"]).sum().value
+    plum1 = (sphere[xray_fields[-2]] * sphere["cell_volume"]).sum().value
+    plum2 = sphere[xray_fields[-1]].sum().value
 
     int_fields = thermal_model.make_intensity_fields(
         ds, 0.5 / (1.0 + redshift), 7.0 / (1.0 + redshift), redshift=redshift
@@ -229,6 +230,7 @@ def test_beta_model_fields():
 
     assert np.abs(lum1 - lum) / lum < 0.001
     assert np.abs(plum1 - plum) / plum < 0.01
+    assert np.abs(plum2 - plum) / plum < 0.01
 
     assert np.abs(eflux2.value - eflux.value) / eflux.value < 0.001
     assert np.abs(pflux2.value - pflux.value) / pflux.value < 0.01

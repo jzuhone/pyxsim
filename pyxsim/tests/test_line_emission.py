@@ -113,19 +113,23 @@ def test_line_emission_fields():
 
     line_fields1 = line_model1.make_source_fields(ds, 0.5, 7.0)
     assert_allclose(sphere[line_fields1[1]].sum().to("keV/s"), dm_E * location)
-    assert_allclose((sphere[line_fields1[-1]] * sphere["cell_volume"]).sum(), dm_E)
+    assert_allclose((sphere[line_fields1[-2]] * sphere["cell_volume"]).sum(), dm_E)
+    assert_allclose(sphere[line_fields1[-1]].sum(), dm_E)
 
     line_fields2 = line_model1.make_source_fields(ds, 0.5, 2.0)
-    assert_allclose(sphere[line_fields2[1]].sum().to("keV/s"), 0.0)
-    assert_allclose(sphere[line_fields2[-1]].sum(), 0.0)
+    for field in line_fields2:
+        assert_allclose(sphere[field].sum(), 0.0)
 
     line_model2 = LineSourceModel(
         location, "dm_emission", sigma=("stream", "dark_matter_dispersion")
     )
 
+    del sphere[line_fields1[-2]]
+    del sphere[line_fields1[1]]
+
     line_fields3 = line_model2.make_source_fields(ds, 0.5, 7.0, force_override=True)
     assert_allclose(sphere[line_fields3[1]].sum().to("keV/s"), dm_E * location)
-    assert_allclose((sphere[line_fields3[-1]] * sphere["cell_volume"]).sum(), dm_E)
+    assert_allclose((sphere[line_fields3[-2]] * sphere["cell_volume"]).sum(), dm_E)
 
     line_fields4 = line_model2.make_source_fields(ds, 0.1, 3.5)
     de = sigma_E / np.sqrt(2.0 * np.pi)
@@ -134,8 +138,9 @@ def test_line_emission_fields():
         sphere[line_fields4[1]].sum().to("keV/s"), dm_E * (0.5 * location - de)
     )
     assert_allclose(
-        (sphere[line_fields4[-1]] * sphere["cell_volume"]).sum(), 0.5 * dm_E
+        (sphere[line_fields4[-2]] * sphere["cell_volume"]).sum(), 0.5 * dm_E
     )
+    assert_allclose(sphere[line_fields4[-1]].sum(), 0.5 * dm_E)
 
 
 def test_line_emission_spectra():
