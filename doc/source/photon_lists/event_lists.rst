@@ -117,7 +117,19 @@ To read in an event list, simply provide the filename if it is a single file:
 
     events = pyxsim.EventList("my_events.h5")
 
-or a list of filenames if the events are split into multiple files:
+Or, if the filenames are split into multiple numbered files, choose the
+first one:
+
+.. code-block:: python
+
+    events = pyxsim.EventList("my_events.0000.h5")
+
+the others will be found automatically, as the total list of files is stored in
+the first one.
+
+For event list files created previous to pyXSIM version 4.3.0, an event list
+split up into multiple files should be loaded up in one of two ways. Either
+the full list of files can be provided:
 
 .. code-block:: python
 
