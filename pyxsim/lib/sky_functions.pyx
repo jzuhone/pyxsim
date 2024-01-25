@@ -5,13 +5,13 @@ cimport numpy as np
 
 
 cdef extern from "math.h":
-    double sqrt(double x) nogil
-    double sin(double x) nogil
-    double cos(double x) nogil
-    double atan(double x) nogil
-    double atan2(double y, double x) nogil
-    double asin(double x) nogil
-    double acos(double x) nogil
+    double sqrt(double x) noexcept nogil
+    double sin(double x) noexcept nogil
+    double cos(double x) noexcept nogil
+    double atan(double x) noexcept nogil
+    double atan2(double y, double x) noexcept nogil
+    double asin(double x) noexcept nogil
+    double acos(double x) noexcept nogil
 
 
 @cython.cdivision(True)
