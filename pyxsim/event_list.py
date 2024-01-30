@@ -383,3 +383,52 @@ class EventList:
         hdulist = fits.HDUList([fits.PrimaryHDU(), tbhdu])
 
         hdulist.writeto(specfile, overwrite=overwrite)
+
+    def _filter(self, prefix, keep_condition):
+        new_fns = [f"{prefix}_{fn}" for fn in self.filenames]
+        for i, fn in enumerate(self.filenames):
+            f = h5py.File(fn, "r")
+            d = f["data"]
+            x = d["xsky"][()]
+            y = d["ysky"][()]
+            keep = keep_condition(x, y)
+            nkeep = keep.sum()
+            with h5py.File(new_fns[i], "w") as fnew:
+                f.copy("parameters", fnew)
+                f.copy("info", fnew)
+                dnew = fnew.create_group("data")
+                for key in d:
+                    dnew.create_dataset(key, data=d[key][keep])
+                if nkeep == 0:
+                    flux = 0.0
+                    emin = np.nan
+                    emax = np.nan
+                else:
+                    energy = d["eobs"][keep]
+                    flux = (
+                        np.sum(energy * erg_per_keV)
+                        / self.parameters["exp_time"]
+                        / self.parameters["area"]
+                    )
+                    emin = energy.min()
+                    emax = energy.max()
+                fnew["parameters"]["flux"][()] = flux
+                fnew["parameters"]["emin"][()] = emin
+                fnew["parameters"]["emin"][()] = emax
+                fnew["info"].attrs["filenames"] = new_fns
+            f.close()
+
+    def filter_circle(self, prefix, center, radius):
+        def keep_condition(x, y):
+            r2 = (x - center[0]) ** 2 + (y - center[1]) ** 2
+            return r2 <= radius * radius
+
+        self._filter(prefix, keep_condition)
+
+    def filter_rectangle(self, prefix, left_edge, right_edge):
+        def keep_condition(x, y):
+            keep = (x >= left_edge[0]) & (x < right_edge[0])
+            keep &= (y >= left_edge[1]) & (y < right_edge[1])
+            return keep
+
+        self._filter(prefix, keep_condition)
