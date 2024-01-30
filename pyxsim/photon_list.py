@@ -489,6 +489,7 @@ def _project_photons(
     sigma_pos=None,
     kernel="top_hat",
     save_los=False,
+    phys_coord=False,
     prng=None,
     column_file=None,
 ):
@@ -626,6 +627,7 @@ def _project_photons(
         pe.create_dataset("observer", data=observer)
         pe.create_dataset("no_shifting", data=int(no_shifting))
         pe.create_dataset("flat_sky", data=int(flat_sky))
+        pe.create_dataset("phys_coord", data=int(phys_coord))
         pe.create_dataset("normal", data=normal)
         if north_vector is not None:
             pe.create_dataset("north_vector", data=north_vector)
@@ -765,14 +767,15 @@ def _project_photons(
                         xsky += sigma * prng.normal(loc=0.0, scale=1.0, size=num_det)
                         ysky += sigma * prng.normal(loc=0.0, scale=1.0, size=num_det)
 
-                    xsky /= D_A
-                    ysky /= D_A
+                    if not phys_coord:
+                        xsky /= D_A
+                        ysky /= D_A
 
-                    if flat_sky:
-                        xsky = sky_center[0] - np.rad2deg(xsky)
-                        ysky = sky_center[1] + np.rad2deg(ysky)
-                    else:
-                        pixel_to_cel(xsky, ysky, sky_center)
+                        if flat_sky:
+                            xsky = sky_center[0] - np.rad2deg(xsky)
+                            ysky = sky_center[1] + np.rad2deg(ysky)
+                        else:
+                            pixel_to_cel(xsky, ysky, sky_center)
 
                 elif observer == "internal":
                     xsky, ysky, los = scatter_events_allsky(
@@ -854,6 +857,7 @@ def project_photons(
     kernel="top_hat",
     save_los=False,
     column_file=None,
+    phys_coord=False,
     prng=None,
 ):
     r"""
@@ -928,6 +932,9 @@ def project_photons(
         used for internal absorption, produced by
         :meth:`~pyxsim.internal_absorption.make_column_density_map`. Default
         is None for no internal absorption.
+    phys_coord : boolean, optional
+        If True, save the flat-field physical coordinates in kpc to the
+        events list instead of sky coordinates. Default: False
     prng : integer or :class:`~numpy.random.RandomState` object
         A pseudo-random number generator. Typically will only be specified
         if you have a reason to generate the same set of random numbers,
@@ -960,6 +967,7 @@ def project_photons(
         flat_sky=flat_sky,
         kernel=kernel,
         save_los=save_los,
+        phys_coord=phys_coord,
         prng=prng,
         column_file=column_file,
     )
