@@ -1139,20 +1139,7 @@ class PhotonList:
         self.tot_num_photons = np.sum(self.num_photons)
         self.tot_num_cells = np.sum(self.num_cells)
         self.observer = self.parameters.get("observer", "external")
-        self.num_files = len(self.filenames)
-
-    def get_data(self, i, fields=None):
-        data = {}
-        with h5py.File(self.filenames[i]) as f:
-            d = f["data"]
-            if fields is None:
-                fields = list(d.keys())
-            for field in fields:
-                if self.num_cells[i] > 0:
-                    data[field] = d[field][()].copy()
-                else:
-                    data[field] = np.array([])
-        return data
+        self._data = {}
 
     def write_spectrum(self, specfile, emin, emax, nchan, overwrite=False):
         """
@@ -1225,3 +1212,13 @@ class PhotonList:
         hdulist = fits.HDUList([fits.PrimaryHDU(), tbhdu])
 
         hdulist.writeto(specfile, overwrite=overwrite)
+
+    def __getitem__(self, item):
+        if item not in self._data:
+            values = []
+            for fn in self.filenames:
+                with h5py.File(fn, "r") as f:
+                    d = f["data"]
+                    values.append(d[item][()])
+                self._data[item] = np.concatenate(values)
+        return self._data[item]

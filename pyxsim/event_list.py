@@ -72,6 +72,7 @@ class EventList:
         self.num_files = len(self.filenames)
         self.tot_num_events = np.sum(self.num_events)
         self.observer = self.parameters.get("observer", "external")
+        self._data = {}
 
     def write_fits_file(self, fitsfile, fov, nx, overwrite=False):
         """
@@ -177,6 +178,16 @@ class EventList:
         hdulist = [fits.PrimaryHDU(), tbhdu]
 
         fits.HDUList(hdulist).writeto(fitsfile, overwrite=overwrite)
+
+    def __getitem__(self, item):
+        if item not in self._data:
+            values = []
+            for fn in self.filenames:
+                with h5py.File(fn, "r") as f:
+                    d = f["data"]
+                    values.append(d[item][()])
+                self._data[item] = np.concatenate(values)
+        return self._data[item]
 
     def get_data(self, i):
         with h5py.File(self.filenames[i]) as f:
