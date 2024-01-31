@@ -418,10 +418,11 @@ def make_photons(
 
             for i, ax in enumerate("xyz"):
                 pos = chunk[p_fields[i]][idxs].to_value("kpc")
+                dx = chunk[w_field][idxs].to_value("kpc")
                 # Fix photon coordinates for regions crossing a periodic boundary
                 if ds.periodicity[i]:
-                    tfl = pos < le[i]
-                    tfr = pos > re[i]
+                    tfl = pos + dx < le[i]
+                    tfr = pos - dx > re[i]
                     pos[tfl] += dw[i]
                     pos[tfr] -= dw[i]
 
