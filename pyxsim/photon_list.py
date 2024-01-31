@@ -1062,6 +1062,7 @@ class PhotonList:
                         self.info[k] = v
         self.tot_num_photons = np.sum(self.num_photons)
         self.observer = self.parameters.get("observer", "external")
+        self._data = {}
 
     def write_spectrum(self, specfile, emin, emax, nchan, overwrite=False):
         """
@@ -1134,3 +1135,13 @@ class PhotonList:
         hdulist = fits.HDUList([fits.PrimaryHDU(), tbhdu])
 
         hdulist.writeto(specfile, overwrite=overwrite)
+
+    def __getitem__(self, item):
+        if item not in self._data:
+            values = []
+            for fn in self.filenames:
+                with h5py.File(fn, "r") as f:
+                    d = f["data"]
+                    values.append(d[item][()])
+                self._data[item] = np.concatenate(values)
+        return self._data[item]
