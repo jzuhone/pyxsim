@@ -3,6 +3,18 @@
 ChangeLog
 =========
 
+Version 4.3.1
+-------------
+
+This version of pyXSIM contains a bugfix and updates compatibility with other
+packages.
+
+* The minimum required version of yt has been bumped up to 4.3.0.
+* Cython 3.0 is now supported as a compile-time dependency for those building
+  pyXSIM from source.
+* A subtle bug that caused photons created from cells or particles on the edges
+  of input regions to be scattered to large distances has been fixed.
+
 Version 4.3.0
 -------------
 
