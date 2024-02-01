@@ -4,6 +4,10 @@ cimport cython
 cimport numpy as np
 
 
+@cython.cdivision(True)
+@cython.wraparound(False)
+@cython.boundscheck(False)
+@cython.cpow(True)
 def power_law_spectrum(
     int num_cells,
     np.ndarray[np.float64_t, ndim=1] emid,
@@ -24,6 +28,9 @@ def power_law_spectrum(
     return spec
 
 
+@cython.cdivision(True)
+@cython.wraparound(False)
+@cython.boundscheck(False)
 def line_spectrum(
     int num_cells,
     np.ndarray[np.float64_t, ndim=1] ee,
