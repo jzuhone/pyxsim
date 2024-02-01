@@ -48,7 +48,7 @@ setup(
         "h5py>=3.0",
         "scipy",
         "yt>=4.3",
-        "unyt>=3.0.1",
+        "unyt>=2.9.5",
         "soxs>=4.6.0",
         "tqdm",
         "cython",
