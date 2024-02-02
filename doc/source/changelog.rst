@@ -3,7 +3,7 @@
 ChangeLog
 =========
 
-Version 4.3.2
+Version 4.3.3
 -------------
 
 This version of pyXSIM contains a bugfix and updates compatibility with other

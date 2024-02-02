@@ -51,7 +51,6 @@ setup(
         "unyt>=2.9.5",
         "soxs>=4.6.0",
         "tqdm",
-        "cython",
     ],
     include_package_data=True,
     ext_modules=cython_extensions,

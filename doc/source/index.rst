@@ -44,7 +44,7 @@ pyXSIM is released under a
 Current Version
 ---------------
 
-The current stable version is 4.3.2. See the :ref:`changelog` for details on
+The current stable version is 4.3.3. See the :ref:`changelog` for details on
 changes from previous versions.
 
 Table of Contents
