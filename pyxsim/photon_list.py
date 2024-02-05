@@ -1,6 +1,7 @@
 """
 Classes for generating lists of photons
 """
+
 import h5py
 import numpy as np
 from soxs import __version__ as soxs_version

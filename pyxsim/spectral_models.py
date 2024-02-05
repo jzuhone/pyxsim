@@ -1,6 +1,7 @@
 """
 Photon emission and absoprtion models.
 """
+
 import numpy as np
 from scipy.interpolate import interp1d
 from soxs.constants import K_per_keV
@@ -605,6 +606,7 @@ class TBabsModel(AbsorptionModel):
     --------
     >>> tbabs_model = TBabsModel(0.1)
     """
+
     _name = "tbabs"
 
     def __init__(self, nH, abund_table="angr"):
@@ -630,6 +632,7 @@ class WabsModel(AbsorptionModel):
     --------
     >>> wabs_model = WabsModel(0.1)
     """
+
     _name = "wabs"
 
     def __init__(self, nH, abund_table="angr"):

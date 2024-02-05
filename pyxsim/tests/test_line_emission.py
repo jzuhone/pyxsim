@@ -74,8 +74,7 @@ def test_line_emission():
 
     assert np.abs(loc - E.mean()) < 1.645 * sig / np.sqrt(n_E)
     assert (
-        np.abs(E.std() ** 2 - sig * sig)
-        < 1.645 * np.sqrt(2 * (n_E - 1)) * sig**2 / n_E
+        np.abs(E.std() ** 2 - sig * sig) < 1.645 * np.sqrt(2 * (n_E - 1)) * sig**2 / n_E
     )
     assert np.abs(n_E - n_E_pred) < 1.645 * np.sqrt(n_E)
 
