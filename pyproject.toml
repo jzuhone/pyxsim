@@ -10,7 +10,7 @@ requires = [
 
 [project]
 name = "pyxsim"
-version = "4.5.dev0"
+dynamic = ["version"]
 requires-python = ">=3.9.2"
 description = "Python package for simulating X-ray observations from astrophysical sources"
 authors = [
