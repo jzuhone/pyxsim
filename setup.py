@@ -36,28 +36,8 @@ cython_extensions = [
 
 
 setup(
-    name="pyxsim",
     packages=find_packages(),
-    description="Python package for simulating X-ray observations of astrophysical sources",
-    author="John ZuHone",
-    author_email="jzuhone@gmail.com",
     url="http://github.com/jzuhone/pyxsim",
-    install_requires=[
-        "numpy",
-        "astropy>=4.0",
-        "h5py>=3.0",
-        "scipy",
-        "yt>=4.3",
-        "unyt>=2.9.5",
-        "soxs>=4.6.0",
-        "tqdm",
-    ],
     include_package_data=True,
     ext_modules=cython_extensions,
-    classifiers=[
-        "Intended Audience :: Science/Research",
-        "Operating System :: OS Independent",
-        "Programming Language :: Python :: 3",
-        "Topic :: Scientific/Engineering :: Visualization",
-    ],
 )
