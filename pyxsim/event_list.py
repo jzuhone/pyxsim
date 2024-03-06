@@ -1,6 +1,7 @@
 """
 Classes for generating lists of detected events
 """
+
 import os
 
 import astropy.wcs as pywcs
