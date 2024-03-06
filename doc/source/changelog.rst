@@ -3,12 +3,13 @@
 ChangeLog
 =========
 
-Version 4.3.3
+Version 4.4.0
 -------------
 
 This version of pyXSIM contains a bugfix and updates compatibility with other
 packages.
 
+* Support for Python 3.8 has been dropped.
 * The minimum required version of yt has been bumped up to 4.3.0.
 * Cython 3.0 is now supported as a compile-time dependency for those building
   pyXSIM from source.

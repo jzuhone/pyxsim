@@ -219,10 +219,18 @@ def create_metal_fields(ds, metallicity_field, elements, abund_table):
 
 
 def compute_H_abund(abund_table):
+    if abund_table not in abund_tables:
+        raise KeyError(
+            f"Abundance table {abund_table} not found! Options are: {list(abund_tables.keys())}"
+        )
     return atomic_weights[1] / (atomic_weights * abund_tables[abund_table]).sum()
 
 
 def compute_zsolar(abund_table):
+    if abund_table not in abund_tables:
+        raise KeyError(
+            f"Abundance table {abund_table} not found! Options are: {list(abund_tables.keys())}"
+        )
     elems = atomic_weights * abund_tables[abund_table]
     return elems[3:].sum() / elems.sum()
 
