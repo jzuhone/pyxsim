@@ -8,7 +8,30 @@ requires = [
   "numpy>=1.25, <2.0",
 ]
 
+[project]
+name = "pyxsim"
+version = "4.5.dev0"
 requires-python = ">=3.9.2"
+description = "Python package for simulating X-ray observations from astrophysical sources"
+authors = [
+    { name = "John ZuHone", email = "jzuhone@gmail.com" },
+]
+classifiers = [
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Visualization",
+]
+dependencies = [
+    "numpy",
+    "astropy>=4.0",
+    "h5py>=3.0",
+    "scipy",
+    "yt>=4.3",
+    "unyt>=2.9.5",
+    "soxs>=4.6.0",
+    "tqdm",
+]
 
 [tool.setuptools_scm]
 
