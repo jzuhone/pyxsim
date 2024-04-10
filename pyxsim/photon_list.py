@@ -1127,3 +1127,52 @@ class PhotonList:
         hdulist = fits.HDUList([fits.PrimaryHDU(), tbhdu])
 
         hdulist.writeto(specfile, overwrite=overwrite)
+
+
+def internal_absorption(
+    ds, photon_list, absorb_list, normal, distance=None, load_kwargs=None
+):
+    from yt.loaders import load
+
+    if isinstance(ds, str):
+        ds = load(ds, **load_kwargs)
+
+    if distance is None:
+        distance = ds.domain_width.max().to("kpc")
+    else:
+        distance = parse_value(distance, "kpc", ds)
+
+    if isinstance(normal, str):
+        ax = "xyz".index(normal)
+        normal = np.zeros(3)
+        normal[ax] = 1.0
+    normal = np.array(normal)
+    normal /= np.sqrt(np.dot(normal, normal))
+
+    with h5py.File(photon_list, "r") as f:
+        d = f["data"]
+        num_rays = d["x"].size
+        start_pos = ds.arr([d["x"][()], d["y"][()], d["z"][()]], "kpc")
+        end_pos = start_pos + distance * normal
+
+    nH = np.zeros(num_rays)
+
+    pbar = tqdm(
+        leave=True, total=num_rays, desc="Casting rays to determine nH for absorption "
+    )
+
+    for i in range(len(num_rays)):
+        ray = ds.ray(start_pos[i], end_pos[i])
+        nH[i] = np.sum(
+            ray["gas", "H_p0_number_density"] * ray["dts"] * distance
+        ).to_value("cm**-2")
+        pbar.update()
+    pbar.close()
+    nH *= 1.0e-22
+
+    with h5py.File(absorb_list, "w") as f:
+        f.attrs["photon_list"] = photon_list
+        f.attrs["distance"] = distance.v
+        f.create_dataset("start_pos", data=start_pos.d)
+        f.create_dataset("end_pos", data=end_pos.d)
+        f.create_dataset("nH", data=nH.d)

@@ -10,6 +10,7 @@ except PackageNotFoundError:
 from pyxsim.event_list import EventList
 from pyxsim.photon_list import (
     PhotonList,
+    internal_absorption,
     make_photons,
     project_photons,
     project_photons_allsky,
