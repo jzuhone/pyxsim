@@ -558,16 +558,24 @@ class AbsorptionModel:
     _name = ""
 
     def __init__(self, nH, energy, cross_section):
-        self.nH = YTQuantity(nH * 1.0e22, "cm**-2")
+        self._nH = nH
         self.emid = YTArray(energy, "keV")
         self.sigma = YTArray(cross_section, "cm**2")
+
+    @property
+    def nH(self):
+        return YTQuantity(self._nH, "1.0e22*cm**-2")
+
+    @nH.setter
+    def nH(self, value):
+        self._nH = value
 
     def get_absorb(self, e):
         """
         Get the absorption spectrum.
         """
         sigma = np.interp(e, self.emid, self.sigma, left=0.0, right=0.0)
-        return np.exp(-sigma * self.nH)
+        return np.exp(-sigma * self._nH)
 
     def absorb_photons(self, eobs, prng=None):
         r"""
@@ -610,12 +618,12 @@ class TBabsModel(AbsorptionModel):
     _name = "tbabs"
 
     def __init__(self, nH, abund_table="angr"):
-        self.nH = YTQuantity(nH, "1.0e22*cm**-2")
+        super().__init__(nH, [], [])
         self.abund_table = abund_table
 
     def get_absorb(self, e):
         e = np.array(e)
-        return get_tbabs_absorb(e, self.nH.v, abund_table=self.abund_table)
+        return get_tbabs_absorb(e, self._nH, abund_table=self.abund_table)
 
 
 class WabsModel(AbsorptionModel):
@@ -636,12 +644,12 @@ class WabsModel(AbsorptionModel):
     _name = "wabs"
 
     def __init__(self, nH, abund_table="angr"):
-        self.nH = YTQuantity(nH, "1.0e22*cm**-2")
+        super().__init__(nH, [], [])
         self.abund_table = abund_table
 
     def get_absorb(self, e):
         e = np.array(e)
-        return get_wabs_absorb(e, self.nH.v)
+        return get_wabs_absorb(e, self._nH)
 
 
 absorb_models = {"wabs": WabsModel, "tbabs": TBabsModel}
