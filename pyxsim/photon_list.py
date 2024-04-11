@@ -517,6 +517,9 @@ def _project_photons(
         y_hat = np.zeros(3)
         z_hat = np.zeros(3)
         north_vector = None
+        ax = "xyz".index(normal)
+        L = np.zeros(3)
+        L[ax] = 1.0
 
     absorb_file = None
 
@@ -660,7 +663,7 @@ def _project_photons(
         nH_int = None
         if absorb_file is not None:
             with h5py.File(absorb_file, "r") as fa:
-                if not np.isclose(fa["parameters"]["nH"][()], nH):
+                if not np.isclose(fa["parameters"].attrs["normal"], L).all():
                     raise ValueError(
                         "The value of the normal in the absorption file "
                         "does not match the value in the call to project_photons!"
