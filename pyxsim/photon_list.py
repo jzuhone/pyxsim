@@ -490,6 +490,7 @@ def _project_photons(
     kernel="top_hat",
     save_los=False,
     prng=None,
+    absorb_prefix=None,
 ):
     from yt.funcs import ensure_numpy_array
 
@@ -500,6 +501,9 @@ def _project_photons(
 
     if event_prefix.endswith(".h5"):
         event_prefix = event_prefix[:-3]
+
+    if absorb_prefix is not None and absorb_prefix.endswith(".h5"):
+        absorb_prefix = absorb_prefix[:-3]
 
     if not isinstance(normal, str):
         L = np.array(normal)
@@ -514,13 +518,19 @@ def _project_photons(
         z_hat = np.zeros(3)
         north_vector = None
 
+    absorb_file = None
+
     if comm.size > 1:
         photon_file = f"{photon_prefix}.{comm.rank:04d}.h5"
         event_file = f"{event_prefix}.{comm.rank:04d}.h5"
+        if absorb_prefix is not None:
+            absorb_file = f"{absorb_prefix}.{comm.rank:04d}.h5"
         event_files = [f"{event_prefix}.{i:04d}.h5" for i in range(comm.size)]
     else:
         photon_file = f"{photon_prefix}.h5"
         event_file = f"{event_prefix}.h5"
+        if absorb_prefix is not None:
+            absorb_file = f"{absorb_prefix}.h5"
         event_files = [event_file]
 
     sky_center = ensure_numpy_array(sky_center)
@@ -532,20 +542,21 @@ def _project_photons(
         if absorb_model not in absorb_models:
             raise KeyError(f"{absorb_model} is not a known absorption model!")
         absorb_model = absorb_models[absorb_model]
+    absorb_model_nH = None
     if absorb_model is not None:
         if nH is None:
             raise RuntimeError(
                 "You specified an absorption model, but didn't "
                 "specify a value for nH!"
             )
-        absorb_model = absorb_model(nH, abund_table=abund_table)
+        absorb_model_nH = absorb_model(nH, abund_table=abund_table)
         if comm.rank == 0:
             mylog.info(
                 "Foreground galactic absorption: using the %s model and nH = %g.",
-                absorb_model._name,
+                absorb_model_nH._name,
                 nH,
             )
-    abs_model_name = absorb_model._name if absorb_model else "none"
+    abs_model_name = absorb_model_nH._name if absorb_model_nH else "none"
     if nH is None:
         nH = 0.0
 
@@ -646,6 +657,16 @@ def _project_photons(
         emin = 1.0e99
         emax = -1.0e99
 
+        nH_int = None
+        if absorb_file is not None:
+            with h5py.File(absorb_file, "r") as fa:
+                if not np.isclose(fa["parameters"]["nH"][()], nH):
+                    raise ValueError(
+                        "The value of the normal in the absorption file "
+                        "does not match the value in the call to project_photons!"
+                    )
+                nH_int = fa["data"]["nH"][()]
+
         for start_c in range(0, n_cells, cell_chunk):
             end_c = min(start_c + cell_chunk, n_cells)
 
@@ -688,12 +709,22 @@ def _project_photons(
                 )
                 doppler_shift(vn * scale_shift, v2 * scale_shift2, n_ph, eobs)
 
-            if absorb_model is None:
-                det = np.ones(eobs.size, dtype="bool")
-                num_det = np.int64(eobs.size)
-            else:
-                det = absorb_model.absorb_photons(eobs, prng=prng)
-                num_det = np.int64(det.sum())
+            det = np.ones(eobs.size, dtype="bool")
+
+            if nH_int is not None:
+                e_begin = 0
+                for i in range(n_cells):
+                    e_end = e_begin + n_ph[i]
+                    absorb_model.nH = nH_int[i - start_c]
+                    det[e_begin:e_end] &= absorb_model.absorb_photons(
+                        eobs[e_begin:e_end], prng=prng
+                    )
+                    e_begin += n_ph[i]
+
+            if absorb_model is not None:
+                det &= absorb_model.absorb_photons(eobs, prng=prng)
+
+            num_det = np.int64(det.sum())
 
             if num_det > 0:
                 if observer == "external":
@@ -810,6 +841,7 @@ def project_photons(
     flat_sky=False,
     kernel="top_hat",
     save_los=False,
+    absorb_prefix=None,
     prng=None,
 ):
     r"""
@@ -912,6 +944,7 @@ def project_photons(
         kernel=kernel,
         save_los=save_los,
         prng=prng,
+        absorb_prefix=absorb_prefix,
     )
 
 
@@ -1040,11 +1073,33 @@ class PhotonList:
         self.parameters = {}
         self.info = {}
         self.num_photons = []
+        self.num_cells = []
+        prefixes = set()
+        self.filenums = []
         for i, fn in enumerate(self.filenames):
+            words = fn.rsplit(".", maxsplit=2)
+            if words == 2:
+                # One file without a number
+                prefix, suffix = words
+                filenum = None
+            elif words == 3:
+                # More than one file with numbers
+                prefix, filenum, suffix = words
+            else:
+                raise ValueError(f"Something is wrong with the filename {fn}!")
+            if suffix != ".h5":
+                raise ValueError(f"The file {fn} has an incorrect suffix!")
+            if filenum is not None and int(filenum) != i:
+                raise ValueError(
+                    f"The filenum {filenum} is inconsistent with that expected: {i}!"
+                )
+            prefixes.add(prefix)
+            self.filenums.append(filenum)
             with h5py.File(fn, "r") as f:
                 p = f["parameters"]
                 info = f["info"]
                 self.num_photons.append(f["data"]["energy"].size)
+                self.num_cells.append(f["data"]["x"].size)
                 if i == 0:
                     for field in p:
                         if isinstance(p[field][()], (str, bytes)):
@@ -1053,8 +1108,26 @@ class PhotonList:
                             self.parameters[field] = p[field][()]
                     for k, v in info.attrs.items():
                         self.info[k] = v
+        if len(prefixes) != 1:
+            raise ValueError("File prefixes are not unique!")
+        self.prefix = prefixes.pop()
         self.tot_num_photons = np.sum(self.num_photons)
+        self.tot_num_cells = np.sum(self.num_cells)
         self.observer = self.parameters.get("observer", "external")
+        self.num_files = len(self.filenames)
+
+    def get_data(self, i, fields=None):
+        data = {}
+        with h5py.File(self.filenames[i]) as f:
+            d = f["data"]
+            if fields is None:
+                fields = list(d.keys())
+            for field in fields:
+                if self.num_cells[i] > 0:
+                    data[field] = d[field][()].copy()
+                else:
+                    data[field] = np.array([])
+        return data
 
     def write_spectrum(self, specfile, emin, emax, nchan, overwrite=False):
         """
@@ -1128,51 +1201,62 @@ class PhotonList:
 
         hdulist.writeto(specfile, overwrite=overwrite)
 
+    def internal_absorption(
+        self, absorb_prefix, ds, normal, distance=None, load_kwargs=None
+    ):
+        from yt.loaders import load
 
-def internal_absorption(
-    ds, photon_list, absorb_list, normal, distance=None, load_kwargs=None
-):
-    from yt.loaders import load
+        if isinstance(ds, str):
+            ds = load(ds, **load_kwargs)
 
-    if isinstance(ds, str):
-        ds = load(ds, **load_kwargs)
+        if distance is None:
+            distance = ds.domain_width.max().to("kpc")
+        else:
+            distance = parse_value(distance, "kpc", ds)
 
-    if distance is None:
-        distance = ds.domain_width.max().to("kpc")
-    else:
-        distance = parse_value(distance, "kpc", ds)
+        if isinstance(normal, str):
+            ax = "xyz".index(normal)
+            normal = np.zeros(3)
+            normal[ax] = 1.0
+        normal = np.array(normal)
+        normal /= np.sqrt(np.dot(normal, normal))
 
-    if isinstance(normal, str):
-        ax = "xyz".index(normal)
-        normal = np.zeros(3)
-        normal[ax] = 1.0
-    normal = np.array(normal)
-    normal /= np.sqrt(np.dot(normal, normal))
+        pbar = tqdm(
+            leave=True,
+            total=self.tot_num_cells,
+            desc="Casting rays to determine nH for absorption ",
+        )
 
-    with h5py.File(photon_list, "r") as f:
-        d = f["data"]
-        num_rays = d["x"].size
-        start_pos = ds.arr([d["x"][()], d["y"][()], d["z"][()]], "kpc")
-        end_pos = start_pos + distance * normal
+        for i in range(self.num_files):
+            pos = self.get_data(i, fields=["x", "y", "z"])
+            num_rays = pos["x"].size
+            start_pos = ds.arr([pos["x"], pos["y"], pos["z"]], "kpc")
+            end_pos = start_pos + distance * normal
 
-    nH = np.zeros(num_rays)
+            nH = np.zeros(num_rays)
 
-    pbar = tqdm(
-        leave=True, total=num_rays, desc="Casting rays to determine nH for absorption "
-    )
+            for i in range(len(num_rays)):
+                ray = ds.ray(start_pos[i], end_pos[i])
+                nH[i] = np.sum(
+                    ray["gas", "H_p0_number_density"] * ray["dts"] * distance
+                ).to_value("cm**-2")
+                pbar.update()
+            nH *= 1.0e-22
 
-    for i in range(len(num_rays)):
-        ray = ds.ray(start_pos[i], end_pos[i])
-        nH[i] = np.sum(
-            ray["gas", "H_p0_number_density"] * ray["dts"] * distance
-        ).to_value("cm**-2")
-        pbar.update()
-    pbar.close()
-    nH *= 1.0e-22
+            filenum = self.filenums[i]
+            if filenum is None:
+                suffix = "h5"
+            else:
+                suffix = f"{filenum}.h5"
+            absorb_file = f"{absorb_prefix}.{suffix}"
+            with h5py.File(absorb_file, "w") as f:
+                p = f.create_group("parameters")
+                p.attrs["photon_list"] = self.filenames[i]
+                p.attrs["distance"] = distance.v
+                p.attrs["normal"] = normal
+                d = f.create_group("data")
+                d.create_dataset("start_pos", data=start_pos.d)
+                d.create_dataset("end_pos", data=end_pos.d)
+                d.create_dataset("nH", data=nH.d)
 
-    with h5py.File(absorb_list, "w") as f:
-        f.attrs["photon_list"] = photon_list
-        f.attrs["distance"] = distance.v
-        f.create_dataset("start_pos", data=start_pos.d)
-        f.create_dataset("end_pos", data=end_pos.d)
-        f.create_dataset("nH", data=nH.d)
+        pbar.close()
