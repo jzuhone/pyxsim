@@ -1081,16 +1081,16 @@ class PhotonList:
         self.filenums = []
         for i, fn in enumerate(self.filenames):
             words = fn.rsplit(".", maxsplit=2)
-            if words == 2:
+            if len(words) == 2:
                 # One file without a number
                 prefix, suffix = words
                 filenum = None
-            elif words == 3:
+            elif len(words) == 3:
                 # More than one file with numbers
                 prefix, filenum, suffix = words
             else:
                 raise ValueError(f"Something is wrong with the filename {fn}!")
-            if suffix != ".h5":
+            if suffix != "h5":
                 raise ValueError(f"The file {fn} has an incorrect suffix!")
             if filenum is not None and int(filenum) != i:
                 raise ValueError(
@@ -1203,63 +1203,3 @@ class PhotonList:
         hdulist = fits.HDUList([fits.PrimaryHDU(), tbhdu])
 
         hdulist.writeto(specfile, overwrite=overwrite)
-
-    def internal_absorption(
-        self, absorb_prefix, ds, normal, distance=None, load_kwargs=None
-    ):
-        from yt.loaders import load
-
-        if isinstance(ds, str):
-            ds = load(ds, **load_kwargs)
-
-        if distance is None:
-            distance = ds.domain_width.max().to("kpc")
-        else:
-            distance = parse_value(distance, "kpc", ds)
-
-        if isinstance(normal, str):
-            ax = "xyz".index(normal)
-            normal = np.zeros(3)
-            normal[ax] = 1.0
-        normal = np.array(normal)
-        normal /= np.sqrt(np.dot(normal, normal))
-
-        pbar = tqdm(
-            leave=True,
-            total=self.tot_num_cells,
-            desc="Casting rays to determine nH for absorption ",
-        )
-
-        for i in range(self.num_files):
-            pos = self.get_data(i, fields=["x", "y", "z"])
-            num_rays = pos["x"].size
-            start_pos = ds.arr([pos["x"], pos["y"], pos["z"]], "kpc")
-            end_pos = start_pos + distance * normal
-
-            nH = np.zeros(num_rays)
-
-            for i in range(len(num_rays)):
-                ray = ds.ray(start_pos[i], end_pos[i])
-                nH[i] = np.sum(
-                    ray["gas", "H_p0_number_density"] * ray["dts"] * distance
-                ).to_value("cm**-2")
-                pbar.update()
-            nH *= 1.0e-22
-
-            filenum = self.filenums[i]
-            if filenum is None:
-                suffix = "h5"
-            else:
-                suffix = f"{filenum}.h5"
-            absorb_file = f"{absorb_prefix}.{suffix}"
-            with h5py.File(absorb_file, "w") as f:
-                p = f.create_group("parameters")
-                p.attrs["photon_list"] = self.filenames[i]
-                p.attrs["distance"] = distance.v
-                p.attrs["normal"] = normal
-                d = f.create_group("data")
-                d.create_dataset("start_pos", data=start_pos.d)
-                d.create_dataset("end_pos", data=end_pos.d)
-                d.create_dataset("nH", data=nH.d)
-
-        pbar.close()
