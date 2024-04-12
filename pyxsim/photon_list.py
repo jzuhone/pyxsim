@@ -521,9 +521,15 @@ def _project_photons(
         with h5py.File(absorb_file, "r") as fa:
             if not np.isclose(fa["parameters"].attrs["normal"], L).all():
                 raise ValueError(
-                    "The value of the normal in the absorption file "
+                    "The value of the normal vector in the absorption file "
                     "does not match the value in the call to project_photons!"
                 )
+            if not np.isclose(fa["parameters"].attrs["north"], north_vector).all():
+                raise ValueError(
+                    "The value of the north vector in the absorption file "
+                    "does not match the value in the call to project_photons!"
+                )
+
             x_mid = y_mid = fa["data"]["wmid"][()]
             z_mid = fa["data"]["dmid"][()]
             nH_grid = fa["data"]["nH"][()]
