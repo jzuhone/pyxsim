@@ -8,7 +8,7 @@ except PackageNotFoundError:
 
 
 from pyxsim.event_list import EventList
-from pyxsim.internal_absorption import internal_absorption
+from pyxsim.internal_absorption import make_absorption_map
 from pyxsim.photon_list import (
     PhotonList,
     make_photons,

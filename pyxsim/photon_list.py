@@ -4,6 +4,7 @@ Classes for generating lists of photons
 
 import h5py
 import numpy as np
+from scipy.interpolate import interpn
 from soxs import __version__ as soxs_version
 from soxs.constants import erg_per_keV
 from soxs.utils import parse_prng
@@ -11,7 +12,6 @@ from tqdm.auto import tqdm
 from unyt.array import unyt_array
 from yt import __version__ as yt_version
 from yt.utilities.cosmology import Cosmology
-from yt.utilities.orientation import Orientation
 from yt.utilities.parallel_tools.parallel_analysis_interface import (
     communication_system,
     parallel_objects,
@@ -26,7 +26,7 @@ from pyxsim.lib.sky_functions import (
     scatter_events_allsky,
 )
 from pyxsim.spectral_models import absorb_models
-from pyxsim.utils import mylog, parse_value
+from pyxsim.utils import get_normal_and_north, mylog, parse_value
 
 comm = communication_system.communicators[-1]
 
@@ -490,7 +490,7 @@ def _project_photons(
     kernel="top_hat",
     save_los=False,
     prng=None,
-    absorb_prefix=None,
+    absorb_file=None,
 ):
     from yt.funcs import ensure_numpy_array
 
@@ -502,39 +502,31 @@ def _project_photons(
     if event_prefix.endswith(".h5"):
         event_prefix = event_prefix[:-3]
 
-    if absorb_prefix is not None and absorb_prefix.endswith(".h5"):
-        absorb_prefix = absorb_prefix[:-3]
-
-    if not isinstance(normal, str):
-        L = np.array(normal)
-        orient = Orientation(L, north_vector=north_vector)
-        x_hat = orient.unit_vectors[0]
-        y_hat = orient.unit_vectors[1]
-        z_hat = orient.unit_vectors[2]
-        north_vector = orient.north_vector
-    else:
-        x_hat = np.zeros(3)
-        y_hat = np.zeros(3)
-        z_hat = np.zeros(3)
-        north_vector = None
-        ax = "xyz".index(normal)
-        L = np.zeros(3)
-        L[ax] = 1.0
-
-    absorb_file = None
+    L, north_vector, orient = get_normal_and_north(normal, north_vector=north_vector)
+    x_hat = orient.unit_vectors[0]
+    y_hat = orient.unit_vectors[1]
+    z_hat = orient.unit_vectors[2]
 
     if comm.size > 1:
         photon_file = f"{photon_prefix}.{comm.rank:04d}.h5"
         event_file = f"{event_prefix}.{comm.rank:04d}.h5"
-        if absorb_prefix is not None:
-            absorb_file = f"{absorb_prefix}.{comm.rank:04d}.h5"
         event_files = [f"{event_prefix}.{i:04d}.h5" for i in range(comm.size)]
     else:
         photon_file = f"{photon_prefix}.h5"
         event_file = f"{event_prefix}.h5"
-        if absorb_prefix is not None:
-            absorb_file = f"{absorb_prefix}.h5"
         event_files = [event_file]
+
+    nH_grid = None
+    if absorb_file is not None:
+        with h5py.File(absorb_file, "r") as fa:
+            if not np.isclose(fa["parameters"].attrs["normal"], L).all():
+                raise ValueError(
+                    "The value of the normal in the absorption file "
+                    "does not match the value in the call to project_photons!"
+                )
+            x_mid = y_mid = fa["data"]["wmid"][()]
+            z_mid = fa["data"]["dmid"][()]
+            nH_grid = fa["data"]["nH"][()]
 
     sky_center = ensure_numpy_array(sky_center)
 
@@ -545,21 +537,20 @@ def _project_photons(
         if absorb_model not in absorb_models:
             raise KeyError(f"{absorb_model} is not a known absorption model!")
         absorb_model = absorb_models[absorb_model]
-    absorb_model_nH = None
     if absorb_model is not None:
         if nH is None:
             raise RuntimeError(
                 "You specified an absorption model, but didn't "
                 "specify a value for nH!"
             )
-        absorb_model_nH = absorb_model(nH, abund_table=abund_table)
+        absorb_model = absorb_model(nH, abund_table=abund_table)
         if comm.rank == 0:
             mylog.info(
                 "Foreground galactic absorption: using the %s model and nH = %g.",
-                absorb_model_nH._name,
+                absorb_model._name,
                 nH,
             )
-    abs_model_name = absorb_model_nH._name if absorb_model_nH else "none"
+    abs_model_name = absorb_model._name if absorb_model else "none"
     if nH is None:
         nH = 0.0
 
@@ -660,16 +651,6 @@ def _project_photons(
         emin = 1.0e99
         emax = -1.0e99
 
-        nH_int = None
-        if absorb_file is not None:
-            with h5py.File(absorb_file, "r") as fa:
-                if not np.isclose(fa["parameters"].attrs["normal"], L).all():
-                    raise ValueError(
-                        "The value of the normal in the absorption file "
-                        "does not match the value in the call to project_photons!"
-                    )
-                nH_int = fa["data"]["nH"][()]
-
         for start_c in range(0, n_cells, cell_chunk):
             end_c = min(start_c + cell_chunk, n_cells)
 
@@ -680,7 +661,16 @@ def _project_photons(
             dx = d["dx"][start_c:end_c]
             end_e = start_e + n_ph.sum()
             eobs = d["energy"][start_e:end_e]
-
+            nH_int = None
+            if nH_grid is not None:
+                pos = np.dot(orient.unit_vectors, np.array([x, y, z]))
+                nH_int = interpn(
+                    (x_mid, y_mid, z_mid),
+                    nH_grid,
+                    pos.T,
+                    bounds_error=False,
+                    fill_value=0.0,
+                )
             if observer == "internal":
                 r = np.sqrt(x * x + y * y + z * z)
             else:
@@ -716,15 +706,16 @@ def _project_photons(
 
             if nH_int is not None:
                 e_begin = 0
-                for i in range(n_cells):
+                for i in range(n_ph.size):
                     e_end = e_begin + n_ph[i]
-                    absorb_model.nH = nH_int[i - start_c]
+                    absorb_model.nH = nH_int[i]
                     det[e_begin:e_end] &= absorb_model.absorb_photons(
                         eobs[e_begin:e_end], prng=prng
                     )
                     e_begin += n_ph[i]
 
             if absorb_model is not None:
+                absorb_model.nH = nH
                 det &= absorb_model.absorb_photons(eobs, prng=prng)
 
             num_det = np.int64(det.sum())
@@ -844,7 +835,7 @@ def project_photons(
     flat_sky=False,
     kernel="top_hat",
     save_los=False,
-    absorb_prefix=None,
+    absorb_file=None,
     prng=None,
 ):
     r"""
@@ -947,7 +938,7 @@ def project_photons(
         kernel=kernel,
         save_los=save_los,
         prng=prng,
-        absorb_prefix=absorb_prefix,
+        absorb_file=absorb_file,
     )
 
 
