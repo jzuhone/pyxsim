@@ -522,6 +522,10 @@ def _project_photons(
             raise ValueError(
                 "You must specify an absorption model if you are using an absorption file!"
             )
+        if obs == "internal":
+            raise ValueError(
+                "You cannot use an absorption file with an internal observer!"
+            )
         with h5py.File(absorb_file, "r") as fa:
             if not np.isclose(fa["parameters"].attrs["normal"], L).all():
                 raise ValueError(
