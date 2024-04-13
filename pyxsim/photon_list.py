@@ -490,7 +490,7 @@ def _project_photons(
     kernel="top_hat",
     save_los=False,
     prng=None,
-    absorb_file=None,
+    column_file=None,
 ):
     from yt.funcs import ensure_numpy_array
 
@@ -517,7 +517,7 @@ def _project_photons(
         event_files = [event_file]
 
     nH_grid = None
-    if absorb_file is not None:
+    if column_file is not None:
         if absorb_model is None:
             raise ValueError(
                 "You must specify an absorption model if you are using an absorption file!"
@@ -526,7 +526,7 @@ def _project_photons(
             raise ValueError(
                 "You cannot use an absorption file with an internal observer!"
             )
-        with h5py.File(absorb_file, "r") as fa:
+        with h5py.File(column_file, "r") as fa:
             if not np.isclose(fa["parameters"].attrs["normal"], L).all():
                 raise ValueError(
                     "The value of the normal vector in the absorption file "
@@ -560,11 +560,11 @@ def _project_photons(
                     absorb_model._name,
                     nH,
                 )
-            if absorb_file is not None:
+            if column_file is not None:
                 mylog.info(
                     "Internal absorption: using the %s model and column density map %s.",
                     absorb_model._name,
-                    absorb_file,
+                    column_file,
                 )
 
     abs_model_name = absorb_model._name if absorb_model else "none"
@@ -572,7 +572,8 @@ def _project_photons(
     f = h5py.File(photon_file, "r")
 
     p = f["parameters"]
-
+    redshift = p["fid_redshift"][()]
+    oneplusz = 1.0 + redshift
     data_type = p["data_type"].asstr()[()]
     if "observer" in p:
         observer = p["observer"].asstr()[()]
@@ -635,6 +636,7 @@ def _project_photons(
         if sigma_pos is not None:
             pe.create_dataset("sigma_pos", data=sigma_pos)
         pe.create_dataset("kernel", data=kernel)
+        pe.create_dataset("redshift", data=redshift)
         event_fields = ["xsky", "ysky", "eobs"]
         if save_los:
             event_fields.append("los")
@@ -726,7 +728,7 @@ def _project_photons(
                         e_end = e_begin + n_ph[i]
                         absorb_model.nH = nH_int[i]
                         det[e_begin:e_end] &= absorb_model.absorb_photons(
-                            eobs[e_begin:e_end], prng=prng
+                            eobs[e_begin:e_end] * oneplusz, prng=prng
                         )
                         e_begin += n_ph[i]
 
@@ -851,7 +853,7 @@ def project_photons(
     flat_sky=False,
     kernel="top_hat",
     save_los=False,
-    absorb_file=None,
+    column_file=None,
     prng=None,
 ):
     r"""
@@ -921,6 +923,11 @@ def project_photons(
     save_los : boolean, optional
         If True, save the line-of-sight positions along the projection axis in
         units of kpc to the events list. Default: False
+    column_file : string, optional
+        An HDF5 file containing a neutral hydrogen column density map to be
+        used for internal absorption, produced by
+        :meth:`~pyxsim.internal_absorption.make_column_density_map`. Default
+        is None for no internal absorption.
     prng : integer or :class:`~numpy.random.RandomState` object
         A pseudo-random number generator. Typically will only be specified
         if you have a reason to generate the same set of random numbers,
@@ -954,7 +961,7 @@ def project_photons(
         kernel=kernel,
         save_los=save_los,
         prng=prng,
-        absorb_file=absorb_file,
+        column_file=column_file,
     )
 
 
