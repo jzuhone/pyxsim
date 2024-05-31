@@ -80,9 +80,11 @@ def test_sloshing(answer_store):
     merge_files(["photons1.h5", "photons2.h5"], "photons.h5", overwrite=True)
     merge_files(["events1.h5", "events2.h5"], "events.h5", overwrite=True)
 
-    with h5py.File("photons.h5", "r") as f, h5py.File(
-        "photons1.h5", "r"
-    ) as f1, h5py.File("photons2.h5", "r") as f2:
+    with (
+        h5py.File("photons.h5", "r") as f,
+        h5py.File("photons1.h5", "r") as f1,
+        h5py.File("photons2.h5", "r") as f2,
+    ):
         assert f["data"]["energy"].size == n_photons1 + n_photons2
         assert f["data"]["x"].size == n_cells1 + n_cells2
         for k in f["data"]:
@@ -90,9 +92,11 @@ def test_sloshing(answer_store):
                 f["data"][k][()], np.concatenate([f1["data"][k][()], f2["data"][k][()]])
             )
 
-    with h5py.File("events.h5", "r") as f, h5py.File(
-        "events1.h5", "r"
-    ) as f1, h5py.File("events2.h5", "r") as f2:
+    with (
+        h5py.File("events.h5", "r") as f,
+        h5py.File("events1.h5", "r") as f1,
+        h5py.File("events2.h5", "r") as f2,
+    ):
         assert f["data"]["eobs"].size == n_events1 + n_events2
         for k in f["data"]:
             assert_array_equal(
