@@ -5,6 +5,7 @@ from astropy.units import Quantity
 from more_itertools import always_iterable
 from soxs.constants import abund_tables, atomic_weights, elem_names
 from unyt import unyt_array, unyt_quantity
+from yt.utilities.orientation import Orientation
 
 pyxsimLogger = logging.getLogger("pyxsim")
 
@@ -245,3 +246,15 @@ class ParallelProgressBar:
 
     def close(self):
         mylog.info("Finishing %s", self.title)
+
+
+def get_normal_and_north(normal, north_vector=None):
+    if not isinstance(normal, str):
+        L = np.array(normal)
+    else:
+        ax = "xyz".index(normal)
+        L = np.zeros(3)
+        L[ax] = 1.0
+    orient = Orientation(L, north_vector=north_vector)
+    north_vector = orient.north_vector
+    return L, north_vector, orient

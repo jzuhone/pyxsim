@@ -4,6 +4,7 @@ Classes for generating lists of photons
 
 import h5py
 import numpy as np
+from scipy.interpolate import interpn
 from soxs import __version__ as soxs_version
 from soxs.constants import erg_per_keV
 from soxs.utils import parse_prng
@@ -11,7 +12,6 @@ from tqdm.auto import tqdm
 from unyt.array import unyt_array
 from yt import __version__ as yt_version
 from yt.utilities.cosmology import Cosmology
-from yt.utilities.orientation import Orientation
 from yt.utilities.parallel_tools.parallel_analysis_interface import (
     communication_system,
     parallel_objects,
@@ -26,7 +26,7 @@ from pyxsim.lib.sky_functions import (
     scatter_events_allsky,
 )
 from pyxsim.spectral_models import absorb_models
-from pyxsim.utils import mylog, parse_value
+from pyxsim.utils import get_normal_and_north, mylog, parse_value
 
 comm = communication_system.communicators[-1]
 
@@ -490,6 +490,7 @@ def _project_photons(
     kernel="top_hat",
     save_los=False,
     prng=None,
+    column_file=None,
 ):
     from yt.funcs import ensure_numpy_array
 
@@ -501,18 +502,10 @@ def _project_photons(
     if event_prefix.endswith(".h5"):
         event_prefix = event_prefix[:-3]
 
-    if not isinstance(normal, str):
-        L = np.array(normal)
-        orient = Orientation(L, north_vector=north_vector)
-        x_hat = orient.unit_vectors[0]
-        y_hat = orient.unit_vectors[1]
-        z_hat = orient.unit_vectors[2]
-        north_vector = orient.north_vector
-    else:
-        x_hat = np.zeros(3)
-        y_hat = np.zeros(3)
-        z_hat = np.zeros(3)
-        north_vector = None
+    L, north_vector, orient = get_normal_and_north(normal, north_vector=north_vector)
+    x_hat = orient.unit_vectors[0]
+    y_hat = orient.unit_vectors[1]
+    z_hat = orient.unit_vectors[2]
 
     if comm.size > 1:
         photon_file = f"{photon_prefix}.{comm.rank:04d}.h5"
@@ -522,6 +515,32 @@ def _project_photons(
         photon_file = f"{photon_prefix}.h5"
         event_file = f"{event_prefix}.h5"
         event_files = [event_file]
+
+    nH_grid = None
+    if column_file is not None:
+        if absorb_model is None:
+            raise ValueError(
+                "You must specify an absorption model if you are using an absorption file!"
+            )
+        if obs == "internal":
+            raise ValueError(
+                "You cannot use an absorption file with an internal observer!"
+            )
+        with h5py.File(column_file, "r") as fa:
+            if not np.isclose(fa["parameters"].attrs["normal"], L).all():
+                raise ValueError(
+                    "The value of the normal vector in the absorption file "
+                    "does not match the value in the call to project_photons!"
+                )
+            if not np.isclose(fa["parameters"].attrs["north"], north_vector).all():
+                raise ValueError(
+                    "The value of the north vector in the absorption file "
+                    "does not match the value in the call to project_photons!"
+                )
+
+            x_mid = y_mid = fa["data"]["wmid"][()]
+            z_mid = fa["data"]["dmid"][()]
+            nH_grid = fa["data"]["nH"][()]
 
     sky_center = ensure_numpy_array(sky_center)
 
@@ -533,26 +552,28 @@ def _project_photons(
             raise KeyError(f"{absorb_model} is not a known absorption model!")
         absorb_model = absorb_models[absorb_model]
     if absorb_model is not None:
-        if nH is None:
-            raise RuntimeError(
-                "You specified an absorption model, but didn't "
-                "specify a value for nH!"
-            )
         absorb_model = absorb_model(nH, abund_table=abund_table)
         if comm.rank == 0:
-            mylog.info(
-                "Foreground galactic absorption: using the %s model and nH = %g.",
-                absorb_model._name,
-                nH,
-            )
+            if nH is not None:
+                mylog.info(
+                    "Foreground galactic absorption: using the %s model and nH = %g.",
+                    absorb_model._name,
+                    nH,
+                )
+            if column_file is not None:
+                mylog.info(
+                    "Internal absorption: using the %s model and column density map %s.",
+                    absorb_model._name,
+                    column_file,
+                )
+
     abs_model_name = absorb_model._name if absorb_model else "none"
-    if nH is None:
-        nH = 0.0
 
     f = h5py.File(photon_file, "r")
 
     p = f["parameters"]
-
+    redshift = p["fid_redshift"][()]
+    oneplusz = 1.0 + redshift
     data_type = p["data_type"].asstr()[()]
     if "observer" in p:
         observer = p["observer"].asstr()[()]
@@ -615,6 +636,7 @@ def _project_photons(
         if sigma_pos is not None:
             pe.create_dataset("sigma_pos", data=sigma_pos)
         pe.create_dataset("kernel", data=kernel)
+        pe.create_dataset("redshift", data=redshift)
         event_fields = ["xsky", "ysky", "eobs"]
         if save_los:
             event_fields.append("los")
@@ -656,7 +678,16 @@ def _project_photons(
             dx = d["dx"][start_c:end_c]
             end_e = start_e + n_ph.sum()
             eobs = d["energy"][start_e:end_e]
-
+            nH_int = None
+            if nH_grid is not None:
+                pos = np.dot(orient.unit_vectors, np.array([x, y, z]))
+                nH_int = interpn(
+                    (x_mid, y_mid, z_mid),
+                    nH_grid,
+                    pos.T,
+                    bounds_error=False,
+                    fill_value=0.0,
+                )
             if observer == "internal":
                 r = np.sqrt(x * x + y * y + z * z)
             else:
@@ -688,12 +719,24 @@ def _project_photons(
                 )
                 doppler_shift(vn * scale_shift, v2 * scale_shift2, n_ph, eobs)
 
-            if absorb_model is None:
-                det = np.ones(eobs.size, dtype="bool")
-                num_det = np.int64(eobs.size)
-            else:
-                det = absorb_model.absorb_photons(eobs, prng=prng)
-                num_det = np.int64(det.sum())
+            det = np.ones(eobs.size, dtype="bool")
+
+            if absorb_model is not None:
+                if nH_int is not None:
+                    e_begin = 0
+                    for i in range(n_ph.size):
+                        e_end = e_begin + n_ph[i]
+                        absorb_model.nH = nH_int[i]
+                        det[e_begin:e_end] &= absorb_model.absorb_photons(
+                            eobs[e_begin:e_end] * oneplusz, prng=prng
+                        )
+                        e_begin += n_ph[i]
+
+                if nH is not None:
+                    absorb_model.nH = nH
+                    det &= absorb_model.absorb_photons(eobs, prng=prng)
+
+            num_det = np.int64(det.sum())
 
             if num_det > 0:
                 if observer == "external":
@@ -810,6 +853,7 @@ def project_photons(
     flat_sky=False,
     kernel="top_hat",
     save_los=False,
+    column_file=None,
     prng=None,
 ):
     r"""
@@ -879,6 +923,11 @@ def project_photons(
     save_los : boolean, optional
         If True, save the line-of-sight positions along the projection axis in
         units of kpc to the events list. Default: False
+    column_file : string, optional
+        An HDF5 file containing a neutral hydrogen column density map to be
+        used for internal absorption, produced by
+        :meth:`~pyxsim.internal_absorption.make_column_density_map`. Default
+        is None for no internal absorption.
     prng : integer or :class:`~numpy.random.RandomState` object
         A pseudo-random number generator. Typically will only be specified
         if you have a reason to generate the same set of random numbers,
@@ -912,6 +961,7 @@ def project_photons(
         kernel=kernel,
         save_los=save_los,
         prng=prng,
+        column_file=column_file,
     )
 
 
@@ -1040,11 +1090,33 @@ class PhotonList:
         self.parameters = {}
         self.info = {}
         self.num_photons = []
+        self.num_cells = []
+        prefixes = set()
+        self.filenums = []
         for i, fn in enumerate(self.filenames):
+            words = fn.rsplit(".", maxsplit=2)
+            if len(words) == 2:
+                # One file without a number
+                prefix, suffix = words
+                filenum = None
+            elif len(words) == 3:
+                # More than one file with numbers
+                prefix, filenum, suffix = words
+            else:
+                raise ValueError(f"Something is wrong with the filename {fn}!")
+            if suffix != "h5":
+                raise ValueError(f"The file {fn} has an incorrect suffix!")
+            if filenum is not None and int(filenum) != i:
+                raise ValueError(
+                    f"The filenum {filenum} is inconsistent with that expected: {i}!"
+                )
+            prefixes.add(prefix)
+            self.filenums.append(filenum)
             with h5py.File(fn, "r") as f:
                 p = f["parameters"]
                 info = f["info"]
                 self.num_photons.append(f["data"]["energy"].size)
+                self.num_cells.append(f["data"]["x"].size)
                 if i == 0:
                     for field in p:
                         if isinstance(p[field][()], (str, bytes)):
@@ -1053,8 +1125,26 @@ class PhotonList:
                             self.parameters[field] = p[field][()]
                     for k, v in info.attrs.items():
                         self.info[k] = v
+        if len(prefixes) != 1:
+            raise ValueError("File prefixes are not unique!")
+        self.prefix = prefixes.pop()
         self.tot_num_photons = np.sum(self.num_photons)
+        self.tot_num_cells = np.sum(self.num_cells)
         self.observer = self.parameters.get("observer", "external")
+        self.num_files = len(self.filenames)
+
+    def get_data(self, i, fields=None):
+        data = {}
+        with h5py.File(self.filenames[i]) as f:
+            d = f["data"]
+            if fields is None:
+                fields = list(d.keys())
+            for field in fields:
+                if self.num_cells[i] > 0:
+                    data[field] = d[field][()].copy()
+                else:
+                    data[field] = np.array([])
+        return data
 
     def write_spectrum(self, specfile, emin, emax, nchan, overwrite=False):
         """
