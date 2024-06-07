@@ -12,6 +12,7 @@ from pyxsim.lib.spectra import make_band, shift_spectrum
 from pyxsim.source_models.sources import SourceModel
 from pyxsim.spectral_models import (
     CloudyCIESpectralModel,
+    CXSpectralModel,
     IGMSpectralModel,
     MekalSpectralModel,
     TableCIEModel,
@@ -28,6 +29,7 @@ from pyxsim.utils import (
 class ThermalSourceModel(SourceModel):
     _density_dependence = False
     _nei = False
+    _cx = False
 
     def __init__(
         self,
@@ -82,6 +84,7 @@ class ThermalSourceModel(SourceModel):
         self.emission_measure_field = emission_measure_field
         self.density_field = None  # Will be determined later
         self.nh_field = None  # Will be set by the subclass
+        self.collision_field = None  # Will be set by the subclass
         self.max_density = max_density
         self.min_entropy = min_entropy
         self.tot_num_cells = 0  # Will be determined later
@@ -220,6 +223,8 @@ class ThermalSourceModel(SourceModel):
         mylog.info("Using temperature field '%s'.", self.temperature_field)
         if self.nh_field is not None:
             mylog.info("Using nH field '%s'.", self.nh_field)
+        if self.collision_field is not None:
+            mylog.info("Using collision field '%s'.", self.collision_field)
         self.spectral_model.prepare_spectrum(redshift)
         if mode in ["photons", "spectrum"]:
             self.setup_pbar(data_source, self.temperature_field)
@@ -348,6 +353,10 @@ class ThermalSourceModel(SourceModel):
         else:
             nH = None
 
+        if self.collision_field is not None:
+            coll = np.ravel(chunk[self.collision_field].d)
+        else:
+            coll = None
         if isinstance(self.h_fraction, Number):
             X_H = self.h_fraction
         else:
@@ -388,6 +397,8 @@ class ThermalSourceModel(SourceModel):
         cell_nrm = cell_nrm[cut]
         if nH is not None:
             nH = nH[cut]
+        if coll is not None:
+            coll = coll[cut]
         if not isinstance(X_H, Number):
             X_H = X_H[cut]
 
@@ -446,6 +457,9 @@ class ThermalSourceModel(SourceModel):
                 if self._density_dependence:
                     nHi = nH[ibegin:iend]
                     cspec, mspec, vspec = self.spectral_model.get_spectrum(kTi, nHi)
+                elif self._cx:
+                    colli = coll[ibegin:iend]
+                    cspec, mspec, vspec = self.spectral_model.get_spectrum(kTi, colli)
                 else:
                     cspec, mspec, vspec = self.spectral_model.get_spectrum(kTi)
 
@@ -511,6 +525,9 @@ class ThermalSourceModel(SourceModel):
                 if self._density_dependence:
                     nHi = nH[ibegin:iend]
                     cflux, mflux, vflux = fluxf(kTi, nHi)
+                elif self._cx:
+                    colli = coll[ibegin:iend]
+                    cflux, mflux, vflux = fluxf(kTi, colli)
                 else:
                     cflux, mflux, vflux = fluxf(kTi)
 
@@ -700,6 +717,7 @@ class IGMSourceModel(ThermalSourceModel):
 
     def _prep_repr(self):
         class_name, strs = super()._prep_repr()
+        strs["nh_field"] = self.nh_field
         strs["resonant_scattering"] = self.resonant_scattering
         strs["cxb_factor"] = self.cxb_factor
         return class_name, strs
@@ -965,7 +983,7 @@ class NEISourceModel(CIESourceModel):
         "accept_reject": Acceptance-rejection method using the spectrum.
         The first method should be sufficient for most cases.
     thermal_broad : boolean, optional
-        Whether or not the spectral lines should be thermally
+        Whether the spectral lines should be thermally
         broadened. Default: True
     model_root : string, optional
         The directory root where the model files are stored. If not provided,
@@ -1067,4 +1085,65 @@ class NEISourceModel(CIESourceModel):
         class_name, strs = super()._prep_repr()
         strs.pop("model")
         strs.pop("Zmet")
+        return class_name, strs
+
+
+class CXSourceModel(ThermalSourceModel):
+    _cx = True
+
+    def __init__(
+        self,
+        emin,
+        emax,
+        nbins,
+        Zmet,
+        collntype=1,
+        acx_model=8,
+        recomb_type=1,
+        binscale="linear",
+        temperature_field=("gas", "temperature"),
+        emission_measure_field=("gas", "emission_measure"),
+        collision_field=("gas", "collision_parameter"),
+        h_fraction=None,
+        kT_min=0.00431,
+        kT_max=64.0,
+        max_density=None,
+        min_entropy=None,
+        var_elem=None,
+        method="invert_cdf",
+        abund_table="angr",
+        prng=None,
+    ):
+        spectral_model = CXSpectralModel(
+            emin, emax, nbins, collntype, acx_model, recomb_type, binscale=binscale
+        )
+        super().__init__(
+            spectral_model,
+            emin,
+            emax,
+            nbins,
+            Zmet,
+            binscale=binscale,
+            kT_min=kT_min,
+            kT_max=kT_max,
+            var_elem=var_elem,
+            max_density=max_density,
+            min_entropy=min_entropy,
+            method=method,
+            abund_table=abund_table,
+            prng=prng,
+            temperature_field=temperature_field,
+            h_fraction=h_fraction,
+            emission_measure_field=emission_measure_field,
+        )
+        self.collision_field = collision_field
+        self.collntype = collntype
+        self.acx_model = acx_model
+        self.recomb_type = recomb_type
+
+    def _prep_repr(self):
+        class_name, strs = super()._prep_repr()
+        strs["collision_field"] = self.collision_field
+        strs["collntype"] = self.collntype
+        strs["acx_model"] = self.acx_model
         return class_name, strs
