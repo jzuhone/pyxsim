@@ -1154,4 +1154,5 @@ class CXSourceModel(ThermalSourceModel):
         strs["collision_field"] = self.collision_field
         strs["collntype"] = self.collntype
         strs["acx_model"] = self.acx_model
+        strs["recomb_type"] = self.recomb_type
         return class_name, strs
