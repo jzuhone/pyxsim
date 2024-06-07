@@ -262,6 +262,10 @@ class TableCIEModel(ThermalSpectralModel):
         )
 
 
+class CXSpectralModel(ThermalSpectralModel):
+    pass
+
+
 class Atable1DSpectralModel(ThermalSpectralModel):
     _logT = True
 
