@@ -550,9 +550,7 @@ class ThermalSourceModel(SourceModel):
                         ei = elemZ[:, ibegin:iend]
                     else:
                         ei = None
-                    cx_flux = self.spectral_model.get_cx_flux(
-                        kTi, colli, meti, Hei, elem_abund=ei
-                    )
+                    cx_flux = fluxf(kTi, colli, meti, Hei, elem_abund=ei)
                 else:
                     cflux, mflux, vflux = fluxf(kTi)
 
