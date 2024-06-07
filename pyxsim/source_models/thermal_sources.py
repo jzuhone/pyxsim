@@ -1115,7 +1115,15 @@ class CXSourceModel(ThermalSourceModel):
         prng=None,
     ):
         spectral_model = CXSpectralModel(
-            emin, emax, nbins, collntype, acx_model, recomb_type, binscale=binscale
+            emin,
+            emax,
+            nbins,
+            collntype=collntype,
+            acx_model=acx_model,
+            recomb_type=recomb_type,
+            binscale=binscale,
+            abund_table=abund_table,
+            var_elem=var_elem,
         )
         super().__init__(
             spectral_model,

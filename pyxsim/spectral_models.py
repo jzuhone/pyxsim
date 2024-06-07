@@ -7,6 +7,7 @@ from scipy.interpolate import interp1d
 from soxs.constants import K_per_keV
 from soxs.spectra import get_tbabs_absorb, get_wabs_absorb
 from soxs.thermal_spectra import (
+    ACX2Generator,
     CIEGenerator,
     CloudyCIEGenerator,
     IGMGenerator,
@@ -263,7 +264,35 @@ class TableCIEModel(ThermalSpectralModel):
 
 
 class CXSpectralModel(ThermalSpectralModel):
-    pass
+    def __init__(
+        self,
+        emin,
+        emax,
+        nbins,
+        collntype=1,
+        acx_model=8,
+        recomb_type=1,
+        binscale="linear",
+        var_elem=None,
+        abund_table="angr",
+    ):
+        self.cxgen = ACX2Generator(
+            emin,
+            emax,
+            nbins,
+            collntype=collntype,
+            acx_model=acx_model,
+            recomb_type=recomb_type,
+            binscale=binscale,
+            var_elem=var_elem,
+            abund_table=abund_table,
+        )
+        self.nbins = self.cxgen.nbins
+        self.ebins = self.cxgen.ebins
+        self.emid = self.cxgen.emid
+        self.var_elem_names = self.cxgen.var_elem_names
+        self.atable = self.cxgen.atable
+        self.de = np.diff(self.ebins)
 
 
 class Atable1DSpectralModel(ThermalSpectralModel):
