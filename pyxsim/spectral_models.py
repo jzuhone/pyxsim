@@ -319,10 +319,10 @@ class CXSpectralModel(ThermalSpectralModel):
         # TODO: the normalization here is wrong, fix it
         return spec * 1.0e10 / cv
 
-    def get_cx_flux(self, kT, collnpar, abund, He_frac, elem_abund=None):
-        spec = self.get_cx_spectrum(kT, collnpar, abund, He_frac, elem_abund)
-        # TODO: this is wrong, fix it
-        return spec.sum(axis=-1)
+    def make_fluxf(self, emin, emax, energy=False):
+        # spec = self.get_cx_spectrum(kT, collnpar, abund, He_frac, elem_abund)
+        # return spec.sum(axis=-1)
+        pass
 
 
 class Atable1DSpectralModel(ThermalSpectralModel):
