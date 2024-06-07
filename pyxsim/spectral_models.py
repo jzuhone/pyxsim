@@ -293,6 +293,23 @@ class CXSpectralModel(ThermalSpectralModel):
         self.var_elem_names = self.cxgen.var_elem_names
         self.atable = self.cxgen.atable
         self.de = np.diff(self.ebins)
+        self.model = self.cxgen.model
+        self.collntype = self.cxgen.collntype
+        self._cv = self.cxgen._cv
+
+    def prepare_spectrum(self, zobs):
+        self.model.set_ebins(self.ebins * (1.0 + zobs))
+
+    def get_cx_spectrum(self, kT, collnpar, abund, He_frac, elem_abund=None):
+        self.model.set_abund(elem_abund, elements=self.cxgen.elements)
+        self.model.set_temperature(kT)
+        self.model.set_donorabund(["H", "He"], [1 - He_frac, He_frac])
+        spec = self.model.calc_spectrum(collnpar)
+        cv = collnpar
+        if self.collntype == 1:
+            cv **= 0.5
+        cv *= self._cv
+        return spec * 1.0e10 / cv
 
 
 class Atable1DSpectralModel(ThermalSpectralModel):

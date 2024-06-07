@@ -357,6 +357,12 @@ class ThermalSourceModel(SourceModel):
             coll = np.ravel(chunk[self.collision_field].d)
         else:
             coll = None
+
+        if self.He_frac_field is not None:
+            He_f = np.ravel(chunk[self.He_frac_field].d)
+        else:
+            He_f = None
+
         if isinstance(self.h_fraction, Number):
             X_H = self.h_fraction
         else:
@@ -459,16 +465,27 @@ class ThermalSourceModel(SourceModel):
                     cspec, mspec, vspec = self.spectral_model.get_spectrum(kTi, nHi)
                 elif self._cx:
                     colli = coll[ibegin:iend]
-                    cspec, mspec, vspec = self.spectral_model.get_spectrum(kTi, colli)
+                    meti = metalZ[ibegin:iend]
+                    Hei = He_f[ibegin:iend]
+                    if self.num_var_elem > 0:
+                        ei = elemZ[:, ibegin:iend]
+                    else:
+                        ei = None
+                    cx_spec = self.spectral_model.get_cx_spectrum(
+                        kTi, colli, meti, Hei, elem_abund=ei
+                    )
                 else:
                     cspec, mspec, vspec = self.spectral_model.get_spectrum(kTi)
 
-                tot_spec = cspec
-                tot_spec += metalZ[ibegin:iend, np.newaxis] * mspec
-                if self.num_var_elem > 0:
-                    tot_spec += np.sum(
-                        elemZ[:, ibegin:iend, np.newaxis] * vspec, axis=0
-                    )
+                if self._cx:
+                    tot_spec = cx_spec
+                else:
+                    tot_spec = cspec
+                    tot_spec += metalZ[ibegin:iend, np.newaxis] * mspec
+                    if self.num_var_elem > 0:
+                        tot_spec += np.sum(
+                            elemZ[:, ibegin:iend, np.newaxis] * vspec, axis=0
+                        )
                 np.clip(tot_spec, 0.0, None, out=tot_spec)
 
                 if mode == "photons":
@@ -527,14 +544,25 @@ class ThermalSourceModel(SourceModel):
                     cflux, mflux, vflux = fluxf(kTi, nHi)
                 elif self._cx:
                     colli = coll[ibegin:iend]
-                    cflux, mflux, vflux = fluxf(kTi, colli)
+                    meti = metalZ[ibegin:iend]
+                    Hei = He_f[ibegin:iend]
+                    if self.num_var_elem > 0:
+                        ei = elemZ[:, ibegin:iend]
+                    else:
+                        ei = None
+                    cx_flux = self.spectral_model.get_cx_flux(
+                        kTi, colli, meti, Hei, elem_abund=ei
+                    )
                 else:
                     cflux, mflux, vflux = fluxf(kTi)
 
-                tot_flux = cflux
-                tot_flux += metalZ[ibegin:iend] * mflux
-                if self.num_var_elem > 0:
-                    tot_flux += np.sum(elemZ[:, ibegin:iend] * vflux, axis=0)
+                if self._cx:
+                    tot_flux = cx_flux
+                else:
+                    tot_flux = cflux
+                    tot_flux += metalZ[ibegin:iend] * mflux
+                    if self.num_var_elem > 0:
+                        tot_flux += np.sum(elemZ[:, ibegin:iend] * vflux, axis=0)
 
                 ret[idxs[ibegin:iend]] = tot_flux * cnm
 
@@ -1104,6 +1132,7 @@ class CXSourceModel(ThermalSourceModel):
         temperature_field=("gas", "temperature"),
         emission_measure_field=("gas", "emission_measure"),
         collision_field=("gas", "collision_parameter"),
+        He_frac_field=("gas", "He_donor_fraction"),
         h_fraction=None,
         kT_min=0.00431,
         kT_max=64.0,
@@ -1145,6 +1174,7 @@ class CXSourceModel(ThermalSourceModel):
             emission_measure_field=emission_measure_field,
         )
         self.collision_field = collision_field
+        self.He_frac_field = He_frac_field
         self.collntype = collntype
         self.acx_model = acx_model
         self.recomb_type = recomb_type
@@ -1152,6 +1182,7 @@ class CXSourceModel(ThermalSourceModel):
     def _prep_repr(self):
         class_name, strs = super()._prep_repr()
         strs["collision_field"] = self.collision_field
+        strs["He_frac_field"] = self.He_frac_field
         strs["collntype"] = self.collntype
         strs["acx_model"] = self.acx_model
         strs["recomb_type"] = self.recomb_type
