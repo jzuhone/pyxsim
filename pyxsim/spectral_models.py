@@ -296,20 +296,33 @@ class CXSpectralModel(ThermalSpectralModel):
         self.model = self.cxgen.model
         self.collntype = self.cxgen.collntype
         self._cv = self.cxgen._cv
+        self.num_elements = self.cxgen.num_elements
 
     def prepare_spectrum(self, zobs):
         self.model.set_ebins(self.ebins * (1.0 + zobs))
 
     def get_cx_spectrum(self, kT, collnpar, abund, He_frac, elem_abund=None):
-        self.model.set_abund(elem_abund, elements=self.cxgen.elements)
-        self.model.set_temperature(kT)
-        self.model.set_donorabund(["H", "He"], [1 - He_frac, He_frac])
-        spec = self.model.calc_spectrum(collnpar)
+        ncells = kT.size
+        spec = np.zeros((ncells, self.nbins))
+        abunds = abund[:, np.newaxis] * np.ones((ncells, self.num_elements))
+        if elem_abund is not None:
+            abunds[:, self.cxgen.var_elem_idxs] = elem_abund
+        for i in range(ncells):
+            self.model.set_abund(abunds[i], elements=self.cxgen.elements)
+            self.model.set_temperature(kT[i])
+            self.model.set_donorabund(["H", "He"], [1 - He_frac[i], He_frac[i]])
+            spec[i, :] = self.model.calc_spectrum(collnpar[i])
         cv = collnpar
         if self.collntype == 1:
             cv **= 0.5
         cv *= self._cv
+        # TODO: the normalization here is wrong, fix it
         return spec * 1.0e10 / cv
+
+    def get_cx_flux(self, kT, collnpar, abund, He_frac, elem_abund=None):
+        spec = self.get_cx_spectrum(kT, collnpar, abund, He_frac, elem_abund)
+        # TODO: this is wrong, fix it
+        return spec.sum(axis=-1)
 
 
 class Atable1DSpectralModel(ThermalSpectralModel):
