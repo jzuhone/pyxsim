@@ -85,6 +85,7 @@ class ThermalSourceModel(SourceModel):
         self.density_field = None  # Will be determined later
         self.nh_field = None  # Will be set by the subclass
         self.collision_field = None  # Will be set by the subclass
+        self.He_frac_field = None
         self.max_density = max_density
         self.min_entropy = min_entropy
         self.tot_num_cells = 0  # Will be determined later
