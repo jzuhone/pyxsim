@@ -466,27 +466,16 @@ class ThermalSourceModel(SourceModel):
                     cspec, mspec, vspec = self.spectral_model.get_spectrum(kTi, nHi)
                 elif self._cx:
                     colli = coll[ibegin:iend]
-                    meti = metalZ[ibegin:iend]
-                    Hei = He_f[ibegin:iend]
-                    if self.num_var_elem > 0:
-                        ei = elemZ[:, ibegin:iend]
-                    else:
-                        ei = None
-                    cx_spec = self.spectral_model.get_cx_spectrum(
-                        kTi, colli, meti, Hei, elem_abund=ei
-                    )
+                    cspec, mspec, vspec = self.spectral_model.get_spectrum(kTi, colli)
                 else:
                     cspec, mspec, vspec = self.spectral_model.get_spectrum(kTi)
 
-                if self._cx:
-                    tot_spec = cx_spec
-                else:
-                    tot_spec = cspec
-                    tot_spec += metalZ[ibegin:iend, np.newaxis] * mspec
-                    if self.num_var_elem > 0:
-                        tot_spec += np.sum(
-                            elemZ[:, ibegin:iend, np.newaxis] * vspec, axis=0
-                        )
+                tot_spec = cspec
+                tot_spec += metalZ[ibegin:iend, np.newaxis] * mspec
+                if self.num_var_elem > 0:
+                    tot_spec += np.sum(
+                        elemZ[:, ibegin:iend, np.newaxis] * vspec, axis=0
+                    )
                 np.clip(tot_spec, 0.0, None, out=tot_spec)
 
                 if mode == "photons":
