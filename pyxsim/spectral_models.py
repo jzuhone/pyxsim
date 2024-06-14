@@ -5,13 +5,14 @@ Photon emission and absoprtion models.
 import numpy as np
 from scipy.interpolate import interp1d
 from soxs.constants import K_per_keV
-from soxs.spectra import get_tbabs_absorb, get_wabs_absorb
-from soxs.thermal_spectra import (
+from soxs.spectra import (
     ACX2Generator,
     CIEGenerator,
     CloudyCIEGenerator,
     IGMGenerator,
     MekalGenerator,
+    get_tbabs_absorb,
+    get_wabs_absorb,
 )
 from soxs.utils import parse_prng, regrid_spectrum
 from yt.units.yt_array import YTArray, YTQuantity
@@ -269,6 +270,7 @@ class CXSpectralModel(ThermalSpectralModel):
         emin,
         emax,
         nbins,
+        He_frac,
         collntype=1,
         acx_model=8,
         recomb_type=1,
@@ -297,27 +299,25 @@ class CXSpectralModel(ThermalSpectralModel):
         self.collntype = self.cxgen.collntype
         self._cv = self.cxgen._cv
         self.num_elements = self.cxgen.num_elements
+        self.cxgen.model.set_donorabund(["H", "He"], [1 - He_frac, He_frac])
 
     def prepare_spectrum(self, zobs):
         self.model.set_ebins(self.ebins * (1.0 + zobs))
+        cosmic_spec, metal_spec, var_spec = self.cxgen._get_table(
+            list(range(self.idx_min, self.idx_max)), zobs, 0.0
+        )
+        self.cosmic_spec = cosmic_spec
+        self.metal_spec = metal_spec
+        self.var_spec = var_spec
+        self.si = SpectralInterpolator1D(
+            self.Tvals, self.cosmic_spec, self.metal_spec, self.var_spec
+        )
 
-    def get_cx_spectrum(self, kT, collnpar, abund, He_frac, elem_abund=None):
-        ncells = kT.size
-        spec = np.zeros((ncells, self.nbins))
-        abunds = abund[:, np.newaxis] * np.ones((ncells, self.num_elements))
-        if elem_abund is not None:
-            abunds[:, self.cxgen.var_elem_idxs] = elem_abund
-        for i in range(ncells):
-            self.model.set_abund(abunds[i], elements=self.cxgen.elements)
-            self.model.set_temperature(kT[i])
-            self.model.set_donorabund(["H", "He"], [1 - He_frac[i], He_frac[i]])
-            spec[i, :] = self.model.calc_spectrum(collnpar[i])
-        cv = collnpar
-        if self.collntype == 1:
-            cv **= 0.5
-        cv *= self._cv
-        # TODO: the normalization here is wrong, fix it
-        return spec * 1.0e10 / cv
+    def get_spectrum(self, kT, collnpar):
+        cspec = None
+        mspec = None
+        vspec = None
+        return cspec, mspec, vspec
 
     def make_fluxf(self, emin, emax, energy=False):
         # spec = self.get_cx_spectrum(kT, collnpar, abund, He_frac, elem_abund)
