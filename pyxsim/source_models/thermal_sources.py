@@ -165,7 +165,8 @@ class ThermalSourceModel(SourceModel):
                 "found. If you do not have species fields in "
                 "your dataset, you may need to set "
                 "default_species_fields='ionized' in the call "
-                "to yt.load()."
+                "to yt.load(), or set them up using Trident, or "
+                "manually."
             )
         self.temperature_field = ds._get_field_info(self.temperature_field).name
         fields = [self.emission_measure_field, self.temperature_field]
