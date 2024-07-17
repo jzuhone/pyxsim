@@ -310,6 +310,7 @@ class CXSpectralModel:
             binscale=binscale,
             abund_table=abund_table,
         )
+        self.model_vers = self.cxgen.model_vers
         self.var_elem_names = []
         self.var_ion_names = []
         self.ions = []
