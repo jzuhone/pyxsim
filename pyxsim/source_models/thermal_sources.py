@@ -84,8 +84,9 @@ class ThermalSourceModel(SourceModel):
         self.emission_measure_field = emission_measure_field
         self.density_field = None  # Will be determined later
         self.nh_field = None  # Will be set by the subclass
-        self.collision_field = None  # Will be set by the subclass
-        self.He_frac_field = None
+        self.collnpar = None  # Will be set by the subclass
+        self.h_p0_fraction = None  # Will be set by the subclass
+        self.he_p0_fraction = None  # Will be set by the subclass
         self.max_density = max_density
         self.min_entropy = min_entropy
         self.tot_num_cells = 0  # Will be determined later
@@ -170,7 +171,7 @@ class ThermalSourceModel(SourceModel):
         fields = [self.emission_measure_field, self.temperature_field]
         self.ftype = ftype
         self.redshift = redshift
-        if not self._nei and not isinstance(self.Zmet, Number):
+        if not (self._nei or self._cx) and not isinstance(self.Zmet, Number):
             zfield = ds._get_field_info(self.Zmet)
             Z_units = str(zfield.units)
             self.Zmet = zfield.name
@@ -213,6 +214,12 @@ class ThermalSourceModel(SourceModel):
         if not isinstance(self.h_fraction, Number):
             self.h_fraction = ds._get_field_info(self.h_fraction).name
             fields.append(self.h_fraction)
+        if self.h_p0_fraction and not isinstance(self.h_p0_fraction, Number):
+            self.h_p0_fraction = ds._get_field_info(self.h_p0_fraction).name
+            fields.append(self.h_p0_fraction)
+        if self.he_p0_fraction and not isinstance(self.he_p0_fraction, Number):
+            self.he_p0_fraction = ds._get_field_info(self.he_p0_fraction).name
+            fields.append(self.he_p0_fraction)
         ftypes = np.array([f[0] for f in fields])
         if not np.all(ftypes == ftype):
             mylog.warning(
@@ -224,8 +231,12 @@ class ThermalSourceModel(SourceModel):
         mylog.info("Using temperature field '%s'.", self.temperature_field)
         if self.nh_field is not None:
             mylog.info("Using nH field '%s'.", self.nh_field)
-        if self.collision_field is not None:
-            mylog.info("Using collision field '%s'.", self.collision_field)
+        if self.collnpar is not None:
+            mylog.info("Using collnpar '%s'.", self.collnpar)
+        if self.h_p0_fraction is not None:
+            mylog.info("Using h_p0_fraction '%s'.", self.h_p0_fraction)
+        if self.he_p0_fraction is not None:
+            mylog.info("Using he_p0_fraction '%s'.", self.he_p0_fraction)
         self.spectral_model.prepare_spectrum(redshift)
         if mode in ["photons", "spectrum"]:
             self.setup_pbar(data_source, self.temperature_field)
@@ -354,15 +365,23 @@ class ThermalSourceModel(SourceModel):
         else:
             nH = None
 
-        if self.collision_field is not None:
-            coll = np.ravel(chunk[self.collision_field].d)
+        if self._cx:
+            if isinstance(self.collnpar, Number):
+                coll = self.collnpar
+            else:
+                coll = np.ravel(chunk[self.collnpar].d)
+            if isinstance(self.h_p0_fraction, Number):
+                h_f = self.h_p0_fraction
+            else:
+                h_f = np.ravel(chunk[self.h_p0_fraction].d)
+            if isinstance(self.he_p0_fraction, Number):
+                he_f = self.he_p0_fraction
+            else:
+                he_f = np.ravel(chunk[self.he_p0_fraction].d)
         else:
             coll = None
-
-        if self.He_frac_field is not None:
-            He_f = np.ravel(chunk[self.He_frac_field].d)
-        else:
-            He_f = None
+            h_f = None
+            he_f = None
 
         if isinstance(self.h_fraction, Number):
             X_H = self.h_fraction
@@ -380,19 +399,28 @@ class ThermalSourceModel(SourceModel):
         elif num_cells == 0:
             # Here, we have no active cells, and so we
             # return an array of zeros with the original shape.
-            # But yt needs to know that we may depend on the metallicity
-            # or abundance fields, so we check for that here. Very hacky!
+            # But yt needs to know that we may depend on various
+            # fields, so we check for them here. Very hacky!
             if not isinstance(self.Zmet, Number):
-                chunk[self.Zmet]
+                _ = chunk[self.Zmet]
+            if self._cx:
+                if not isinstance(self.collnpar, Number):
+                    _ = chunk[self.collnpar]
+                if not isinstance(self.h_p0_fraction, Number):
+                    _ = chunk[self.h_p0_fraction]
+                if not isinstance(self.he_p0_fraction, Number):
+                    _ = chunk[self.he_p0_fraction]
             if self.num_var_elem > 0:
-                elem_keys = self.var_ion_keys if self._nei else self.var_elem_keys
+                elem_keys = (
+                    self.var_ion_keys if (self._nei or self._cx) else self.var_elem_keys
+                )
                 for key in elem_keys:
                     value = self.var_elem[key]
                     if not isinstance(value, Number):
-                        chunk[value]
+                        _ = chunk[value]
             # We also need to do this for the velocity fields if we use them
             if mode in ["spectrum", "intensity", "photon_intensity"] and shifting:
-                chunk[self.ftype, "velocity_magnitude"]
+                _ = chunk[self.ftype, "velocity_magnitude"]
             return np.zeros(orig_shape)
 
         if mode in ["spectrum", "intensity", "photon_intensity"] and shifting:
@@ -404,12 +432,24 @@ class ThermalSourceModel(SourceModel):
         cell_nrm = cell_nrm[cut]
         if nH is not None:
             nH = nH[cut]
-        if coll is not None:
-            coll = coll[cut]
+        if self._cx:
+            if isinstance(self.collnpar, Number):
+                coll = coll * np.ones(num_cells)
+            else:
+                coll = coll[cut]
+            if isinstance(self.h_p0_fraction, Number):
+                h_f = h_f * np.ones(num_cells)
+            else:
+                h_f = h_f[cut]
+            if isinstance(self.he_p0_fraction, Number):
+                he_f = he_f * np.ones(num_cells)
+            else:
+                he_f = he_f[cut]
+
         if not isinstance(X_H, Number):
             X_H = X_H[cut]
 
-        if self._nei:
+        if self._nei or self._cx:
             metalZ = np.zeros(num_cells)
             elem_keys = self.var_ion_keys
         else:
@@ -460,22 +500,38 @@ class ThermalSourceModel(SourceModel):
             kTi = kT[ibegin:iend]
 
             shifti = shift[ibegin:iend]
-            if mode in ["photons", "spectrum"] or shifted_intensity:
-                if self._density_dependence:
-                    nHi = nH[ibegin:iend]
-                    cspec, mspec, vspec = self.spectral_model.get_spectrum(kTi, nHi)
-                elif self._cx:
-                    colli = coll[ibegin:iend]
-                    cspec, mspec, vspec = self.spectral_model.get_spectrum(kTi, colli)
-                else:
-                    cspec, mspec, vspec = self.spectral_model.get_spectrum(kTi)
+            if self._cx:
+                colli = coll[ibegin:iend]
+                hi = h_f[ibegin:iend]
+                hei = he_f[ibegin:iend]
+            else:
+                colli = None
+                hi = None
+                hei = None
+            if self._density_dependence:
+                nHi = nH[ibegin:iend]
+            else:
+                nHi = None
 
-                tot_spec = cspec
-                tot_spec += metalZ[ibegin:iend, np.newaxis] * mspec
-                if self.num_var_elem > 0:
-                    tot_spec += np.sum(
-                        elemZ[:, ibegin:iend, np.newaxis] * vspec, axis=0
+            if mode in ["photons", "spectrum"] or shifted_intensity:
+                if self._cx:
+                    h_spec, he_spec = self.spectral_model.get_spectrum(colli)
+                    tot_spec = np.sum(
+                        elemZ[:, ibegin:iend, np.newaxis]
+                        * (hi * h_spec + hei * he_spec),
+                        axis=0,
                     )
+                else:
+                    if self._density_dependence:
+                        cspec, mspec, vspec = self.spectral_model.get_spectrum(kTi, nHi)
+                    else:
+                        cspec, mspec, vspec = self.spectral_model.get_spectrum(kTi)
+                    tot_spec = cspec
+                    tot_spec += metalZ[ibegin:iend, np.newaxis] * mspec
+                    if self.num_var_elem > 0:
+                        tot_spec += np.sum(
+                            elemZ[:, ibegin:iend, np.newaxis] * vspec, axis=0
+                        )
                 np.clip(tot_spec, 0.0, None, out=tot_spec)
 
                 if mode == "photons":
@@ -529,24 +585,16 @@ class ThermalSourceModel(SourceModel):
                     self.efluxf if mode in ["luminosity", "intensity"] else self.pfluxf
                 )
 
-                if self._density_dependence:
-                    nHi = nH[ibegin:iend]
-                    cflux, mflux, vflux = fluxf(kTi, nHi)
-                elif self._cx:
-                    colli = coll[ibegin:iend]
-                    meti = metalZ[ibegin:iend]
-                    Hei = He_f[ibegin:iend]
-                    if self.num_var_elem > 0:
-                        ei = elemZ[:, ibegin:iend]
-                    else:
-                        ei = None
-                    cx_flux = fluxf(kTi, colli, meti, Hei, elem_abund=ei)
-                else:
-                    cflux, mflux, vflux = fluxf(kTi)
-
                 if self._cx:
-                    tot_flux = cx_flux
+                    h_flux, he_flux = fluxf(kTi, colli, hi, hei)
+                    tot_flux = np.sum(
+                        elemZ[:, ibegin:iend] * (hi * h_flux + hei * he_flux), axis=0
+                    )
                 else:
+                    if self._density_dependence:
+                        cflux, mflux, vflux = fluxf(kTi, nHi)
+                    else:
+                        cflux, mflux, vflux = fluxf(kTi)
                     tot_flux = cflux
                     tot_flux += metalZ[ibegin:iend] * mflux
                     if self.num_var_elem > 0:
@@ -630,7 +678,7 @@ class IGMSourceModel(ThermalSourceModel):
         the appropriate value for the Feldman abundance table.
     kT_min : float, optional
         The default minimum temperature in keV to compute emission for.
-        Default: 0.00431
+        Default: 0.025
     kT_max : float, optional
         The default maximum temperature in keV to compute emission for.
         Default: 64.0
@@ -684,7 +732,7 @@ class IGMSourceModel(ThermalSourceModel):
         temperature_field=("gas", "temperature"),
         emission_measure_field=("gas", "emission_measure"),
         h_fraction=None,
-        kT_min=0.00431,
+        kT_min=0.025,
         kT_max=64.0,
         max_density=None,
         min_entropy=None,
@@ -1032,7 +1080,7 @@ class NEISourceModel(CIESourceModel):
 
     Examples
     --------
-    >>> var_elem = {"H^1": ("flash", "h   "),
+    >>> var_elem = {"H^0": ("flash", "h   "),
     >>>             "He^0": ("flash", "he  "),
     >>>             "He^1": ("flash", "he1 "),
     >>>             "He^2": ("flash", "he2 "),
@@ -1112,21 +1160,23 @@ class CXSourceModel(ThermalSourceModel):
         emin,
         emax,
         nbins,
-        Zmet,
+        collnpar,
+        h_p0_fraction,
+        he_p0_fraction,
+        var_elem,
         collntype=1,
         acx_model=8,
         recomb_type=1,
+        vmin=10.0,
+        vmax=10000.0,
+        nbins_v=1000,
         binscale="linear",
-        temperature_field=("gas", "temperature"),
         emission_measure_field=("gas", "emission_measure"),
-        collision_field=("gas", "collision_parameter"),
-        He_frac_field=("gas", "He_donor_fraction"),
         h_fraction=None,
-        kT_min=0.00431,
+        kT_min=0.025,
         kT_max=64.0,
         max_density=None,
         min_entropy=None,
-        var_elem=None,
         method="invert_cdf",
         abund_table="angr",
         prng=None,
@@ -1135,6 +1185,9 @@ class CXSourceModel(ThermalSourceModel):
             emin,
             emax,
             nbins,
+            vmin,
+            vmax,
+            nbins_v,
             collntype=collntype,
             acx_model=acx_model,
             recomb_type=recomb_type,
@@ -1147,7 +1200,7 @@ class CXSourceModel(ThermalSourceModel):
             emin,
             emax,
             nbins,
-            Zmet,
+            0.0,
             binscale=binscale,
             kT_min=kT_min,
             kT_max=kT_max,
@@ -1157,21 +1210,24 @@ class CXSourceModel(ThermalSourceModel):
             method=method,
             abund_table=abund_table,
             prng=prng,
-            temperature_field=temperature_field,
             h_fraction=h_fraction,
             emission_measure_field=emission_measure_field,
         )
-        self.collision_field = collision_field
-        self.He_frac_field = He_frac_field
+        self.collnpar = collnpar
+        self.h_p0_fraction = h_p0_fraction
+        self.he_p0_fraction = he_p0_fraction
         self.collntype = collntype
         self.acx_model = acx_model
         self.recomb_type = recomb_type
+        self.var_elem_keys = self.spectral_model.var_elem_names
+        self.var_ion_keys = self.spectral_model.var_ion_names
 
     def _prep_repr(self):
         class_name, strs = super()._prep_repr()
-        strs["collision_field"] = self.collision_field
-        strs["He_frac_field"] = self.He_frac_field
+        strs["collnpar"] = self.collnpar
         strs["collntype"] = self.collntype
         strs["acx_model"] = self.acx_model
         strs["recomb_type"] = self.recomb_type
+        strs.pop("model")
+        strs.pop("Zmet")
         return class_name, strs

@@ -4,20 +4,20 @@ Photon emission and absoprtion models.
 
 import numpy as np
 from scipy.interpolate import interp1d
-from soxs.constants import K_per_keV
+from soxs.constants import K_per_keV, elem_names
 from soxs.spectra import (
-    ACX2Generator,
     CIEGenerator,
     CloudyCIEGenerator,
     IGMGenerator,
     MekalGenerator,
+    OneACX2Generator,
     get_tbabs_absorb,
     get_wabs_absorb,
 )
 from soxs.utils import parse_prng, regrid_spectrum
 from yt.units.yt_array import YTArray, YTQuantity
 
-from pyxsim.lib.interpolate import interp1d_spec, interp2d_spec
+from pyxsim.lib.interpolate import interp1d_spec, interp2d_spec, interp_cx_spec
 
 
 class SpectralInterpolator1D:
@@ -81,6 +81,26 @@ class SpectralInterpolator2D:
             self.do_var,
         )
         return c_vals, m_vals, v_vals
+
+
+class SpectralInterpolatorCX:
+    def __init__(self, vbins, h_spec, he_spec):
+        self.vbins = vbins.astype("float64")
+        self.h_spec = h_spec
+        self.he_spec = he_spec
+
+    def __call__(self, v_vals):
+        x_i = (np.digitize(v_vals, self.vbins) - 1).astype("int32")
+        if np.any((x_i == -1) | (x_i == len(self.vbins) - 1)):
+            x_i = np.minimum(np.maximum(x_i, 0), len(self.vbins) - 2)
+        h_vals, he_vals = interp_cx_spec(
+            self.h_spec,
+            self.he_spec,
+            v_vals,
+            self.vbins,
+            x_i,
+        )
+        return h_vals, he_vals
 
 
 class ThermalSpectralModel:
@@ -264,21 +284,23 @@ class TableCIEModel(ThermalSpectralModel):
         )
 
 
-class CXSpectralModel(ThermalSpectralModel):
+class CXSpectralModel:
     def __init__(
         self,
         emin,
         emax,
         nbins,
-        He_frac,
+        vmin,
+        vmax,
+        nbins_v,
+        var_elem,
         collntype=1,
         acx_model=8,
         recomb_type=1,
         binscale="linear",
-        var_elem=None,
         abund_table="angr",
     ):
-        self.cxgen = ACX2Generator(
+        self.cxgen = OneACX2Generator(
             emin,
             emax,
             nbins,
@@ -286,38 +308,39 @@ class CXSpectralModel(ThermalSpectralModel):
             acx_model=acx_model,
             recomb_type=recomb_type,
             binscale=binscale,
-            var_elem=var_elem,
             abund_table=abund_table,
         )
+        self.var_elem_names = []
+        self.var_ion_names = []
+        self.ions = []
+        for elem in var_elem:
+            e, ion = elem.split("^")
+            self.var_elem_names.append(e)
+            self.var_ion_names.append(elem)
+            self.ions.append((elem_names.index(e), int(ion)))
+        self.vmin = np.log10(vmin)
+        self.vmax = np.log10(vmax)
+        self.nbins_v = nbins_v
+        self.v_bins = np.linspace(self.vmin, self.vmax, self.nbins_v + 1)
+        self.v_mid = 0.5 * (self.v_bins[:-1] + self.v_bins[1:])
         self.nbins = self.cxgen.nbins
         self.ebins = self.cxgen.ebins
         self.emid = self.cxgen.emid
-        self.var_elem_names = self.cxgen.var_elem_names
         self.atable = self.cxgen.atable
         self.de = np.diff(self.ebins)
         self.model = self.cxgen.model
         self.collntype = self.cxgen.collntype
-        self._cv = self.cxgen._cv
         self.num_elements = self.cxgen.num_elements
-        self.cxgen.model.set_donorabund(["H", "He"], [1 - He_frac, He_frac])
 
     def prepare_spectrum(self, zobs):
-        self.model.set_ebins(self.ebins * (1.0 + zobs))
-        cosmic_spec, metal_spec, var_spec = self.cxgen._get_table(
-            list(range(self.idx_min, self.idx_max)), zobs, 0.0
-        )
-        self.cosmic_spec = cosmic_spec
-        self.metal_spec = metal_spec
-        self.var_spec = var_spec
-        self.si = SpectralInterpolator1D(
-            self.Tvals, self.cosmic_spec, self.metal_spec, self.var_spec
-        )
+        h_spec, he_spec = self.cxgen.make_table(self.ions, 10**self.v_mid, zobs)
+        self.h_spec = h_spec
+        self.he_spec = he_spec
+        self.si = SpectralInterpolatorCX(self.v_mid, self.he_spec, self.he_spec)
 
-    def get_spectrum(self, kT, collnpar):
-        cspec = None
-        mspec = None
-        vspec = None
-        return cspec, mspec, vspec
+    def get_spectrum(self, coll):
+        coll = np.atleast_1d(coll)
+        return self.si(coll)
 
     def make_fluxf(self, emin, emax, energy=False):
         # spec = self.get_cx_spectrum(kT, collnpar, abund, He_frac, elem_abund)
