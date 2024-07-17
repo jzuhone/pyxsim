@@ -16,7 +16,7 @@ from pyxsim.spectral_models import (
     MekalSpectralModel,
     TableCIEModel,
 )
-from pyxsim.utils import compute_H_abund, mylog, parse_value
+from pyxsim.utils import compute_H_abund, isunitful, mylog, parse_value
 
 
 class ThermalSourceModel(SourceModel):
@@ -224,6 +224,8 @@ class ThermalSourceModel(SourceModel):
             mylog.info("Using nH field '%s'.", self.nh_field)
         if self.collnpar is not None:
             mylog.info("Using collnpar '%s'.", self.collnpar)
+            if isunitful(self.collnpar):
+                self.collnpar = parse_value(self.collnpar, "km/s")
         if self.h_p0_fraction is not None:
             mylog.info("Using h_p0_fraction '%s'.", self.h_p0_fraction)
         if self.he_p0_fraction is not None:
