@@ -159,7 +159,8 @@ def interp_cx_spec(np.ndarray[np.float64_t, ndim=3] h_table,
     cdef np.ndarray[np.float64_t, ndim=3] h_output, he_output
 
     nelem = <int>h_table.shape[0]
-    voutput = np.zeros((nelem, nt, ne))
+    h_output = np.zeros((nelem, nt, ne))
+    he_output = np.zeros((nelem, nt, ne))
 
     xp = np.zeros(nt)
     xm = np.zeros(nt)
