@@ -1165,7 +1165,6 @@ class CXSourceModel(ThermalSourceModel):
         h_p0_fraction,
         he_p0_fraction,
         var_elem,
-        collntype=1,
         acx_model=8,
         recomb_type=1,
         vmin=10.0,
@@ -1190,7 +1189,7 @@ class CXSourceModel(ThermalSourceModel):
             vmin,
             vmax,
             nbins_v,
-            collntype=collntype,
+            collntype=2,
             acx_model=acx_model,
             recomb_type=recomb_type,
             binscale=binscale,
@@ -1219,7 +1218,7 @@ class CXSourceModel(ThermalSourceModel):
         self.collnpar = collnpar
         self.h_p0_fraction = h_p0_fraction
         self.he_p0_fraction = he_p0_fraction
-        self.collntype = collntype
+        self.collntype = 2
         self.acx_model = acx_model
         self.recomb_type = recomb_type
         self.var_elem_keys = self.spectral_model.var_elem_names
