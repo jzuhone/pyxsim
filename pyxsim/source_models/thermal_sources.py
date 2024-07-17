@@ -1172,6 +1172,7 @@ class CXSourceModel(ThermalSourceModel):
         vmax=10000.0,
         nbins_v=1000,
         binscale="linear",
+        temperature_field=("gas", "temperature"),
         emission_measure_field=("gas", "emission_measure_cx"),
         h_fraction=None,
         kT_min=0.025,
@@ -1212,6 +1213,7 @@ class CXSourceModel(ThermalSourceModel):
             abund_table=abund_table,
             prng=prng,
             h_fraction=h_fraction,
+            temperature_field=temperature_field,
             emission_measure_field=emission_measure_field,
         )
         self.collnpar = collnpar
