@@ -1172,7 +1172,7 @@ class CXSourceModel(ThermalSourceModel):
         recomb_type=1,
         vmin=10.0,
         vmax=10000.0,
-        nbins_v=1000,
+        nbins_v=100,
         binscale="linear",
         temperature_field=("gas", "temperature"),
         emission_measure_field=("gas", "emission_measure_cx"),
