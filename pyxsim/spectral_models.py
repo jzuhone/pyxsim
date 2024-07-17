@@ -344,9 +344,26 @@ class CXSpectralModel:
         return self.si(coll)
 
     def make_fluxf(self, emin, emax, energy=False):
-        # spec = self.get_cx_spectrum(kT, collnpar, abund, He_frac, elem_abund)
-        # return spec.sum(axis=-1)
-        pass
+        eidxs = (self.ebins[:-1] > emin) & (self.ebins[1:] < emax)
+        emid = self.emid[eidxs]
+        if energy:
+            h_flux = (self.h_spec[:, :, eidxs] * emid).sum(axis=-1)
+            he_flux = (self.he_spec[:, :, eidxs] * emid).sum(axis=-1)
+        else:
+            h_flux = self.h_spec[:, :, eidxs].sum(axis=-1)
+            he_flux = self.he_spec[:, :, eidxs].sum(axis=-1)
+        h_f = interp1d(
+            self.v_mid, h_flux, axis=1, fill_value=0.0, assume_sorted=True, copy=False
+        )
+        he_f = interp1d(
+            self.v_mid, he_flux, axis=1, fill_value=0.0, assume_sorted=True, copy=False
+        )
+
+        def _fluxf(v):
+            logv = np.log10(v)
+            return h_f(logv), he_f(logv)
+
+        return _fluxf
 
 
 class Atable1DSpectralModel(ThermalSpectralModel):
