@@ -236,7 +236,7 @@ class ThermalSourceModel(SourceModel):
         if self.collnpar is not None:
             mylog.info("Using collnpar '%s'.", self.collnpar)
             if isunitful(self.collnpar):
-                self.collnpar = parse_value(self.collnpar, "km/s")
+                self.collnpar = float(parse_value(self.collnpar, "km/s").v)
         if self.h_p0_fraction is not None:
             mylog.info("Using h_p0_fraction '%s'.", self.h_p0_fraction)
         if self.he_p0_fraction is not None:
@@ -590,7 +590,7 @@ class ThermalSourceModel(SourceModel):
                 )
 
                 if self._cx:
-                    h_flux, he_flux = fluxf(kTi, colli, hi, hei)
+                    h_flux, he_flux = fluxf(colli)
                     tot_flux = np.sum(
                         elemZ[:, ibegin:iend] * (hi * h_flux + hei * he_flux), axis=0
                     )
