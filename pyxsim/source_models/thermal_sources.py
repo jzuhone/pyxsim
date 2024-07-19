@@ -523,13 +523,10 @@ class ThermalSourceModel(SourceModel):
             if mode in ["photons", "spectrum"] or shifted_intensity:
                 if self._cx:
                     h_spec, he_spec = self.spectral_model.get_spectrum(colli)
-                    tot_spec = (
-                        np.sum(
-                            elemZ[:, ibegin:iend, np.newaxis]
-                            * (hi * h_spec + hei * he_spec),
-                            axis=0,
-                        )
-                        / colli
+                    tot_spec = np.sum(
+                        elemZ[:, ibegin:iend, np.newaxis]
+                        * (hi * h_spec + hei * he_spec),
+                        axis=0,
                     )
                 else:
                     if self._density_dependence:
@@ -597,12 +594,9 @@ class ThermalSourceModel(SourceModel):
 
                 if self._cx:
                     h_flux, he_flux = fluxf(colli)
-                    tot_flux = (
-                        np.sum(
-                            elemZ[:, ibegin:iend] * (hi * h_flux + hei * he_flux),
-                            axis=0,
-                        )
-                        / colli
+                    tot_flux = np.sum(
+                        elemZ[:, ibegin:iend] * (hi * h_flux + hei * he_flux),
+                        axis=0,
                     )
                 else:
                     if self._density_dependence:
