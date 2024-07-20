@@ -1017,7 +1017,7 @@ class NEISourceModel(CIESourceModel):
     nbins : integer
         The number of channels in the spectrum.
     var_elem : dictionary
-        Abundances of elements. Each dictionary value, specified by the abundance
+        Abundances of ions. Each dictionary value, specified by the ionic
         symbol, corresponds to the abundance of that symbol. If a float, it is
         understood to be constant and in solar units. If a string or tuple of
         strings, it is assumed to be a spatially varying field.
@@ -1088,20 +1088,21 @@ class NEISourceModel(CIESourceModel):
 
     Examples
     --------
-    >>> var_elem = {"H^0": ("flash", "h   "),
-    >>>             "He^0": ("flash", "he  "),
-    >>>             "He^1": ("flash", "he1 "),
-    >>>             "He^2": ("flash", "he2 "),
-    >>>             "O^0": ("flash", "o   "),
-    >>>             "O^1": ("flash", "o1  "),
-    >>>             "O^2": ("flash", "o2  "),
-    >>>             "O^3": ("flash", "o3  "),
-    >>>             "O^4": ("flash", "o4  "),
-    >>>             "O^5": ("flash", "o5  "),
-    >>>             "O^6": ("flash", "o6  "),
-    >>>             "O^7": ("flash", "o7  "),
-    >>>             "O^8": ("flash", "o8  ")
-    >>>            }
+    >>> var_elem = {
+    ...     "H^0":  ("flash", "h   "),
+    ...     "He^0": ("flash", "he  "),
+    ...     "He^1": ("flash", "he1 "),
+    ...     "He^2": ("flash", "he2 "),
+    ...     "O^0":  ("flash", "o   "),
+    ...     "O^1":  ("flash", "o1  "),
+    ...     "O^2":  ("flash", "o2  "),
+    ...     "O^3":  ("flash", "o3  "),
+    ...     "O^4":  ("flash", "o4  "),
+    ...     "O^5":  ("flash", "o5  "),
+    ...     "O^6":  ("flash", "o6  "),
+    ...     "O^7":  ("flash", "o7  "),
+    ...     "O^8":  ("flash", "o8  ")
+    ... }
     >>> source_model = NEISourceModel(0.1, 10.0, 10000, var_elem)
     """
 
@@ -1161,6 +1162,124 @@ class NEISourceModel(CIESourceModel):
 
 
 class CXSourceModel(ThermalSourceModel):
+    """
+    This class generates a source model for emission from charge exchange,
+    using the AtomDB Charge Exchange Model, v2.0 (ACX2). It models the
+    emission obtained from collisions between neutral hydrogen/helium and
+    ions. The neutrals and the ion fields must be supplied, as detailed
+    below. The "collision parameter" must also be specified, which is the
+    relative velocity between the ions and the neutrals. This can be either
+    a single value or a spatially varying field. The emission spectrum is a
+    function of this parameter and is interpolated from a precomputed table
+    for each ion, the velocity bins for which can also be specified below.
+    Other ACX2 parameters can also be set. For the meaning of these parameters,
+    consult the ACX2 docs at https://acx2.readthedocs.io/.
+
+    To use this model, you must have the AtomDB Charge Exchange Model
+    package installed from https://github.com/AtomDB/ACX2, as well as the
+    pyatomdb package.
+
+    Parameters
+    ----------
+    emin : float
+        The minimum energy for the spectrum in keV.
+    emax : float
+        The maximum energy for the spectrum in keV.
+    nbins : integer
+        The number of channels in the spectrum.
+    collnpar : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
+        The collision parameter for the CX process, in units of velocity.
+        If a float, the units are assumed to be km/s. If set to a field name,
+        this will be a spatially varying collision parameter field.
+    h_p0_fraction : float, string, or tuple of strings
+        The neutral hydrogen mass fraction. If a float, assumes a constant mass
+        fraction throughout. If a tuple of strings, is taken to be the name of
+        the neutral hydrogen fraction field.
+    he_p0_fraction : float, string, or tuple of strings, optional
+        The neutral helium mass fraction. If a float, assumes a constant mass
+        fraction throughout. If a tuple of strings, is taken to be the name of
+        the neutral helium fraction field.
+    var_elem : dictionary
+        Abundances of ions. Each dictionary value, specified by the ionic symbol,
+        corresponds to the abundance of that symbol. If a float, it is understood
+        to be constant and in solar units. If a string or tuple of strings, it is
+        assumed to be a spatially varying field.
+    acx_model : integer, optional
+        ACX model to fall back on, from 1 to 8. Default: 8.
+    recomb_type : integer, optional
+        Single recombination (1) or all the way to neutral (2) Default: 1.
+    vmin : float, optional
+        The minimum value of the velocity table in km/s. Default: 10.0
+    vmax : float, optional
+        The maximum value of the velocity table in km/s. Default: 10000.0
+    nbins_v : integer, optional
+        The number of bins in the velocity table. Default: 100
+    binscale : string, optional
+        The scale of the energy binning: "linear" or "log".
+        Default: "linear"
+    temperature_field : string or (ftype, fname) tuple, optional
+        The yt temperature field to use for the thermal modeling. Must have
+        units of Kelvin. Default: ("gas","temperature")
+    emission_measure_field : string or (ftype, fname) tuple, optional
+        The emission measure field to use for the normalization. Must
+        have units of cm^-3. Default: ("gas", "emission_measure_cx")
+    h_fraction : float, string, or tuple of strings, optional
+        The hydrogen mass fraction. If a float, assumes a constant mass
+        fraction of hydrogen throughout. If a string or tuple of strings,
+        is taken to be the name of the hydrogen fraction field. Default is
+        whatever value is appropriate for the chosen abundance table.
+    kT_min : float, optional
+        The default minimum temperature in keV to compute emission for.
+        Default: 0.025
+    kT_max : float, optional
+        The default maximum temperature in keV to compute emission for.
+        Default: 64.0
+    max_density : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
+        The maximum density of the cells or particles to use when generating
+        photons. If a float, the units are assumed to be g/cm**3.
+        Default: None, meaning no maximum density.
+    min_entropy : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
+        The minimum entropy of the cells or particles to use when generating
+        photons. If a float, the units are assumed to be keV*cm**2.
+        Default: None, meaning no minimum entropy.
+    method : string, optional
+        The method used to generate the photon energies from the spectrum:
+        "invert_cdf": Invert the cumulative distribution function of the spectrum.
+        "accept_reject": Acceptance-rejection method using the spectrum.
+        The first method should be sufficient for most cases.
+    abund_table : string or array_like, optional
+        The abundance table to be used for solar abundances.
+        Either a string corresponding to a built-in table or an array
+        of 30 floats corresponding to the abundances of each element
+        relative to the abundance of H. Default is "angr".
+        Built-in options are:
+        "angr" : from Anders E. & Grevesse N. (1989, Geochimica et
+        Cosmochimica Acta 53, 197)
+        "aspl" : from Asplund M., Grevesse N., Sauval A.J. & Scott
+        P. (2009, ARAA, 47, 481)
+        "wilm" : from Wilms, Allen & McCray (2000, ApJ 542, 914
+        except for elements not listed which are given zero abundance)
+        "lodd" : from Lodders, K (2003, ApJ 591, 1220)
+        "feld" : from Feldman U. (Physica Scripta, 46, 202)
+        "cl17.03" : the abundance table used in Cloudy v17.03.
+    prng : integer or :class:`~numpy.random.RandomState` object
+        A pseudo-random number generator. Typically will only be specified
+        if you have a reason to generate the same set of random numbers,
+        such as for a test. Default is to use the :mod:`numpy.random` module.
+
+    Examples
+    --------
+    >>> var_elem = {
+    ...     "Si^12": ("flash", "si12"),
+    ...     "S^14":  ("flash", "s14 "),
+    ...     "Ar^16": ("flash", "ar16"),
+    ...     "Ca^18": ("flash", "ca18"),
+    ... }
+    >>> source_model = CXSourceModel(
+    ...     0.1, 3.0, 10000, ("gas", "coll_vell"), ("gas", "h_p0_fraction"),
+    ...     ("gas", "he_p0_fraction"), var_elem)
+    """
+
     _cx = True
 
     def __init__(
