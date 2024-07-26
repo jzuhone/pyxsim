@@ -154,8 +154,8 @@ def pixel_to_cel(np.ndarray[np.float64_t, ndim=1] xsky,
                  np.ndarray[np.float64_t, ndim=1] ysky,
                  np.ndarray[np.float64_t, ndim=1] sky_center):
 
-    cdef int i
-    cdef int n = xsky.size
+    cdef np.int64_t i
+    cdef np.int64_t n = xsky.size
     cdef np.float64_t B, D, cx, cy, sin_cy, cos_cy
     cdef np.float64_t PI = np.pi
 
