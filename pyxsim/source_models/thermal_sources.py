@@ -2,8 +2,8 @@ from numbers import Number
 
 import numpy as np
 from more_itertools import chunked
-from soxs.constants import abund_tables, atomic_weights, elem_names, metal_elem
-from soxs.utils import parse_prng, regrid_spectrum
+from soxs.constants import atomic_weights, elem_names, metal_elem
+from soxs.utils import _parse_abund_table, parse_prng, regrid_spectrum
 from unyt.array import unyt_quantity
 from yt.data_objects.static_output import Dataset
 from yt.utilities.exceptions import YTFieldNotFound
@@ -93,7 +93,8 @@ class ThermalSourceModel(SourceModel):
         self.pbar = None
         self.Zconvert = 1.0
         self.mconvert = {}
-        self.atable = abund_tables[abund_table].copy()
+        self.abund_table = abund_table
+        self.atable = _parse_abund_table(abund_table)
         if h_fraction is None:
             h_fraction = compute_H_abund(abund_table)
         self.h_fraction = h_fraction
