@@ -3,6 +3,12 @@
 ChangeLog
 =========
 
+Version 4.4.1
+-------------
+
+This version of pyXSIM contains a bugfix, where supplying an array of floats
+for abundance tables in thermal source models was not working correctly.
+
 Version 4.4.0
 -------------
 
