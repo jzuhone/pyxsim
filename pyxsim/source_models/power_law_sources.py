@@ -164,13 +164,7 @@ class PowerLawSourceModel(SourceModel):
                 norm *= spectral_norm * self.scale_factor
 
                 if self.observer == "internal":
-                    pos = np.array(
-                        [
-                            np.ravel(chunk[self.p_fields[i]].to_value("kpc"))
-                            for i in range(3)
-                        ]
-                    )
-                    r2 = self.compute_radius(pos)
+                    r2 = self.compute_radius(chunk)
                     norm /= r2
 
                 number_of_photons = self.prng.poisson(lam=norm)

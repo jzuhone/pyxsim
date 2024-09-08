@@ -364,13 +364,7 @@ class ThermalSourceModel(SourceModel):
                     elemZ[j, :] = np.ravel(eZ.d * fac)[cut]
 
         if self.observer == "internal" and mode == "photons":
-            pos = np.array(
-                [
-                    np.ravel(chunk[self.p_fields[i]].to_value("kpc"))[cut]
-                    for i in range(3)
-                ]
-            )
-            r2 = self.compute_radius(pos)
+            r2 = self.compute_radius(chunk, cut=cut)
             cell_nrm /= r2
 
         num_photons_max = 10000000

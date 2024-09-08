@@ -57,7 +57,12 @@ class SourceModel:
         self.periodicity = periodicity
         self.observer = observer
 
-    def compute_radius(self, pos):
+    def compute_radius(self, chunk, cut=None):
+        if cut is None:
+            cut = ...
+        pos = np.array(
+            [np.ravel(chunk[self.p_fields[i]].to_value("kpc"))[cut] for i in range(3)]
+        )
         for i in range(3):
             if self.periodicity[i]:
                 tfl = pos[i] < self.le[i]

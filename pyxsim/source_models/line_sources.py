@@ -161,13 +161,7 @@ class LineSourceModel(SourceModel):
         if mode == "photons":
             F = norm_field * spectral_norm * self.scale_factor
             if self.observer == "internal":
-                pos = np.array(
-                    [
-                        np.ravel(chunk[self.p_fields[i]].to_value("kpc"))
-                        for i in range(3)
-                    ]
-                )
-                r2 = self.compute_radius(pos)
+                r2 = self.compute_radius(chunk)
                 F /= r2
 
             number_of_photons = self.prng.poisson(lam=F.in_cgs().d)
