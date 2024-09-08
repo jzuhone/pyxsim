@@ -71,6 +71,16 @@ class SourceModel:
                 pos[:, tfr] -= self.dw[i]
         return np.sum((pos - self.c[:, np.newaxis]) ** 2, axis=0) * cm2_per_kpc2
 
+    def compute_shift(self, chunk, normal, cut=None):
+        if cut is None:
+            cut = ...
+        vel = np.array(
+            [np.ravel(chunk[self.v_fields[i]].to_value("c"))[cut] for i in range(3)]
+        )
+        beta_n = np.dot(normal, vel)
+        beta2 = np.sum(vel**2, axis=0)
+        return (1.0 - beta_n) / np.sqrt(1.0 - beta2)
+
     def cleanup_model(self, mode):
         # This needs to be implemented for every
         # source model specifically
