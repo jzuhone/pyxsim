@@ -16,7 +16,6 @@ from yt.utilities.parallel_tools.parallel_analysis_interface import (
     communication_system,
     parallel_objects,
 )
-from yt.utilities.physical_constants import clight
 
 from pyxsim import __version__ as pyxsim_version
 from pyxsim.lib.sky_functions import (
@@ -26,7 +25,7 @@ from pyxsim.lib.sky_functions import (
     scatter_events_allsky,
 )
 from pyxsim.spectral_models import absorb_models
-from pyxsim.utils import mylog, parse_value
+from pyxsim.utils import mylog, parse_value, scale_shift, scale_shift2
 
 comm = communication_system.communicators[-1]
 
@@ -524,9 +523,6 @@ def _project_photons(
         event_files = [event_file]
 
     sky_center = ensure_numpy_array(sky_center)
-
-    scale_shift = -1.0 / clight.to_value("km/s")
-    scale_shift2 = scale_shift * scale_shift
 
     if isinstance(absorb_model, str):
         if absorb_model not in absorb_models:
