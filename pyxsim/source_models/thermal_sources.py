@@ -15,7 +15,13 @@ from pyxsim.spectral_models import (
     MekalSpectralModel,
     TableCIEModel,
 )
-from pyxsim.utils import _parse_abund_table, compute_H_abund, mylog, parse_value
+from pyxsim.utils import (
+    _parse_abund_table,
+    compute_H_abund,
+    mylog,
+    parse_value,
+    sanitize_normal,
+)
 
 
 class ThermalSourceModel(SourceModel):
@@ -216,7 +222,15 @@ class ThermalSourceModel(SourceModel):
             self.setup_pbar(data_source, self.temperature_field)
 
     def make_spectrum(
-        self, data_source, emin, emax, nbins, redshift=0.0, dist=None, cosmology=None
+        self,
+        data_source,
+        emin,
+        emax,
+        nbins,
+        redshift=0.0,
+        dist=None,
+        cosmology=None,
+        normal=None,
     ):
         """
         Make a count rate spectrum in the source frame from a yt data container,
@@ -250,13 +264,16 @@ class ThermalSourceModel(SourceModel):
         :class:`~soxs.spectra.CountRateSpectrum` or :class:`~soxs.spectra.Spectrum`,
         depending on how the method is invoked.
         """
+        normal = sanitize_normal(normal)
         self.setup_model("spectrum", data_source, redshift)
         spectral_norm = 1.0
         spec = np.zeros(nbins)
         ebins = np.linspace(emin, emax, nbins + 1)
         for chunk in data_source.chunks([], "io"):
-            s = self.process_data("spectrum", chunk, spectral_norm)
-            spec += regrid_spectrum(ebins, self.ebins, s)
+            spec += self.process_data(
+                "spectrum", chunk, spectral_norm, normal=normal, spec_bins=ebins
+            )
+            # spec += regrid_spectrum(ebins, self.ebins, s)
         spec /= np.diff(ebins)
         self.cleanup_model("spectrum")
         return self._make_spectrum(
@@ -266,7 +283,9 @@ class ThermalSourceModel(SourceModel):
     def make_fluxf(self, emin, emax, energy=False):
         return self.spectral_model.make_fluxf(emin, emax, energy=energy)
 
-    def process_data(self, mode, chunk, spectral_norm, fluxf=None):
+    def process_data(
+        self, mode, chunk, spectral_norm, fluxf=None, normal=None, spec_bins=None
+    ):
         spec = np.zeros(self.nbins)
 
         orig_shape = chunk[self.temperature_field].shape
@@ -367,6 +386,11 @@ class ThermalSourceModel(SourceModel):
             r2 = self.compute_radius(chunk, cut=cut)
             cell_nrm /= r2
 
+        if normal is not None and mode == "spectrum":
+            shift = self.compute_shift(chunk, normal, cut=cut)
+        else:
+            shift = np.ones(num_cells)
+
         num_photons_max = 10000000
         number_of_photons = np.zeros(num_cells, dtype="int64")
         energies = np.zeros(num_photons_max)
@@ -433,7 +457,10 @@ class ThermalSourceModel(SourceModel):
                     start_e = end_e
 
                 elif mode == "spectrum":
-                    spec += np.sum(tot_spec * cnm[:, np.newaxis], axis=0)
+                    s = shift * tot_spec * cnm[:, np.newaxis]
+                    spec += np.sum(
+                        regrid_spectrum(self.ebins * shift, spec_bins, s), axis=0
+                    )
 
                 self.pbar.update(nck)
 

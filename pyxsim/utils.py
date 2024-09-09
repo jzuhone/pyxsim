@@ -263,3 +263,17 @@ class ParallelProgressBar:
 
     def close(self):
         mylog.info("Finishing %s", self.title)
+
+
+def sanitize_normal(normal):
+    if normal is None:
+        L = normal
+    elif isinstance(normal, (str, int)):
+        L = np.zeros(3)
+        if normal in "xyz":
+            normal = "xyz".index(normal)
+        L[normal] = 1.0
+    elif normal is not None:
+        L = np.array(normal)
+        L /= np.sqrt(np.dot(L, L))
+    return L
