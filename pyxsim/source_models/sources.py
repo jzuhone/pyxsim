@@ -79,7 +79,7 @@ class SourceModel:
         )
         beta_n = np.dot(normal, vel)
         beta2 = np.sum(vel**2, axis=0)
-        return (1.0 - beta_n) / np.sqrt(1.0 - beta2)
+        return np.sqrt(1.0 - beta2) / (1.0 - beta_n)
 
     def cleanup_model(self, mode):
         # This needs to be implemented for every

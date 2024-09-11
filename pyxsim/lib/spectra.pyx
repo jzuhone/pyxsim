@@ -40,16 +40,21 @@ def line_spectrum(
     np.ndarray[np.float64_t, ndim=1] N,
     pbar
 ):
-    cdef np.int64_t nbins = ee.size
-    cdef np.ndarray[np.float64_t, ndim=1] spec
+    cdef np.int64_t nbins = ee.size-1
+    cdef np.ndarray[np.float64_t, ndim=1] spec, ret, xtmp
     cdef int i, j
 
     spec = np.zeros(nbins)
+    ret = np.zeros(nbins+1)
+    xtmp = np.zeros(nbins+1)
 
     for i in range(num_cells):
-        xtmp = ee / sigma[i]
         for j in range(nbins):
-            ret = np.interp(xtmp, gx, gcdf)
-            spec[j] += N[i] * (ret[1:] - ret[:-1])
+            xtmp[j] = ee[j] / sigma[i]
+        ret = np.interp(xtmp, gx, gcdf)
+        for j in range(nbins):
+            spec[j] += N[i] * (ret[j+1] - ret[j])
+        pbar.update()
+    return spec
         pbar.update()
     return spec
