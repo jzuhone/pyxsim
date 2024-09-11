@@ -3,11 +3,12 @@ from numbers import Number
 import numpy as np
 from more_itertools import chunked
 from soxs.constants import atomic_weights, elem_names, metal_elem
-from soxs.utils import parse_prng, regrid_spectrum
+from soxs.utils import parse_prng
 from unyt.array import unyt_quantity
 from yt.data_objects.static_output import Dataset
 from yt.utilities.exceptions import YTFieldNotFound
 
+from pyxsim.lib.spectra import shift_spectrum
 from pyxsim.source_models.sources import SourceModel
 from pyxsim.spectral_models import (
     CloudyCIESpectralModel,
@@ -457,10 +458,7 @@ class ThermalSourceModel(SourceModel):
                     start_e = end_e
 
                 elif mode == "spectrum":
-                    s = shift * tot_spec * cnm[:, np.newaxis]
-                    spec += np.sum(
-                        regrid_spectrum(self.ebins * shift, spec_bins, s), axis=0
-                    )
+                    spec += shift_spectrum(self.ebins, spec_bins, tot_spec, shift, cnm)
 
                 self.pbar.update(nck)
 
