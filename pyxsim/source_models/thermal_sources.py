@@ -272,9 +272,8 @@ class ThermalSourceModel(SourceModel):
         ebins = np.linspace(emin, emax, nbins + 1)
         for chunk in data_source.chunks([], "io"):
             spec += self.process_data(
-                "spectrum", chunk, spectral_norm, normal=normal, spec_bins=ebins
+                "spectrum", chunk, spectral_norm, normal=normal, ebins=ebins
             )
-            # spec += regrid_spectrum(ebins, self.ebins, s)
         spec /= np.diff(ebins)
         self.cleanup_model("spectrum")
         return self._make_spectrum(
@@ -285,7 +284,7 @@ class ThermalSourceModel(SourceModel):
         return self.spectral_model.make_fluxf(emin, emax, energy=energy)
 
     def process_data(
-        self, mode, chunk, spectral_norm, fluxf=None, normal=None, spec_bins=None
+        self, mode, chunk, spectral_norm, fluxf=None, normal=None, ebins=None
     ):
         spec = np.zeros(self.nbins)
 
@@ -458,7 +457,7 @@ class ThermalSourceModel(SourceModel):
                     start_e = end_e
 
                 elif mode == "spectrum":
-                    spec += shift_spectrum(self.ebins, spec_bins, tot_spec, shift, cnm)
+                    spec += shift_spectrum(self.ebins, ebins, tot_spec, shift, cnm)
 
                 self.pbar.update(nck)
 
