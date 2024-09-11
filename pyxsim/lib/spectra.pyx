@@ -62,16 +62,15 @@ def line_spectrum(
 @cython.wraparound(False)
 @cython.boundscheck(False)
 def shift_spectrum(
-    int num_cells,
     np.ndarray[np.float64_t, ndim=1] ebold,
     np.ndarray[np.float64_t, ndim=1] ebnew,
     np.ndarray[np.float64_t, ndim=2] spec,
     np.ndarray[np.float64_t, ndim=1] shift,
     np.ndarray[np.float64_t, ndim=1] N,
-    pbar
 ):
     cdef np.int64_t nold = ebold.size-1
     cdef np.int64_t nnew = ebnew.size-1
+    cdef np.int64_t num_cells = N.size
     cdef np.ndarray[np.float64_t, ndim=1] nspec, cspec
     cdef int i, j
 
@@ -85,5 +84,4 @@ def shift_spectrum(
         nspec = np.interp(ebnew/shift[i], ebold, cspec)
         for j in range(nnew):
             ospec[j] += shift[i] * shift[i] * N[i] * (nspec[j+1] - nspec[j])
-        pbar.update()
     return ospec
