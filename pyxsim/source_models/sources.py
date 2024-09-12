@@ -47,7 +47,17 @@ class SourceModel:
         # source model specifically
         pass
 
-    def set_pv(self, p_fields, v_fields, le, re, dw, c, periodicity, observer):
+    def set_pv(
+        self,
+        p_fields,
+        v_fields,
+        le=None,
+        re=None,
+        dw=None,
+        c=None,
+        periodicity=None,
+        observer=None,
+    ):
         self.p_fields = p_fields
         self.v_fields = v_fields
         self.le = le

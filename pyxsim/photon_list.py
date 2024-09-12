@@ -336,7 +336,16 @@ def make_photons(
     else:
         parameters["data_type"] = "particles"
 
-    source_model.set_pv(p_fields, v_fields, le, re, dw, c, ds.periodicity, observer)
+    source_model.set_pv(
+        p_fields,
+        v_fields,
+        le=le,
+        re=re,
+        dw=dw,
+        c=c,
+        periodicity=ds.periodicity,
+        observer=observer,
+    )
 
     f = h5py.File(photon_file, "w")
 
