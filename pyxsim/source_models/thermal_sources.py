@@ -267,6 +267,10 @@ class ThermalSourceModel(SourceModel):
         """
         normal = sanitize_normal(normal)
         self.setup_model("spectrum", data_source, redshift)
+        if normal is not None:
+            p_fields = None
+            v_fields = [(self.ftype, f"relative_velocity_{ax}") for ax in "xyz"]
+            self.set_pv(p_fields, v_fields)
         spectral_norm = 1.0
         spec = np.zeros(nbins)
         ebins = np.linspace(emin, emax, nbins + 1)
@@ -286,7 +290,10 @@ class ThermalSourceModel(SourceModel):
     def process_data(
         self, mode, chunk, spectral_norm, fluxf=None, normal=None, ebins=None
     ):
-        spec = np.zeros(self.nbins)
+        if mode == "spectrum":
+            spec = np.zeros(ebins.size - 1)
+        else:
+            spec = None
 
         orig_shape = chunk[self.temperature_field].shape
         if len(orig_shape) == 0:
@@ -462,6 +469,7 @@ class ThermalSourceModel(SourceModel):
                 self.pbar.update(nck)
 
             else:
+
                 if self._density_dependence:
                     nHi = nH[ibegin:iend]
                     cflux, mflux, vflux = fluxf(kTi, nHi)
