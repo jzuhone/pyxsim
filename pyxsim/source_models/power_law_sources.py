@@ -134,10 +134,17 @@ class PowerLawSourceModel(SourceModel):
             data_source.ds, ebins, spec, redshift, dist, cosmology
         )
 
-    def make_fluxf(self, emin, emax, energy=False):
-        return {"emin": emin, "emax": emax}
+    def process_data(
+        self,
+        mode,
+        chunk,
+        spectral_norm,
+        ebins=None,
+        emin=None,
+        emax=None,
+        shifting=False,
+    ):
 
-    def process_data(self, mode, chunk, spectral_norm, fluxf=None, ebins=None):
         num_cells = len(chunk[self.emission_field])
 
         if isinstance(self.alpha, float):
@@ -145,14 +152,14 @@ class PowerLawSourceModel(SourceModel):
         else:
             alpha = chunk[self.alpha].d
 
-        if fluxf is None:
+        if emin is not None and emax is not None:
+            ei = emin
+            ef = emax
+        else:
             ei = self.emin.v
             ef = self.emax.v
-        else:
-            ei = fluxf["emin"].v
-            ef = fluxf["emax"].v
 
-        if mode in ["photons", "photon_field"]:
+        if mode in ["photons", "photon_rate"]:
             norm_fac = ef ** (1.0 - alpha) - ei ** (1.0 - alpha)
             norm_fac[alpha == 1] = np.log(ef / ei)
             norm_fac *= self.e0.v**alpha
@@ -195,10 +202,10 @@ class PowerLawSourceModel(SourceModel):
                     energies[:end_e].copy(),
                 )
 
-            elif mode == "photon_field":
+            elif mode == "photon_rate":
                 return norm
 
-        elif mode == "energy_field":
+        elif mode == "luminosity":
             norm_fac = ef ** (2.0 - alpha) - ei ** (2.0 - alpha)
             norm_fac *= self.e0.v**alpha / (2.0 - alpha)
 

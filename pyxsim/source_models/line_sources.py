@@ -150,10 +150,16 @@ class LineSourceModel(SourceModel):
             data_source.ds, ebins, spec, redshift, dist, cosmology
         )
 
-    def make_fluxf(self, emin, emax, energy=False):
-        return {"emin": emin, "emax": emax}
-
-    def process_data(self, mode, chunk, spectral_norm, fluxf=None, ebins=None):
+    def process_data(
+        self,
+        mode,
+        chunk,
+        spectral_norm,
+        ebins=None,
+        emin=None,
+        emax=None,
+        shifting=False,
+    ):
         num_cells = len(chunk[self.emission_field])
 
         norm_field = chunk[self.emission_field]
@@ -200,15 +206,15 @@ class LineSourceModel(SourceModel):
 
             return ncells, number_of_photons[active_cells], active_cells, energies
 
-        elif mode in ["photon_field", "energy_field"]:
-            xlo = fluxf["emin"].v - self.e0.value
-            xhi = fluxf["emax"].v - self.e0.value
+        elif mode in ["photon_rate", "luminosity"]:
+            xlo = emin - self.e0.value
+            xhi = emax - self.e0.value
             if self.sigma is None:
                 if (xlo < 0) & (xhi > 0.0):
                     fac = 1.0
                 else:
                     fac = 0.0
-                if mode == "energy_field":
+                if mode == "luminosity":
                     fac *= self.e0
             else:
                 if isinstance(self.sigma, unyt_quantity):
@@ -218,7 +224,7 @@ class LineSourceModel(SourceModel):
                 xhis = xhi / sigma
                 xlos = xlo / sigma
                 fac = norm.cdf(xhis) - norm.cdf(xlos)
-                if mode == "energy_field":
+                if mode == "luminosity":
                     fac = self.e0.value * fac
                     fac -= (
                         sigma

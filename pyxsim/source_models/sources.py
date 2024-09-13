@@ -81,14 +81,11 @@ class SourceModel:
                 pos[:, tfr] -= self.dw[i]
         return np.sum((pos - self.c[:, np.newaxis]) ** 2, axis=0) * cm2_per_kpc2
 
-    def compute_shift(self, chunk, normal, cut=None):
+    def compute_shift(self, chunk, cut=None):
         if cut is None:
             cut = ...
-        vel = np.array(
-            [np.ravel(chunk[self.v_fields[i]].to_value("c"))[cut] for i in range(3)]
-        )
-        beta_n = np.dot(normal, vel)
-        beta2 = np.sum(vel**2, axis=0)
+        beta_n = chunk[self.ftype, "velocity_los"].to_value("c")[cut]
+        beta2 = chunk[self.ftype, "velocity_magnitude"].to_value("c")[cut] ** 2
         return np.sqrt(1.0 - beta2) / (1.0 - beta_n)
 
     def cleanup_model(self, mode):
@@ -96,7 +93,7 @@ class SourceModel:
         # source model specifically
         pass
 
-    def make_fluxf(self, emin, emax, energy=False):
+    def make_fluxf(self, emin, emax):
         # This needs to be implemented for every
         # source model specifically
         pass
@@ -203,11 +200,11 @@ class SourceModel:
         )
         count_rate_dname = lum_dname.replace("\rm{{L}}", "\rm{{R}}")
 
-        efluxf = self.make_fluxf(emin, emax, energy=True)
+        self.make_fluxf(emin, emax)
 
         def _luminosity_field(field, data):
             return data.ds.arr(
-                self.process_data("energy_field", data, spectral_norm, fluxf=efluxf),
+                self.process_data("luminosity", data, spectral_norm),
                 "keV/s",
             )
 
@@ -233,11 +230,9 @@ class SourceModel:
             force_override=force_override,
         )
 
-        pfluxf = self.make_fluxf(emin, emax, energy=False)
-
         def _count_rate_field(field, data):
             return data.ds.arr(
-                self.process_data("photon_field", data, spectral_norm, fluxf=pfluxf),
+                self.process_data("photon_rate", data, spectral_norm),
                 "photons/s",
             )
 
@@ -363,6 +358,10 @@ class SourceModel:
         -------
         The list of fields which are generated.
         """
+        from yt.fields.derived_field import ValidateParameter
+
+        validators = [ValidateParameter("axis", {"axis": [0, 1, 2]})]
+
         if redshift == 0.0 and dist is None:
             raise ValueError(
                 "Either 'redshift' must be > 0.0 or 'dist' must " "not be None!"
@@ -390,11 +389,16 @@ class SourceModel:
         ei_name = (ftype, f"xray_intensity_{band_name}")
         ei_dname = rf"I_{{X}} ({emin.value:.2f}-{emax.value:.2f} keV)"
 
-        eif = self.make_fluxf(emin_src, emax_src, energy=True)
-
         def _intensity_field(field, data):
             ret = data.ds.arr(
-                self.process_data("energy_field", data, spectral_norm, fluxf=eif),
+                self.process_data(
+                    "intensity",
+                    data,
+                    spectral_norm,
+                    emin=emin_src.value,
+                    emax=emax_src.value,
+                    shifting=True,
+                ),
                 "keV/s",
             )
             idV = data[ftype, "density"] / data[ftype, "mass"]
@@ -407,16 +411,22 @@ class SourceModel:
             display_name=ei_dname,
             sampling_type="local",
             units="erg/cm**3/s/arcsec**2",
+            validators=validators,
             force_override=force_override,
         )
 
         i_name = (ftype, ei_name[1].replace("intensity", "photon_intensity"))
 
-        pif = self.make_fluxf(emin_src, emax_src, energy=False)
-
         def _photon_intensity_field(field, data):
             ret = data.ds.arr(
-                self.process_data("photon_field", data, spectral_norm, fluxf=pif),
+                self.process_data(
+                    "photon_intensity",
+                    data,
+                    spectral_norm,
+                    emin=emin_src.value,
+                    emax=emax_src.value,
+                    shifting=True,
+                ),
                 "photons/s",
             )
             idV = data[ftype, "density"] / data[ftype, "mass"]
@@ -429,6 +439,7 @@ class SourceModel:
             display_name=ei_dname,
             sampling_type="local",
             units="photons/cm**3/s/arcsec**2",
+            validators=validators,
             force_override=force_override,
         )
 
