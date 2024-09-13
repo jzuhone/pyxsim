@@ -85,3 +85,39 @@ def shift_spectrum(
         for j in range(nnew):
             ospec[j] += shift[i] * shift[i] * N[i] * (nspec[j+1] - nspec[j])
     return ospec
+
+
+@cython.cdivision(True)
+@cython.wraparound(False)
+@cython.boundscheck(False)
+def make_band(
+    int use_energy,
+    double emin,
+    double emax,
+    np.ndarray[np.float64_t, ndim=1] ebins,
+    np.ndarray[np.float64_t, ndim=1] emid,
+    np.ndarray[np.float64_t, ndim=2] spec,
+    np.ndarray[np.float64_t, ndim=1] shift,
+):
+    cdef np.int64_t nbins = emid.size
+    cdef np.int64_t num_cells = spec.shape[0]
+    cdef np.ndarray[np.float64_t, ndim=1] ofield
+    cdef int i, j
+    cdef double spec_sum, shft, ener
+
+    ofield = np.zeros(num_cells)
+
+    for i in range(num_cells):
+        spec_sum = 0.0
+        for j in range(nbins):
+            if use_energy == 1:
+                ener = emid[j]
+            else:
+                ener = 1.0
+            if ebins[j] >= emin/shift[i] and ebins[j+1] <= emax/shift[i]:
+                spec_sum += ener*spec[i, j]
+        shft = shift[i]*shift[i]
+        if use_energy == 1:
+            shft *= shift[i]
+        ofield[i] += shft * spec_sum
+    return ofield
