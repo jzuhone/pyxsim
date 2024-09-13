@@ -266,13 +266,10 @@ class ParallelProgressBar:
 
 
 def sanitize_normal(normal):
-    if normal is None:
+    if normal is None or isinstance(normal, int):
         L = normal
-    elif isinstance(normal, (str, int)):
-        L = np.zeros(3)
-        if normal in "xyz":
-            normal = "xyz".index(normal)
-        L[normal] = 1.0
+    elif isinstance(normal, str):
+        L = "xyz".index(normal)
     elif normal is not None:
         L = np.array(normal)
         L /= np.sqrt(np.dot(L, L))
