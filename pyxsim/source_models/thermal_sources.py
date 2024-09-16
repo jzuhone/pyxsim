@@ -261,6 +261,12 @@ class ThermalSourceModel(SourceModel):
             Cosmological information. If not supplied, we try to get the
             cosmology from the dataset. Otherwise, LCDM with the default yt
             parameters is assumed.
+        normal : integer, string, or array-like, optional
+            This is a line-of-sight direction along which the spectrum will be
+            Doppler shifted using the velocity field in the object. This is
+            only an option if the spectrum is calculated in the observer frame.
+            Options are one of "x", "y", "z", 0, 1, 2, or an 3-element array-like
+            object of floats to specify an off-axis normal vector.
 
         Returns
         -------
@@ -269,6 +275,11 @@ class ThermalSourceModel(SourceModel):
         """
         normal = sanitize_normal(normal)
         if normal is not None:
+            if redshift == 0.0 and dist is None:
+                raise RuntimeError(
+                    "Cannot use a normal vector for the line-of-sight "
+                    "when a redshift or the distance is not specified! not specified or the distance "
+                )
             data_source.set_field_parameter("axis", normal)
         shifting = normal is not None
         self.setup_model("spectrum", data_source, redshift)
