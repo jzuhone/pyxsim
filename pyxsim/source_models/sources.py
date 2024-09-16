@@ -311,6 +311,7 @@ class SourceModel:
         redshift=0.0,
         dist=None,
         cosmology=None,
+        no_doppler=False,
         force_override=True,
         band_name=None,
     ):
@@ -347,6 +348,10 @@ class SourceModel:
             Cosmological information. If not supplied, we try to get the
             cosmology from the dataset. Otherwise, LCDM with the default yt
             parameters is assumed.
+        no_doppler : boolean, optional
+            If True, no Doppler shifting from velocities will be applied to the
+            intensity fields. Projections will be faster if this is used.
+            Default: False
         force_override : boolean, optional
             If True, override a pre-existing field with the same name.
             Default: False
@@ -389,6 +394,9 @@ class SourceModel:
         ei_name = (ftype, f"xray_intensity_{band_name}")
         ei_dname = rf"I_{{X}} ({emin.value:.2f}-{emax.value:.2f} keV)"
 
+        if no_doppler:
+            self.make_fluxf(emin_src, emax_src)
+
         def _intensity_field(field, data):
             ret = data.ds.arr(
                 self.process_data(
@@ -397,7 +405,7 @@ class SourceModel:
                     spectral_norm,
                     emin=emin_src.value,
                     emax=emax_src.value,
-                    shifting=True,
+                    shifting=not no_doppler,
                 ),
                 "keV/s",
             )
@@ -425,7 +433,7 @@ class SourceModel:
                     spectral_norm,
                     emin=emin_src.value,
                     emax=emax_src.value,
-                    shifting=True,
+                    shifting=not no_doppler,
                 ),
                 "photons/s",
             )
@@ -454,6 +462,7 @@ class SourceModel:
         redshift=0.0,
         dist=None,
         cosmology=None,
+        no_doppler=False,
         force_override=False,
     ):
         """
@@ -490,6 +499,10 @@ class SourceModel:
             Cosmological information. If not supplied, we try to get the
             cosmology from the dataset. Otherwise, LCDM with the default yt
             parameters is assumed.
+        no_doppler : boolean, optional
+            If True, no Doppler shifting from velocities will be applied to the
+            intensity fields. Projections will be faster if this is used.
+            Default: False
         force_override : boolean, optional
             If True, override a pre-existing field with the same name.
             Default: False
@@ -512,5 +525,6 @@ class SourceModel:
             dist=dist,
             cosmology=cosmology,
             band_name=line_name,
+            no_doppler=no_doppler,
             force_override=force_override,
         )

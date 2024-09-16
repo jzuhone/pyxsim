@@ -315,6 +315,8 @@ class ThermalSourceModel(SourceModel):
         else:
             spec = None
 
+        shifted_intensity = mode.endswith("intensity") and shifting
+
         orig_shape = chunk[self.temperature_field].shape
         if len(orig_shape) == 0:
             orig_ncells = 0
@@ -439,7 +441,7 @@ class ThermalSourceModel(SourceModel):
 
             kTi = kT[ibegin:iend]
 
-            if mode in ["photons", "spectrum", "intensity", "photon_intensity"]:
+            if mode in ["photons", "spectrum"] or shifted_intensity:
                 if self._density_dependence:
                     nHi = nH[ibegin:iend]
                     cspec, mspec, vspec = self.spectral_model.get_spectrum(kTi, nHi)
@@ -501,7 +503,9 @@ class ThermalSourceModel(SourceModel):
 
             else:
 
-                fluxf = self.efluxf if mode == "luminosity" else self.pfluxf
+                fluxf = (
+                    self.efluxf if mode in ["luminosity", "intensity"] else self.pfluxf
+                )
 
                 if self._density_dependence:
                     nHi = nH[ibegin:iend]
