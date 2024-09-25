@@ -81,11 +81,12 @@ class SourceModel:
                 pos[:, tfr] -= self.dw[i]
         return np.sum((pos - self.c[:, np.newaxis]) ** 2, axis=0) * cm2_per_kpc2
 
-    def compute_shift(self, chunk, cut=None):
+    def compute_shift(self, chunk, cut=None, particle_type=False):
         if cut is None:
             cut = ...
-        beta_n = chunk[self.ftype, "velocity_los"].to_value("c")[cut]
-        beta2 = chunk[self.ftype, "velocity_magnitude"].to_value("c")[cut] ** 2
+        prefix = "particle_" if particle_type else ""
+        beta_n = chunk[self.ftype, f"{prefix}velocity_los"].to_value("c")[cut]
+        beta2 = chunk[self.ftype, f"{prefix}velocity_magnitude"].to_value("c")[cut] ** 2
         return np.sqrt(1.0 - beta2) / (1.0 - beta_n)
 
     def cleanup_model(self, mode):
