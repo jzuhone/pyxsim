@@ -425,9 +425,12 @@ def make_photons(
                     p_size *= 2
                 d["energy"].resize((p_size,))
 
+            if w_field is None:
+                dx = 0.0
+            else:
+                dx = chunk[w_field][idxs].to_value("kpc")
             for i, ax in enumerate("xyz"):
                 pos = chunk[p_fields[i]][idxs].to_value("kpc")
-                dx = chunk[w_field][idxs].to_value("kpc")
                 # Fix photon coordinates for regions crossing a periodic boundary
                 if ds.periodicity[i]:
                     tfl = pos + dx < le[i]
@@ -447,9 +450,7 @@ def make_photons(
             if w_field is None:
                 d["dx"][c_offset : c_offset + chunk_nc] = 0.0
             else:
-                d["dx"][c_offset : c_offset + chunk_nc] = chunk[w_field][idxs].to_value(
-                    "kpc"
-                )
+                d["dx"][c_offset : c_offset + chunk_nc] = dx
 
             for field in fields_store:
                 d[field[1]][c_offset : c_offset + chunk_nc] = chunk[field][idxs]

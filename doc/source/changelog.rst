@@ -3,6 +3,13 @@
 ChangeLog
 =========
 
+Version 4.4.2
+-------------
+
+This version of pyXSIM contains a bugfix for simulations where particle-based
+emission sources have no intrinsic widths (neither cell sizes or smoothing
+lengths).
+
 Version 4.4.1
 -------------
 
