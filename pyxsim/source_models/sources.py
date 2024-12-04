@@ -205,7 +205,9 @@ class SourceModel:
 
         def _luminosity_field(field, data):
             return data.ds.arr(
-                self.process_data("luminosity", data, spectral_norm),
+                self.process_data(
+                    "luminosity", data, spectral_norm, emin=emin.value, emax=emax.value
+                ),
                 "keV/s",
             )
 
@@ -233,7 +235,9 @@ class SourceModel:
 
         def _count_rate_field(field, data):
             return data.ds.arr(
-                self.process_data("photon_rate", data, spectral_norm),
+                self.process_data(
+                    "photon_rate", data, spectral_norm, emin=emin.value, emax=emax.value
+                ),
                 "photons/s",
             )
 
