@@ -9,7 +9,7 @@ from yt.utilities.physical_constants import clight
 
 from pyxsim.lib.spectra import line_spectrum
 from pyxsim.source_models.sources import SourceModel
-from pyxsim.utils import isunitful, mylog, parse_value
+from pyxsim.utils import check_num_cells, isunitful, mylog, parse_value
 
 gx = np.linspace(-6, 6, 2400)
 gcdf = norm.cdf(gx)
@@ -144,7 +144,11 @@ class LineSourceModel(SourceModel):
         spectral_norm = 1.0
         self.setup_model("spectrum", data_source, redshift)
         for chunk in data_source.chunks([], "io"):
-            spec += self.process_data("spectrum", chunk, spectral_norm, ebins=ebins)
+            chunk_data = self.process_data(
+                "spectrum", chunk, spectral_norm, ebins=ebins
+            )
+            if chunk_data is not None:
+                spec += chunk_data
         self.cleanup_model("spectrum")
         return self._make_spectrum(
             data_source.ds, ebins, spec, redshift, dist, cosmology
@@ -160,7 +164,13 @@ class LineSourceModel(SourceModel):
         emax=None,
         shifting=False,
     ):
-        num_cells = len(chunk[self.emission_field])
+        num_cells = check_num_cells(self.ftype, chunk)
+
+        if num_cells == 0:
+            if mode in ["photons", "spectrum"]:
+                return
+            else:
+                return np.array([])
 
         norm_field = chunk[self.emission_field]
 

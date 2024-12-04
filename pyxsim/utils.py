@@ -274,3 +274,14 @@ def sanitize_normal(normal):
         L = np.array(normal)
         L /= np.sqrt(np.dot(L, L))
     return L
+
+
+def check_num_cells(ftype, obj):
+    if ftype == "gas":
+        if ("gas", "ones") in obj.ds.field_info:
+            test_field = ("gas", "ones")
+        else:
+            test_field = ("index", "ones")
+    else:
+        test_field = (ftype, "particle_ones")
+    return obj[test_field].size

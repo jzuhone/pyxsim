@@ -287,9 +287,11 @@ class ThermalSourceModel(SourceModel):
         spec = np.zeros(nbins)
         ebins = np.linspace(emin, emax, nbins + 1)
         for chunk in data_source.chunks([], "io"):
-            spec += self.process_data(
+            chunk_data = self.process_data(
                 "spectrum", chunk, spectral_norm, shifting=shifting, ebins=ebins
             )
+            if chunk_data is not None:
+                spec += chunk_data
         spec /= np.diff(ebins)
         self.cleanup_model("spectrum")
         return self._make_spectrum(
@@ -323,10 +325,8 @@ class ThermalSourceModel(SourceModel):
         else:
             orig_ncells = np.prod(orig_shape)
         if orig_ncells == 0:
-            if mode == "photons":
+            if mode in ["photons", "spectrum"]:
                 return
-            elif mode == "spectrum":
-                return spec
             else:
                 return np.array([])
 
