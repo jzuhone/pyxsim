@@ -158,7 +158,7 @@ class PowerLawSourceModel(SourceModel):
                 return np.array([])
 
         if isinstance(self.alpha, float):
-            alpha = self.alpha * np.ones(num_cells)
+            alpha = self.alpha * np.ones_like(chunk[self.emission_field].d)
         else:
             alpha = chunk[self.alpha].d
 
