@@ -441,6 +441,7 @@ class ThermalSourceModel(SourceModel):
 
             kTi = kT[ibegin:iend]
 
+            shifti = shift[ibegin:iend]
             if mode in ["photons", "spectrum"] or shifted_intensity:
                 if self._density_dependence:
                     nHi = nH[ibegin:iend]
@@ -489,7 +490,7 @@ class ThermalSourceModel(SourceModel):
                     start_e = end_e
 
                 elif mode == "spectrum":
-                    spec += shift_spectrum(self.ebins, ebins, tot_spec, shift, cnm)
+                    spec += shift_spectrum(self.ebins, ebins, tot_spec, shifti, cnm)
 
                 elif mode.endswith("intensity"):
                     use_energy = int(mode == "intensity")
