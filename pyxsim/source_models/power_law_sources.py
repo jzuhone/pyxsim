@@ -157,6 +157,11 @@ class PowerLawSourceModel(SourceModel):
             else:
                 return np.array([])
 
+        if mode in ["spectrum", "intensity", "photon_intensity"] and shifting:
+            shift = self.compute_shift(chunk)
+        else:
+            shift = np.ones(num_cells)
+
         if isinstance(self.alpha, float):
             alpha = self.alpha * np.ones_like(chunk[self.luminosity_field].d)
         else:
@@ -178,9 +183,9 @@ class PowerLawSourceModel(SourceModel):
 
         K = chunk[self.luminosity_field].d / K_fac
 
-        if mode in ["photons", "photon_rate"]:
+        if mode in ["photons", "photon_rate", "photon_intensity"]:
 
-            Nph = K * ef ** (1.0 - alpha) - ei ** (1.0 - alpha)
+            Nph = K * (ef / shift) ** (1.0 - alpha) - (ei / shift) ** (1.0 - alpha)
             Nph[alpha == 1] = np.log(ef / ei)
             Nph *= etoalpha
             if np.any(alpha != 1):
@@ -221,22 +226,22 @@ class PowerLawSourceModel(SourceModel):
                     energies[:end_e].copy(),
                 )
 
-            elif mode == "photon_rate":
-                return Nph
+            else:
+                return Nph * shift * shift
 
-        elif mode == "luminosity":
-            L = K * ef ** (2.0 - alpha) - ei ** (2.0 - alpha)
+        elif mode in ["luminosity", "intensity"]:
+            L = K * (ef / shift) ** (2.0 - alpha) - (ei / shift) ** (2.0 - alpha)
             L[alpha == 2] = np.log(ef / ei)
             L *= etoalpha
             if np.any(alpha != 2):
                 L[alpha != 2] /= 2.0 - alpha[alpha != 2]
 
-            return L
+            return L * shift * shift * shift
 
         elif mode == "spectrum":
             inv_sf = 1.0 / self.scale_factor
             emid = 0.5 * (ebins[1:] + ebins[:-1]) * inv_sf / self.e0.v
 
-            spec = power_law_spectrum(num_cells, emid, alpha, K, self.pbar)
+            spec = power_law_spectrum(num_cells, emid, alpha, K, shift, self.pbar)
 
             return spec

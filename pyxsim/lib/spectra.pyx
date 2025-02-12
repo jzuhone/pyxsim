@@ -13,6 +13,7 @@ def power_law_spectrum(
     np.ndarray[np.float64_t, ndim=1] emid,
     np.ndarray[np.float64_t, ndim=1] alpha,
     np.ndarray[np.float64_t, ndim=1] K,
+    np.ndarray[np.float64_t, ndim=1] shift,
     pbar
 ):
     cdef np.int64_t nbins = emid.size
@@ -23,7 +24,7 @@ def power_law_spectrum(
 
     for i in range(num_cells):
         for j in range(nbins):
-            spec[j] += K[i] * emid[j] ** -alpha[i]
+            spec[j] += shift[i] * shift[i] * K[i] * (emid[j] / shift[i]) ** -alpha[i]
         pbar.update()
     return spec
 
