@@ -24,7 +24,7 @@ class PowerLawSourceModel(SourceModel):
     emax : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
         The maximum energy of the photons to be generated, in the rest frame of
         the source. If units are not given, they are assumed to be in keV.
-    emission_field : string or (ftype, fname) tuple
+    luminosity_field : string or (ftype, fname) tuple
         The field corresponding to the specific photon count rate per cell or
         particle, in the rest frame of the source, which serves as the
         normalization for the power law. Must be in counts/s/keV.
@@ -44,11 +44,11 @@ class PowerLawSourceModel(SourceModel):
     >>> plaw_model = PowerLawSourceModel(e0, emin, emax, ("gas", "norm"), ("gas", "index"))
     """
 
-    def __init__(self, e0, emin, emax, emission_field, alpha, prng=None):
+    def __init__(self, e0, emin, emax, luminosity_field, alpha, prng=None):
         self.e0 = parse_value(e0, "keV")
         self.emin = parse_value(emin, "keV")
         self.emax = parse_value(emax, "keV")
-        self.emission_field = emission_field
+        self.luminosity_field = luminosity_field
         self.alpha = alpha
         self.prng = parse_prng(prng)
         self.ftype = None
@@ -59,18 +59,18 @@ class PowerLawSourceModel(SourceModel):
         else:
             ds = data_source.ds
         self.scale_factor = 1.0 / (1.0 + redshift)
-        self.emission_field = ds._get_field_info(self.emission_field).name
+        self.luminosity_field = ds._get_field_info(self.luminosity_field).name
         if not isinstance(self.alpha, Number):
             self.alpha = ds._get_field_info(self.alpha).name
-            if self.emission_field[0] != self.alpha[0]:
+            if self.luminosity_field[0] != self.alpha[0]:
                 mylog.warning(
-                    "The 'emission_field' %s and the 'alpha' field %s do not have the same field type!",
-                    self.emission_field,
+                    "The 'luminosity_field' %s and the 'alpha' field %s do not have the same field type!",
+                    self.luminosity_field,
                     self.alpha,
                 )
-        self.ftype = self.emission_field[0]
+        self.ftype = self.luminosity_field[0]
         if mode == "spectrum":
-            self.setup_pbar(data_source, self.emission_field)
+            self.setup_pbar(data_source, self.luminosity_field)
 
     def __repr__(self):
         rets = [
@@ -78,7 +78,7 @@ class PowerLawSourceModel(SourceModel):
             f"    e0={self.e0}\n",
             f"    emin={self.emin}\n",
             f"    emax={self.emax}\n",
-            f"    emission_field={self.emission_field}\n",
+            f"    luminosity_field={self.luminosity_field}\n",
             f"    alpha={self.alpha}\n",
             ")",
         ]
@@ -158,7 +158,7 @@ class PowerLawSourceModel(SourceModel):
                 return np.array([])
 
         if isinstance(self.alpha, float):
-            alpha = self.alpha * np.ones_like(chunk[self.emission_field].d)
+            alpha = self.alpha * np.ones_like(chunk[self.luminosity_field].d)
         else:
             alpha = chunk[self.alpha].d
 
@@ -169,22 +169,31 @@ class PowerLawSourceModel(SourceModel):
             ei = self.emin.v
             ef = self.emax.v
 
+        etoalpha = self.e0.v**alpha
+        K_fac = self.emax.v ** (2.0 - alpha) - self.emin.v ** (2.0 - alpha)
+        K_fac[alpha == 2] = np.log(self.emax.v / self.emin.v)
+        K_fac *= etoalpha
+        if np.any(alpha != 2):
+            K_fac[alpha != 2] /= 2.0 - alpha[alpha != 2]
+
+        K = chunk[self.luminosity_field].d / K_fac
+
         if mode in ["photons", "photon_rate"]:
-            norm_fac = ef ** (1.0 - alpha) - ei ** (1.0 - alpha)
-            norm_fac[alpha == 1] = np.log(ef / ei)
-            norm_fac *= self.e0.v**alpha
-            norm = norm_fac * chunk[self.emission_field].d
+
+            Nph = K * ef ** (1.0 - alpha) - ei ** (1.0 - alpha)
+            Nph[alpha == 1] = np.log(ef / ei)
+            Nph *= etoalpha
             if np.any(alpha != 1):
-                norm[alpha != 1] /= 1.0 - alpha[alpha != 1]
+                Nph[alpha != 1] /= 1.0 - alpha[alpha != 1]
 
             if mode == "photons":
-                norm *= spectral_norm * self.scale_factor
+                Nph *= spectral_norm * self.scale_factor
 
                 if self.observer == "internal":
                     r2 = self.compute_radius(chunk)
-                    norm /= r2
+                    Nph /= r2
 
-                number_of_photons = self.prng.poisson(lam=norm)
+                number_of_photons = self.prng.poisson(lam=Nph)
 
                 energies = np.zeros(number_of_photons.sum())
 
@@ -197,7 +206,7 @@ class PowerLawSourceModel(SourceModel):
                         if alpha[i] == 1:
                             e = ei * (ef / ei) ** u
                         else:
-                            e = ei ** (1.0 - alpha[i]) + u * norm_fac[i]
+                            e = ei ** (1.0 - alpha[i]) + u * Nph[i]
                             e **= 1.0 / (1.0 - alpha[i])
                         energies[start_e:end_e] = e * self.scale_factor
                         start_e = end_e
@@ -213,20 +222,21 @@ class PowerLawSourceModel(SourceModel):
                 )
 
             elif mode == "photon_rate":
-                return norm
+                return Nph
 
         elif mode == "luminosity":
-            norm_fac = ef ** (2.0 - alpha) - ei ** (2.0 - alpha)
-            norm_fac *= self.e0.v**alpha / (2.0 - alpha)
+            L = K * ef ** (2.0 - alpha) - ei ** (2.0 - alpha)
+            L[alpha == 2] = np.log(ef / ei)
+            L *= etoalpha
+            if np.any(alpha != 2):
+                L[alpha != 2] /= 2.0 - alpha[alpha != 2]
 
-            return norm_fac * chunk[self.emission_field].d
+            return L
 
         elif mode == "spectrum":
             inv_sf = 1.0 / self.scale_factor
             emid = 0.5 * (ebins[1:] + ebins[:-1]) * inv_sf / self.e0.v
 
-            spec = power_law_spectrum(
-                num_cells, emid, alpha, chunk[self.emission_field].d, self.pbar
-            )
+            spec = power_law_spectrum(num_cells, emid, alpha, K, self.pbar)
 
             return spec
