@@ -135,6 +135,29 @@ class SourceModel:
             spec_class = CountRateSpectrum
         return spec_class(ebins, spec)
 
+    def _get_inverse_volume(self, ds, ftype):
+        if ("index", "cell_volume") in ds.derived_field_list:
+
+            def _idV(data):
+                return 1.0 / data["index", "cell_volume"]
+
+        elif (ftype, "cell_volume") in ds.derived_field_list:
+
+            def _idV(data):
+                return 1.0 / data[ftype, "cell_volume"]
+
+        elif (ftype, "density") in ds.derived_field_list and (
+            ftype,
+            "mass",
+        ) in ds.derived_field_list:
+
+            def _idV(data):
+                return data[ftype, "density"] / data[ftype, "mass"]
+
+        else:
+            raise RuntimeError("No way to compute inverse volume")
+        return _idV
+
     def make_source_fields(self, ds, emin, emax, force_override=False, band_name=None):
         """
         Make the following fields in the rest frame of the
@@ -181,6 +204,8 @@ class SourceModel:
 
         ftype = self.ftype
 
+        idV_func = self._get_inverse_volume(ds, ftype)
+
         if band_name is None:
             band_name = f"{emin.value}_{emax.value}_keV"
 
@@ -222,7 +247,7 @@ class SourceModel:
 
         def _emissivity_field(field, data):
             ret = data[lum_name]
-            return ret * data[ftype, "density"] / data[ftype, "mass"]
+            return ret * idV_func(data)
 
         ds.add_field(
             emiss_name,
@@ -252,7 +277,7 @@ class SourceModel:
 
         def _photon_emissivity_field(field, data):
             ret = data[count_rate_name]
-            return ret * data[ftype, "density"] / data[ftype, "mass"]
+            return ret * idV_func(data)
 
         ds.add_field(
             phot_emiss_name,
@@ -386,6 +411,8 @@ class SourceModel:
 
         ftype = self.ftype
 
+        idV_func = self._get_inverse_volume(ds, ftype)
+
         dist_fac, redshift = self._make_dist_fac(
             ds, redshift, dist, cosmology, per_sa=True
         )
@@ -414,8 +441,7 @@ class SourceModel:
                 ),
                 "keV/s",
             )
-            idV = data[ftype, "density"] / data[ftype, "mass"]
-            I = dist_fac * ret * idV
+            I = dist_fac * ret * idV_func(data)
             return I.in_units("erg/cm**3/s/arcsec**2")
 
         ds.add_field(
@@ -442,8 +468,7 @@ class SourceModel:
                 ),
                 "photons/s",
             )
-            idV = data[ftype, "density"] / data[ftype, "mass"]
-            I = (1.0 + redshift) * dist_fac * ret * idV
+            I = (1.0 + redshift) * dist_fac * ret * idV_func(data)
             return I.in_units("photons/cm**3/s/arcsec**2")
 
         ds.add_field(
