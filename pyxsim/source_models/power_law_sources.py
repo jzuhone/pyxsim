@@ -2,6 +2,7 @@ from numbers import Number
 
 import numpy as np
 from soxs.utils import parse_prng
+from unyt.exceptions import UnitConversionError
 from yt.data_objects.static_output import Dataset
 
 from pyxsim.lib.spectra import power_law_spectrum
@@ -25,9 +26,10 @@ class PowerLawSourceModel(SourceModel):
         The maximum energy of the photons to be generated, in the rest frame of
         the source. If units are not given, they are assumed to be in keV.
     luminosity_field : string or (ftype, fname) tuple
-        The field corresponding to the specific photon count rate per cell or
-        particle, in the rest frame of the source, which serves as the
-        normalization for the power law. Must be in counts/s/keV.
+        The field corresponding to the luminosity within the emin-emax band per
+        cell or particle, in the rest frame of the source, which serves as the
+        normalization for the power law. Must be in units with dimensions of power,
+        such as erg/s, W, or keV/s.
     index : float, string, or (ftype, fname) tuple
         The power-law index of the spectrum. Either a float for a single power law or
         the name of a field that corresponds to the power law.
@@ -160,7 +162,7 @@ class PowerLawSourceModel(SourceModel):
         if mode in ["spectrum", "intensity", "photon_intensity"] and shifting:
             shift = self.compute_shift(chunk)
         else:
-            shift = np.ones(num_cells)
+            shift = np.ones_like(chunk[self.luminosity_field].d)
 
         if isinstance(self.alpha, float):
             alpha = self.alpha * np.ones_like(chunk[self.luminosity_field].d)
@@ -181,19 +183,21 @@ class PowerLawSourceModel(SourceModel):
         if np.any(alpha != 2):
             K_fac[alpha != 2] /= 2.0 - alpha[alpha != 2]
 
-        K = chunk[self.luminosity_field].d / K_fac
+        try:
+            K = chunk[self.luminosity_field].to_value("keV/s") / K_fac
+        except UnitConversionError:
+            raise ValueError('The "luminosity_field" must be in units of power!')
 
         if mode in ["photons", "photon_rate", "photon_intensity"]:
 
-            Nph = K * (ef / shift) ** (1.0 - alpha) - (ei / shift) ** (1.0 - alpha)
+            Nph = (ef / shift) ** (1.0 - alpha) - (ei / shift) ** (1.0 - alpha)
             Nph[alpha == 1] = np.log(ef / ei)
-            Nph *= etoalpha
+            Nph *= K * etoalpha
             if np.any(alpha != 1):
                 Nph[alpha != 1] /= 1.0 - alpha[alpha != 1]
 
             if mode == "photons":
                 Nph *= spectral_norm * self.scale_factor
-
                 if self.observer == "internal":
                     r2 = self.compute_radius(chunk)
                     Nph /= r2
@@ -230,9 +234,9 @@ class PowerLawSourceModel(SourceModel):
                 return Nph * shift * shift
 
         elif mode in ["luminosity", "intensity"]:
-            L = K * (ef / shift) ** (2.0 - alpha) - (ei / shift) ** (2.0 - alpha)
+            L = (ef / shift) ** (2.0 - alpha) - (ei / shift) ** (2.0 - alpha)
             L[alpha == 2] = np.log(ef / ei)
-            L *= etoalpha
+            L *= K * etoalpha
             if np.any(alpha != 2):
                 L[alpha != 2] /= 2.0 - alpha[alpha != 2]
 
