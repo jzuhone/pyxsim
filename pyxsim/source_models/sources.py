@@ -136,7 +136,12 @@ class SourceModel:
         return spec_class(ebins, spec)
 
     def _get_inverse_volume(self, ds, ftype):
-        if ("index", "cell_volume") in ds.derived_field_list:
+        from yt.geometry.particle_geometry_handler import ParticleIndex
+
+        if (
+            not isinstance(ds.index, ParticleIndex)
+            and ("index", "cell_volume") in ds.derived_field_list
+        ):
 
             def _idV(data):
                 return 1.0 / data["index", "cell_volume"]
