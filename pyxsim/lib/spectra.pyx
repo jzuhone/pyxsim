@@ -39,6 +39,7 @@ def line_spectrum(
     np.ndarray[np.float64_t, ndim=1] gx,
     np.ndarray[np.float64_t, ndim=1] gcdf,
     np.ndarray[np.float64_t, ndim=1] N,
+    np.ndarray[np.float64_t, ndim=1] shift,
     pbar
 ):
     cdef np.int64_t nbins = ee.size-1
@@ -54,7 +55,7 @@ def line_spectrum(
             xtmp[j] = ee[j] / sigma[i]
         ret = np.interp(xtmp, gx, gcdf)
         for j in range(nbins):
-            spec[j] += N[i] * (ret[j+1] - ret[j])
+            spec[j] += shift[i] * shift[i] * N[i] * (ret[j+1] - ret[j])
         pbar.update()
     return spec
 
