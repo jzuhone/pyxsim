@@ -26,7 +26,7 @@ rho_s = 9.0e-26  # g/cm**3
 
 
 class BetaModelSource:
-    def __init__(self, no_broad=False):
+    def __init__(self, no_broad=False, v_s=v_shift):
         self.prng = RandomState(32)
         self.kT = kT
         self.Z = Z
@@ -50,9 +50,9 @@ class BetaModelSource:
         temp = self.kT * K_per_keV * np.ones(ddims)
         bbox = np.array([[-0.5, 0.5], [-0.5, 0.5], [-0.5, 0.5]])
         if no_broad:
-            velz = np.ones(ddims) * v_shift
+            velz = np.ones(ddims) * v_s
         else:
-            velz = self.prng.normal(loc=v_shift, scale=v_width, size=ddims)
+            velz = self.prng.normal(loc=v_s, scale=v_width, size=ddims)
         dm_disp = 1000.0 * np.ones(ddims)  # km/s
 
         data = {}
