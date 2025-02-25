@@ -216,6 +216,7 @@ class PowerLawSourceModel(SourceModel):
             Nph = (ef / shift) ** (1.0 - alpha) - (ei / shift) ** (1.0 - alpha)
             Nph[alpha == 1] = np.log(ef / ei)
             Nph *= K * etoalpha
+            norm_fac = Nph / K
             if np.any(alpha != 1):
                 Nph[alpha != 1] /= 1.0 - alpha[alpha != 1]
 
@@ -238,7 +239,7 @@ class PowerLawSourceModel(SourceModel):
                         if alpha[i] == 1:
                             e = ei * (ef / ei) ** u
                         else:
-                            e = ei ** (1.0 - alpha[i]) + u * Nph[i]
+                            e = ei ** (1.0 - alpha[i]) + u * norm_fac[i]
                             e **= 1.0 / (1.0 - alpha[i])
                         energies[start_e:end_e] = e * self.scale_factor
                         start_e = end_e

@@ -31,19 +31,17 @@ def plaw_fit(alpha_sim, check_dir, prng=None):
     if prng is None:
         prng = bms.prng
 
-    def _hard_emission(field, data):
-        return (
-            data.ds.quan(1.0e-18, "s**-1*keV**-1")
-            * data["density"]
-            * data["cell_volume"]
-            / mp
-        )
+    def _power_law_luminosity(field, data):
+        norm = data.ds.quan(
+            1.3e-26, "erg/s"
+        )  # this seems small, but only because it is per-cell
+        return norm * data["cell_mass"] / (1.0 * mp)
 
     ds.add_field(
-        ("gas", "hard_emission"),
-        function=_hard_emission,
-        units="keV**-1*s**-1",
+        ("gas", "plaw_lum"),
+        function=_power_law_luminosity,
         sampling_type="local",
+        units="erg/s",
     )
 
     nH_sim = 0.02
@@ -57,14 +55,19 @@ def plaw_fit(alpha_sim, check_dir, prng=None):
     sphere = ds.sphere("c", (100.0, "kpc"))
 
     plaw_model = PowerLawSourceModel(
-        1.0, 0.01, 11.0, "hard_emission", alpha_sim, prng=prng
+        1.0, 0.01, 11.0, ("gas", "plaw_lum"), alpha_sim, prng=prng
     )
 
     make_photons("plaw_photons.h5", sphere, redshift, A, exp_time, plaw_model)
 
     D_A = cosmo.angular_diameter_distance(0.0, redshift).to_value("cm")
     dist_fac = 1.0 / (4.0 * np.pi * D_A * D_A * (1.0 + redshift) ** 3)
-    norm_sim = float((sphere["hard_emission"]).sum() * dist_fac) * (1.0 + redshift)
+    norm_sim = float((sphere["plaw_lum"].to("keV/s")).sum() * dist_fac) * (
+        1.0 + redshift
+    )
+    norm_sim *= (2.0 - alpha_sim) / (
+        11.0 ** (2.0 - alpha_sim) - 0.01 ** (2.0 - alpha_sim)
+    )
 
     project_photons(
         "plaw_photons.h5",
