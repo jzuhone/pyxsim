@@ -104,7 +104,7 @@ class LineSourceModel(SourceModel):
         self, data_source, emin, emax, nbins, redshift=0.0, dist=None, cosmology=None
     ):
         """
-        Make a count rate spectrum in the source frame from a yt data container,
+        Using all the data in a yt data container, make a count rate spectrum in the source frame,
         or a spectrum in the observer frame.
 
         Parameters
