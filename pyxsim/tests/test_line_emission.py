@@ -108,7 +108,7 @@ def test_line_emission_fields():
 
     dm_E = (sphere["dm_emission"]).sum()
 
-    line_model1 = LineSourceModel(location, "dm_emission")
+    line_model1 = LineSourceModel(location, "dm_emission", (1.0, "eV"))
 
     line_fields1 = line_model1.make_source_fields(ds, 0.5, 7.0)
     assert_allclose(sphere[line_fields1[1]].sum().to("keV/s"), dm_E * location)
@@ -148,6 +148,8 @@ def test_line_emission_spectra():
     bms = BetaModelSource()
     ds = bms.ds
 
+    redshift = 0.2
+
     def _dm_emission(field, data):
         return data["index", "ones"] * data.ds.quan(1.0e40, "1/s")
 
@@ -166,7 +168,7 @@ def test_line_emission_spectra():
     sigma = YTQuantity(1000.0, "km/s")
     sigma_E = (location * sigma / clight).in_units("keV")
 
-    line_model = LineSourceModel(location, "dm_emission", sigma=sigma)
+    line_model = LineSourceModel(location, "dm_emission", sigma)
 
     def weight_std(x, w):
         return np.sqrt(np.average((x - np.average(x, weights=w)) ** 2, weights=w))
@@ -178,15 +180,20 @@ def test_line_emission_spectra():
     )
     assert_allclose(np.sum(spec1.flux.value * spec1.de.value), dm_E.v)
 
-    spec2 = line_model.make_spectrum(sphere, 1.0, 6.0, 5000, redshift=0.2)
-    D_A = cosmo.angular_diameter_distance(0.0, 0.2).to_value("cm")
+    spec2 = line_model.make_spectrum(sphere, 1.0, 6.0, 5000, redshift=redshift)
+    D_A = cosmo.angular_diameter_distance(0.0, redshift).to_value("cm")
 
-    dist_fac = 1.0 / (4.0 * np.pi * (D_A * 1.2) ** 2)
+    dist_fac = 1.0 / (4.0 * np.pi * (D_A * (1.0 + redshift)) ** 2)
 
     assert_allclose(
-        np.average(spec2.emid.value, weights=spec2.flux.value), location.v / 1.2
+        np.average(spec2.emid.value, weights=spec2.flux.value),
+        location.v / (1.0 + redshift),
     )
     assert_allclose(
-        weight_std(spec2.emid.value, spec2.flux.value), sigma_E.v / 1.2, rtol=1.0e-3
+        weight_std(spec2.emid.value, spec2.flux.value),
+        sigma_E.v / (1.0 + redshift),
+        rtol=1.0e-3,
     )
-    assert_allclose(np.sum(spec2.flux.value * spec2.de.value), dm_E.v * dist_fac / 1.2)
+    assert_allclose(
+        np.sum(spec2.flux.value * spec2.de.value), dm_E.v * dist_fac / (1.0 + redshift)
+    )

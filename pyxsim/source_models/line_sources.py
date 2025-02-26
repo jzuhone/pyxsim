@@ -11,8 +11,9 @@ from pyxsim.lib.spectra import line_spectrum
 from pyxsim.source_models.sources import SourceModel
 from pyxsim.utils import check_num_cells, isunitful, mylog, parse_value
 
-gx = np.linspace(-6, 6, 2400)
+gx = np.linspace(-7, 7, 10000)
 gcdf = norm.cdf(gx)
+gpdf = norm.pdf(gx)
 
 
 class LineSourceModel(SourceModel):
@@ -213,13 +214,19 @@ class LineSourceModel(SourceModel):
             return ncells, number_of_photons[active_cells], active_cells, energies
 
         elif mode == "spectrum":
-            inv_sf = 1.0 / self.scale_factor
-            ee = ebins * inv_sf / shift - self.e0.value
-            de = np.diff(ebins * inv_sf / shift)
 
-            spec = (
-                line_spectrum(num_cells, ee, sigma, gx, gcdf, norm_field.d, self.pbar)
-                / de
+            ee = 0.5 * (ebins[1:] + ebins[:-1]) / self.scale_factor
+
+            spec = line_spectrum(
+                num_cells,
+                float(self.e0),
+                ee,
+                sigma,
+                gx,
+                gpdf,
+                norm_field.d,
+                shift,
+                self.pbar,
             )
 
             return spec

@@ -34,28 +34,29 @@ def power_law_spectrum(
 @cython.boundscheck(False)
 def line_spectrum(
     int num_cells,
+    float e0,
     np.ndarray[np.float64_t, ndim=1] ee,
     np.ndarray[np.float64_t, ndim=1] sigma,
     np.ndarray[np.float64_t, ndim=1] gx,
-    np.ndarray[np.float64_t, ndim=1] gcdf,
+    np.ndarray[np.float64_t, ndim=1] gpdf,
     np.ndarray[np.float64_t, ndim=1] N,
     np.ndarray[np.float64_t, ndim=1] shift,
     pbar
 ):
-    cdef np.int64_t nbins = ee.size-1
+    cdef np.int64_t nbins = ee.size
     cdef np.ndarray[np.float64_t, ndim=1] spec, ret, xtmp
     cdef int i, j
 
     spec = np.zeros(nbins)
-    ret = np.zeros(nbins+1)
-    xtmp = np.zeros(nbins+1)
+    ret = np.zeros(nbins)
+    xtmp = np.zeros(nbins)
 
     for i in range(num_cells):
         for j in range(nbins):
-            xtmp[j] = ee[j] / sigma[i]
-        ret = np.interp(xtmp, gx, gcdf)
+            xtmp[j] = (ee[j] / shift[i] - e0) / sigma[i]
+        ret = np.interp(xtmp, gx, gpdf)
         for j in range(nbins):
-            spec[j] += shift[i] * shift[i] * N[i] * (ret[j+1] - ret[j])
+            spec[j] += shift[i] * shift[i] * N[i] * ret[j] / sigma[i]
         pbar.update()
     return spec
 
