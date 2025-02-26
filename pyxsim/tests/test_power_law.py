@@ -94,8 +94,16 @@ def plaw_fit(alpha_sim, check_dir, prng=None):
 
 
 def test_power_law_fields():
-    bms = BetaModelSource()
+    cosmo = Cosmology()
+
+    vtot = vlos = 0.5
+    v_s = YTQuantity(vlos, "c").to_value("cm/s")
+    bms = BetaModelSource(no_broad=True, v_s=v_s)
     ds = bms.ds
+
+    redshift = 0.2
+
+    angular_scale = 1.0 / cosmo.angular_scale(0.0, redshift).to("cm/arcsec")
 
     def _power_law_luminosity(field, data):
         norm = data.ds.quan(
@@ -143,6 +151,48 @@ def test_power_law_fields():
     del sphere[src_fields1[-1]]
     del sphere[src_fields1[-2]]
     del sphere[src_fields1[1]]
+
+    sphere.set_field_parameter("axis", 2)
+
+    int_fields1 = plaw_model1.make_intensity_fields(ds, 0.5, 7.0, redshift=redshift)
+
+    eflux = (sphere[int_fields1[0]] * sphere["cell_volume"]).sum() * angular_scale**2
+    pflux = (sphere[int_fields1[1]] * sphere["cell_volume"]).sum() * angular_scale**2
+
+    dist_fac = (
+        1.0 / (4.0 * np.pi * cosmo.luminosity_distance(0.0, redshift).to("cm") ** 2).v
+    )
+    shift = np.sqrt(1.0 - vtot**2) / (1.0 - vlos)
+
+    elumi = (
+        lum
+        * (
+            (7.0 * (1.0 + redshift) / shift) ** (2.0 - alpha1)
+            - (0.5 * (1.0 + redshift) / shift) ** (2.0 - alpha1)
+        )
+        / (11.0 ** (2.0 - alpha1) - 0.01 ** (2.0 - alpha1))
+    )
+    plumi = (
+        keV_per_erg
+        * lum
+        * (
+            (7.0 * (1.0 + redshift) / shift) ** (1.0 - alpha1)
+            - (0.5 * (1.0 + redshift) / shift) ** (1.0 - alpha1)
+        )
+        / (11.0 ** (2.0 - alpha1) - 0.01 ** (2.0 - alpha1))
+        * (2.0 - alpha1)
+        / (1.0 - alpha1)
+    )
+
+    spec = plaw_model1.make_spectrum(
+        sphere, 0.5, 7.0, 3000, redshift=redshift, normal=[0.0, 0.0, 1.0]
+    )
+
+    assert_allclose(eflux.v, (shift**4) * elumi * dist_fac)
+    assert_allclose(eflux.v, np.sum(spec.energy_flux.value * spec.de.value))
+
+    assert_allclose(pflux.v, (1.0 + redshift) * (shift**3) * plumi * dist_fac)
+    assert_allclose(pflux.v, np.sum(spec.flux.value * spec.de.value), rtol=1.0e-6)
 
     alpha2 = 1.0
     plaw_model2 = PowerLawSourceModel(1.0, 0.01, 11.0, "hard_emission", alpha2)

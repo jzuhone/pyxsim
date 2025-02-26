@@ -83,8 +83,16 @@ def test_line_emission():
 
 
 def test_line_emission_fields():
-    bms = BetaModelSource()
+    cosmo = Cosmology()
+
+    vtot = vlos = 0.5
+    v_s = YTQuantity(vlos, "c").to_value("cm/s")
+    bms = BetaModelSource(no_broad=True, v_s=v_s)
     ds = bms.ds
+
+    redshift = 0.2
+
+    angular_scale = 1.0 / cosmo.angular_scale(0.0, redshift).to("cm/arcsec")
 
     def _dm_emission(field, data):
         return (
@@ -120,7 +128,7 @@ def test_line_emission_fields():
         assert_allclose(sphere[field].sum(), 0.0)
 
     line_model2 = LineSourceModel(
-        location, "dm_emission", sigma=("stream", "dark_matter_dispersion")
+        location, "dm_emission", ("stream", "dark_matter_dispersion")
     )
 
     del sphere[line_fields1[-2]]
@@ -140,6 +148,21 @@ def test_line_emission_fields():
         (sphere[line_fields4[-2]] * sphere["cell_volume"]).sum(), 0.5 * dm_E
     )
     assert_allclose(sphere[line_fields4[-1]].sum(), 0.5 * dm_E)
+
+    sphere.set_field_parameter("axis", 2)
+
+    int_fields = line_model2.make_intensity_fields(ds, 0.5, 7.0, redshift=redshift)
+
+    dist_fac = (
+        1.0 / (4.0 * np.pi * cosmo.luminosity_distance(0.0, redshift).to("cm") ** 2).v
+    )
+    shift = np.sqrt(1.0 - vtot**2) / (1.0 - vlos)
+
+    eflux = (sphere[int_fields[0]] * sphere["cell_volume"]).sum() * angular_scale**2
+    pflux = (sphere[int_fields[1]] * sphere["cell_volume"]).sum() * angular_scale**2
+
+    assert_allclose(eflux.v, (shift**4) * location.to_value("erg") * dm_E.v * dist_fac)
+    assert_allclose(pflux.v, (1.0 + redshift) * (shift**3) * dm_E.v * dist_fac)
 
 
 def test_line_emission_spectra():
@@ -210,11 +233,13 @@ def test_line_emission_spectra():
         np.average(spec3.emid.value, weights=spec3.flux.value),
         location.v * shift / (1.0 + redshift),
     )
+
     assert_allclose(
         weight_std(spec3.emid.value, spec3.flux.value),
         sigma_E.v * shift / (1.0 + redshift),
         rtol=1.0e-4,
     )
+
     assert_allclose(
         np.sum(spec3.flux.value * spec3.de.value),
         dm_E.v * dist_fac * shift**3 / (1.0 + redshift),
