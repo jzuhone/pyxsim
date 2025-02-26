@@ -255,7 +255,7 @@ class PowerLawSourceModel(SourceModel):
                 )
 
             else:
-                return Nph * shift * shift
+                return Nph * shift * shift * shift
 
         elif mode in ["luminosity", "intensity"]:
             L = (ef / shift) ** (2.0 - alpha) - (ei / shift) ** (2.0 - alpha)
@@ -264,7 +264,7 @@ class PowerLawSourceModel(SourceModel):
             if np.any(alpha != 2):
                 L[alpha != 2] /= 2.0 - alpha[alpha != 2]
 
-            return L * shift * shift * shift
+            return L * shift * shift * shift * shift
 
         elif mode == "spectrum":
             inv_sf = 1.0 / self.scale_factor

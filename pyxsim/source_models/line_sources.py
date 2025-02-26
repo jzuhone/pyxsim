@@ -260,7 +260,7 @@ class LineSourceModel(SourceModel):
             xhi = emax - self.e0.value
             xhis = xhi / sigma
             xlos = xlo / sigma
-            fac = (norm.cdf(xhis) - norm.cdf(xlos)) * shift * shift
+            fac = (norm.cdf(xhis) - norm.cdf(xlos)) * shift * shift * shift
             if mode in ["luminosity", "intensity"]:
                 fac = self.e0.value * fac
                 fac -= (
