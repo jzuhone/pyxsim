@@ -47,7 +47,17 @@ class SourceModel:
         # source model specifically
         pass
 
-    def set_pv(self, p_fields, v_fields, le, re, dw, c, periodicity, observer):
+    def set_pv(
+        self,
+        p_fields,
+        v_fields,
+        le=None,
+        re=None,
+        dw=None,
+        c=None,
+        periodicity=None,
+        observer=None,
+    ):
         self.p_fields = p_fields
         self.v_fields = v_fields
         self.le = le
@@ -57,7 +67,12 @@ class SourceModel:
         self.periodicity = periodicity
         self.observer = observer
 
-    def compute_radius(self, pos):
+    def compute_radius(self, chunk, cut=None):
+        if cut is None:
+            cut = ...
+        pos = np.array(
+            [np.ravel(chunk[self.p_fields[i]].to_value("kpc"))[cut] for i in range(3)]
+        )
         for i in range(3):
             if self.periodicity[i]:
                 tfl = pos[i] < self.le[i]
@@ -66,12 +81,20 @@ class SourceModel:
                 pos[:, tfr] -= self.dw[i]
         return np.sum((pos - self.c[:, np.newaxis]) ** 2, axis=0) * cm2_per_kpc2
 
+    def compute_shift(self, chunk, cut=None, particle_type=False):
+        if cut is None:
+            cut = ...
+        prefix = "particle_" if particle_type else ""
+        beta_n = chunk[self.ftype, f"{prefix}velocity_los"].to_value("c")[cut]
+        beta2 = chunk[self.ftype, f"{prefix}velocity_magnitude"].to_value("c")[cut] ** 2
+        return np.sqrt(1.0 - beta2) / (1.0 - beta_n)
+
     def cleanup_model(self, mode):
         # This needs to be implemented for every
         # source model specifically
         pass
 
-    def make_fluxf(self, emin, emax, energy=False):
+    def make_fluxf(self, emin, emax):
         # This needs to be implemented for every
         # source model specifically
         pass
@@ -111,6 +134,34 @@ class SourceModel:
         else:
             spec_class = CountRateSpectrum
         return spec_class(ebins, spec)
+
+    def _get_inverse_volume(self, ds, ftype):
+        from yt.geometry.particle_geometry_handler import ParticleIndex
+
+        if (
+            not isinstance(ds.index, ParticleIndex)
+            and ("index", "cell_volume") in ds.derived_field_list
+        ):
+
+            def _idV(data):
+                return 1.0 / data["index", "cell_volume"]
+
+        elif (ftype, "cell_volume") in ds.derived_field_list:
+
+            def _idV(data):
+                return 1.0 / data[ftype, "cell_volume"]
+
+        elif (ftype, "density") in ds.derived_field_list and (
+            ftype,
+            "mass",
+        ) in ds.derived_field_list:
+
+            def _idV(data):
+                return data[ftype, "density"] / data[ftype, "mass"]
+
+        else:
+            raise RuntimeError("No way to compute inverse volume")
+        return _idV
 
     def make_source_fields(self, ds, emin, emax, force_override=False, band_name=None):
         """
@@ -158,6 +209,8 @@ class SourceModel:
 
         ftype = self.ftype
 
+        idV_func = self._get_inverse_volume(ds, ftype)
+
         if band_name is None:
             band_name = f"{emin.value}_{emax.value}_keV"
 
@@ -178,11 +231,13 @@ class SourceModel:
         )
         count_rate_dname = lum_dname.replace("\rm{{L}}", "\rm{{R}}")
 
-        efluxf = self.make_fluxf(emin, emax, energy=True)
+        self.make_fluxf(emin, emax)
 
         def _luminosity_field(field, data):
             return data.ds.arr(
-                self.process_data("energy_field", data, spectral_norm, fluxf=efluxf),
+                self.process_data(
+                    "luminosity", data, spectral_norm, emin=emin.value, emax=emax.value
+                ),
                 "keV/s",
             )
 
@@ -197,7 +252,7 @@ class SourceModel:
 
         def _emissivity_field(field, data):
             ret = data[lum_name]
-            return ret * data[ftype, "density"] / data[ftype, "mass"]
+            return ret * idV_func(data)
 
         ds.add_field(
             emiss_name,
@@ -208,11 +263,11 @@ class SourceModel:
             force_override=force_override,
         )
 
-        pfluxf = self.make_fluxf(emin, emax, energy=False)
-
         def _count_rate_field(field, data):
             return data.ds.arr(
-                self.process_data("photon_field", data, spectral_norm, fluxf=pfluxf),
+                self.process_data(
+                    "photon_rate", data, spectral_norm, emin=emin.value, emax=emax.value
+                ),
                 "photons/s",
             )
 
@@ -227,7 +282,7 @@ class SourceModel:
 
         def _photon_emissivity_field(field, data):
             ret = data[count_rate_name]
-            return ret * data[ftype, "density"] / data[ftype, "mass"]
+            return ret * idV_func(data)
 
         ds.add_field(
             phot_emiss_name,
@@ -291,6 +346,7 @@ class SourceModel:
         redshift=0.0,
         dist=None,
         cosmology=None,
+        no_doppler=False,
         force_override=True,
         band_name=None,
     ):
@@ -327,6 +383,10 @@ class SourceModel:
             Cosmological information. If not supplied, we try to get the
             cosmology from the dataset. Otherwise, LCDM with the default yt
             parameters is assumed.
+        no_doppler : boolean, optional
+            If True, no Doppler shifting from velocities will be applied to the
+            intensity fields. Projections will be faster if this is used.
+            Default: False
         force_override : boolean, optional
             If True, override a pre-existing field with the same name.
             Default: False
@@ -338,6 +398,10 @@ class SourceModel:
         -------
         The list of fields which are generated.
         """
+        from yt.fields.derived_field import ValidateParameter
+
+        validators = [ValidateParameter("axis", {"axis": [0, 1, 2]})]
+
         if redshift == 0.0 and dist is None:
             raise ValueError(
                 "Either 'redshift' must be > 0.0 or 'dist' must " "not be None!"
@@ -352,6 +416,8 @@ class SourceModel:
 
         ftype = self.ftype
 
+        idV_func = self._get_inverse_volume(ds, ftype)
+
         dist_fac, redshift = self._make_dist_fac(
             ds, redshift, dist, cosmology, per_sa=True
         )
@@ -365,15 +431,22 @@ class SourceModel:
         ei_name = (ftype, f"xray_intensity_{band_name}")
         ei_dname = rf"I_{{X}} ({emin.value:.2f}-{emax.value:.2f} keV)"
 
-        eif = self.make_fluxf(emin_src, emax_src, energy=True)
+        if no_doppler:
+            self.make_fluxf(emin_src, emax_src)
 
         def _intensity_field(field, data):
             ret = data.ds.arr(
-                self.process_data("energy_field", data, spectral_norm, fluxf=eif),
+                self.process_data(
+                    "intensity",
+                    data,
+                    spectral_norm,
+                    emin=emin_src.value,
+                    emax=emax_src.value,
+                    shifting=not no_doppler,
+                ),
                 "keV/s",
             )
-            idV = data[ftype, "density"] / data[ftype, "mass"]
-            I = dist_fac * ret * idV
+            I = dist_fac * ret * idV_func(data)
             return I.in_units("erg/cm**3/s/arcsec**2")
 
         ds.add_field(
@@ -382,20 +455,25 @@ class SourceModel:
             display_name=ei_dname,
             sampling_type="local",
             units="erg/cm**3/s/arcsec**2",
+            validators=validators,
             force_override=force_override,
         )
 
         i_name = (ftype, ei_name[1].replace("intensity", "photon_intensity"))
 
-        pif = self.make_fluxf(emin_src, emax_src, energy=False)
-
         def _photon_intensity_field(field, data):
             ret = data.ds.arr(
-                self.process_data("photon_field", data, spectral_norm, fluxf=pif),
+                self.process_data(
+                    "photon_intensity",
+                    data,
+                    spectral_norm,
+                    emin=emin_src.value,
+                    emax=emax_src.value,
+                    shifting=not no_doppler,
+                ),
                 "photons/s",
             )
-            idV = data[ftype, "density"] / data[ftype, "mass"]
-            I = (1.0 + redshift) * dist_fac * ret * idV
+            I = (1.0 + redshift) * dist_fac * ret * idV_func(data)
             return I.in_units("photons/cm**3/s/arcsec**2")
 
         ds.add_field(
@@ -404,6 +482,7 @@ class SourceModel:
             display_name=ei_dname,
             sampling_type="local",
             units="photons/cm**3/s/arcsec**2",
+            validators=validators,
             force_override=force_override,
         )
 
@@ -418,6 +497,7 @@ class SourceModel:
         redshift=0.0,
         dist=None,
         cosmology=None,
+        no_doppler=False,
         force_override=False,
     ):
         """
@@ -454,6 +534,10 @@ class SourceModel:
             Cosmological information. If not supplied, we try to get the
             cosmology from the dataset. Otherwise, LCDM with the default yt
             parameters is assumed.
+        no_doppler : boolean, optional
+            If True, no Doppler shifting from velocities will be applied to the
+            intensity fields. Projections will be faster if this is used.
+            Default: False
         force_override : boolean, optional
             If True, override a pre-existing field with the same name.
             Default: False
@@ -476,5 +560,6 @@ class SourceModel:
             dist=dist,
             cosmology=cosmology,
             band_name=line_name,
+            no_doppler=no_doppler,
             force_override=force_override,
         )

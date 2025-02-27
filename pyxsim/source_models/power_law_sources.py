@@ -2,11 +2,12 @@ from numbers import Number
 
 import numpy as np
 from soxs.utils import parse_prng
+from unyt.exceptions import UnitConversionError
 from yt.data_objects.static_output import Dataset
 
 from pyxsim.lib.spectra import power_law_spectrum
 from pyxsim.source_models.sources import SourceModel
-from pyxsim.utils import mylog, parse_value
+from pyxsim.utils import check_num_cells, mylog, parse_value, sanitize_normal
 
 
 class PowerLawSourceModel(SourceModel):
@@ -24,10 +25,11 @@ class PowerLawSourceModel(SourceModel):
     emax : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
         The maximum energy of the photons to be generated, in the rest frame of
         the source. If units are not given, they are assumed to be in keV.
-    emission_field : string or (ftype, fname) tuple
-        The field corresponding to the specific photon count rate per cell or
-        particle, in the rest frame of the source, which serves as the
-        normalization for the power law. Must be in counts/s/keV.
+    luminosity_field : string or (ftype, fname) tuple
+        The field corresponding to the luminosity within the emin-emax band per
+        cell or particle, in the rest frame of the source, which serves as the
+        normalization for the power law. Must be in units with dimensions of power,
+        such as erg/s, W, or keV/s.
     index : float, string, or (ftype, fname) tuple
         The power-law index of the spectrum. Either a float for a single power law or
         the name of a field that corresponds to the power law.
@@ -44,11 +46,11 @@ class PowerLawSourceModel(SourceModel):
     >>> plaw_model = PowerLawSourceModel(e0, emin, emax, ("gas", "norm"), ("gas", "index"))
     """
 
-    def __init__(self, e0, emin, emax, emission_field, alpha, prng=None):
+    def __init__(self, e0, emin, emax, luminosity_field, alpha, prng=None):
         self.e0 = parse_value(e0, "keV")
         self.emin = parse_value(emin, "keV")
         self.emax = parse_value(emax, "keV")
-        self.emission_field = emission_field
+        self.luminosity_field = luminosity_field
         self.alpha = alpha
         self.prng = parse_prng(prng)
         self.ftype = None
@@ -59,18 +61,18 @@ class PowerLawSourceModel(SourceModel):
         else:
             ds = data_source.ds
         self.scale_factor = 1.0 / (1.0 + redshift)
-        self.emission_field = ds._get_field_info(self.emission_field).name
+        self.luminosity_field = ds._get_field_info(self.luminosity_field).name
         if not isinstance(self.alpha, Number):
             self.alpha = ds._get_field_info(self.alpha).name
-            if self.emission_field[0] != self.alpha[0]:
+            if self.luminosity_field[0] != self.alpha[0]:
                 mylog.warning(
-                    "The 'emission_field' %s and the 'alpha' field %s do not have the same field type!",
-                    self.emission_field,
+                    "The 'luminosity_field' %s and the 'alpha' field %s do not have the same field type!",
+                    self.luminosity_field,
                     self.alpha,
                 )
-        self.ftype = self.emission_field[0]
+        self.ftype = self.luminosity_field[0]
         if mode == "spectrum":
-            self.setup_pbar(data_source, self.emission_field)
+            self.setup_pbar(data_source, self.luminosity_field)
 
     def __repr__(self):
         rets = [
@@ -78,7 +80,7 @@ class PowerLawSourceModel(SourceModel):
             f"    e0={self.e0}\n",
             f"    emin={self.emin}\n",
             f"    emax={self.emax}\n",
-            f"    emission_field={self.emission_field}\n",
+            f"    luminosity_field={self.luminosity_field}\n",
             f"    alpha={self.alpha}\n",
             ")",
         ]
@@ -89,10 +91,18 @@ class PowerLawSourceModel(SourceModel):
             self.pbar.close()
 
     def make_spectrum(
-        self, data_source, emin, emax, nbins, redshift=0.0, dist=None, cosmology=None
+        self,
+        data_source,
+        emin,
+        emax,
+        nbins,
+        redshift=0.0,
+        dist=None,
+        cosmology=None,
+        normal=None,
     ):
         """
-        Make a count rate spectrum in the source frame from a yt data container,
+        Using all the data in a yt data container, make a count rate spectrum in the source frame,
         or a spectrum in the observer frame.
 
         Parameters
@@ -117,63 +127,106 @@ class PowerLawSourceModel(SourceModel):
             Cosmological information. If not supplied, we try to get the
             cosmology from the dataset. Otherwise, LCDM with the default yt
             parameters is assumed.
+        normal : integer, string, or array-like, optional
+            This is a line-of-sight direction along which the spectrum will be
+            Doppler shifted using the velocity field in the object. This is
+            only an option if the spectrum is calculated in the observer frame.
+            Options are one of "x", "y", "z", 0, 1, 2, or an 3-element array-like
+            object of floats to specify an off-axis normal vector.
 
         Returns
         -------
         :class:`~soxs.spectra.CountRateSpectrum` or :class:`~soxs.spectra.Spectrum`,
         depending on how the method is invoked.
         """
+        normal = sanitize_normal(normal)
+        if normal is not None:
+            if redshift == 0.0 and dist is None:
+                raise RuntimeError(
+                    "Cannot use a normal vector for the line-of-sight "
+                    "when a redshift or the distance is not specified! not specified or the distance "
+                )
+            data_source.set_field_parameter("axis", normal)
+        shifting = normal is not None
         ebins = np.linspace(emin, emax, nbins + 1)
         spec = np.zeros(nbins)
         spectral_norm = 1.0
         self.setup_model("spectrum", data_source, redshift)
         for chunk in data_source.chunks([], "io"):
-            spec += self.process_data("spectrum", chunk, spectral_norm, ebins=ebins)
+            chunk_data = self.process_data(
+                "spectrum", chunk, spectral_norm, shifting=shifting, ebins=ebins
+            )
+            if chunk_data is not None:
+                spec += chunk_data
         self.cleanup_model("spectrum")
         return self._make_spectrum(
             data_source.ds, ebins, spec, redshift, dist, cosmology
         )
 
-    def make_fluxf(self, emin, emax, energy=False):
-        return {"emin": emin, "emax": emax}
+    def process_data(
+        self,
+        mode,
+        chunk,
+        spectral_norm,
+        ebins=None,
+        emin=None,
+        emax=None,
+        shifting=False,
+    ):
 
-    def process_data(self, mode, chunk, spectral_norm, fluxf=None, ebins=None):
-        num_cells = len(chunk[self.emission_field])
+        num_cells = check_num_cells(self.ftype, chunk)
+
+        if num_cells == 0:
+            if mode in ["photons", "spectrum"]:
+                return
+            else:
+                return np.array([])
+
+        if mode in ["spectrum", "intensity", "photon_intensity"] and shifting:
+            shift = self.compute_shift(chunk)
+        else:
+            shift = np.ones_like(chunk[self.luminosity_field].d)
 
         if isinstance(self.alpha, float):
-            alpha = self.alpha * np.ones(num_cells)
+            alpha = self.alpha * np.ones_like(chunk[self.luminosity_field].d)
         else:
             alpha = chunk[self.alpha].d
 
-        if fluxf is None:
+        if emin is not None and emax is not None:
+            ei = emin
+            ef = emax
+        else:
             ei = self.emin.v
             ef = self.emax.v
-        else:
-            ei = fluxf["emin"].v
-            ef = fluxf["emax"].v
 
-        if mode in ["photons", "photon_field"]:
-            norm_fac = ef ** (1.0 - alpha) - ei ** (1.0 - alpha)
-            norm_fac[alpha == 1] = np.log(ef / ei)
-            norm_fac *= self.e0.v**alpha
-            norm = norm_fac * chunk[self.emission_field].d
+        etoalpha = self.e0.v**alpha
+        K_fac = self.emax.v ** (2.0 - alpha) - self.emin.v ** (2.0 - alpha)
+        K_fac[alpha == 2] = np.log(self.emax.v / self.emin.v)
+        K_fac *= etoalpha
+        if np.any(alpha != 2):
+            K_fac[alpha != 2] /= 2.0 - alpha[alpha != 2]
+
+        try:
+            K = chunk[self.luminosity_field].to_value("keV/s") / K_fac
+        except UnitConversionError:
+            raise ValueError('The "luminosity_field" must be in units of power!')
+
+        if mode in ["photons", "photon_rate", "photon_intensity"]:
+
+            Nph = (ef / shift) ** (1.0 - alpha) - (ei / shift) ** (1.0 - alpha)
+            Nph[alpha == 1] = np.log(ef / ei)
+            Nph *= K * etoalpha
+            norm_fac = Nph / K
             if np.any(alpha != 1):
-                norm[alpha != 1] /= 1.0 - alpha[alpha != 1]
+                Nph[alpha != 1] /= 1.0 - alpha[alpha != 1]
 
             if mode == "photons":
-                norm *= spectral_norm * self.scale_factor
-
+                Nph *= spectral_norm * self.scale_factor
                 if self.observer == "internal":
-                    pos = np.array(
-                        [
-                            np.ravel(chunk[self.p_fields[i]].to_value("kpc"))
-                            for i in range(3)
-                        ]
-                    )
-                    r2 = self.compute_radius(pos)
-                    norm /= r2
+                    r2 = self.compute_radius(chunk)
+                    Nph /= r2
 
-                number_of_photons = self.prng.poisson(lam=norm)
+                number_of_photons = self.prng.poisson(lam=Nph)
 
                 energies = np.zeros(number_of_photons.sum())
 
@@ -201,21 +254,22 @@ class PowerLawSourceModel(SourceModel):
                     energies[:end_e].copy(),
                 )
 
-            elif mode == "photon_field":
-                return norm
+            else:
+                return Nph * shift * shift * shift
 
-        elif mode == "energy_field":
-            norm_fac = ef ** (2.0 - alpha) - ei ** (2.0 - alpha)
-            norm_fac *= self.e0.v**alpha / (2.0 - alpha)
+        elif mode in ["luminosity", "intensity"]:
+            L = (ef / shift) ** (2.0 - alpha) - (ei / shift) ** (2.0 - alpha)
+            L[alpha == 2] = np.log(ef / ei)
+            L *= K * etoalpha
+            if np.any(alpha != 2):
+                L[alpha != 2] /= 2.0 - alpha[alpha != 2]
 
-            return norm_fac * chunk[self.emission_field].d
+            return L * shift * shift * shift * shift
 
         elif mode == "spectrum":
             inv_sf = 1.0 / self.scale_factor
             emid = 0.5 * (ebins[1:] + ebins[:-1]) * inv_sf / self.e0.v
 
-            spec = power_law_spectrum(
-                num_cells, emid, alpha, chunk[self.emission_field].d, self.pbar
-            )
+            spec = power_law_spectrum(num_cells, emid, alpha, K, shift, self.pbar)
 
             return spec

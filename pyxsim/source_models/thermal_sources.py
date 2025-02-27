@@ -2,12 +2,13 @@ from numbers import Number
 
 import numpy as np
 from more_itertools import chunked
-from soxs.constants import abund_tables, atomic_weights, elem_names, metal_elem
-from soxs.utils import parse_prng, regrid_spectrum
+from soxs.constants import atomic_weights, elem_names, metal_elem
+from soxs.utils import parse_prng
 from unyt.array import unyt_quantity
 from yt.data_objects.static_output import Dataset
 from yt.utilities.exceptions import YTFieldNotFound
 
+from pyxsim.lib.spectra import make_band, shift_spectrum
 from pyxsim.source_models.sources import SourceModel
 from pyxsim.spectral_models import (
     CloudyCIESpectralModel,
@@ -15,7 +16,13 @@ from pyxsim.spectral_models import (
     MekalSpectralModel,
     TableCIEModel,
 )
-from pyxsim.utils import compute_H_abund, mylog, parse_value
+from pyxsim.utils import (
+    _parse_abund_table,
+    compute_H_abund,
+    mylog,
+    parse_value,
+    sanitize_normal,
+)
 
 
 class ThermalSourceModel(SourceModel):
@@ -93,7 +100,8 @@ class ThermalSourceModel(SourceModel):
         self.pbar = None
         self.Zconvert = 1.0
         self.mconvert = {}
-        self.atable = abund_tables[abund_table].copy()
+        self.abund_table = abund_table
+        self.atable = _parse_abund_table(abund_table)
         if h_fraction is None:
             h_fraction = compute_H_abund(abund_table)
         self.h_fraction = h_fraction
@@ -103,6 +111,8 @@ class ThermalSourceModel(SourceModel):
         self.bin_edges = np.log10(self.ebins) if self.binscale == "log" else self.ebins
         self.nbins = self.emid.size
         self.model_vers = self.spectral_model.model_vers
+        self.efluxf = None
+        self.pfluxf = None
 
     def _prep_repr(self):
         class_name = self.__class__.__name__
@@ -215,10 +225,18 @@ class ThermalSourceModel(SourceModel):
             self.setup_pbar(data_source, self.temperature_field)
 
     def make_spectrum(
-        self, data_source, emin, emax, nbins, redshift=0.0, dist=None, cosmology=None
+        self,
+        data_source,
+        emin,
+        emax,
+        nbins,
+        redshift=0.0,
+        dist=None,
+        cosmology=None,
+        normal=None,
     ):
         """
-        Make a count rate spectrum in the source frame from a yt data container,
+        Using all the data in a yt data container, make a count rate spectrum in the source frame,
         or a spectrum in the observer frame.
 
         Parameters
@@ -243,30 +261,63 @@ class ThermalSourceModel(SourceModel):
             Cosmological information. If not supplied, we try to get the
             cosmology from the dataset. Otherwise, LCDM with the default yt
             parameters is assumed.
+        normal : integer, string, or array-like, optional
+            This is a line-of-sight direction along which the spectrum will be
+            Doppler shifted using the velocity field in the object. This is
+            only an option if the spectrum is calculated in the observer frame.
+            Options are one of "x", "y", "z", 0, 1, 2, or an 3-element array-like
+            object of floats to specify an off-axis normal vector.
 
         Returns
         -------
         :class:`~soxs.spectra.CountRateSpectrum` or :class:`~soxs.spectra.Spectrum`,
         depending on how the method is invoked.
         """
+        normal = sanitize_normal(normal)
+        if normal is not None:
+            if redshift == 0.0 and dist is None:
+                raise RuntimeError(
+                    "Cannot use a normal vector for the line-of-sight "
+                    "when a redshift or the distance is not specified! not specified or the distance "
+                )
+            data_source.set_field_parameter("axis", normal)
+        shifting = normal is not None
         self.setup_model("spectrum", data_source, redshift)
         spectral_norm = 1.0
         spec = np.zeros(nbins)
         ebins = np.linspace(emin, emax, nbins + 1)
         for chunk in data_source.chunks([], "io"):
-            s = self.process_data("spectrum", chunk, spectral_norm)
-            spec += regrid_spectrum(ebins, self.ebins, s)
+            chunk_data = self.process_data(
+                "spectrum", chunk, spectral_norm, shifting=shifting, ebins=ebins
+            )
+            if chunk_data is not None:
+                spec += chunk_data
         spec /= np.diff(ebins)
         self.cleanup_model("spectrum")
         return self._make_spectrum(
             data_source.ds, ebins, spec, redshift, dist, cosmology
         )
 
-    def make_fluxf(self, emin, emax, energy=False):
-        return self.spectral_model.make_fluxf(emin, emax, energy=energy)
+    def make_fluxf(self, emin, emax):
+        self.efluxf = self.spectral_model.make_fluxf(emin, emax, energy=True)
+        self.pfluxf = self.spectral_model.make_fluxf(emin, emax, energy=False)
 
-    def process_data(self, mode, chunk, spectral_norm, fluxf=None):
-        spec = np.zeros(self.nbins)
+    def process_data(
+        self,
+        mode,
+        chunk,
+        spectral_norm,
+        ebins=None,
+        emin=None,
+        emax=None,
+        shifting=False,
+    ):
+        if mode == "spectrum":
+            spec = np.zeros(ebins.size - 1)
+        else:
+            spec = None
+
+        shifted_intensity = mode.endswith("intensity") and shifting
 
         orig_shape = chunk[self.temperature_field].shape
         if len(orig_shape) == 0:
@@ -274,10 +325,8 @@ class ThermalSourceModel(SourceModel):
         else:
             orig_ncells = np.prod(orig_shape)
         if orig_ncells == 0:
-            if mode == "photons":
+            if mode in ["photons", "spectrum"]:
                 return
-            elif mode == "spectrum":
-                return spec
             else:
                 return np.array([])
 
@@ -325,7 +374,15 @@ class ThermalSourceModel(SourceModel):
                     value = self.var_elem[key]
                     if not isinstance(value, Number):
                         chunk[value]
+            # We also need to do this for the velocity fields if we use them
+            if mode in ["spectrum", "intensity", "photon_intensity"] and shifting:
+                chunk[self.ftype, "velocity_magnitude"]
             return np.zeros(orig_shape)
+
+        if mode in ["spectrum", "intensity", "photon_intensity"] and shifting:
+            shift = self.compute_shift(chunk, cut=cut)
+        else:
+            shift = np.ones(num_cells)
 
         kT = kT[cut]
         cell_nrm = cell_nrm[cut]
@@ -346,7 +403,7 @@ class ThermalSourceModel(SourceModel):
                 fac = self.Zconvert
                 if str(mZ.units) != "Zsun":
                     fac /= X_H
-                metalZ = np.ravel(mZ.d[cut] * fac)
+                metalZ = np.ravel(mZ.d * fac)[cut]
 
         elemZ = None
         if self.num_var_elem > 0:
@@ -360,16 +417,10 @@ class ThermalSourceModel(SourceModel):
                     fac = self.mconvert[key]
                     if str(eZ.units) != "Zsun":
                         fac /= X_H
-                    elemZ[j, :] = np.ravel(eZ.d[cut] * fac)
+                    elemZ[j, :] = np.ravel(eZ.d * fac)[cut]
 
         if self.observer == "internal" and mode == "photons":
-            pos = np.array(
-                [
-                    np.ravel(chunk[self.p_fields[i]].to_value("kpc"))[cut]
-                    for i in range(3)
-                ]
-            )
-            r2 = self.compute_radius(pos)
+            r2 = self.compute_radius(chunk, cut=cut)
             cell_nrm /= r2
 
         num_photons_max = 10000000
@@ -390,7 +441,8 @@ class ThermalSourceModel(SourceModel):
 
             kTi = kT[ibegin:iend]
 
-            if mode in ["photons", "spectrum"]:
+            shifti = shift[ibegin:iend]
+            if mode in ["photons", "spectrum"] or shifted_intensity:
                 if self._density_dependence:
                     nHi = nH[ibegin:iend]
                     cspec, mspec, vspec = self.spectral_model.get_spectrum(kTi, nHi)
@@ -438,11 +490,24 @@ class ThermalSourceModel(SourceModel):
                     start_e = end_e
 
                 elif mode == "spectrum":
-                    spec += np.sum(tot_spec * cnm[:, np.newaxis], axis=0)
+                    spec += shift_spectrum(self.ebins, ebins, tot_spec, shifti, cnm)
 
-                self.pbar.update(nck)
+                elif mode.endswith("intensity"):
+                    use_energy = int(mode == "intensity")
+                    I = make_band(
+                        use_energy, emin, emax, self.ebins, self.emid, tot_spec, shift
+                    )
+                    ret[idxs[ibegin:iend]] = I * cnm
+
+                if mode in ["photons", "spectrum"]:
+                    self.pbar.update(nck)
 
             else:
+
+                fluxf = (
+                    self.efluxf if mode in ["luminosity", "intensity"] else self.pfluxf
+                )
+
                 if self._density_dependence:
                     nHi = nH[ibegin:iend]
                     cflux, mflux, vflux = fluxf(kTi, nHi)

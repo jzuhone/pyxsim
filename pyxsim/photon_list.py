@@ -16,7 +16,6 @@ from yt.utilities.parallel_tools.parallel_analysis_interface import (
     communication_system,
     parallel_objects,
 )
-from yt.utilities.physical_constants import clight
 
 from pyxsim import __version__ as pyxsim_version
 from pyxsim.lib.sky_functions import (
@@ -26,7 +25,13 @@ from pyxsim.lib.sky_functions import (
     scatter_events_allsky,
 )
 from pyxsim.spectral_models import absorb_models
-from pyxsim.utils import get_normal_and_north, mylog, parse_value
+from pyxsim.utils import (
+    get_normal_and_north,
+    mylog,
+    parse_value,
+    scale_shift,
+    scale_shift2,
+)
 
 comm = communication_system.communicators[-1]
 
@@ -337,7 +342,16 @@ def make_photons(
     else:
         parameters["data_type"] = "particles"
 
-    source_model.set_pv(p_fields, v_fields, le, re, dw, c, ds.periodicity, observer)
+    source_model.set_pv(
+        p_fields,
+        v_fields,
+        le=le,
+        re=re,
+        dw=dw,
+        c=c,
+        periodicity=ds.periodicity,
+        observer=observer,
+    )
 
     f = h5py.File(photon_file, "w")
 
@@ -417,9 +431,12 @@ def make_photons(
                     p_size *= 2
                 d["energy"].resize((p_size,))
 
+            if w_field is None:
+                dx = 0.0
+            else:
+                dx = chunk[w_field][idxs].to_value("kpc")
             for i, ax in enumerate("xyz"):
                 pos = chunk[p_fields[i]][idxs].to_value("kpc")
-                dx = chunk[w_field][idxs].to_value("kpc")
                 # Fix photon coordinates for regions crossing a periodic boundary
                 if ds.periodicity[i]:
                     tfl = pos + dx < le[i]
@@ -439,9 +456,7 @@ def make_photons(
             if w_field is None:
                 d["dx"][c_offset : c_offset + chunk_nc] = 0.0
             else:
-                d["dx"][c_offset : c_offset + chunk_nc] = chunk[w_field][idxs].to_value(
-                    "kpc"
-                )
+                d["dx"][c_offset : c_offset + chunk_nc] = dx
 
             for field in fields_store:
                 d[field[1]][c_offset : c_offset + chunk_nc] = chunk[field][idxs]
@@ -543,9 +558,6 @@ def _project_photons(
             nH_grid = fa["data"]["nH"][()]
 
     sky_center = ensure_numpy_array(sky_center)
-
-    scale_shift = -1.0 / clight.to_value("km/s")
-    scale_shift2 = scale_shift * scale_shift
 
     if isinstance(absorb_model, str):
         if absorb_model not in absorb_models:

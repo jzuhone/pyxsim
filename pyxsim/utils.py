@@ -6,6 +6,10 @@ from more_itertools import always_iterable
 from soxs.constants import abund_tables, atomic_weights, elem_names
 from unyt import unyt_array, unyt_quantity
 from yt.utilities.orientation import Orientation
+from yt.utilities.physical_constants import clight
+
+scale_shift = -1.0 / clight.to_value("km/s")
+scale_shift2 = scale_shift * scale_shift
 
 pyxsimLogger = logging.getLogger("pyxsim")
 
@@ -173,10 +177,26 @@ def merge_files(input_files, output_file, overwrite=False, add_exposure_times=Fa
     f_out.close()
 
 
+def _parse_abund_table(abund_table):
+    if not isinstance(abund_table, str):
+        if len(abund_table) != 30:
+            raise RuntimeError(
+                "User-supplied abundance tables must be 30 elements long!"
+            )
+        atable = np.concatenate([[0.0], np.array(abund_table)])
+    else:
+        if abund_table not in abund_tables:
+            raise KeyError(
+                f"Abundance table {abund_table} not found! Options are: {list(abund_tables.keys())}"
+            )
+        atable = abund_tables[abund_table].copy()
+    return atable
+
+
 def compute_elem_mass_fraction(elem, abund_table="angr"):
     if isinstance(elem, str):
         elem = elem_names.index(elem)
-    atable = abund_tables[abund_table]
+    atable = _parse_abund_table(abund_table)
     mZ = (atomic_weights[3:] * atable[3:]).sum()
     mE = atomic_weights[elem] * atable[elem]
     return mE / mZ
@@ -220,19 +240,17 @@ def create_metal_fields(ds, metallicity_field, elements, abund_table):
 
 
 def compute_H_abund(abund_table):
-    if abund_table not in abund_tables:
-        raise KeyError(
-            f"Abundance table {abund_table} not found! Options are: {list(abund_tables.keys())}"
-        )
-    return atomic_weights[1] / (atomic_weights * abund_tables[abund_table]).sum()
+    atable = _parse_abund_table(abund_table)
+    return atomic_weights[1] / (atomic_weights * atable).sum()
 
 
 def compute_zsolar(abund_table):
+    atable = _parse_abund_table(abund_table)
     if abund_table not in abund_tables:
         raise KeyError(
             f"Abundance table {abund_table} not found! Options are: {list(abund_tables.keys())}"
         )
-    elems = atomic_weights * abund_tables[abund_table]
+    elems = atomic_weights * atable
     return elems[3:].sum() / elems.sum()
 
 
@@ -258,3 +276,25 @@ def get_normal_and_north(normal, north_vector=None):
     orient = Orientation(L, north_vector=north_vector)
     north_vector = orient.north_vector
     return L, north_vector, orient
+
+
+def sanitize_normal(normal):
+    if normal is None or isinstance(normal, int):
+        L = normal
+    elif isinstance(normal, str):
+        L = "xyz".index(normal)
+    elif normal is not None:
+        L = np.array(normal)
+        L /= np.sqrt(np.dot(L, L))
+    return L
+
+
+def check_num_cells(ftype, obj):
+    if ftype == "gas":
+        if ("gas", "ones") in obj.ds.field_info:
+            test_field = ("gas", "ones")
+        else:
+            test_field = ("index", "ones")
+    else:
+        test_field = (ftype, "particle_ones")
+    return obj[test_field].size

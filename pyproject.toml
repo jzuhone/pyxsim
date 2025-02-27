@@ -4,14 +4,13 @@ requires = [
   "setuptools_scm[toml]>=6.2",
   # see https://github.com/numpy/numpy/pull/18389
   "wheel>=0.36.2",
-  "Cython>=0.29.21, <3.1",
-  "numpy>=1.25, <2.0",
+  "Cython>=0.29.21, <3.1", "numpy>=2.0.0,<3"
 ]
 
 [project]
 name = "pyxsim"
 dynamic = ["version"]
-requires-python = ">=3.9.2"
+requires-python = ">=3.11.2"
 description = "Python package for simulating X-ray observations from astrophysical sources"
 authors = [
     { name = "John ZuHone", email = "jzuhone@gmail.com" },
