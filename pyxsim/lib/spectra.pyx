@@ -119,7 +119,7 @@ def make_band(
                 ener = 1.0
             if ebins[j] >= emin/shift[i] and ebins[j+1] <= emax/shift[i]:
                 spec_sum += ener*spec[i, j]
-        shft = shift[i]*shift[i]
+        shft = shift[i]*shift[i]*shift[i]
         if use_energy == 1:
             shft *= shift[i]
         ofield[i] += shft * spec_sum

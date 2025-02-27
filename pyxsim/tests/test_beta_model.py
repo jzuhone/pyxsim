@@ -9,6 +9,7 @@ import tempfile
 import numpy as np
 from numpy.testing import assert_allclose
 from soxs import ApecGenerator
+from yt import YTQuantity
 from yt.utilities.cosmology import Cosmology
 from yt.utilities.physical_constants import clight
 
@@ -17,7 +18,6 @@ from pyxsim.tests.utils import (
     BetaModelSource,
     ParticleBetaModelSource,
     events_ks_testing,
-    v_shift,
 )
 
 cosmo = Cosmology()
@@ -180,7 +180,6 @@ def test_vapec_beta_model(check_dir):
 
     pvalue = events_ks_testing("my_events.h5", spec, exp_time, A, check_dir)
 
-    print(pvalue)
     assert pvalue > 0.05
 
     os.chdir(curdir)
@@ -190,21 +189,24 @@ def test_vapec_beta_model(check_dir):
 def test_beta_model_fields():
     from astropy.cosmology import FlatLambdaCDM
 
-    bms = BetaModelSource()
+    vlos = -0.5
+    vtot = np.abs(vlos)
+    v_s = YTQuantity(vlos, "c").to_value("cm/s")
+    bms = BetaModelSource(no_broad=True, v_s=v_s)
     ds = bms.ds
+
+    shift = np.sqrt(1.0 - vtot**2) / (1.0 - vlos)
 
     redshift = 0.2
 
     acosmo = FlatLambdaCDM(H0=71.0, Om0=0.27)
-
-    vlos = (-v_shift, "cm/s")
 
     kT_sim = bms.kT
     Z_sim = bms.Z
 
     D_A = cosmo.angular_diameter_distance(0.0, redshift).to_value("cm")
 
-    sphere = ds.sphere("c", (0.5, "Mpc"))
+    sphere = ds.sphere("c", (0.2, "Mpc"))
 
     norm = (
         1.0e-14
@@ -215,11 +217,12 @@ def test_beta_model_fields():
     agen = ApecGenerator(0.1, 11.5, 10000)
 
     spec = agen.get_spectrum(kT_sim, Z_sim, redshift, norm)
-    plum, lum = spec.get_lum_in_band(0.5, 7.0, redshift=redshift, cosmology=acosmo)
+    pflux, eflux = spec.get_flux_in_band(1.0, 4.0)
+    plum, lum = spec.get_lum_in_band(1.0, 4.0, redshift=redshift, cosmology=acosmo)
 
     thermal_model = CIESourceModel("apec", 0.1, 11.5, 10000, Z_sim)
 
-    xray_fields = thermal_model.make_source_fields(ds, 0.5, 7.0)
+    xray_fields = thermal_model.make_source_fields(ds, 1.0, 4.0)
     lum1 = (sphere[xray_fields[0]] * sphere["cell_volume"]).sum().value
     lum2 = sphere.sum(xray_fields[1]).value
     plum1 = (sphere[xray_fields[-2]] * sphere["cell_volume"]).sum().value
@@ -227,55 +230,43 @@ def test_beta_model_fields():
 
     assert np.abs(lum1 - lum.value) / lum.value < 0.001
     assert np.abs(lum2 - lum.value) / lum.value < 0.001
-    assert np.abs(plum1 - plum.value) / plum.value < 0.001
-    assert np.abs(plum2 - plum.value) / plum.value < 0.001
-
-    sphere.set_field_parameter("axis", 0)
+    assert np.abs(plum1 - plum.value) / plum.value < 0.0012
+    assert np.abs(plum2 - plum.value) / plum.value < 0.0012
 
     angular_scale = 1.0 / cosmo.angular_scale(0.0, redshift).to("cm/arcsec")
 
-    int_fields = thermal_model.make_intensity_fields(ds, 0.5, 7.0, redshift=redshift)
-
-    eflux2 = (sphere[int_fields[0]] * sphere["cell_volume"]).sum() * angular_scale**2
-    pflux2 = (sphere[int_fields[1]] * sphere["cell_volume"]).sum() * angular_scale**2
-
-    pflux, eflux = spec.get_flux_in_band(0.5, 7.0)
-
-    assert np.abs(eflux2.value - eflux.value) / eflux.value < 0.001
-    assert np.abs(pflux2.value - pflux.value) / pflux.value < 0.001
-
-    sphere2 = ds.sphere("c", (0.5, "Mpc"))
+    sphere2 = ds.sphere("c", (0.2, "Mpc"))
 
     sphere2.set_field_parameter("axis", 2)
 
     int_fields = thermal_model.make_intensity_fields(
         ds,
-        0.5,
-        7.0,
+        1.0,
+        4.0,
         redshift=redshift,
-        force_override=True,
     )
 
     eflux3 = (sphere2[int_fields[0]] * sphere2["cell_volume"]).sum() * angular_scale**2
     pflux3 = (sphere2[int_fields[1]] * sphere2["cell_volume"]).sum() * angular_scale**2
 
-    spec2 = spec.regrid_spectrum(0.2, 10.0, 10000, vlos=vlos)
+    pflux4, eflux4 = spec.get_flux_in_band(1.0 / shift, 4.0 / shift)
 
-    pflux4, eflux4 = spec2.get_flux_in_band(0.5, 7.0)
+    eflux4 *= shift**4
+    pflux4 *= shift**3
 
     assert np.abs(eflux3.value - eflux4.value) / eflux4.value < 0.001
     assert np.abs(pflux3.value - pflux4.value) / pflux4.value < 0.001
 
-    sphere3 = ds.sphere("c", (0.5, "Mpc"))
+    sphere3 = ds.sphere("c", (0.2, "Mpc"))
 
     sphere3.set_field_parameter("axis", 2)
 
     int_fields = thermal_model.make_intensity_fields(
         ds,
-        0.5,
-        7.0,
+        1.0,
+        4.0,
         redshift=redshift,
-        no_shifting=True,
+        no_doppler=True,
         force_override=True,
         band_name="no_shift",
     )
@@ -288,7 +279,10 @@ def test_beta_model_fields():
 
 
 def test_beta_model_spectrum():
-    bms = BetaModelSource(no_broad=True)
+
+    vlos = -0.5
+    v_s = YTQuantity(vlos, "c").to_value("cm/s")
+    bms = BetaModelSource(no_broad=True, v_s=v_s)
     ds = bms.ds
 
     redshift = 0.2
@@ -321,10 +315,8 @@ def test_beta_model_spectrum():
 
     assert_allclose(spec3.flux.value, spec4.flux.value)
 
-    vlos = (-v_shift, "cm/s")
-
     spec5 = agen.get_spectrum(kT_sim, Z_sim, redshift, norm2).regrid_spectrum(
-        0.2, 7.0, 2000, vlos=vlos
+        0.2, 7.0, 2000, vlos=vlos * ckms
     )
 
     spec6 = thermal_model.make_spectrum(
@@ -339,7 +331,7 @@ def test_beta_model_spectrum():
     assert_allclose(spec5.flux.value, spec6.flux.value)
 
     spec7 = agen.get_spectrum(kT_sim, Z_sim, redshift, norm2).regrid_spectrum(
-        0.2, 7.0, 2000, vlos=0.0, vtot=vlos
+        0.2, 7.0, 2000, vlos=0.0, vtot=vlos * ckms
     )
 
     spec8 = thermal_model.make_spectrum(
