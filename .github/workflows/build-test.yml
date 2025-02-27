@@ -54,9 +54,10 @@ jobs:
                       numpy=${{ matrix.numpy-version }}
 
             - name: Install dependencies and pyxsim
-              shell: bash
+              shell: bash -el {0}
               env:
                   mode: testing
               run: source ./tests/ci_install.sh
             - name: Run Tests
-              run: py.test -vv pyxsim/tests
+              shell: bash -el {0}
+              run: micromamba activate test-env; python -m pytest -vv pyxsim/tests
