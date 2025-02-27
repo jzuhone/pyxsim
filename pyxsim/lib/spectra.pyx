@@ -86,7 +86,7 @@ def shift_spectrum(
             cspec[j] = spec[i, j-1] + cspec[j-1]
         nspec = np.interp(ebnew/shift[i], ebold, cspec)
         for j in range(nnew):
-            ospec[j] += shift[i] * shift[i] * N[i] * (nspec[j+1] - nspec[j])
+            ospec[j] += shift[i] * shift[i] * shift[i] * N[i] * (nspec[j+1] - nspec[j])
     return ospec
 
 

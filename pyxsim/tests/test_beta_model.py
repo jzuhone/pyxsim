@@ -280,7 +280,7 @@ def test_beta_model_fields():
 
 def test_beta_model_spectrum():
 
-    vlos = -0.5
+    vlos = -0.2
     v_s = YTQuantity(vlos, "c").to_value("cm/s")
     bms = BetaModelSource(no_broad=True, v_s=v_s)
     ds = bms.ds
@@ -297,32 +297,32 @@ def test_beta_model_spectrum():
     norm1 = 1.0e-14 * sphere.sum(("gas", "emission_measure")).v
     norm2 = norm1 / (4.0 * np.pi * D_A * D_A * (1 + redshift) ** 2)
 
-    agen = ApecGenerator(0.1, 8.0, 3000)
+    agen = ApecGenerator(0.1, 11.0, 3000)
 
     spec1 = agen.get_spectrum(kT_sim, Z_sim, redshift, norm2).regrid_spectrum(
-        0.2, 7.0, 2000
+        0.2, 6.0, 2000
     )
 
-    thermal_model = CIESourceModel("apec", 0.1, 8.0, 3000, Z_sim)
+    thermal_model = CIESourceModel("apec", 0.1, 11.0, 3000, Z_sim)
     spec2 = thermal_model.make_spectrum(
-        sphere, 0.2, 7.0, 2000, redshift=redshift, cosmology=cosmo
+        sphere, 0.2, 6.0, 2000, redshift=redshift, cosmology=cosmo
     )
     assert_allclose(spec1.flux.value, spec2.flux.value)
 
-    spec3 = agen.get_spectrum(kT_sim, Z_sim, 0.0, norm1).regrid_spectrum(0.2, 7.0, 2000)
+    spec3 = agen.get_spectrum(kT_sim, Z_sim, 0.0, norm1).regrid_spectrum(0.2, 6.0, 2000)
 
-    spec4 = thermal_model.make_spectrum(sphere, 0.2, 7.0, 2000)
+    spec4 = thermal_model.make_spectrum(sphere, 0.2, 6.0, 2000)
 
     assert_allclose(spec3.flux.value, spec4.flux.value)
 
     spec5 = agen.get_spectrum(kT_sim, Z_sim, redshift, norm2).regrid_spectrum(
-        0.2, 7.0, 2000, vlos=vlos * ckms
+        0.2, 6.0, 2000, vlos=-vlos * ckms
     )
 
     spec6 = thermal_model.make_spectrum(
         sphere,
         0.2,
-        7.0,
+        6.0,
         2000,
         redshift=redshift,
         cosmology=cosmo,
@@ -331,13 +331,13 @@ def test_beta_model_spectrum():
     assert_allclose(spec5.flux.value, spec6.flux.value)
 
     spec7 = agen.get_spectrum(kT_sim, Z_sim, redshift, norm2).regrid_spectrum(
-        0.2, 7.0, 2000, vlos=0.0, vtot=vlos * ckms
+        0.2, 6.0, 2000, vlos=0.0, vtot=vlos * ckms
     )
 
     spec8 = thermal_model.make_spectrum(
         sphere,
         0.2,
-        7.0,
+        6.0,
         2000,
         redshift=redshift,
         cosmology=cosmo,
