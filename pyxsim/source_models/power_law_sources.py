@@ -171,6 +171,7 @@ class PowerLawSourceModel(SourceModel):
         ebins=None,
         emin=None,
         emax=None,
+        fluxf=None,
         shifting=False,
     ):
 

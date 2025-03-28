@@ -182,6 +182,7 @@ class LineSourceModel(SourceModel):
         ebins=None,
         emin=None,
         emax=None,
+        fluxf=None,
         shifting=False,
     ):
         num_cells = check_num_cells(self.ftype, chunk)

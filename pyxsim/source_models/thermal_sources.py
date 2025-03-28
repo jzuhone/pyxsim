@@ -319,9 +319,8 @@ class ThermalSourceModel(SourceModel):
             data_source.ds, ebins, spec, redshift, dist, cosmology
         )
 
-    def make_fluxf(self, emin, emax):
-        self.efluxf = self.spectral_model.make_fluxf(emin, emax, energy=True)
-        self.pfluxf = self.spectral_model.make_fluxf(emin, emax, energy=False)
+    def make_fluxf(self, emin, emax, energy=False):
+        return self.spectral_model.make_fluxf(emin, emax, energy=energy)
 
     def process_data(
         self,
@@ -331,6 +330,7 @@ class ThermalSourceModel(SourceModel):
         ebins=None,
         emin=None,
         emax=None,
+        fluxf=None,
         shifting=False,
     ):
         if mode == "spectrum":
@@ -587,10 +587,6 @@ class ThermalSourceModel(SourceModel):
                     self.pbar.update(nck)
 
             else:
-
-                fluxf = (
-                    self.efluxf if mode in ["luminosity", "intensity"] else self.pfluxf
-                )
 
                 if self._cx:
                     h_flux, he_flux = fluxf(colli)

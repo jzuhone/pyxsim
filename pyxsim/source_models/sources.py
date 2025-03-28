@@ -24,7 +24,16 @@ class SourceModel:
         self.prng = parse_prng(prng)
         self.observer = "external"
 
-    def process_data(self, mode, chunk, spectral_norm, fluxf=None):
+    def process_data(
+        self,
+        mode,
+        chunk,
+        spectral_norm,
+        emin=None,
+        emax=None,
+        fluxf=None,
+        shifting=False,
+    ):
         # This needs to be implemented for every
         # source model specifically
         pass
@@ -94,7 +103,7 @@ class SourceModel:
         # source model specifically
         pass
 
-    def make_fluxf(self, emin, emax):
+    def make_fluxf(self, emin, emax, energy=False):
         # This needs to be implemented for every
         # source model specifically
         pass
@@ -231,12 +240,17 @@ class SourceModel:
         )
         count_rate_dname = lum_dname.replace("\rm{{L}}", "\rm{{R}}")
 
-        self.make_fluxf(emin, emax)
+        efluxf = self.make_fluxf(emin, emax, energy=True)
 
         def _luminosity_field(field, data):
             return data.ds.arr(
                 self.process_data(
-                    "luminosity", data, spectral_norm, emin=emin.value, emax=emax.value
+                    "luminosity",
+                    data,
+                    spectral_norm,
+                    emin=emin.value,
+                    emax=emax.value,
+                    fluxf=efluxf,
                 ),
                 "keV/s",
             )
@@ -263,10 +277,17 @@ class SourceModel:
             force_override=force_override,
         )
 
+        pfluxf = self.make_fluxf(emin, emax, energy=False)
+
         def _count_rate_field(field, data):
             return data.ds.arr(
                 self.process_data(
-                    "photon_rate", data, spectral_norm, emin=emin.value, emax=emax.value
+                    "photon_rate",
+                    data,
+                    spectral_norm,
+                    emin=emin.value,
+                    emax=emax.value,
+                    fluxf=pfluxf,
                 ),
                 "photons/s",
             )
@@ -432,7 +453,11 @@ class SourceModel:
         ei_dname = rf"I_{{X}} ({emin.value:.2f}-{emax.value:.2f} keV)"
 
         if no_doppler:
-            self.make_fluxf(emin_src, emax_src)
+            efluxf = self.make_fluxf(emin_src, emax_src, energy=True)
+            pfluxf = self.make_fluxf(emin_src, emax_src, energy=False)
+        else:
+            efluxf = None
+            pfluxf = None
 
         def _intensity_field(field, data):
             ret = data.ds.arr(
@@ -442,6 +467,7 @@ class SourceModel:
                     spectral_norm,
                     emin=emin_src.value,
                     emax=emax_src.value,
+                    fluxf=efluxf,
                     shifting=not no_doppler,
                 ),
                 "keV/s",
@@ -469,6 +495,7 @@ class SourceModel:
                     spectral_norm,
                     emin=emin_src.value,
                     emax=emax_src.value,
+                    fluxf=pfluxf,
                     shifting=not no_doppler,
                 ),
                 "photons/s",
