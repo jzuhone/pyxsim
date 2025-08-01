@@ -12,11 +12,14 @@ backwards-incompatible changes.
 * Support for Doppler shifting of intensity fields and spectra created from data
   objects has been added. See :ref:`intensity-fields` and :ref:`xray-spectra`
   for more details.
+* The :class:`~pyxsim.source_models.power_law_sources.PowerLawSourceModel` no
+  longer takes an ``emission_field`` argument in units of counts/s/keV, but
+  instead takes a ``luminosity_field`` argument in units of power (e.g. W, erg/s,
+  keV/s,). See :ref:`powerlaw-sources` for more details. This is a
+  backwards-incompatible change.
 * Charge exchange
 * No-sky option
 * Absorption
-* Changes to power law and line source models
-
 
 Version 4.4.2
 -------------
