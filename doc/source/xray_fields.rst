@@ -13,7 +13,7 @@ Source Fields
 -------------
 
 One may want to compute fields for the emissivity or the luminosity of a particular
-source in its rest frame. This can be done using the
+source in its rest/source frame. This can be done using the
 :meth:`~pyxsim.source_models.sources.SourceModel.make_source_fields` method. This
 method takes a :class:`~yt.data_objects.static_output.Dataset` object from yt,
 and the minimum and maximum energies of the band you want to create fields for.
@@ -107,16 +107,21 @@ given in ``band_name``:
      ('gas', 'xray_photon_emissivity_broad'),
      ('gas', 'xray_count_rate_broad')]
 
+.. _intensity-fields:
+
 Intensity Fields
 ----------------
 
-If one wants to compute the fields that are observed locally from the source that
-is at a given distance or redshift, this can be done using the
+If instead one wants to compute the intensity fields in the observer frame, which
+is at a given distance or redshift from the source, this can be done using the
 :meth:`~pyxsim.source_models.sources.SourceModel.make_intensity_fields` method. This
 method takes a :class:`~yt.data_objects.static_output.Dataset` object from yt,
 the minimum and maximum energies of the band you want to create fields for, and either
 the cosmological redshift of the source (which gives the distance) or the local distance
-for a nearby source. These fields are designed specifically for making projections.
+for a nearby source. These fields are designed specifically for making projections. By
+default, these fields also take into account the Doppler shifting of the individual volume
+or mass elements of the source. For this reason, constructing these fields may take more
+computational time.
 
 The example below shows creating source fields for thermal emission from a simulation
 of the circumgalactic medium of a disk galaxy:
@@ -128,15 +133,15 @@ of the circumgalactic medium of a disk galaxy:
 
     def hot_gas(pfilter, data):
         pfilter1 = data[pfilter.filtered_type, "temperature"] > 3.0e5
-        pfilter2 = data["PartType0", "StarFormationRate"] == 0.0
-        pfilter3 = data[pfilter.filtered_type, "density"] < 5.0e-25
+        pfilter2 = data[pfilter.filtered_type, "star_formation_rate"] == 0.0
+        pfilter3 = data[pfilter.filtered_type, "density"] < 3.0e-25
         return pfilter1 & pfilter2 & pfilter3
 
     yt.add_particle_filter(
         "hot_gas",
         function=hot_gas,
         filtered_type="gas",
-        requires=["temperature", "density"],
+        requires=["temperature", "star_formation_rate", "density"],
     )
 
     ds = yt.load("cutout_37.hdf5",
@@ -185,11 +190,10 @@ These can be used to make projections:
 As with the source fields, it is possible to adjust the names for the fields that
 are produced by passing in the ``band_name`` keyword argument.
 
-.. note::
-
-    At this time, Doppler-shifting of photon energies by motions of the emitting
-    material is not available for the creation of intensity fields in this mode,
-    but it will be available in a future release.
+By default, these fields are created taking into account the Doppler shifting of the
+individual volume or mass elements of the source. If one does not want this, the
+``no_doppler`` keyword argument can be set to ``True`` in the call to
+:meth:`~pyxsim.source_models.sources.SourceModel.make_intensity_fields`.
 
 .. _line-fields:
 

@@ -3,6 +3,21 @@
 ChangeLog
 =========
 
+Version 4.5.0
+-------------
+
+This version of pyXSIM contains significant new features, and some
+backwards-incompatible changes.
+
+* Support for Doppler shifting of intensity fields and spectra created from data
+  objects has been added. See :ref:`intensity-fields` and :ref:`xray-spectra`
+  for more details.
+* Charge exchange
+* No-sky option
+* Absorption
+* Changes to power law and line source models
+
+
 Version 4.4.2
 -------------
 
