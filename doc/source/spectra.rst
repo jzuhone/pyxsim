@@ -6,9 +6,10 @@ Generating Spectra from Data Objects
 If you have a yt data object (such as a sphere, box, disk) and a source model
 of any sort, then you can also generate spectra from the entire object. This can
 be done in two modes--either in the rest frame of the source, in which case the
-spectrum will be a "count rate" spectrum in units of :math:`\rm{counts}~\rm{s}^{-1}~\rm{keV}^{-1}`,
-or in an observer frame at some distance in which case the spectrum will be in units of
-:math:`\rm{counts}~\rm{cm}^{-2}~\rm{s}^{-1}~\rm{keV}^{-1}`.
+spectrum will be a "count rate" spectrum in units of counts s\ :sup:`-1` keV\ :sup:`-1`,
+or in an observer frame at some distance in which case the spectrum will be in
+units of counts s\ :sup:`-1` cm\ :sup:`-2` keV\ :sup:`-1`
+
 
 Assuming one has a dataset and (say) a sphere object, you can generate spectra
 like this:

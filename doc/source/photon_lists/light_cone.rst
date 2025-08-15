@@ -57,7 +57,7 @@ They are:
   is used to connect the initial and final redshift. If False, the light cone
   solution will contain as many entries as possible within the redshift
   interval. Default: True.
-* ``deltaz_min`` (float): Specifies the minimum :math:`\Delta{z}` between
+* ``deltaz_min`` (float): Specifies the minimum Δz between
   consecutive datasets. Default: 0.0.
 * ``minimum_coherent_box_fraction`` (float): Used with ``use_minimum_datasets``
   set to False, this parameter specifies the fraction of the total box size to

@@ -11,14 +11,13 @@ be described by a pure power law:
     \varepsilon(E) = K\left(\frac{E}{E_0}\right)^{-\alpha}, E_{\rm min} \leq E \leq E_{\rm max}
 
 between the energies ``emin`` and ``emax``, with a power-law spectral index
-``alpha``. The power law normalization :math:`K` is represented by an
-``luminosity_field`` specified by the user, which represents the per-cell or
-per-particle luminosity in the source rest frame within the ``emin``-``emax``
-band, and must have units of power, such as W, erg/s, or keV/s. ``alpha`` may
-be a single floating-point number (implying the spectral index is the same
-everywhere), or a field specification corresponding to a spatially varying
-spectral index. A reference energy ``e0`` (see above equation) must also be
-specified.
+``alpha``. The power law normalization K is represented by a ``luminosity_field``
+specified by the user, which represents the per-cell or per-particle luminosity
+in the source rest frame within the ``emin``-``emax`` band, and must have units
+of power, such as W, erg/s, or keV/s. ``alpha`` may be a single floating-point
+number (implying the spectral index is the same everywhere), or a field
+specification corresponding to a spatially varying spectral index. A reference
+energy ``e0`` (see above equation) must also be specified.
 
 Examples
 ++++++++

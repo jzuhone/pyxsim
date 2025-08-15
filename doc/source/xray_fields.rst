@@ -53,11 +53,11 @@ The fields are created for the :class:`~yt.data_objects.static_output.Dataset`
      ('gas', 'xray_count_rate_0.5_7.0_keV')]
 
 Four fields have been created--one for the X-ray emissivity in the chosen band in
-:math:`\rm{erg}~\rm{cm}^{-3}~\rm{s}^{-1}`, another for the X-ray luminosity in the
-chosen band in :math:`\rm{erg}~\rm{s}^{-1}`, another for the X-ray photon
-emissivity in :math:`\rm{photon}~\rm{cm}^{-3}~\rm{s}^{-1}`, and another for the X-ray
-photon count rate in :math:`\rm{photon}~\rm{s}^{-1}`. These fields exist in the same
-way as any other field in yt, and can be used in the same ways.
+erg cm\ :sup:`-3` s\ :sup:`-1`, another for the X-ray luminosity in the chosen band
+in erg s\ :sup:`-1`, another for the X-ray photon emissivity in photon cm\ :sup:`-3`
+s\ :sup:`-1`, and another for the X-ray photon count rate in photon s\ :sup:`-1`.
+These fields exist in the same way as any other field in yt, and can be used in the
+same ways.
 
 Querying emissivity values in a sphere:
 
@@ -191,8 +191,8 @@ As with the source fields, it is possible to adjust the names for the fields tha
 are produced by passing in the ``band_name`` keyword argument.
 
 By default, these fields are created taking into account the Doppler shifting of the
-individual volume or mass elements of the source. If one does not want this, the
-``no_doppler`` keyword argument can be set to ``True`` in the call to
+individual volume or mass elements of the source. This can be very computationally
+expensive. If one does not want this, the ``no_doppler`` keyword argument can be set to ``True`` in the call to
 :meth:`~pyxsim.source_models.sources.SourceModel.make_intensity_fields`.
 
 .. _line-fields:
