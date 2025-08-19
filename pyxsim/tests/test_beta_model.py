@@ -9,9 +9,9 @@ import tempfile
 import numpy as np
 from numpy.testing import assert_allclose
 from soxs import ApecGenerator
+from unyt import clight
 from yt import YTQuantity
 from yt.utilities.cosmology import Cosmology
-from yt.utilities.physical_constants import clight
 
 from pyxsim import CIESourceModel, make_photons, project_photons
 from pyxsim.tests.utils import (
@@ -22,7 +22,7 @@ from pyxsim.tests.utils import (
 
 cosmo = Cosmology()
 
-ckms = clight.in_units("km/s").v
+ckms = clight.to_value("km/s")
 
 
 def test_beta_model(check_dir):

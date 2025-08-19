@@ -3,9 +3,9 @@ from numbers import Number
 import numpy as np
 from scipy.stats import norm
 from soxs.utils import parse_prng
+from unyt import clight
 from unyt.array import unyt_quantity
 from yt.data_objects.static_output import Dataset
-from yt.utilities.physical_constants import clight
 
 from pyxsim.lib.spectra import line_spectrum
 from pyxsim.source_models.sources import SourceModel

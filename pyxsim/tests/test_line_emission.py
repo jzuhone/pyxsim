@@ -5,9 +5,9 @@ import tempfile
 import h5py
 import numpy as np
 from numpy.testing import assert_allclose
+from unyt import clight
 from yt.units.yt_array import YTArray, YTQuantity
 from yt.utilities.cosmology import Cosmology
-from yt.utilities.physical_constants import clight
 
 from pyxsim import LineSourceModel, make_photons
 from pyxsim.tests.utils import BetaModelSource

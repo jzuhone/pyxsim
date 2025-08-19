@@ -4,9 +4,8 @@ import numpy as np
 from astropy.units import Quantity
 from more_itertools import always_iterable
 from soxs.constants import abund_tables, atomic_weights, elem_names
-from unyt import unyt_array, unyt_quantity
+from unyt import clight, unyt_array, unyt_quantity
 from yt.utilities.orientation import Orientation
-from yt.utilities.physical_constants import clight
 
 scale_shift = -1.0 / clight.to_value("km/s")
 scale_shift2 = scale_shift * scale_shift

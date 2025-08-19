@@ -1,12 +1,18 @@
 from numbers import Real
 
 import numpy as np
+import unyt as u
 from numpy.random import RandomState
 from soxs.utils import soxs_cfg
 from yt.loaders import load_particles, load_uniform_grid
-from yt.utilities.physical_ratios import K_per_keV, cm_per_mpc, mass_hydrogen_grams
 
 answer_dir = soxs_cfg.get("soxs", "soxs_answer_dir")
+
+# constants
+K_per_keV = (1.0 * u.keV).to_value("K", "thermal")
+cm_per_mpc = (1.0 * u.kpc).to_value("cm")
+mass_hydrogen_grams = u.mass_hydrogen.to_value("g")
+me_over_mp = (u.electron_mass / u.proton_mass).to_value("dimensionless")
 
 # Gas parameters
 R = 1.0  # Mpc
@@ -129,6 +135,40 @@ class ParticleBetaModelSource:
             length_unit=(2 * R, "Mpc"),
             bbox=bbox,
             default_species_fields="ionized",
+        )
+
+
+class UniformSource:
+    def __init__(self):
+        self.prng = RandomState(35)
+        self.kT = kT
+        self.Z = Z
+
+        nx = 64
+        ddims = (nx, nx, nx)
+
+        dens = 0.1 * rho_c * np.ones(ddims)
+        temp = self.kT * K_per_keV * np.ones(ddims)
+        bbox = np.array([[-0.5, 0.5], [-0.5, 0.5], [-0.5, 0.5]])
+
+        data = {}
+        data["density"] = (dens, "g/cm**3")
+        data["temperature"] = (temp, "K")
+        data["H_p0_fraction"] = (0.76 * 0.1 * np.ones(ddims), "dimensionless")
+        data["H_p1_fraction"] = (0.76 * 0.9 * np.ones(ddims), "dimensionless")
+        data["El_fraction"] = (
+            0.76 * 0.9 * me_over_mp * np.ones(ddims),
+            "dimensionless",
+        )
+        data["velocity_x"] = (np.zeros(ddims), "cm/s")
+        data["velocity_y"] = (np.zeros(ddims), "cm/s")
+        data["velocity_z"] = (np.zeros(ddims), "cm/s")
+        self.ds = load_uniform_grid(
+            data,
+            ddims,
+            length_unit=(2 * R, "Mpc"),
+            nprocs=64,
+            bbox=bbox,
         )
 
 

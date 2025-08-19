@@ -6,9 +6,9 @@ import numpy as np
 from numpy.testing import assert_allclose
 from soxs import CountRateSpectrum, Spectrum
 from soxs.constants import keV_per_erg
+from unyt import mp
 from yt.units.yt_array import YTQuantity
 from yt.utilities.cosmology import Cosmology
-from yt.utilities.physical_constants import mp
 
 from pyxsim import PowerLawSourceModel, make_photons, project_photons
 from pyxsim.tests.utils import BetaModelSource, events_ks_testing
