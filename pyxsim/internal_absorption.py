@@ -69,29 +69,39 @@ def make_column_density_map(
         desc="Determining a cube of neutral hydrogen column density ",
     )
 
-    w = ds.coordinates.sanitize_width(normal, width, depth)
+    w = ds.arr(ds.coordinates.sanitize_width(normal, width, depth))
+    center, _ = ds.coordinates.sanitize_center(center, normal)
     dz = w[2] / ndepth
 
     if isinstance(normal, str):
-        id = ds.coordinates.axis_id[normal]
-        le = center - 0.5 * w
-        re = center + 0.5 * w
+        le = center.copy()
+        re = center.copy()
+        dirs = [
+            ds.coordinates.x_axis[normal],
+            ds.coordinates.y_axis[normal],
+            ds.coordinates.axis_id[normal],
+        ]
+        for ii, ax in enumerate(dirs):
+            le[ax] = center[ax] - 0.5 * w[ii]
+            re[ax] = center[ax] + 0.5 * w[ii]
+        id = dirs[2]
+        lei = le.copy()
         for i in range(ndepth):
-            le[id] += (i + 1) * dz
-            box = ds.box(le, re)
+            lei[id] = le[id] + i * dz
+            box = ds.box(lei, re)
+            print(lei, re, re - lei)
             prj = ds.proj(field, normal, center=center, data_source=box)
             frb = prj.to_frb(width, nwidth)
             nH[:, :, i] = frb[field].d
             pbar.update()
     else:
-        bw = ds.arr(w)
         re = center + 0.5 * depth * L
         for i in range(ndepth):
-            bw[2] = (ndepth - i) * dz
+            w[2] = (ndepth - i) * dz
             bc = re - 0.5 * (ndepth - i) * dz * L
-            dk = ds.disk(bc, L, bw[0], 0.5 * bw[2])
+            dk = ds.disk(bc, L, w[0], 0.5 * w[2])
             img = off_axis_projection(
-                dk, center, L, bw, (nwidth, nwidth), field, north_vector=north_vector
+                dk, center, L, w, (nwidth, nwidth), field, north_vector=north_vector
             )
             nH[:, :, i] = np.asarray(img)
             pbar.update()
