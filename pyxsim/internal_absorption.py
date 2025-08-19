@@ -1,6 +1,8 @@
 import h5py
 import numpy as np
 from tqdm.auto import tqdm
+from yt.config import ytcfg
+from yt.utilities.logger import ytLogger
 from yt.visualization.volume_rendering.off_axis_projection import off_axis_projection
 
 from pyxsim.utils import get_normal_and_north, parse_value
@@ -86,14 +88,16 @@ def make_column_density_map(
             re[ax] = center[ax] + 0.5 * w[ii]
         id = dirs[2]
         lei = le.copy()
+        old_level = int(ytcfg.get("yt", "log_level"))
+        ytLogger.setLevel(40)
         for i in range(ndepth):
             lei[id] = le[id] + i * dz
             box = ds.box(lei, re)
-            print(lei, re, re - lei)
             prj = ds.proj(field, normal, center=center, data_source=box)
             frb = prj.to_frb(width, nwidth)
             nH[:, :, i] = frb[field].d
             pbar.update()
+        ytLogger.setLevel(old_level)
     else:
         re = center + 0.5 * depth * L
         for i in range(ndepth):
@@ -110,13 +114,11 @@ def make_column_density_map(
 
     wbins = np.linspace(-0.5 * width.d, 0.5 * width.d, nwidth + 1)
     dbins = np.linspace(-0.5 * depth.d, 0.5 * depth.d, ndepth + 1)
-    wmid = 0.5 * (wbins[1:] + wbins[:-1])
-    dmid = 0.5 * (dbins[1:] + dbins[:-1])
     with h5py.File(outfile, "w") as f:
         p = f.create_group("parameters")
         p.attrs["normal"] = L
         p.attrs["north"] = north_vector
         d = f.create_group("data")
-        d.create_dataset("wmid", data=wmid)
-        d.create_dataset("dmid", data=dmid)
+        d.create_dataset("wbins", data=wbins)
+        d.create_dataset("dbins", data=dbins)
         d.create_dataset("nH", data=nH * 1.0e-22)

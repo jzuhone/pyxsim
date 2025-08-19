@@ -24,14 +24,14 @@ def test_absorption(prng=None):
     if prng is None:
         prng = us.prng
 
-    A = 10000.0
+    A = 3000.0
     exp_time = 1.0e4
     redshift = 0.05
     nH_sim = 0.02
 
     dd = us.ds.all_data()
 
-    thermal_model = CIESourceModel("apec", 0.1, 11.5, 20000, us.Z, prng=prng)
+    thermal_model = CIESourceModel("apec", 0.1, 11.5, 10000, us.Z, prng=prng)
     make_photons("my_photons", dd, redshift, A, exp_time, thermal_model)
     make_column_density_map(
         us.ds,
@@ -53,8 +53,9 @@ def test_absorption(prng=None):
         nH=nH_sim,
         prng=prng,
         column_file="nH.h5",
+        save_los=True,
     )
-    os.system("cp nH.h5 /Users/jzuhone")
+    os.system("cp my_photons.h5 my_events.h5 nH.h5 /Users/jzuhone")
     os.chdir(curdir)
     shutil.rmtree(tmpdir)
 

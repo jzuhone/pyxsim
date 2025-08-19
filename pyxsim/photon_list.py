@@ -554,8 +554,10 @@ def _project_photons(
                     "does not match the value in the call to project_photons!"
                 )
 
-            x_mid = y_mid = fa["data"]["wmid"][()]
-            z_mid = fa["data"]["dmid"][()]
+            wbins = fa["data"]["wbins"][()]
+            dbins = fa["data"]["dbins"][()]
+            wmid = 0.5 * (wbins[1:] + wbins[:-1])
+            dmid = 0.5 * (dbins[1:] + dbins[:-1])
             nH_grid = fa["data"]["nH"][()]
 
     sky_center = ensure_numpy_array(sky_center)
@@ -696,7 +698,7 @@ def _project_photons(
             if nH_grid is not None:
                 pos = np.dot(orient.unit_vectors, np.array([x, y, z]))
                 nH_int = interpn(
-                    (x_mid, y_mid, z_mid),
+                    (wmid, wmid, dmid),
                     nH_grid,
                     pos.T,
                     bounds_error=False,
