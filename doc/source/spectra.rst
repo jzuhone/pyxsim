@@ -6,9 +6,10 @@ Generating Spectra from Data Objects
 If you have a yt data object (such as a sphere, box, disk) and a source model
 of any sort, then you can also generate spectra from the entire object. This can
 be done in two modes--either in the rest frame of the source, in which case the
-spectrum will be a "count rate" spectrum in units of :math:`\rm{counts}~\rm{s}^{-1}~\rm{keV}^{-1}`,
-or in an observer frame at some distance in which case the spectrum will be in units of
-:math:`\rm{counts}~\rm{cm}^{-2}~\rm{s}^{-1}~\rm{keV}^{-1}`.
+spectrum will be a "count rate" spectrum in units of counts s\ :sup:`-1` keV\ :sup:`-1`,
+or in an observer frame at some distance in which case the spectrum will be in
+units of counts s\ :sup:`-1` cm\ :sup:`-2` keV\ :sup:`-1`
+
 
 Assuming one has a dataset and (say) a sphere object, you can generate spectra
 like this:
@@ -36,8 +37,9 @@ object, which has a number of methods in SOXS that can be used to analyze and vi
 it.
 
 If we instead want to find a spectrum of a source measured by an observer at a specific
-distance, then we can specify either a redshift and a cosmology (which uniquely specifies
-a distance) or we can set a distance explicitly for a local source.
+distance in their own reference frame, then we can specify either a redshift and a
+cosmology (which uniquely specifies a distance) or we can set a distance explicitly
+for a local source.
 
 Here's an example where only a redshift is specified. In this case, a cosmology is assumed
 by default from yt, usually the one associated with the dataset:
@@ -87,8 +89,32 @@ same time):
 
     spec_obs = plaw_model.make_spectrum(sp, emin, emax, nbins, dist=(8.0, "kpc"))
 
+Finally, it is also possible to simulate the Doppler shifting of the spectrum from the
+velocity field of the source. This is done by specifying the ``normal`` keyword argument,
+which can be either be a string corresponding to one of the coordinate axes
+(e.g. "x", "y", or "z"), or a 3-vector of the form ``[a, b, c]`` that specifies the
+normal direction to the source:
+
+.. code-block:: python
+
+    emin_obs = 2.0
+    emax_obs = 20.0
+
+    # Make a flux spectrum in the observer frame at some local distance with
+    # Doppler shifting along the z-axis
+
+    spec_obs1 = plaw_model.make_spectrum(sp, emin, emax, nbins, dist=(8.0, "kpc"),
+                                         normal="z")
+
+    # Make a flux spectrum in the observer frame at some redshift with
+    # Doppler shifting along an arbitrary direction
+
+    spec_obs2 = plaw_model.make_spectrum(sp, emin, emax, nbins, redshift=0.05,
+                                         normal=[3.0, -0.2, 1.0])
+
+
 .. note::
 
-    At this time, Doppler-shifting of photon energies by motions of the emitting
-    material is not available for the creation of spectra in this mode, but it will
-    be available in a future release.
+    Doppler shifting via the ``normal`` keyword is only possible if a distance or redshift
+    is specified, since otherwise the spectrum is by definition computed in the rest frame
+    of the source.

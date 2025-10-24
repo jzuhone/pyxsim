@@ -3,24 +3,34 @@ from numbers import Number
 import numpy as np
 from more_itertools import chunked
 from soxs.constants import atomic_weights, elem_names, metal_elem
-from soxs.utils import parse_prng, regrid_spectrum
+from soxs.utils import parse_prng
 from unyt.array import unyt_quantity
 from yt.data_objects.static_output import Dataset
 from yt.utilities.exceptions import YTFieldNotFound
 
+from pyxsim.lib.spectra import make_band, shift_spectrum
 from pyxsim.source_models.sources import SourceModel
 from pyxsim.spectral_models import (
     CloudyCIESpectralModel,
+    CXSpectralModel,
     IGMSpectralModel,
     MekalSpectralModel,
     TableCIEModel,
 )
-from pyxsim.utils import _parse_abund_table, compute_H_abund, mylog, parse_value
+from pyxsim.utils import (
+    _parse_abund_table,
+    compute_H_abund,
+    isunitful,
+    mylog,
+    parse_value,
+    sanitize_normal,
+)
 
 
 class ThermalSourceModel(SourceModel):
     _density_dependence = False
     _nei = False
+    _cx = False
 
     def __init__(
         self,
@@ -75,6 +85,9 @@ class ThermalSourceModel(SourceModel):
         self.emission_measure_field = emission_measure_field
         self.density_field = None  # Will be determined later
         self.nh_field = None  # Will be set by the subclass
+        self.collnpar = None  # Will be set by the subclass
+        self.h_p0_fraction = None  # Will be set by the subclass
+        self.he_p0_fraction = None  # Will be set by the subclass
         self.max_density = max_density
         self.min_entropy = min_entropy
         self.tot_num_cells = 0  # Will be determined later
@@ -104,6 +117,8 @@ class ThermalSourceModel(SourceModel):
         self.bin_edges = np.log10(self.ebins) if self.binscale == "log" else self.ebins
         self.nbins = self.emid.size
         self.model_vers = self.spectral_model.model_vers
+        self.efluxf = None
+        self.pfluxf = None
 
     def _prep_repr(self):
         class_name = self.__class__.__name__
@@ -151,13 +166,14 @@ class ThermalSourceModel(SourceModel):
                 "found. If you do not have species fields in "
                 "your dataset, you may need to set "
                 "default_species_fields='ionized' in the call "
-                "to yt.load()."
+                "to yt.load(), or set them up using Trident, or "
+                "manually."
             )
         self.temperature_field = ds._get_field_info(self.temperature_field).name
         fields = [self.emission_measure_field, self.temperature_field]
         self.ftype = ftype
         self.redshift = redshift
-        if not self._nei and not isinstance(self.Zmet, Number):
+        if not (self._nei or self._cx) and not isinstance(self.Zmet, Number):
             zfield = ds._get_field_info(self.Zmet)
             Z_units = str(zfield.units)
             self.Zmet = zfield.name
@@ -200,6 +216,12 @@ class ThermalSourceModel(SourceModel):
         if not isinstance(self.h_fraction, Number):
             self.h_fraction = ds._get_field_info(self.h_fraction).name
             fields.append(self.h_fraction)
+        if self.h_p0_fraction and not isinstance(self.h_p0_fraction, Number):
+            self.h_p0_fraction = ds._get_field_info(self.h_p0_fraction).name
+            fields.append(self.h_p0_fraction)
+        if self.he_p0_fraction and not isinstance(self.he_p0_fraction, Number):
+            self.he_p0_fraction = ds._get_field_info(self.he_p0_fraction).name
+            fields.append(self.he_p0_fraction)
         ftypes = np.array([f[0] for f in fields])
         if not np.all(ftypes == ftype):
             mylog.warning(
@@ -211,15 +233,31 @@ class ThermalSourceModel(SourceModel):
         mylog.info("Using temperature field '%s'.", self.temperature_field)
         if self.nh_field is not None:
             mylog.info("Using nH field '%s'.", self.nh_field)
+        if self.collnpar is not None:
+            mylog.info("Using collnpar '%s'.", self.collnpar)
+            if isunitful(self.collnpar):
+                self.collnpar = float(parse_value(self.collnpar, "km/s").v)
+        if self.h_p0_fraction is not None:
+            mylog.info("Using h_p0_fraction '%s'.", self.h_p0_fraction)
+        if self.he_p0_fraction is not None:
+            mylog.info("Using he_p0_fraction '%s'.", self.he_p0_fraction)
         self.spectral_model.prepare_spectrum(redshift)
         if mode in ["photons", "spectrum"]:
             self.setup_pbar(data_source, self.temperature_field)
 
     def make_spectrum(
-        self, data_source, emin, emax, nbins, redshift=0.0, dist=None, cosmology=None
+        self,
+        data_source,
+        emin,
+        emax,
+        nbins,
+        redshift=0.0,
+        dist=None,
+        cosmology=None,
+        normal=None,
     ):
         """
-        Make a count rate spectrum in the source frame from a yt data container,
+        Using all the data in a yt data container, make a count rate spectrum in the source frame,
         or a spectrum in the observer frame.
 
         Parameters
@@ -244,19 +282,37 @@ class ThermalSourceModel(SourceModel):
             Cosmological information. If not supplied, we try to get the
             cosmology from the dataset. Otherwise, LCDM with the default yt
             parameters is assumed.
+        normal : integer, string, or array-like, optional
+            This is a line-of-sight direction along which the spectrum will be
+            Doppler shifted using the velocity field in the object. This is
+            only an option if the spectrum is calculated in the observer frame.
+            Options are one of "x", "y", "z", 0, 1, 2, or an 3-element array-like
+            object of floats to specify an off-axis normal vector.
 
         Returns
         -------
         :class:`~soxs.spectra.CountRateSpectrum` or :class:`~soxs.spectra.Spectrum`,
         depending on how the method is invoked.
         """
+        normal = sanitize_normal(normal)
+        if normal is not None:
+            if redshift == 0.0 and dist is None:
+                raise RuntimeError(
+                    "Cannot use a normal vector for the line-of-sight "
+                    "when a redshift or the distance is not specified! not specified or the distance "
+                )
+            data_source.set_field_parameter("axis", normal)
+        shifting = normal is not None
         self.setup_model("spectrum", data_source, redshift)
         spectral_norm = 1.0
         spec = np.zeros(nbins)
         ebins = np.linspace(emin, emax, nbins + 1)
         for chunk in data_source.chunks([], "io"):
-            s = self.process_data("spectrum", chunk, spectral_norm)
-            spec += regrid_spectrum(ebins, self.ebins, s)
+            chunk_data = self.process_data(
+                "spectrum", chunk, spectral_norm, shifting=shifting, ebins=ebins
+            )
+            if chunk_data is not None:
+                spec += chunk_data
         spec /= np.diff(ebins)
         self.cleanup_model("spectrum")
         return self._make_spectrum(
@@ -266,8 +322,23 @@ class ThermalSourceModel(SourceModel):
     def make_fluxf(self, emin, emax, energy=False):
         return self.spectral_model.make_fluxf(emin, emax, energy=energy)
 
-    def process_data(self, mode, chunk, spectral_norm, fluxf=None):
-        spec = np.zeros(self.nbins)
+    def process_data(
+        self,
+        mode,
+        chunk,
+        spectral_norm,
+        ebins=None,
+        emin=None,
+        emax=None,
+        fluxf=None,
+        shifting=False,
+    ):
+        if mode == "spectrum":
+            spec = np.zeros(ebins.size - 1)
+        else:
+            spec = None
+
+        shifted_intensity = mode.endswith("intensity") and shifting
 
         orig_shape = chunk[self.temperature_field].shape
         if len(orig_shape) == 0:
@@ -275,10 +346,8 @@ class ThermalSourceModel(SourceModel):
         else:
             orig_ncells = np.prod(orig_shape)
         if orig_ncells == 0:
-            if mode == "photons":
+            if mode in ["photons", "spectrum"]:
                 return
-            elif mode == "spectrum":
-                return spec
             else:
                 return np.array([])
 
@@ -300,6 +369,24 @@ class ThermalSourceModel(SourceModel):
         else:
             nH = None
 
+        if self._cx:
+            if isinstance(self.collnpar, Number):
+                coll = self.collnpar
+            else:
+                coll = np.ravel(chunk[self.collnpar].d)
+            if isinstance(self.h_p0_fraction, Number):
+                h_f = self.h_p0_fraction
+            else:
+                h_f = np.ravel(chunk[self.h_p0_fraction].d)
+            if isinstance(self.he_p0_fraction, Number):
+                he_f = self.he_p0_fraction
+            else:
+                he_f = np.ravel(chunk[self.he_p0_fraction].d)
+        else:
+            coll = None
+            h_f = None
+            he_f = None
+
         if isinstance(self.h_fraction, Number):
             X_H = self.h_fraction
         else:
@@ -316,26 +403,57 @@ class ThermalSourceModel(SourceModel):
         elif num_cells == 0:
             # Here, we have no active cells, and so we
             # return an array of zeros with the original shape.
-            # But yt needs to know that we may depend on the metallicity
-            # or abundance fields, so we check for that here. Very hacky!
+            # But yt needs to know that we may depend on various
+            # fields, so we check for them here. Very hacky!
             if not isinstance(self.Zmet, Number):
-                chunk[self.Zmet]
+                _ = chunk[self.Zmet]
+            if self._cx:
+                if not isinstance(self.collnpar, Number):
+                    _ = chunk[self.collnpar]
+                if not isinstance(self.h_p0_fraction, Number):
+                    _ = chunk[self.h_p0_fraction]
+                if not isinstance(self.he_p0_fraction, Number):
+                    _ = chunk[self.he_p0_fraction]
             if self.num_var_elem > 0:
-                elem_keys = self.var_ion_keys if self._nei else self.var_elem_keys
+                elem_keys = (
+                    self.var_ion_keys if (self._nei or self._cx) else self.var_elem_keys
+                )
                 for key in elem_keys:
                     value = self.var_elem[key]
                     if not isinstance(value, Number):
-                        chunk[value]
+                        _ = chunk[value]
+            # We also need to do this for the velocity fields if we use them
+            if mode in ["spectrum", "intensity", "photon_intensity"] and shifting:
+                _ = chunk[self.ftype, "velocity_magnitude"]
             return np.zeros(orig_shape)
+
+        if mode in ["spectrum", "intensity", "photon_intensity"] and shifting:
+            shift = self.compute_shift(chunk, cut=cut)
+        else:
+            shift = np.ones(num_cells)
 
         kT = kT[cut]
         cell_nrm = cell_nrm[cut]
         if nH is not None:
             nH = nH[cut]
+        if self._cx:
+            if isinstance(self.collnpar, Number):
+                coll = coll * np.ones(num_cells)
+            else:
+                coll = coll[cut]
+            if isinstance(self.h_p0_fraction, Number):
+                h_f = h_f * np.ones(num_cells)
+            else:
+                h_f = h_f[cut]
+            if isinstance(self.he_p0_fraction, Number):
+                he_f = he_f * np.ones(num_cells)
+            else:
+                he_f = he_f[cut]
+
         if not isinstance(X_H, Number):
             X_H = X_H[cut]
 
-        if self._nei:
+        if self._nei or self._cx:
             metalZ = np.zeros(num_cells)
             elem_keys = self.var_ion_keys
         else:
@@ -364,13 +482,7 @@ class ThermalSourceModel(SourceModel):
                     elemZ[j, :] = np.ravel(eZ.d * fac)[cut]
 
         if self.observer == "internal" and mode == "photons":
-            pos = np.array(
-                [
-                    np.ravel(chunk[self.p_fields[i]].to_value("kpc"))[cut]
-                    for i in range(3)
-                ]
-            )
-            r2 = self.compute_radius(pos)
+            r2 = self.compute_radius(chunk, cut=cut)
             cell_nrm /= r2
 
         num_photons_max = 10000000
@@ -391,19 +503,42 @@ class ThermalSourceModel(SourceModel):
 
             kTi = kT[ibegin:iend]
 
-            if mode in ["photons", "spectrum"]:
-                if self._density_dependence:
-                    nHi = nH[ibegin:iend]
-                    cspec, mspec, vspec = self.spectral_model.get_spectrum(kTi, nHi)
-                else:
-                    cspec, mspec, vspec = self.spectral_model.get_spectrum(kTi)
+            shifti = shift[ibegin:iend]
+            if self._cx:
+                colli = coll[ibegin:iend]
+                hi = h_f[ibegin:iend] / atomic_weights[1]
+                hei = he_f[ibegin:iend] / atomic_weights[2]
+                di = hi + hei
+                hi /= di
+                hei /= di
+            else:
+                colli = None
+                hi = None
+                hei = None
+            if self._density_dependence:
+                nHi = nH[ibegin:iend]
+            else:
+                nHi = None
 
-                tot_spec = cspec
-                tot_spec += metalZ[ibegin:iend, np.newaxis] * mspec
-                if self.num_var_elem > 0:
-                    tot_spec += np.sum(
-                        elemZ[:, ibegin:iend, np.newaxis] * vspec, axis=0
+            if mode in ["photons", "spectrum"] or shifted_intensity:
+                if self._cx:
+                    h_spec, he_spec = self.spectral_model.get_spectrum(colli)
+                    tot_spec = np.sum(
+                        elemZ[:, ibegin:iend, np.newaxis]
+                        * (hi * h_spec + hei * he_spec),
+                        axis=0,
                     )
+                else:
+                    if self._density_dependence:
+                        cspec, mspec, vspec = self.spectral_model.get_spectrum(kTi, nHi)
+                    else:
+                        cspec, mspec, vspec = self.spectral_model.get_spectrum(kTi)
+                    tot_spec = cspec
+                    tot_spec += metalZ[ibegin:iend, np.newaxis] * mspec
+                    if self.num_var_elem > 0:
+                        tot_spec += np.sum(
+                            elemZ[:, ibegin:iend, np.newaxis] * vspec, axis=0
+                        )
                 np.clip(tot_spec, 0.0, None, out=tot_spec)
 
                 if mode == "photons":
@@ -439,21 +574,35 @@ class ThermalSourceModel(SourceModel):
                     start_e = end_e
 
                 elif mode == "spectrum":
-                    spec += np.sum(tot_spec * cnm[:, np.newaxis], axis=0)
+                    spec += shift_spectrum(self.ebins, ebins, tot_spec, shifti, cnm)
 
-                self.pbar.update(nck)
+                elif mode.endswith("intensity"):
+                    use_energy = int(mode == "intensity")
+                    I = make_band(
+                        use_energy, emin, emax, self.ebins, self.emid, tot_spec, shift
+                    )
+                    ret[idxs[ibegin:iend]] = I * cnm
+
+                if mode in ["photons", "spectrum"]:
+                    self.pbar.update(nck)
 
             else:
-                if self._density_dependence:
-                    nHi = nH[ibegin:iend]
-                    cflux, mflux, vflux = fluxf(kTi, nHi)
-                else:
-                    cflux, mflux, vflux = fluxf(kTi)
 
-                tot_flux = cflux
-                tot_flux += metalZ[ibegin:iend] * mflux
-                if self.num_var_elem > 0:
-                    tot_flux += np.sum(elemZ[:, ibegin:iend] * vflux, axis=0)
+                if self._cx:
+                    h_flux, he_flux = fluxf(colli)
+                    tot_flux = np.sum(
+                        elemZ[:, ibegin:iend] * (hi * h_flux + hei * he_flux),
+                        axis=0,
+                    )
+                else:
+                    if self._density_dependence:
+                        cflux, mflux, vflux = fluxf(kTi, nHi)
+                    else:
+                        cflux, mflux, vflux = fluxf(kTi)
+                    tot_flux = cflux
+                    tot_flux += metalZ[ibegin:iend] * mflux
+                    if self.num_var_elem > 0:
+                        tot_flux += np.sum(elemZ[:, ibegin:iend] * vflux, axis=0)
 
                 ret[idxs[ibegin:iend]] = tot_flux * cnm
 
@@ -533,7 +682,7 @@ class IGMSourceModel(ThermalSourceModel):
         the appropriate value for the Feldman abundance table.
     kT_min : float, optional
         The default minimum temperature in keV to compute emission for.
-        Default: 0.00431
+        Default: 0.025
     kT_max : float, optional
         The default maximum temperature in keV to compute emission for.
         Default: 64.0
@@ -587,7 +736,7 @@ class IGMSourceModel(ThermalSourceModel):
         temperature_field=("gas", "temperature"),
         emission_measure_field=("gas", "emission_measure"),
         h_fraction=None,
-        kT_min=0.00431,
+        kT_min=0.025,
         kT_max=64.0,
         max_density=None,
         min_entropy=None,
@@ -636,6 +785,7 @@ class IGMSourceModel(ThermalSourceModel):
 
     def _prep_repr(self):
         class_name, strs = super()._prep_repr()
+        strs["nh_field"] = self.nh_field
         strs["resonant_scattering"] = self.resonant_scattering
         strs["cxb_factor"] = self.cxb_factor
         return class_name, strs
@@ -863,7 +1013,7 @@ class NEISourceModel(CIESourceModel):
     nbins : integer
         The number of channels in the spectrum.
     var_elem : dictionary
-        Abundances of elements. Each dictionary value, specified by the abundance
+        Abundances of ions. Each dictionary value, specified by the ionic
         symbol, corresponds to the abundance of that symbol. If a float, it is
         understood to be constant and in solar units. If a string or tuple of
         strings, it is assumed to be a spatially varying field.
@@ -901,7 +1051,7 @@ class NEISourceModel(CIESourceModel):
         "accept_reject": Acceptance-rejection method using the spectrum.
         The first method should be sufficient for most cases.
     thermal_broad : boolean, optional
-        Whether or not the spectral lines should be thermally
+        Whether the spectral lines should be thermally
         broadened. Default: True
     model_root : string, optional
         The directory root where the model files are stored. If not provided,
@@ -934,20 +1084,21 @@ class NEISourceModel(CIESourceModel):
 
     Examples
     --------
-    >>> var_elem = {"H^1": ("flash", "h   "),
-    >>>             "He^0": ("flash", "he  "),
-    >>>             "He^1": ("flash", "he1 "),
-    >>>             "He^2": ("flash", "he2 "),
-    >>>             "O^0": ("flash", "o   "),
-    >>>             "O^1": ("flash", "o1  "),
-    >>>             "O^2": ("flash", "o2  "),
-    >>>             "O^3": ("flash", "o3  "),
-    >>>             "O^4": ("flash", "o4  "),
-    >>>             "O^5": ("flash", "o5  "),
-    >>>             "O^6": ("flash", "o6  "),
-    >>>             "O^7": ("flash", "o7  "),
-    >>>             "O^8": ("flash", "o8  ")
-    >>>            }
+    >>> var_elem = {
+    ...     "H^0":  ("flash", "h   "),
+    ...     "He^0": ("flash", "he  "),
+    ...     "He^1": ("flash", "he1 "),
+    ...     "He^2": ("flash", "he2 "),
+    ...     "O^0":  ("flash", "o   "),
+    ...     "O^1":  ("flash", "o1  "),
+    ...     "O^2":  ("flash", "o2  "),
+    ...     "O^3":  ("flash", "o3  "),
+    ...     "O^4":  ("flash", "o4  "),
+    ...     "O^5":  ("flash", "o5  "),
+    ...     "O^6":  ("flash", "o6  "),
+    ...     "O^7":  ("flash", "o7  "),
+    ...     "O^8":  ("flash", "o8  ")
+    ... }
     >>> source_model = NEISourceModel(0.1, 10.0, 10000, var_elem)
     """
 
@@ -1001,6 +1152,206 @@ class NEISourceModel(CIESourceModel):
 
     def _prep_repr(self):
         class_name, strs = super()._prep_repr()
+        strs.pop("model")
+        strs.pop("Zmet")
+        return class_name, strs
+
+
+class CXSourceModel(ThermalSourceModel):
+    """
+    This class generates a source model for emission from charge exchange,
+    using the AtomDB Charge Exchange Model, v2.0 (ACX2). It models the
+    emission obtained from collisions between neutral hydrogen/helium and
+    ions. The neutrals and the ion fields must be supplied, as detailed
+    below. The "collision parameter" must also be specified, which is the
+    relative velocity between the ions and the neutrals. This can be either
+    a single value or a spatially varying field. The emission spectrum is a
+    function of this parameter and is interpolated from a precomputed table
+    for each ion, the velocity bins for which can also be specified below.
+    Other ACX2 parameters can also be set. For the meaning of these parameters,
+    consult the ACX2 docs at https://acx2.readthedocs.io/.
+
+    To use this model, you must have the AtomDB Charge Exchange Model
+    package installed from https://github.com/AtomDB/ACX2, as well as the
+    pyatomdb package.
+
+    Parameters
+    ----------
+    emin : float
+        The minimum energy for the spectrum in keV.
+    emax : float
+        The maximum energy for the spectrum in keV.
+    nbins : integer
+        The number of channels in the spectrum.
+    collnpar : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
+        The collision parameter for the CX process, in units of velocity.
+        If a float, the units are assumed to be km/s. If set to a field name,
+        this will be a spatially varying collision parameter field.
+    h_p0_fraction : float, string, or tuple of strings
+        The neutral hydrogen mass fraction. If a float, assumes a constant mass
+        fraction throughout. If a tuple of strings, is taken to be the name of
+        the neutral hydrogen fraction field.
+    he_p0_fraction : float, string, or tuple of strings, optional
+        The neutral helium mass fraction. If a float, assumes a constant mass
+        fraction throughout. If a tuple of strings, is taken to be the name of
+        the neutral helium fraction field.
+    var_elem : dictionary
+        Abundances of ions. Each dictionary value, specified by the ionic symbol,
+        corresponds to the abundance of that symbol. If a float, it is understood
+        to be constant and in solar units. If a string or tuple of strings, it is
+        assumed to be a spatially varying field.
+    acx_model : integer, optional
+        ACX model to fall back on, from 1 to 8. Default: 8.
+    recomb_type : integer, optional
+        Single recombination (1) or all the way to neutral (2) Default: 1.
+    vmin : float, optional
+        The minimum value of the velocity table in km/s. Default: 10.0
+    vmax : float, optional
+        The maximum value of the velocity table in km/s. Default: 10000.0
+    nbins_v : integer, optional
+        The number of bins in the velocity table. Default: 100
+    binscale : string, optional
+        The scale of the energy binning: "linear" or "log".
+        Default: "linear"
+    temperature_field : string or (ftype, fname) tuple, optional
+        The yt temperature field to use for the thermal modeling. Must have
+        units of Kelvin. Default: ("gas","temperature")
+    emission_measure_field : string or (ftype, fname) tuple, optional
+        The emission measure field to use for the normalization. Must
+        have units of cm^-3. Default: ("gas", "emission_measure_cx")
+    h_fraction : float, string, or tuple of strings, optional
+        The hydrogen mass fraction. If a float, assumes a constant mass
+        fraction of hydrogen throughout. If a string or tuple of strings,
+        is taken to be the name of the hydrogen fraction field. Default is
+        whatever value is appropriate for the chosen abundance table.
+    kT_min : float, optional
+        The default minimum temperature in keV to compute emission for.
+        Default: 0.025
+    kT_max : float, optional
+        The default maximum temperature in keV to compute emission for.
+        Default: 64.0
+    max_density : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
+        The maximum density of the cells or particles to use when generating
+        photons. If a float, the units are assumed to be g/cm**3.
+        Default: None, meaning no maximum density.
+    min_entropy : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
+        The minimum entropy of the cells or particles to use when generating
+        photons. If a float, the units are assumed to be keV*cm**2.
+        Default: None, meaning no minimum entropy.
+    method : string, optional
+        The method used to generate the photon energies from the spectrum:
+        "invert_cdf": Invert the cumulative distribution function of the spectrum.
+        "accept_reject": Acceptance-rejection method using the spectrum.
+        The first method should be sufficient for most cases.
+    abund_table : string or array_like, optional
+        The abundance table to be used for solar abundances.
+        Either a string corresponding to a built-in table or an array
+        of 30 floats corresponding to the abundances of each element
+        relative to the abundance of H. Default is "angr".
+        Built-in options are:
+        "angr" : from Anders E. & Grevesse N. (1989, Geochimica et
+        Cosmochimica Acta 53, 197)
+        "aspl" : from Asplund M., Grevesse N., Sauval A.J. & Scott
+        P. (2009, ARAA, 47, 481)
+        "wilm" : from Wilms, Allen & McCray (2000, ApJ 542, 914
+        except for elements not listed which are given zero abundance)
+        "lodd" : from Lodders, K (2003, ApJ 591, 1220)
+        "feld" : from Feldman U. (Physica Scripta, 46, 202)
+        "cl17.03" : the abundance table used in Cloudy v17.03.
+    prng : integer or :class:`~numpy.random.RandomState` object
+        A pseudo-random number generator. Typically will only be specified
+        if you have a reason to generate the same set of random numbers,
+        such as for a test. Default is to use the :mod:`numpy.random` module.
+
+    Examples
+    --------
+    >>> var_elem = {
+    ...     "Si^12": ("flash", "si12"),
+    ...     "S^14":  ("flash", "s14 "),
+    ...     "Ar^16": ("flash", "ar16"),
+    ...     "Ca^18": ("flash", "ca18"),
+    ... }
+    >>> source_model = CXSourceModel(
+    ...     0.1, 3.0, 10000, ("gas", "coll_vell"), ("gas", "h_p0_fraction"),
+    ...     ("gas", "he_p0_fraction"), var_elem)
+    """
+
+    _cx = True
+
+    def __init__(
+        self,
+        emin,
+        emax,
+        nbins,
+        collnpar,
+        h_p0_fraction,
+        he_p0_fraction,
+        var_elem,
+        acx_model=8,
+        recomb_type=1,
+        vmin=10.0,
+        vmax=10000.0,
+        nbins_v=100,
+        binscale="linear",
+        temperature_field=("gas", "temperature"),
+        emission_measure_field=("gas", "emission_measure_cx"),
+        h_fraction=None,
+        kT_min=0.01,
+        kT_max=64.0,
+        max_density=None,
+        min_entropy=None,
+        method="invert_cdf",
+        abund_table="angr",
+        prng=None,
+    ):
+        spectral_model = CXSpectralModel(
+            emin,
+            emax,
+            nbins,
+            vmin,
+            vmax,
+            nbins_v,
+            collntype=2,
+            acx_model=acx_model,
+            recomb_type=recomb_type,
+            binscale=binscale,
+            abund_table=abund_table,
+            var_elem=var_elem,
+        )
+        super().__init__(
+            spectral_model,
+            emin,
+            emax,
+            nbins,
+            0.0,
+            binscale=binscale,
+            kT_min=kT_min,
+            kT_max=kT_max,
+            var_elem=var_elem,
+            max_density=max_density,
+            min_entropy=min_entropy,
+            method=method,
+            abund_table=abund_table,
+            prng=prng,
+            h_fraction=h_fraction,
+            temperature_field=temperature_field,
+            emission_measure_field=emission_measure_field,
+        )
+        self.collnpar = collnpar
+        self.h_p0_fraction = h_p0_fraction
+        self.he_p0_fraction = he_p0_fraction
+        self.collntype = 2
+        self.acx_model = acx_model
+        self.recomb_type = recomb_type
+        self.var_elem_keys = self.spectral_model.var_elem_names
+        self.var_ion_keys = self.spectral_model.var_ion_names
+
+    def _prep_repr(self):
+        class_name, strs = super()._prep_repr()
+        strs["collnpar"] = self.collnpar
+        strs["collntype"] = self.collntype
+        strs["acx_model"] = self.acx_model
+        strs["recomb_type"] = self.recomb_type
         strs.pop("model")
         strs.pop("Zmet")
         return class_name, strs

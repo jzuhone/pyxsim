@@ -4,18 +4,20 @@ Photon emission and absoprtion models.
 
 import numpy as np
 from scipy.interpolate import interp1d
-from soxs.constants import K_per_keV
-from soxs.spectra import get_tbabs_absorb, get_wabs_absorb
-from soxs.thermal_spectra import (
+from soxs.constants import K_per_keV, elem_names
+from soxs.spectra import (
     CIEGenerator,
     CloudyCIEGenerator,
     IGMGenerator,
     MekalGenerator,
+    OneACX2Generator,
+    get_tbabs_absorb,
+    get_wabs_absorb,
 )
 from soxs.utils import parse_prng, regrid_spectrum
 from yt.units.yt_array import YTArray, YTQuantity
 
-from pyxsim.lib.interpolate import interp1d_spec, interp2d_spec
+from pyxsim.lib.interpolate import interp1d_spec, interp2d_spec, interp_cx_spec
 
 
 class SpectralInterpolator1D:
@@ -79,6 +81,26 @@ class SpectralInterpolator2D:
             self.do_var,
         )
         return c_vals, m_vals, v_vals
+
+
+class SpectralInterpolatorCX:
+    def __init__(self, vbins, h_spec, he_spec):
+        self.vbins = vbins.astype("float64")
+        self.h_spec = h_spec
+        self.he_spec = he_spec
+
+    def __call__(self, v_vals):
+        x_i = (np.digitize(v_vals, self.vbins) - 1).astype("int32")
+        if np.any((x_i == -1) | (x_i == len(self.vbins) - 1)):
+            x_i = np.minimum(np.maximum(x_i, 0), len(self.vbins) - 2)
+        h_vals, he_vals = interp_cx_spec(
+            self.h_spec,
+            self.he_spec,
+            v_vals,
+            self.vbins,
+            x_i,
+        )
+        return h_vals, he_vals
 
 
 class ThermalSpectralModel:
@@ -260,6 +282,88 @@ class TableCIEModel(ThermalSpectralModel):
         self.si = SpectralInterpolator1D(
             self.Tvals, self.cosmic_spec, self.metal_spec, self.var_spec
         )
+
+
+class CXSpectralModel:
+    def __init__(
+        self,
+        emin,
+        emax,
+        nbins,
+        vmin,
+        vmax,
+        nbins_v,
+        var_elem,
+        collntype=1,
+        acx_model=8,
+        recomb_type=1,
+        binscale="linear",
+        abund_table="angr",
+    ):
+        self.cxgen = OneACX2Generator(
+            emin,
+            emax,
+            nbins,
+            collntype=collntype,
+            acx_model=acx_model,
+            recomb_type=recomb_type,
+            binscale=binscale,
+            abund_table=abund_table,
+        )
+        self.model_vers = self.cxgen.model_vers
+        self.var_elem_names = []
+        self.var_ion_names = []
+        self.ions = []
+        for elem in var_elem:
+            e, ion = elem.split("^")
+            self.var_elem_names.append(e)
+            self.var_ion_names.append(elem)
+            self.ions.append((elem_names.index(e), int(ion)))
+        self.vmin = np.log10(vmin)
+        self.vmax = np.log10(vmax)
+        self.nbins_v = nbins_v
+        self.v_bins = np.linspace(self.vmin, self.vmax, self.nbins_v + 1)
+        self.v_mid = 0.5 * (self.v_bins[:-1] + self.v_bins[1:])
+        self.nbins = self.cxgen.nbins
+        self.ebins = self.cxgen.ebins
+        self.emid = self.cxgen.emid
+        self.atable = self.cxgen.atable
+        self.de = np.diff(self.ebins)
+        self.model = self.cxgen.model
+        self.collntype = self.cxgen.collntype
+        self.num_elements = self.cxgen.num_elements
+
+    def prepare_spectrum(self, zobs):
+        h_spec, he_spec = self.cxgen.make_table(self.ions, 10**self.v_mid, zobs)
+        self.h_spec = h_spec
+        self.he_spec = he_spec
+        self.si = SpectralInterpolatorCX(self.v_mid, self.he_spec, self.he_spec)
+
+    def get_spectrum(self, coll):
+        coll = np.atleast_1d(coll)
+        return self.si(coll)
+
+    def make_fluxf(self, emin, emax, energy=False):
+        eidxs = (self.ebins[:-1] > emin) & (self.ebins[1:] < emax)
+        emid = self.emid[eidxs]
+        if energy:
+            h_flux = (self.h_spec[:, :, eidxs] * emid).sum(axis=-1)
+            he_flux = (self.he_spec[:, :, eidxs] * emid).sum(axis=-1)
+        else:
+            h_flux = self.h_spec[:, :, eidxs].sum(axis=-1)
+            he_flux = self.he_spec[:, :, eidxs].sum(axis=-1)
+        h_f = interp1d(
+            self.v_mid, h_flux, axis=1, fill_value=0.0, assume_sorted=True, copy=False
+        )
+        he_f = interp1d(
+            self.v_mid, he_flux, axis=1, fill_value=0.0, assume_sorted=True, copy=False
+        )
+
+        def _fluxf(v):
+            logv = np.log10(v)
+            return h_f(logv), he_f(logv)
+
+        return _fluxf
 
 
 class Atable1DSpectralModel(ThermalSpectralModel):
@@ -558,16 +662,24 @@ class AbsorptionModel:
     _name = ""
 
     def __init__(self, nH, energy, cross_section):
-        self.nH = YTQuantity(nH * 1.0e22, "cm**-2")
+        self._nH = nH
         self.emid = YTArray(energy, "keV")
         self.sigma = YTArray(cross_section, "cm**2")
+
+    @property
+    def nH(self):
+        return YTQuantity(self._nH, "1.0e22*cm**-2")
+
+    @nH.setter
+    def nH(self, value):
+        self._nH = value
 
     def get_absorb(self, e):
         """
         Get the absorption spectrum.
         """
         sigma = np.interp(e, self.emid, self.sigma, left=0.0, right=0.0)
-        return np.exp(-sigma * self.nH)
+        return np.exp(-sigma * self._nH)
 
     def absorb_photons(self, eobs, prng=None):
         r"""
@@ -610,12 +722,12 @@ class TBabsModel(AbsorptionModel):
     _name = "tbabs"
 
     def __init__(self, nH, abund_table="angr"):
-        self.nH = YTQuantity(nH, "1.0e22*cm**-2")
+        super().__init__(nH, [], [])
         self.abund_table = abund_table
 
     def get_absorb(self, e):
         e = np.array(e)
-        return get_tbabs_absorb(e, self.nH.v, abund_table=self.abund_table)
+        return get_tbabs_absorb(e, self._nH, abund_table=self.abund_table)
 
 
 class WabsModel(AbsorptionModel):
@@ -636,12 +748,12 @@ class WabsModel(AbsorptionModel):
     _name = "wabs"
 
     def __init__(self, nH, abund_table="angr"):
-        self.nH = YTQuantity(nH, "1.0e22*cm**-2")
+        super().__init__(nH, [], [])
         self.abund_table = abund_table
 
     def get_absorb(self, e):
         e = np.array(e)
-        return get_wabs_absorb(e, self.nH.v)
+        return get_wabs_absorb(e, self._nH)
 
 
 absorb_models = {"wabs": WabsModel, "tbabs": TBabsModel}

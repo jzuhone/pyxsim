@@ -3,16 +3,17 @@ from numbers import Number
 import numpy as np
 from scipy.stats import norm
 from soxs.utils import parse_prng
+from unyt import clight
 from unyt.array import unyt_quantity
 from yt.data_objects.static_output import Dataset
-from yt.utilities.physical_constants import clight
 
 from pyxsim.lib.spectra import line_spectrum
 from pyxsim.source_models.sources import SourceModel
-from pyxsim.utils import isunitful, mylog, parse_value
+from pyxsim.utils import check_num_cells, isunitful, mylog, parse_value, sanitize_normal
 
-gx = np.linspace(-6, 6, 2400)
+gx = np.linspace(-7, 7, 10000)
 gcdf = norm.cdf(gx)
+gpdf = norm.pdf(gx)
 
 
 class LineSourceModel(SourceModel):
@@ -34,7 +35,6 @@ class LineSourceModel(SourceModel):
         velocity or energy are accepted. If units are not given, they
         are assumed to be in keV. If set to a field name, the line broadening
         is assumed to be based on this field (in units of velocity or energy).
-        If set to None (the default), it is assumed that the line is unbroadened.
     prng : integer or :class:`~numpy.random.RandomState` object
         A pseudo-random number generator. Typically will only be specified
         if you have a reason to generate the same set of random numbers, such as for a
@@ -47,7 +47,7 @@ class LineSourceModel(SourceModel):
     >>> line_model = LineSourceModel(location, "dark_matter_density_squared", sigma=sigma)
     """
 
-    def __init__(self, e0, emission_field, sigma=None, prng=None):
+    def __init__(self, e0, emission_field, sigma, prng=None):
         from unyt.exceptions import UnitConversionError
 
         self.e0 = parse_value(e0, "keV")
@@ -62,7 +62,7 @@ class LineSourceModel(SourceModel):
             except UnitConversionError:
                 self.sigma = parse_value(sigma, "keV")
         else:
-            # Either no broadening or a field name
+            # Should be a field name
             self.sigma = sigma
         self.emission_field = emission_field
         self.prng = parse_prng(prng)
@@ -75,10 +75,7 @@ class LineSourceModel(SourceModel):
             ds = data_source.ds
         self.scale_factor = 1.0 / (1.0 + redshift)
         self.emission_field = ds._get_field_info(self.emission_field).name
-        if (
-            not isinstance(self.sigma, (Number, unyt_quantity))
-            and self.sigma is not None
-        ):
+        if not isinstance(self.sigma, (Number, unyt_quantity)):
             self.sigma = ds._get_field_info(self.sigma).name
             if self.emission_field[0] != self.sigma[0]:
                 mylog.warning(
@@ -105,10 +102,18 @@ class LineSourceModel(SourceModel):
             self.pbar.close()
 
     def make_spectrum(
-        self, data_source, emin, emax, nbins, redshift=0.0, dist=None, cosmology=None
+        self,
+        data_source,
+        emin,
+        emax,
+        nbins,
+        redshift=0.0,
+        dist=None,
+        cosmology=None,
+        normal=None,
     ):
         """
-        Make a count rate spectrum in the source frame from a yt data container,
+        Using all the data in a yt data container, make a count rate spectrum in the source frame,
         or a spectrum in the observer frame.
 
         Parameters
@@ -133,71 +138,97 @@ class LineSourceModel(SourceModel):
             Cosmological information. If not supplied, we try to get the
             cosmology from the dataset. Otherwise, LCDM with the default yt
             parameters is assumed.
+        normal : integer, string, or array-like, optional
+            This is a line-of-sight direction along which the spectrum will be
+            Doppler shifted using the velocity field in the object. This is
+            only an option if the spectrum is calculated in the observer frame.
+            Options are one of "x", "y", "z", 0, 1, 2, or an 3-element array-like
+            object of floats to specify an off-axis normal vector.
 
         Returns
         -------
         :class:`~soxs.spectra.CountRateSpectrum` or :class:`~soxs.spectra.Spectrum`,
         depending on how the method is invoked.
         """
+        normal = sanitize_normal(normal)
+        if normal is not None:
+            if redshift == 0.0 and dist is None:
+                raise RuntimeError(
+                    "Cannot use a normal vector for the line-of-sight "
+                    "when a redshift or the distance is not specified! not specified or the distance "
+                )
+            data_source.set_field_parameter("axis", normal)
+        shifting = normal is not None
         ebins = np.linspace(emin, emax, nbins + 1)
         spec = np.zeros(nbins)
         spectral_norm = 1.0
         self.setup_model("spectrum", data_source, redshift)
         for chunk in data_source.chunks([], "io"):
-            spec += self.process_data("spectrum", chunk, spectral_norm, ebins=ebins)
+            chunk_data = self.process_data(
+                "spectrum", chunk, spectral_norm, shifting=shifting, ebins=ebins
+            )
+            if chunk_data is not None:
+                spec += chunk_data
         self.cleanup_model("spectrum")
         return self._make_spectrum(
             data_source.ds, ebins, spec, redshift, dist, cosmology
         )
 
-    def make_fluxf(self, emin, emax, energy=False):
-        return {"emin": emin, "emax": emax}
+    def process_data(
+        self,
+        mode,
+        chunk,
+        spectral_norm,
+        ebins=None,
+        emin=None,
+        emax=None,
+        fluxf=None,
+        shifting=False,
+    ):
+        num_cells = check_num_cells(self.ftype, chunk)
 
-    def process_data(self, mode, chunk, spectral_norm, fluxf=None, ebins=None):
-        num_cells = len(chunk[self.emission_field])
+        if num_cells == 0:
+            if mode in ["photons", "spectrum"]:
+                return
+            else:
+                return np.array([])
 
         norm_field = chunk[self.emission_field]
+
+        if mode in ["spectrum", "intensity", "photon_intensity"] and shifting:
+            shift = self.compute_shift(chunk)
+        else:
+            shift = np.ones_like(norm_field.d)
+
+        if isinstance(self.sigma, unyt_quantity):
+            sigma = self.sigma.value * np.ones_like(norm_field.d)
+        else:
+            sigma = (chunk[self.sigma] * self.e0 / clight).to_value("keV")
 
         if mode == "photons":
             F = norm_field * spectral_norm * self.scale_factor
             if self.observer == "internal":
-                pos = np.array(
-                    [
-                        np.ravel(chunk[self.p_fields[i]].to_value("kpc"))
-                        for i in range(3)
-                    ]
-                )
-                r2 = self.compute_radius(pos)
+                r2 = self.compute_radius(chunk)
                 F /= r2
 
             number_of_photons = self.prng.poisson(lam=F.in_cgs().d)
 
             energies = self.e0 * np.ones(number_of_photons.sum())
 
-            if isinstance(self.sigma, unyt_quantity):
-                dE = (
-                    self.prng.normal(
-                        loc=0.0, scale=float(self.sigma), size=number_of_photons.sum()
-                    )
-                    * self.e0.uq
-                )
-                energies += dE
-            elif self.sigma is not None:
-                sigma = (chunk[self.sigma] * self.e0 / clight).in_units("keV")
-                start_e = 0
-                for i in range(num_cells):
-                    if number_of_photons[i] > 0:
-                        end_e = start_e + number_of_photons[i]
-                        dE = (
-                            self.prng.normal(
-                                loc=0.0,
-                                scale=float(sigma[i]),
-                                size=number_of_photons[i],
-                            )
-                            * self.e0.uq
+            start_e = 0
+            for i in range(num_cells):
+                if number_of_photons[i] > 0:
+                    end_e = start_e + number_of_photons[i]
+                    dE = (
+                        self.prng.normal(
+                            loc=0.0,
+                            scale=sigma[i],
+                            size=number_of_photons[i],
                         )
-                        energies[start_e:end_e] += dE
-                        start_e = end_e
+                        * self.e0.uq
+                    )
+                    energies[start_e:end_e] += dE
+                    start_e = end_e
 
             energies = energies * self.scale_factor
 
@@ -206,53 +237,37 @@ class LineSourceModel(SourceModel):
 
             return ncells, number_of_photons[active_cells], active_cells, energies
 
-        elif mode in ["photon_field", "energy_field"]:
-            xlo = fluxf["emin"].v - self.e0.value
-            xhi = fluxf["emax"].v - self.e0.value
-            if self.sigma is None:
-                if (xlo < 0) & (xhi > 0.0):
-                    fac = 1.0
-                else:
-                    fac = 0.0
-                if mode == "energy_field":
-                    fac *= self.e0
-            else:
-                if isinstance(self.sigma, unyt_quantity):
-                    sigma = self.sigma.value
-                else:
-                    sigma = (chunk[self.sigma] * self.e0 / clight).to_value("keV")
-                xhis = xhi / sigma
-                xlos = xlo / sigma
-                fac = norm.cdf(xhis) - norm.cdf(xlos)
-                if mode == "energy_field":
-                    fac = self.e0.value * fac
-                    fac -= (
-                        sigma
-                        * (np.exp(-0.5 * xhis**2) - np.exp(-0.5 * xlos**2))
-                        / np.sqrt(2.0 * np.pi)
-                    )
-            return fac * norm_field
-
         elif mode == "spectrum":
-            inv_sf = 1.0 / self.scale_factor
-            ee = ebins * inv_sf - self.e0.value
-            de = np.diff(ebins * inv_sf)
 
-            if isinstance(self.sigma, unyt_quantity):
-                xtmp = ee / self.sigma.value
-                ret = np.interp(xtmp, gx, gcdf)
-                spec = norm_field.d.sum() * (ret[1:] - ret[:-1]) / de
-            elif self.sigma is not None:
-                sigma = (chunk[self.sigma] * self.e0 / clight).to_value("keV")
-                spec = (
-                    line_spectrum(
-                        num_cells, ee, sigma, gx, gcdf, norm_field.d, self.pbar
-                    )
-                    / de
-                )
-            else:
-                spec = np.zeros(ebins.size - 1)
-                idx = np.searchsorted(ebins * inv_sf, self.e0.value)
-                spec[idx] = norm_field.d.sum()
+            ee = 0.5 * (ebins[1:] + ebins[:-1]) / self.scale_factor
+
+            spec = line_spectrum(
+                num_cells,
+                float(self.e0),
+                ee,
+                sigma,
+                gx,
+                gpdf,
+                norm_field.d,
+                shift,
+                self.pbar,
+            )
 
             return spec
+
+        else:
+
+            xlo = emin - self.e0.value
+            xhi = emax - self.e0.value
+            xhis = xhi / sigma
+            xlos = xlo / sigma
+            fac = (norm.cdf(xhis) - norm.cdf(xlos)) * shift * shift * shift
+            if mode in ["luminosity", "intensity"]:
+                fac = self.e0.value * fac
+                fac -= (
+                    sigma
+                    * (np.exp(-0.5 * xhis**2) - np.exp(-0.5 * xlos**2))
+                    / np.sqrt(2.0 * np.pi)
+                )
+                fac *= shift
+            return fac * norm_field

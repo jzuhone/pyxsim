@@ -4,7 +4,11 @@ import numpy as np
 from astropy.units import Quantity
 from more_itertools import always_iterable
 from soxs.constants import abund_tables, atomic_weights, elem_names
-from unyt import unyt_array, unyt_quantity
+from unyt import clight, unyt_array, unyt_quantity
+from yt.utilities.orientation import Orientation
+
+scale_shift = -1.0 / clight.to_value("km/s")
+scale_shift2 = scale_shift * scale_shift
 
 pyxsimLogger = logging.getLogger("pyxsim")
 
@@ -259,3 +263,37 @@ class ParallelProgressBar:
 
     def close(self):
         mylog.info("Finishing %s", self.title)
+
+
+def get_normal_and_north(normal, north_vector=None):
+    if not isinstance(normal, str):
+        L = np.array(normal)
+    else:
+        ax = "xyz".index(normal)
+        L = np.zeros(3)
+        L[ax] = 1.0
+    orient = Orientation(L, north_vector=north_vector)
+    north_vector = orient.north_vector
+    return L, north_vector, orient
+
+
+def sanitize_normal(normal):
+    if normal is None or isinstance(normal, int):
+        L = normal
+    elif isinstance(normal, str):
+        L = "xyz".index(normal)
+    elif normal is not None:
+        L = np.array(normal)
+        L /= np.sqrt(np.dot(L, L))
+    return L
+
+
+def check_num_cells(ftype, obj):
+    if ftype == "gas":
+        if ("gas", "ones") in obj.ds.field_info:
+            test_field = ("gas", "ones")
+        else:
+            test_field = ("index", "ones")
+    else:
+        test_field = (ftype, "particle_ones")
+    return obj[test_field].size

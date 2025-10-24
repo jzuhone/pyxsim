@@ -32,12 +32,12 @@ photon lists are. The arguments are:
 * ``sky_center``: Central RA, Dec of the events in degrees.
 * ``absorb_model`` (optional): A string representing a model for foreground
   galactic absorption. The two models included in pyXSIM for absorption are:
-  ``"wabs"`` (`Wisconsin (Morrison and McCammon; ApJ 270, 119) <http://adsabs.harvard.edu/abs/1983ApJ...270..119M>`_),
-  and ``"tbabs"`` (`Tuebingen-Boulder (Wilms, J., Allen, A., & McCray, R. 2000, ApJ, 542, 914) <http://adsabs.harvard.edu/abs/2000ApJ...542..914W>`_).
+  ``"wabs"``, `Wisconsin (Morrison and McCammon; ApJ 270, 119) <http://adsabs.harvard.edu/abs/1983ApJ...270..119M>`_,
+  and ``"tbabs"``, `Tuebingen-Boulder (Wilms, J., Allen, A., & McCray, R. 2000, ApJ, 542, 914) <http://adsabs.harvard.edu/abs/2000ApJ...542..914W>`_.
   The default is no absorption--if an absorption model is chosen, the ``nH``
   parameter must also be set.
 * ``nH`` (optional): The foreground galactic column density in units of
-  :math:`10^{22} \rm{atoms} \rm{cm}^{-2}`, for use when one is applying
+  10\ :sup:`22` atoms cm :sup:`-2`, for use when one is applying
   foreground galactic absorption.
 * ``abund_table`` (optional): The abundance table to be used for abundances in the
   TBabs absorption model. Default is set in the SOXS configuration file, the default

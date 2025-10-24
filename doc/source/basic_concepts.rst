@@ -41,8 +41,6 @@ pyXSIM Limitations
 pyXSIM currently has the following limitations, which may or may not be
 lifted in the future:
 
-* pyXSIM is currently unable to simulate any sources with any optical
-  thickness, self-absorption, or self-scattering.
 * pyXSIM is currently unable to simulate any sources with explicit time
   dependence.
 * pyXSIM is currently limited to datasets in Cartesian coordinates.
@@ -115,12 +113,12 @@ one of three forms:
 
 In the latter case, the default units for various dimensionful quantities are:
 
-* Length (for distances to sources): :math:`\rm{Mpc}`
-* Time: :math:`\rm{s}`
-* Velocity: :math:`\rm{km/s}`
-* Area: :math:`\rm{cm^2}`
-* Energy: :math:`\rm{keV}`
-* Angle: :math:`\rm{degree}`
+* Length (for distances to sources): Mpc
+* Time: s
+* Velocity: km s\ :sup:`-1`
+* Area: cm\ :sup:`2`
+* Energy: keV
+* Angle: degree
 
 To be on the safe side, it's always recommended to provide some unit
 information, since the units will be checked for correct dimensionality and will
