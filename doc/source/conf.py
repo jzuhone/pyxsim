@@ -50,7 +50,7 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinx.ext.napoleon",
     "sphinx.ext.autosummary",
-    "nbsphinx",
+    # "nbsphinx",
 ]
 
 numpydoc_show_class_members = False

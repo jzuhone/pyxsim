@@ -144,25 +144,26 @@ class UniformSource:
         self.kT = kT
         self.Z = Z
 
-        nx = 64
-        ddims = (nx, nx, nx)
+        self.nx = 64
+        ddims = (self.nx, self.nx, self.nx)
 
         dens = 0.1 * rho_c * np.ones(ddims)
         temp = self.kT * K_per_keV * np.ones(ddims)
         bbox = np.array([[-0.5, 0.5], [-0.5, 0.5], [-0.5, 0.5]])
 
-        data = {}
-        data["density"] = (dens, "g/cm**3")
-        data["temperature"] = (temp, "K")
-        data["H_p0_fraction"] = (0.76 * 0.1 * np.ones(ddims), "dimensionless")
-        data["H_p1_fraction"] = (0.76 * 0.9 * np.ones(ddims), "dimensionless")
-        data["El_fraction"] = (
-            0.76 * 0.9 * me_over_mp * np.ones(ddims),
-            "dimensionless",
-        )
-        data["velocity_x"] = (np.zeros(ddims), "cm/s")
-        data["velocity_y"] = (np.zeros(ddims), "cm/s")
-        data["velocity_z"] = (np.zeros(ddims), "cm/s")
+        data = {
+            "density": (dens, "g/cm**3"),
+            "temperature": (temp, "K"),
+            "H_p0_fraction": (0.76 * 0.1 * np.ones(ddims), "dimensionless"),
+            "H_p1_fraction": (0.76 * 0.9 * np.ones(ddims), "dimensionless"),
+            "El_fraction": (
+                0.76 * 0.9 * me_over_mp * np.ones(ddims),
+                "dimensionless",
+            ),
+            "velocity_x": (np.zeros(ddims), "cm/s"),
+            "velocity_y": (np.zeros(ddims), "cm/s"),
+            "velocity_z": (np.zeros(ddims), "cm/s"),
+        }
         self.ds = load_uniform_grid(
             data,
             ddims,
