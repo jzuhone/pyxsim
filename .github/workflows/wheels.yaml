@@ -18,9 +18,10 @@ jobs:
         # because forward compatibility is much easier to
         # guarantee than backward compatibility
         os: [
-            ubuntu-latest,
-            macOS-latest,
-            windows-latest
+            ubuntu-24.04,
+            ubuntu-24.04-arm,
+            macos-14,
+            windows-2022
         ]
       fail-fast: false
 
@@ -28,21 +29,16 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Build wheels for CPython
-        uses: pypa/cibuildwheel@v2.16.5
+        uses: pypa/cibuildwheel@v2.22.0
         with:
           output-dir: dist
         env:
-          CIBW_BUILD: "cp39-* cp310-* cp311-* cp312-*"
-          CIBW_SKIP: "*-musllinux_*"  #  numpy doesn't have wheels for musllinux so we can't build some quickly and without bloating
-          CIBW_ARCHS_LINUX: "x86_64"
+          CIBW_ARCHS_LINUX: auto64
           CIBW_ARCHS_MACOS: x86_64 arm64
           CIBW_ARCHS_WINDOWS: auto64
-          MACOSX_DEPLOYMENT_TARGET: "10.9" # as of CIBW 2.9, this is the default value, pin it so it can't be bumped silently
-          CIBW_ENVIRONMENT: "LDFLAGS='-static-libstdc++'"
-          CIBW_BUILD_VERBOSITY: 1
           CIBW_BEFORE_BUILD: "rm -rf build/"  # working around .so files accumulation between builds leading up to bloated wheels
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: wheels
           path: ./dist/*.whl
@@ -56,7 +52,7 @@ jobs:
       - name: Build sdist
         run: pipx run build --sdist
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: tarball
           path: dist/*.tar.gz
