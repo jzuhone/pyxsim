@@ -33,9 +33,14 @@ fi
 
 # Install dependencies using conda
 
-PYVER=`python --version`
+# Install dependencies using mamba and pip
 
-conda install --yes numpy pytest pip h5py astropy nose cython scipy yt
+eval "$(micromamba shell hook --shell bash)"
+micromamba shell init --shell bash --root-prefix=~/micromamba
+micromamba activate test-env
+
+micromamba install --yes -c conda-forge numpy pytest pip astropy scipy cython h5py yt
+
 git clone https://github.com/lynx-x-ray-observatory/soxs
 cd soxs
 pip install .
