@@ -40,7 +40,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: wheels-${{ github.job }}-${{ github.run_id }}
+          name: wheels-${{ matrix.os }}
           path: ./dist/*.whl
 
   build_sdist:
