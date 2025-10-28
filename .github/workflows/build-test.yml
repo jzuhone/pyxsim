@@ -14,7 +14,7 @@ defaults:
         shell: bash
 
 env:
-    ANSWER_VER: pyxsim21
+    ANSWER_VER: pyxsim22
 
 jobs:
     build:
