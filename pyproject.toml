@@ -27,7 +27,7 @@ dependencies = [
     "scipy",
     "yt>=4.3",
     "unyt>=2.9.5",
-    "soxs>=4.6.0",
+    "soxs>=5.0.1",
     "tqdm",
 ]
 
