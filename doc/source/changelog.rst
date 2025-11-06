@@ -3,6 +3,11 @@
 ChangeLog
 =========
 
+Version 4.4.3
+-------------
+
+This version of pyXSIM adds compatibility for NumPy version 2 and Python 3.14.
+
 Version 4.4.2
 -------------
 

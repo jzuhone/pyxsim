@@ -14,9 +14,6 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        # pinning OS versions to oldest versions available
-        # because forward compatibility is much easier to
-        # guarantee than backward compatibility
         os: [
             ubuntu-24.04,
             ubuntu-24.04-arm,
