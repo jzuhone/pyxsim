@@ -1,0 +1,64 @@
+name: Backfill Wheels
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Tag/branch/SHA of pyxsim to build (e.g. v1.4.0)"
+        required: true
+        default: "4.4.3"
+      upload_to_pypi:
+        description: "Upload wheels to PyPI (true/false)"
+        required: true
+        default: "false"
+
+jobs:
+  build:
+    name: Wheels on ${{ matrix.os }} for ${{ inputs.ref }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, ubuntu-24.04-arm, macos-14, windows-2022]
+
+    steps:
+      - name: Checkout source at ref
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Build wheels (cp314 only)
+        uses: pypa/cibuildwheel@v3.2.1
+        with:
+          output-dir: dist
+        env:
+          CIBW_BUILD: "cp314-*"
+          CIBW_SKIP: "cp31?t-*"
+          CIBW_ARCHS_LINUX: auto64
+          CIBW_ARCHS_MACOS: "x86_64 arm64"
+          CIBW_ARCHS_WINDOWS: auto64
+          CIBW_BEFORE_BUILD: "rm -rf build/"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.os }}-${{ inputs.ref }}
+          path: dist/*.whl
+
+  publish:
+    if: ${{ inputs.upload_to_pypi == 'true' }}
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist_all
+      - name: Flatten artifacts
+        run: |
+          mkdir -p dist
+          find dist_all -name "*.whl" -exec mv {} dist/ \;
+          ls -l dist
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          skip-existing: true  # uploads only the missing files

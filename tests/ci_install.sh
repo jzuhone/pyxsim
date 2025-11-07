@@ -31,9 +31,13 @@ if [[ ${mode} == "testing" ]]; then
 
 fi
 
-# Install dependencies using conda
+# Install dependencies using mamba and pip
 
-PYVER=`python --version`
+eval "$(micromamba shell hook --shell bash)"
+micromamba shell init --shell bash --root-prefix=~/micromamba
+micromamba activate test-env
+
+micromamba install --yes -c conda-forge numpy pytest pip astropy scipy cython h5py yt
 
 # Install dependencies using mamba and pip
 

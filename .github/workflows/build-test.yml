@@ -25,6 +25,9 @@ jobs:
                 numpy-version: [ '1', '2' ]
                 include:
                     - os: ubuntu-latest
+                      python-version: '3.14'
+                      numpy-version: '2'
+                    - os: ubuntu-latest
                       python-version: '3.13'
                       numpy-version: '2'
                     - os: ubuntu-latest

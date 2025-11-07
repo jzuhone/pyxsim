@@ -21,6 +21,11 @@ backwards-incompatible changes.
   backwards-incompatible change.
 * No-sky option
 
+Version 4.4.3
+-------------
+
+This version of pyXSIM adds compatibility for NumPy version 2 and Python 3.14.
+
 Version 4.4.2
 -------------
 
