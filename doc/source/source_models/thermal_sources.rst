@@ -106,7 +106,7 @@ parameters which can be set:
   generating photons. By "entropy" we here mean :math:`S = k_BTn_e^{-2/3}`, where
   :math:`k_BT` is the gas temperature and :math:`n_e` is the electron number
   density. If a float, the units are assumed to be keV*cm**2. It can also be a
-``YTQuantity`` or a float, string tuple such as ``(10.0, "keV*cm**2")`` Default:
+  ``YTQuantity`` or a float, string tuple such as ``(10.0, "keV*cm**2")`` Default:
   None, meaning no minimum entropy.
 * ``method``: The method used to generate the photon energies from the spectrum.
   Either ``"invert_cdf"``,

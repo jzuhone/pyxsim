@@ -17,7 +17,7 @@ backwards-incompatible changes.
 * The :class:`~pyxsim.source_models.power_law_sources.PowerLawSourceModel` no
   longer takes an ``emission_field`` argument in units of counts/s/keV, but
   instead takes a ``luminosity_field`` argument in units of power (e.g. W, erg/s,
-  keV/s,). See :ref:`powerlaw-sources` for more details. This is a
+  keV/s, etc.). See :ref:`powerlaw-sources` for more details. This is a
   backwards-incompatible change.
 * No-sky option
 

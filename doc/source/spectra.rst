@@ -8,7 +8,7 @@ of any sort, then you can also generate spectra from the entire object. This can
 be done in two modes--either in the rest frame of the source, in which case the
 spectrum will be a "count rate" spectrum in units of counts s\ :sup:`-1` keV\ :sup:`-1`,
 or in an observer frame at some distance in which case the spectrum will be in
-units of counts s\ :sup:`-1` cm\ :sup:`-2` keV\ :sup:`-1`
+units of counts s\ :sup:`-1` cm\ :sup:`-2` keV\ :sup:`-1`.
 
 
 Assuming one has a dataset and (say) a sphere object, you can generate spectra
@@ -93,7 +93,9 @@ Finally, it is also possible to simulate the Doppler shifting of the spectrum fr
 velocity field of the source. This is done by specifying the ``normal`` keyword argument,
 which can be either be a string corresponding to one of the coordinate axes
 (e.g. "x", "y", or "z"), or a 3-vector of the form ``[a, b, c]`` that specifies the
-normal direction to the source:
+normal direction to the source. This will pick out the component of the velocity along
+the sight line from each cell or particle and Doppler-shift the spectrum from that
+volume element before adding it to the total summed spectrum.
 
 .. code-block:: python
 
