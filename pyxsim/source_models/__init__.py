@@ -5,4 +5,5 @@ from pyxsim.source_models.thermal_sources import (
     CXSourceModel,
     IGMSourceModel,
     NEISourceModel,
+    PionSourceModel,
 )

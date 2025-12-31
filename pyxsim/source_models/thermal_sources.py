@@ -13,8 +13,8 @@ from pyxsim.source_models.sources import SourceModel
 from pyxsim.spectral_models import (
     CloudyCIESpectralModel,
     CXSpectralModel,
-    IGMSpectralModel,
     MekalSpectralModel,
+    PionSpectralModel,
     TableCIEModel,
 )
 from pyxsim.utils import (
@@ -156,11 +156,9 @@ class ThermalSourceModel(SourceModel):
         else:
             ds = data_source.ds
         try:
-            self.emission_measure_field = ds._get_field_info(
-                self.emission_measure_field
-            ).name
+            self.emission_measure_field = ds._get_field_info(self.emission_measure_field).name
             ftype = self.emission_measure_field[0]
-        except YTFieldNotFound:
+        except YTFieldNotFound as e:
             raise RuntimeError(
                 f"The {self.emission_measure_field} field is not "
                 "found. If you do not have species fields in "
@@ -168,7 +166,7 @@ class ThermalSourceModel(SourceModel):
                 "default_species_fields='ionized' in the call "
                 "to yt.load(), or set them up using Trident, or "
                 "manually."
-            )
+            ) from e
         self.temperature_field = ds._get_field_info(self.temperature_field).name
         fields = [self.emission_measure_field, self.temperature_field]
         self.ftype = ftype
@@ -184,9 +182,7 @@ class ThermalSourceModel(SourceModel):
             elif Z_units == "Zsun":
                 self.Zconvert = 1.0
             else:
-                raise RuntimeError(
-                    f"I don't understand metallicity units of {Z_units}!"
-                )
+                raise RuntimeError(f"I don't understand metallicity units of {Z_units}!")
         if self.num_var_elem > 0:
             for key in self.var_elem:
                 value = self.var_elem[key]
@@ -206,10 +202,7 @@ class ThermalSourceModel(SourceModel):
                     elif m_units == "Zsun":
                         self.mconvert[key] = 1.0
                     else:
-                        raise RuntimeError(
-                            f"I don't understand units of "
-                            f"{m_units} for element {key}!"
-                        )
+                        raise RuntimeError(f"I don't understand units of {m_units} for element {key}!")
         if self.nh_field is not None:
             self.nh_field = ds._get_field_info(self.nh_field).name
             fields.append(self.nh_field)
@@ -224,9 +217,7 @@ class ThermalSourceModel(SourceModel):
             fields.append(self.he_p0_fraction)
         ftypes = np.array([f[0] for f in fields])
         if not np.all(ftypes == ftype):
-            mylog.warning(
-                "Not all fields have the same field type! Fields used: %s", fields
-            )
+            mylog.warning("Not all fields have the same field type! Fields used: %s", fields)
         self.density_field = (ftype, "density")
         self.entropy_field = (ftype, "entropy")
         mylog.info("Using emission measure field '%s'.", self.emission_measure_field)
@@ -264,10 +255,10 @@ class ThermalSourceModel(SourceModel):
         ----------
         data_source : :class:`~yt.data_objects.data_containers.YTSelectionContainer`
             The data source from which the photons will be generated.
-        emin : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
+        emin : float, (value, unit) tuple, unyt_quantity, or Quantity
             The minimum energy in the band. If a float, it is assumed to be
             in keV.
-        emax : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
+        emax : float, (value, unit) tuple, unyt_quantity, or Quantity
             The minimum energy in the band. If a float, it is assumed to be
             in keV.
         nbins : integer
@@ -275,7 +266,7 @@ class ThermalSourceModel(SourceModel):
         redshift : float, optional
             If greater than 0, we assume that the spectrum should be created in
             the observer frame at a distance given by the cosmology. Default: 0.0
-        dist : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`, optional
+        dist : float, (value, unit) tuple, unyt_quantity, or Quantity, optional
             The distance to a nearby source, if redshift = 0.0. If a float, it
             is assumed to be in units of kpc.
         cosmology : :class:`~yt.utilities.cosmology.Cosmology`, optional
@@ -308,16 +299,12 @@ class ThermalSourceModel(SourceModel):
         spec = np.zeros(nbins)
         ebins = np.linspace(emin, emax, nbins + 1)
         for chunk in data_source.chunks([], "io"):
-            chunk_data = self.process_data(
-                "spectrum", chunk, spectral_norm, shifting=shifting, ebins=ebins
-            )
+            chunk_data = self.process_data("spectrum", chunk, spectral_norm, shifting=shifting, ebins=ebins)
             if chunk_data is not None:
                 spec += chunk_data
         spec /= np.diff(ebins)
         self.cleanup_model("spectrum")
-        return self._make_spectrum(
-            data_source.ds, ebins, spec, redshift, dist, cosmology
-        )
+        return self._make_spectrum(data_source.ds, ebins, spec, redshift, dist, cosmology)
 
     def make_fluxf(self, emin, emax, energy=False):
         return self.spectral_model.make_fluxf(emin, emax, energy=energy)
@@ -415,9 +402,7 @@ class ThermalSourceModel(SourceModel):
                 if not isinstance(self.he_p0_fraction, Number):
                     _ = chunk[self.he_p0_fraction]
             if self.num_var_elem > 0:
-                elem_keys = (
-                    self.var_ion_keys if (self._nei or self._cx) else self.var_elem_keys
-                )
+                elem_keys = self.var_ion_keys if (self._nei or self._cx) else self.var_elem_keys
                 for key in elem_keys:
                     value = self.var_elem[key]
                     if not isinstance(value, Number):
@@ -524,8 +509,7 @@ class ThermalSourceModel(SourceModel):
                 if self._cx:
                     h_spec, he_spec = self.spectral_model.get_spectrum(colli)
                     tot_spec = np.sum(
-                        elemZ[:, ibegin:iend, np.newaxis]
-                        * (hi * h_spec + hei * he_spec),
+                        elemZ[:, ibegin:iend, np.newaxis] * (hi * h_spec + hei * he_spec),
                         axis=0,
                     )
                 else:
@@ -536,9 +520,7 @@ class ThermalSourceModel(SourceModel):
                     tot_spec = cspec
                     tot_spec += metalZ[ibegin:iend, np.newaxis] * mspec
                     if self.num_var_elem > 0:
-                        tot_spec += np.sum(
-                            elemZ[:, ibegin:iend, np.newaxis] * vspec, axis=0
-                        )
+                        tot_spec += np.sum(elemZ[:, ibegin:iend, np.newaxis] * vspec, axis=0)
                 np.clip(tot_spec, 0.0, None, out=tot_spec)
 
                 if mode == "photons":
@@ -578,16 +560,13 @@ class ThermalSourceModel(SourceModel):
 
                 elif mode.endswith("intensity"):
                     use_energy = int(mode == "intensity")
-                    I = make_band(
-                        use_energy, emin, emax, self.ebins, self.emid, tot_spec, shift
-                    )
+                    I = make_band(use_energy, emin, emax, self.ebins, self.emid, tot_spec, shift)
                     ret[idxs[ibegin:iend]] = I * cnm
 
                 if mode in ["photons", "spectrum"]:
                     self.pbar.update(nck)
 
             else:
-
                 if self._cx:
                     h_flux, he_flux = fluxf(colli)
                     tot_flux = np.sum(
@@ -624,7 +603,7 @@ class ThermalSourceModel(SourceModel):
             self.pbar.close()
 
 
-class IGMSourceModel(ThermalSourceModel):
+class PionSourceModel(ThermalSourceModel):
     """
     A source model for a thermal plasma including photoionization and
     resonant scattering from the CXB based on Khabibullin & Churazov 2019
@@ -641,9 +620,9 @@ class IGMSourceModel(ThermalSourceModel):
 
     Parameters
     ----------
-    emin : float, (value, unit) tuple, or :class:`~astropy.units.Quantity`
+    emin : float, (value, unit) tuple, unyt_quantity, or Quantity
         The minimum energy for the spectral model.
-    emax : float, (value, unit) tuple, or :class:`~astropy.units.Quantity`
+    emax : float, (value, unit) tuple, unyt_quantity, or Quantity
         The maximum energy for the spectral model.
     nbins : integer
         The number of bins in the spectral model. If one
@@ -686,11 +665,11 @@ class IGMSourceModel(ThermalSourceModel):
     kT_max : float, optional
         The default maximum temperature in keV to compute emission for.
         Default: 64.0
-    max_density : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
+    max_density : float, (value, unit) tuple, unyt_quantity, or Quantity
         The maximum density of the cells or particles to use when generating
         photons. If a float, the units are assumed to be g/cm**3.
         Default: None, meaning no maximum density.
-    min_entropy : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
+    min_entropy : float, (value, unit) tuple, unyt_quantity, or Quantity
         The minimum entropy of the cells or particles to use when generating
         photons. If a float, the units are assumed to be keV*cm**2.
         Default: None, meaning no minimum entropy.
@@ -706,7 +685,7 @@ class IGMSourceModel(ThermalSourceModel):
         "accept_reject": Acceptance-rejection method using the spectrum.
         The first method should be sufficient for most cases.
     model_vers : string, optional
-        The version of the IGM tables to use in the calculations.
+        The version of the Pion tables to use in the calculations.
         Options are:
         "4_lo": Tables computed from Cloudy using a continuum resolution
         of 0.1 with a range of 0.05 to 10 keV.
@@ -746,7 +725,7 @@ class IGMSourceModel(ThermalSourceModel):
         prng=None,
     ):
         var_elem_keys = list(var_elem.keys()) if var_elem else None
-        spectral_model = IGMSpectralModel(
+        spectral_model = PionSpectralModel(
             emin,
             emax,
             nbins,
@@ -791,6 +770,10 @@ class IGMSourceModel(ThermalSourceModel):
         return class_name, strs
 
 
+class IGMSourceModel(PionSourceModel):
+    pass
+
+
 class CIESourceModel(ThermalSourceModel):
     """
     Initialize a source model from a CIE spectrum, using either
@@ -817,10 +800,10 @@ class CIESourceModel(ThermalSourceModel):
     temperature_field : string or (ftype, fname) tuple, optional
         The yt temperature field to use for the thermal modeling. Must have
         units of Kelvin. Default: ("gas", "temperature")
-    emission_measure_field : string or (ftype, fname) tuple, optional
+    emission_measure_field : str or (ftype, fname) tuple, optional
         The yt emission measure field to use for the thermal modeling. Must
         have units of cm^-3. Default: ("gas", "emission_measure")
-    h_fraction : float, string, or tuple of strings, optional
+    h_fraction : float, str, or tuple of strings, optional
         The hydrogen mass fraction. If a float, assumes a constant mass
         fraction of hydrogen throughout. If a string or tuple of strings,
         is taken to be the name of the hydrogen fraction field. Default is
@@ -831,11 +814,11 @@ class CIESourceModel(ThermalSourceModel):
     kT_max : float, optional
         The default maximum temperature in keV to compute emission for.
         Default: 64.0
-    max_density : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
+    max_density : float, (value, unit) tuple, unyt_quantity, or Quantity
         The maximum density of the cells or particles to use when generating
         photons. If a float, the units are assumed to be g/cm**3.
         Default: None, meaning no maximum density.
-    min_entropy : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
+    min_entropy : float, (value, unit) tuple, unyt_quantity, or Quantity
         The minimum entropy of the cells or particles to use when generating
         photons. If a float, the units are assumed to be keV*cm**2.
         Default: None, meaning no minimum entropy.
@@ -944,14 +927,11 @@ class CIESourceModel(ThermalSourceModel):
                 abund_table=abund_table,
             )
         elif model == "mekal":
-            spectral_model = MekalSpectralModel(
-                emin, emax, nbins, binscale=binscale, var_elem=var_elem_keys
-            )
+            spectral_model = MekalSpectralModel(emin, emax, nbins, binscale=binscale, var_elem=var_elem_keys)
         elif model == "cloudy":
             if abund_table != "feld":
                 mylog.warning(
-                    "For the 'cloudy' model, the only available abundance table is "
-                    "'feld', so using that one."
+                    "For the 'cloudy' model, the only available abundance table is 'feld', so using that one."
                 )
                 abund_table = "feld"
             spectral_model = CloudyCIESpectralModel(
@@ -1037,11 +1017,11 @@ class NEISourceModel(CIESourceModel):
     kT_max : float, optional
         The default maximum temperature in keV to compute emission for.
         Default: 64.0
-    max_density : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
+    max_density : float, (value, unit) tuple, unyt_quantity, or Quantity
         The maximum density of the cells or particles to use when generating
         photons. If a float, the units are assumed to be g/cm**3.
         Default: None, meaning no maximum density.
-    min_entropy : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
+    min_entropy : float, (value, unit) tuple, unyt_quantity, or Quantity
         The minimum entropy of the cells or particles to use when generating
         photons. If a float, the units are assumed to be keV*cm**2.
         Default: None, meaning no minimum entropy.
@@ -1183,7 +1163,7 @@ class CXSourceModel(ThermalSourceModel):
         The maximum energy for the spectrum in keV.
     nbins : integer
         The number of channels in the spectrum.
-    collnpar : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
+    collnpar : float, (value, unit) tuple, unyt_quantity, or Quantity
         The collision parameter for the CX process, in units of velocity.
         If a float, the units are assumed to be km/s. If set to a field name,
         this will be a spatially varying collision parameter field.
@@ -1230,11 +1210,11 @@ class CXSourceModel(ThermalSourceModel):
     kT_max : float, optional
         The default maximum temperature in keV to compute emission for.
         Default: 64.0
-    max_density : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
+    max_density : float, (value, unit) tuple, unyt_quantity, or Quantity
         The maximum density of the cells or particles to use when generating
         photons. If a float, the units are assumed to be g/cm**3.
         Default: None, meaning no maximum density.
-    min_entropy : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
+    min_entropy : float, (value, unit) tuple, unyt_quantity, or Quantity
         The minimum entropy of the cells or particles to use when generating
         photons. If a float, the units are assumed to be keV*cm**2.
         Default: None, meaning no minimum entropy.

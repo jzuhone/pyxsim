@@ -12,7 +12,7 @@ Source Models API
 .. autoclass:: pyxsim.source_models.thermal_sources.NEISourceModel
     :members: make_spectrum
 
-.. autoclass:: pyxsim.source_models.thermal_sources.IGMSourceModel
+.. autoclass:: pyxsim.source_models.thermal_sources.PionSourceModel
     :members: make_spectrum
 
 .. autoclass:: pyxsim.source_models.power_law_sources.PowerLawSourceModel

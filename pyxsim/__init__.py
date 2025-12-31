@@ -21,6 +21,7 @@ from pyxsim.source_models import (
     IGMSourceModel,
     LineSourceModel,
     NEISourceModel,
+    PionSourceModel,
     PowerLawSourceModel,
 )
 from pyxsim.utils import (

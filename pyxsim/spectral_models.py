@@ -8,9 +8,9 @@ from soxs.constants import K_per_keV, elem_names
 from soxs.spectra import (
     CIEGenerator,
     CloudyCIEGenerator,
-    IGMGenerator,
     MekalGenerator,
     OneACX2Generator,
+    PionGenerator,
     get_tbabs_absorb,
     get_wabs_absorb,
 )
@@ -128,12 +128,8 @@ class ThermalSpectralModel:
         else:
             cosmic_flux = self.cosmic_spec[:, eidxs].sum(axis=-1)
             metal_flux = self.metal_spec[:, eidxs].sum(axis=-1)
-        cf = interp1d(
-            self.Tvals, cosmic_flux, fill_value=0.0, assume_sorted=True, copy=False
-        )
-        mf = interp1d(
-            self.Tvals, metal_flux, fill_value=0.0, assume_sorted=True, copy=False
-        )
+        cf = interp1d(self.Tvals, cosmic_flux, fill_value=0.0, assume_sorted=True, copy=False)
+        mf = interp1d(self.Tvals, metal_flux, fill_value=0.0, assume_sorted=True, copy=False)
         if self.var_spec is not None:
             if energy:
                 var_flux = (self.var_spec[:, :, eidxs] * emid).sum(axis=-1)
@@ -260,9 +256,7 @@ class TableCIEModel(ThermalSpectralModel):
         self.kT_min = kT_min
         self.kT_max = kT_max
         self.idx_min = max(np.searchsorted(self.cgen.Tvals, kT_min) - 1, 0)
-        self.idx_max = min(
-            np.searchsorted(self.cgen.Tvals, kT_max) + 1, self.cgen.nT - 1
-        )
+        self.idx_max = min(np.searchsorted(self.cgen.Tvals, kT_max) + 1, self.cgen.nT - 1)
         self.Tvals = self.cgen.Tvals[self.idx_min : self.idx_max]
         self.nT = self.Tvals.size
         self.dTvals = np.diff(self.Tvals)
@@ -279,9 +273,7 @@ class TableCIEModel(ThermalSpectralModel):
         self.cosmic_spec = cosmic_spec
         self.metal_spec = metal_spec
         self.var_spec = var_spec
-        self.si = SpectralInterpolator1D(
-            self.Tvals, self.cosmic_spec, self.metal_spec, self.var_spec
-        )
+        self.si = SpectralInterpolator1D(self.Tvals, self.cosmic_spec, self.metal_spec, self.var_spec)
 
 
 class CXSpectralModel:
@@ -352,12 +344,8 @@ class CXSpectralModel:
         else:
             h_flux = self.h_spec[:, :, eidxs].sum(axis=-1)
             he_flux = self.he_spec[:, :, eidxs].sum(axis=-1)
-        h_f = interp1d(
-            self.v_mid, h_flux, axis=1, fill_value=0.0, assume_sorted=True, copy=False
-        )
-        he_f = interp1d(
-            self.v_mid, he_flux, axis=1, fill_value=0.0, assume_sorted=True, copy=False
-        )
+        h_f = interp1d(self.v_mid, h_flux, axis=1, fill_value=0.0, assume_sorted=True, copy=False)
+        he_f = interp1d(self.v_mid, he_flux, axis=1, fill_value=0.0, assume_sorted=True, copy=False)
 
         def _fluxf(v):
             logv = np.log10(v)
@@ -384,26 +372,16 @@ class Atable1DSpectralModel(ThermalSpectralModel):
     def prepare_spectrum(self, zobs):
         eidxs, ne, ebins, emid, de = self.sgen._get_energies(zobs)
         cosmic_spec, metal_spec, var_spec = self.sgen._get_table(ne, eidxs, zobs)
-        self.cosmic_spec = 1.0e-14 * regrid_spectrum(
-            self.ebins, ebins, cosmic_spec, clip_neg=False
-        )
-        self.metal_spec = 1.0e-14 * regrid_spectrum(
-            self.ebins, ebins, metal_spec, clip_neg=False
-        )
+        self.cosmic_spec = 1.0e-14 * regrid_spectrum(self.ebins, ebins, cosmic_spec, clip_neg=False)
+        self.metal_spec = 1.0e-14 * regrid_spectrum(self.ebins, ebins, metal_spec, clip_neg=False)
         if var_spec is not None:
-            var_spec = 1.0e-14 * regrid_spectrum(
-                self.ebins, ebins, var_spec, clip_neg=False
-            )
+            var_spec = 1.0e-14 * regrid_spectrum(self.ebins, ebins, var_spec, clip_neg=False)
         self.var_spec = var_spec
-        self.si = SpectralInterpolator1D(
-            self.Tvals, self.cosmic_spec, self.metal_spec, self.var_spec
-        )
+        self.si = SpectralInterpolator1D(self.Tvals, self.cosmic_spec, self.metal_spec, self.var_spec)
 
 
 class MekalSpectralModel(Atable1DSpectralModel):
-    def __init__(
-        self, emin, emax, nbins, binscale="linear", var_elem=None, abund_table="angr"
-    ):
+    def __init__(self, emin, emax, nbins, binscale="linear", var_elem=None, abund_table="angr"):
         mgen = MekalGenerator(
             emin,
             emax,
@@ -486,7 +464,7 @@ class IGMSpectralModel(ThermalSpectralModel):
         var_elem=None,
         model_vers=None,
     ):
-        self.igen = IGMGenerator(
+        self.igen = PionGenerator(
             emin,
             emax,
             nbins,
@@ -529,16 +507,10 @@ class IGMSpectralModel(ThermalSpectralModel):
         """
         eidxs, ne, ebins, emid, de = self.igen._get_energies(zobs)
         cosmic_spec, metal_spec, var_spec = self.igen._get_table(ne, eidxs, zobs)
-        self.cosmic_spec = 1.0e-14 * regrid_spectrum(
-            self.ebins, ebins, cosmic_spec, clip_neg=False
-        )
-        self.metal_spec = 1.0e-14 * regrid_spectrum(
-            self.ebins, ebins, metal_spec, clip_neg=False
-        )
+        self.cosmic_spec = 1.0e-14 * regrid_spectrum(self.ebins, ebins, cosmic_spec, clip_neg=False)
+        self.metal_spec = 1.0e-14 * regrid_spectrum(self.ebins, ebins, metal_spec, clip_neg=False)
         if var_spec is not None:
-            var_spec = 1.0e-14 * regrid_spectrum(
-                self.ebins, ebins, var_spec, clip_neg=False
-            )
+            var_spec = 1.0e-14 * regrid_spectrum(self.ebins, ebins, var_spec, clip_neg=False)
         self.var_spec = var_spec
         self.cie_model.prepare_spectrum(zobs)
         self.si = SpectralInterpolator2D(
@@ -614,9 +586,7 @@ class IGMSpectralModel(ThermalSpectralModel):
             n_igm = use_igm.sum()
             if n_igm > 0:
                 nHi = nH[use_igm]
-                c1, m1, v1 = self._get_flux_2d(
-                    kT[use_igm], nHi, cosmic_flux, metal_flux, var_flux
-                )
+                c1, m1, v1 = self._get_flux_2d(kT[use_igm], nHi, cosmic_flux, metal_flux, var_flux)
                 cflux[use_igm] = c1 / nHi
                 mflux[use_igm] = m1 / nHi
                 if self.var_spec is not None:
