@@ -227,6 +227,18 @@ the model being used:
 * ``"mekal"``: Can vary He, C, N, O, Ne, Na, Mg, Al, Si, S, Ar, Ca, Fe, Ni
 * ``"cloudy"``: Can vary C, N, O, Ne, Fe, S, Si, Ca, and Mg
 
+.. _trace-abund:
+
+Trace Abundances
+++++++++++++++++
+
+If the ``model`` chosen for the ``CIESourceModel`` object is either ``"apec"``
+or ``"spex"``, then it possible to set the overall solar abundance for the
+"trace elements" of Li, Be, B, F, Na, P, Cl, K, Sc, Ti, V, Cr, Mn, Co, Cu, and
+Zn, using the ``trace_abund`` keyword argument, where the value is in units of
+solar metallicity. ``trace_abund`` is set to 1.0 by default. Any trace abundances
+treated as variable using the ``var_elem`` argument will not be set by ``trace_abund``.
+
 Examples
 ++++++++
 
@@ -280,6 +292,13 @@ Turning off line emission for the ``"apec"`` model:
 
     thermal_model = pyxsim.CIESourceModel("apec", 0.1, 20.0, 10000, 0.3,
                                           prng=25, nolines=True)
+
+Setting a trace abundance for the ``"spex"`` model:
+
+.. code-block:: python
+
+    thermal_model = pyxsim.CIESourceModel("spex", 0.1, 20.0, 10000, 0.3,
+                                          trace_abund=0.8)
 
 .. _nei:
 

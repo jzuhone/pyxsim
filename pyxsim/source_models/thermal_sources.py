@@ -69,6 +69,7 @@ class ThermalSourceModel(SourceModel):
             self.num_var_elem = len(var_elem_keys)
         self.var_elem = var_elem
         self.var_elem_keys = var_elem_keys
+        self.trace_abund = None  # Will be set by the subclass
         if max_density is not None:
             if not isinstance(max_density, unyt_quantity):
                 if isinstance(max_density, tuple):
@@ -870,6 +871,13 @@ class CIESourceModel(ThermalSourceModel):
         "lodd" : from Lodders, K (2003, ApJ 591, 1220)
         "feld" : from Feldman U. (1992, Physica Scripta, 46, 202)
         "cl17.03" : the abundance table used in Cloudy v17.03.
+    trace_abund : float, optional
+        The abundance to give to trace elements (Li, Be, B, F, Na, P,
+        Cl, K, Sc, Ti, V, Cr, Mn, Co, Cu, Zn), relative to solar. Any
+        trace element that has an abundance already set using var_elem
+        will not be considered here. By default, trace element abundances
+        are set at 1 solar, similar to the behavior of XSPEC. This option
+        is only available for the "apec" and "spex" models.
     prng : integer or :class:`~numpy.random.RandomState` object
         A pseudo-random number generator. Typically, will only be specified
         if you have a reason to generate the same set of random numbers,
@@ -906,6 +914,7 @@ class CIESourceModel(ThermalSourceModel):
         model_vers=None,
         nolines=False,
         abund_table="angr",
+        trace_abund=1.0,
         prng=None,
     ):
         var_elem_keys = list(var_elem.keys()) if var_elem else None
@@ -925,7 +934,9 @@ class CIESourceModel(ThermalSourceModel):
                 nolines=nolines,
                 nei=self._nei,
                 abund_table=abund_table,
+                trace_abund=trace_abund,
             )
+            self.trace_abund = trace_abund
         elif model == "mekal":
             spectral_model = MekalSpectralModel(emin, emax, nbins, binscale=binscale, var_elem=var_elem_keys)
         elif model == "cloudy":
@@ -973,6 +984,7 @@ class CIESourceModel(ThermalSourceModel):
         strs.update(super_strs)
         strs["nolines"] = self.nolines
         strs["thermal_broad"] = self.thermal_broad
+        strs["trace_abund"] = self.trace_abund
         return class_name, strs
 
 

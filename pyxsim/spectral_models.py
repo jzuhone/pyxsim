@@ -173,26 +173,26 @@ class TableCIEModel(ThermalSpectralModel):
         is thermally broadening lines, it is recommended that
         this value result in an energy resolution per channel
         of roughly 1 eV or smaller.
-    binscale : string, optional
+    binscale : str, optional
         The scale of the energy binning: "linear" or "log".
         Default: "linear"
     var_elem : list of strings, optional
         The names of elements to allow to vary freely
         from the single abundance parameter. Default:
         None
-    model_root : string, optional
+    model_root : str, optional
         The directory root where the model files are stored. If
         not provided, the default SOXS-provided files are used.
-    model_vers : string, optional
+    model_vers : str, optional
         The version identifier string for the APEC files, e.g.
         "3.0.3". Default: 3.0.9
-    thermal_broad : boolean, optional
+    thermal_broad : bool, optional
         Whether the spectral lines should be thermally
         broadened. Default: True
-    nolines : boolean, optional
+    nolines : bool, optional
         Turn off lines entirely for generating spectra.
         Default: False
-    abund_table : string or array_like, optional
+    abund_table : str or array_like, optional
         The abundance table to be used for solar abundances.
         Either a string corresponding to a built-in table or an array
         of 30 floats corresponding to the abundances of each element
@@ -205,7 +205,13 @@ class TableCIEModel(ThermalSpectralModel):
         "wilm" : from Wilms, Allen & McCray (2000, ApJ 542, 914
         except for elements not listed which are given zero abundance)
         "lodd" : from Lodders, K (2003, ApJ 591, 1220)
-    nei : boolean, optional
+    trace_abund : float, optional
+        The abundance to give to trace elements (Li, Be, B, F, Na, P,
+        Cl, K, Sc, Ti, V, Cr, Mn, Co, Cu, Zn), relative to solar. Any
+        trace element that has an abundance already set using var_elem
+        will not be considered here. By default, trace element abundances
+        are set at 1 solar, similar to the behavior of XSPEC.
+    nei : bool, optional
         If True, use the non-equilibrium ionization tables. Only available
         for the "apec" model. Default: False
 
@@ -230,6 +236,7 @@ class TableCIEModel(ThermalSpectralModel):
         thermal_broad=True,
         nolines=False,
         abund_table="angr",
+        trace_abund=1.0,
         nei=False,
     ):
         self.cgen = CIEGenerator(
@@ -244,6 +251,7 @@ class TableCIEModel(ThermalSpectralModel):
             broadening=thermal_broad,
             nolines=nolines,
             abund_table=abund_table,
+            trace_abund=trace_abund,
             nei=nei,
         )
         self.nbins = self.cgen.nbins
@@ -441,7 +449,7 @@ class PionSpectralModel(ThermalSpectralModel):
         The maximum energy for the spectral model.
     nbins : integer
         The number of bins in the spectral model.
-    resonant_scattering : boolean, optional
+    resonant_scattering : bool, optional
         Whether or not to include the effects of resonant scattering
         from CXB photons. Default: False
     cxb_factor : float, optional
