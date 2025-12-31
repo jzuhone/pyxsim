@@ -84,9 +84,7 @@ def do_beta_model(source, check_dir, axis="z", prng=None):
     norm_sim *= 1.0e-14 / (4 * np.pi * D_A * D_A * (1.0 + redshift) * (1.0 + redshift))
     norm_sim = float(norm_sim.in_cgs())
 
-    v1, v2 = sphere.quantities.weighted_standard_deviation(
-        ("gas", "velocity_z"), ("gas", "emission_measure")
-    )
+    v1, v2 = sphere.quantities.weighted_standard_deviation(("gas", "velocity_z"), ("gas", "emission_measure"))
 
     if isinstance(axis, str):
         if axis == "z":
@@ -173,9 +171,7 @@ def test_vapec_beta_model(check_dir):
     )
 
     agen = ApecGenerator(0.2, 10.0, 10000, var_elem=["O", "Ca"])
-    spec = agen.get_spectrum(
-        kT_sim, Z_sim, redshift, norm_sim, elem_abund={"O": O_sim, "Ca": Ca_sim}
-    )
+    spec = agen.get_spectrum(kT_sim, Z_sim, redshift, norm_sim, elem_abund={"O": O_sim, "Ca": Ca_sim})
     spec.apply_foreground_absorption(nH_sim, model="tbabs")
 
     pvalue = events_ks_testing("my_events.h5", spec, exp_time, A, check_dir)
@@ -209,9 +205,7 @@ def test_beta_model_fields():
     sphere = ds.sphere("c", (0.2, "Mpc"))
 
     norm = (
-        1.0e-14
-        * sphere.sum(("gas", "emission_measure")).v
-        / (4.0 * np.pi * D_A * D_A * (1 + redshift) ** 2)
+        1.0e-14 * sphere.sum(("gas", "emission_measure")).v / (4.0 * np.pi * D_A * D_A * (1 + redshift) ** 2)
     )
 
     agen = ApecGenerator(0.1, 11.5, 10000)
@@ -279,7 +273,6 @@ def test_beta_model_fields():
 
 
 def test_beta_model_spectrum():
-
     vlos = -0.2
     v_s = YTQuantity(vlos, "c").to_value("cm/s")
     bms = BetaModelSource(no_broad=True, v_s=v_s)
@@ -299,14 +292,10 @@ def test_beta_model_spectrum():
 
     agen = ApecGenerator(0.1, 11.0, 3000)
 
-    spec1 = agen.get_spectrum(kT_sim, Z_sim, redshift, norm2).regrid_spectrum(
-        0.2, 6.0, 2000
-    )
+    spec1 = agen.get_spectrum(kT_sim, Z_sim, redshift, norm2).regrid_spectrum(0.2, 6.0, 2000)
 
     thermal_model = CIESourceModel("apec", 0.1, 11.0, 3000, Z_sim)
-    spec2 = thermal_model.make_spectrum(
-        sphere, 0.2, 6.0, 2000, redshift=redshift, cosmology=cosmo
-    )
+    spec2 = thermal_model.make_spectrum(sphere, 0.2, 6.0, 2000, redshift=redshift, cosmology=cosmo)
     assert_allclose(spec1.flux.value, spec2.flux.value)
 
     spec3 = agen.get_spectrum(kT_sim, Z_sim, 0.0, norm1).regrid_spectrum(0.2, 6.0, 2000)

@@ -137,9 +137,7 @@ def hmxb_cdf(L):
     return N
 
 
-def make_xrb_particles(
-    data_source, age_field, scale_length, sfr_time_range=(1.0, "Gyr"), prng=None
-):
+def make_xrb_particles(data_source, age_field, scale_length, sfr_time_range=(1.0, "Gyr"), prng=None):
     r"""
     This routine generates an in-memory dataset composed of X-ray binary particles
     from an input data source containing star particles.
@@ -260,15 +258,9 @@ def make_xrb_particles(
                 x += data_source[ptype, "particle_position_x"][i].to("kpc")
                 y += data_source[ptype, "particle_position_y"][i].to("kpc")
                 z += data_source[ptype, "particle_position_z"][i].to("kpc")
-                vx = YTArray([data_source[ptype, "particle_velocity_x"][i]] * n).to(
-                    "km/s"
-                )
-                vy = YTArray([data_source[ptype, "particle_velocity_y"][i]] * n).to(
-                    "km/s"
-                )
-                vz = YTArray([data_source[ptype, "particle_velocity_z"][i]] * n).to(
-                    "km/s"
-                )
+                vx = YTArray([data_source[ptype, "particle_velocity_x"][i]] * n).to("km/s")
+                vy = YTArray([data_source[ptype, "particle_velocity_y"][i]] * n).to("km/s")
+                vz = YTArray([data_source[ptype, "particle_velocity_z"][i]] * n).to("km/s")
                 xp.append(x)
                 yp.append(y)
                 zp.append(z)
@@ -303,15 +295,9 @@ def make_xrb_particles(
                 x += data_source[ptype, "particle_position_x"][i].to("kpc")
                 y += data_source[ptype, "particle_position_y"][i].to("kpc")
                 z += data_source[ptype, "particle_position_z"][i].to("kpc")
-                vx = YTArray([data_source[ptype, "particle_velocity_x"][i]] * n).to(
-                    "km/s"
-                )
-                vy = YTArray([data_source[ptype, "particle_velocity_y"][i]] * n).to(
-                    "km/s"
-                )
-                vz = YTArray([data_source[ptype, "particle_velocity_z"][i]] * n).to(
-                    "km/s"
-                )
+                vx = YTArray([data_source[ptype, "particle_velocity_x"][i]] * n).to("km/s")
+                vy = YTArray([data_source[ptype, "particle_velocity_y"][i]] * n).to("km/s")
+                vz = YTArray([data_source[ptype, "particle_velocity_z"][i]] * n).to("km/s")
                 xp.append(x)
                 yp.append(y)
                 zp.append(z)

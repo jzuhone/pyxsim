@@ -164,15 +164,11 @@ class LineSourceModel(SourceModel):
         spectral_norm = 1.0
         self.setup_model("spectrum", data_source, redshift)
         for chunk in data_source.chunks([], "io"):
-            chunk_data = self.process_data(
-                "spectrum", chunk, spectral_norm, shifting=shifting, ebins=ebins
-            )
+            chunk_data = self.process_data("spectrum", chunk, spectral_norm, shifting=shifting, ebins=ebins)
             if chunk_data is not None:
                 spec += chunk_data
         self.cleanup_model("spectrum")
-        return self._make_spectrum(
-            data_source.ds, ebins, spec, redshift, dist, cosmology
-        )
+        return self._make_spectrum(data_source.ds, ebins, spec, redshift, dist, cosmology)
 
     def process_data(
         self,
@@ -238,7 +234,6 @@ class LineSourceModel(SourceModel):
             return ncells, number_of_photons[active_cells], active_cells, energies
 
         elif mode == "spectrum":
-
             ee = 0.5 * (ebins[1:] + ebins[:-1]) / self.scale_factor
 
             spec = line_spectrum(
@@ -256,7 +251,6 @@ class LineSourceModel(SourceModel):
             return spec
 
         else:
-
             xlo = emin - self.e0.value
             xhi = emax - self.e0.value
             xhis = xhi / sigma
@@ -264,10 +258,6 @@ class LineSourceModel(SourceModel):
             fac = (norm.cdf(xhis) - norm.cdf(xlos)) * shift * shift * shift
             if mode in ["luminosity", "intensity"]:
                 fac = self.e0.value * fac
-                fac -= (
-                    sigma
-                    * (np.exp(-0.5 * xhis**2) - np.exp(-0.5 * xlos**2))
-                    / np.sqrt(2.0 * np.pi)
-                )
+                fac -= sigma * (np.exp(-0.5 * xhis**2) - np.exp(-0.5 * xlos**2)) / np.sqrt(2.0 * np.pi)
                 fac *= shift
             return fac * norm_field

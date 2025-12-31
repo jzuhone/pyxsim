@@ -232,8 +232,7 @@ def make_photons(
         if dist is None:
             if redshift <= 0.0:
                 msg = (
-                    "If redshift <= 0.0, you must specify a distance to the "
-                    "source using the 'dist' argument!"
+                    "If redshift <= 0.0, you must specify a distance to the source using the 'dist' argument!"
                 )
                 mylog.error(msg)
                 raise ValueError(msg)
@@ -241,18 +240,12 @@ def make_photons(
         else:
             D_A = parse_value(dist, "kpc")
             if redshift > 0.0:
-                mylog.warning(
-                    "Redshift must be zero for nearby sources. "
-                    "Resetting redshift to 0.0."
-                )
+                mylog.warning("Redshift must be zero for nearby sources. Resetting redshift to 0.0.")
                 redshift = 0.0
     else:
         D_A = parse_value(0.0, "kpc")
         if redshift > 0.0:
-            mylog.warning(
-                "Redshift must be zero for internal observers. "
-                "Resetting redshift to 0.0."
-            )
+            mylog.warning("Redshift must be zero for internal observers. Resetting redshift to 0.0.")
             redshift = 0.0
 
     if isinstance(center, str):
@@ -273,9 +266,7 @@ def make_photons(
         parameters["center"] = ds.arr(center, "code_length")
     elif center is None:
         if hasattr(data_source, "left_edge"):
-            parameters["center"] = 0.5 * (
-                data_source.left_edge + data_source.right_edge
-            )
+            parameters["center"] = 0.5 * (data_source.left_edge + data_source.right_edge)
         else:
             parameters["center"] = data_source.get_field_parameter("center")
 
@@ -324,9 +315,7 @@ def make_photons(
 
     source_model.setup_model("photons", data_source, redshift)
 
-    p_fields, v_fields, w_field = determine_fields(
-        ds, source_model.ftype, point_sources
-    )
+    p_fields, v_fields, w_field = determine_fields(ds, source_model.ftype, point_sources)
 
     if velocity_fields is not None:
         v_fields = velocity_fields
@@ -535,13 +524,9 @@ def _project_photons(
     nH_grid = None
     if column_file is not None:
         if absorb_model is None:
-            raise ValueError(
-                "You must specify an absorption model if you are using an absorption file!"
-            )
+            raise ValueError("You must specify an absorption model if you are using an absorption file!")
         if obs == "internal":
-            raise ValueError(
-                "You cannot use an absorption file with an internal observer!"
-            )
+            raise ValueError("You cannot use an absorption file with an internal observer!")
         with h5py.File(column_file, "r") as fa:
             if not np.isclose(fa["parameters"].attrs["normal"], L).all():
                 raise ValueError(
@@ -597,21 +582,14 @@ def _project_photons(
     if obs != observer:
         which_func = {"external": "", "internal": "_allsky"}
         raise RuntimeError(
-            f"The function 'project_photons{which_func['obs']}' "
-            f"does not work with '{observer}' photon lists!"
+            f"The function 'project_photons{which_func['obs']}' does not work with '{observer}' photon lists!"
         )
 
     if observer == "internal" and isinstance(normal, str):
-        raise RuntimeError(
-            "Must specify a vector for 'normal' if you are "
-            "doing an 'internal' observation!"
-        )
+        raise RuntimeError("Must specify a vector for 'normal' if you are doing an 'internal' observation!")
 
     if sigma_pos is not None and data_type == "particles":
-        raise RuntimeError(
-            "The 'smooth_positions' argument should "
-            "not be used with particle-based datasets!"
-        )
+        raise RuntimeError("The 'smooth_positions' argument should not be used with particle-based datasets!")
 
     d = f["data"]
 
@@ -665,9 +643,7 @@ def _project_photons(
 
         de = fe.create_group("data")
         for field in event_fields:
-            de.create_dataset(
-                field, data=np.zeros(init_chunk), maxshape=(None,), chunks=True
-            )
+            de.create_dataset(field, data=np.zeros(init_chunk), maxshape=(None,), chunks=True)
 
         if isinstance(normal, str):
             norm = "xyz".index(normal)
@@ -676,9 +652,7 @@ def _project_photons(
 
         n_cells = d["num_photons"].size
 
-        pbar = tqdm(
-            leave=True, total=n_cells, desc="Projecting photons from cells/particles "
-        )
+        pbar = tqdm(leave=True, total=n_cells, desc="Projecting photons from cells/particles ")
 
         flux = 0.0
         emin = 1.0e99
@@ -1129,9 +1103,7 @@ class PhotonList:
             if suffix != "h5":
                 raise ValueError(f"The file {fn} has an incorrect suffix!")
             if filenum is not None and int(filenum) != i:
-                raise ValueError(
-                    f"The filenum {filenum} is inconsistent with that expected: {i}!"
-                )
+                raise ValueError(f"The filenum {filenum} is inconsistent with that expected: {i}!")
             prefixes.add(prefix)
             self.filenums.append(filenum)
             with h5py.File(fn, "r") as f:
@@ -1184,14 +1156,10 @@ class PhotonList:
                 d = f["data"]
                 spec += np.histogram(d["energy"][:], bins=ebins)[0]
 
-        col1 = fits.Column(
-            name="CHANNEL", format="1J", array=np.arange(nchan).astype("int32") + 1
-        )
+        col1 = fits.Column(name="CHANNEL", format="1J", array=np.arange(nchan).astype("int32") + 1)
         col2 = fits.Column(name="ENERGY", format="1D", array=emid.astype("float64"))
         col3 = fits.Column(name="COUNTS", format="1J", array=spec.astype("int32"))
-        col4 = fits.Column(
-            name="COUNT_RATE", format="1D", array=spec / self.parameters["fid_exp_time"]
-        )
+        col4 = fits.Column(name="COUNT_RATE", format="1D", array=spec / self.parameters["fid_exp_time"])
 
         coldefs = fits.ColDefs([col1, col2, col3, col4])
 

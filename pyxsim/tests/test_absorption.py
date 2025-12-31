@@ -71,13 +71,7 @@ def test_absorption():
     agen = soxs.ApecGenerator(emin, emax, nspec)
     dd = us.ds.all_data()
     EM = dd.sum(("gas", "emission_measure")) / us.nx
-    norm = (
-        exp_time
-        * A
-        * 1.0e-14
-        * EM.in_base("cgs")
-        / (4.0 * np.pi * D_A * D_A * (1.0 + redshift) ** 2)
-    )
+    norm = exp_time * A * 1.0e-14 * EM.in_base("cgs") / (4.0 * np.pi * D_A * D_A * (1.0 + redshift) ** 2)
     specm = agen.get_spectrum(us.kT, us.Z, redshift, norm)
     specm.apply_foreground_absorption(nH_sim, model="tbabs")
     for i in range(0, us.nx - 1, 10):
@@ -86,9 +80,7 @@ def test_absorption():
         eobs = events["eobs"][these_events]
         spec, _ = np.histogram(eobs, bins=specm.ebins.value)
         specm_i = deepcopy(specm)
-        specm_i.apply_foreground_absorption(
-            nH_cube["nH"][0, 0, i], model="tbabs", redshift=redshift
-        )
+        specm_i.apply_foreground_absorption(nH_cube["nH"][0, 0, i], model="tbabs", redshift=redshift)
         with np.errstate(divide="ignore"):
             err = (specm_i.binned_flux.value - spec) / np.sqrt(spec)
         err[spec == 0.0] = 0.0

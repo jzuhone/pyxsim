@@ -129,13 +129,11 @@ class EventList:
                 y.append(yy[keep])
 
         mylog.info(
-            "Threw out %d events because they fell outside the " "field of view.",
+            "Threw out %d events because they fell outside the field of view.",
             self.tot_num_events - n_events,
         )
 
-        col_e = fits.Column(
-            name="ENERGY", format="E", unit="eV", array=np.concatenate(e) * 1000.0
-        )
+        col_e = fits.Column(name="ENERGY", format="E", unit="eV", array=np.concatenate(e) * 1000.0)
         col_x = fits.Column(name="X", format="D", unit="pixel", array=np.concatenate(x))
         col_y = fits.Column(name="Y", format="D", unit="pixel", array=np.concatenate(y))
 
@@ -194,20 +192,14 @@ class EventList:
             d = f["data"]
             if self.num_events[i] > 0:
                 if self.observer == "internal":
-                    c = SkyCoord(
-                        d["xsky"][()], d["ysky"][()], unit="deg", frame="galactic"
-                    )
+                    c = SkyCoord(d["xsky"][()], d["ysky"][()], unit="deg", frame="galactic")
                     ra = c.icrs.ra.value
                     dec = c.icrs.dec.value
                 else:
                     ra = d["xsky"][()]
                     dec = d["ysky"][()]
                 energy = d["eobs"][()]
-                flux = (
-                    np.sum(energy * erg_per_keV)
-                    / self.parameters["exp_time"]
-                    / self.parameters["area"]
-                )
+                flux = np.sum(energy * erg_per_keV) / self.parameters["exp_time"] / self.parameters["area"]
             else:
                 ra = np.array([])
                 dec = np.array([])
@@ -257,9 +249,7 @@ class EventList:
             else:
                 mylog.warning("No events found in file %s, so skipping.", fn)
 
-    def write_fits_image(
-        self, imagefile, fov, nx, emin=None, emax=None, overwrite=False
-    ):
+    def write_fits_image(self, imagefile, fov, nx, emin=None, emax=None, overwrite=False):
         r"""
         Generate an image by binning X-ray counts and write it to a FITS file.
 
@@ -352,14 +342,10 @@ class EventList:
                 d = f["data"]
                 spec += np.histogram(d["eobs"][:], bins=ebins)[0]
 
-        col1 = fits.Column(
-            name="CHANNEL", format="1J", array=np.arange(nchan).astype("int32") + 1
-        )
+        col1 = fits.Column(name="CHANNEL", format="1J", array=np.arange(nchan).astype("int32") + 1)
         col2 = fits.Column(name="ENERGY", format="1D", array=emid.astype("float64"))
         col3 = fits.Column(name="COUNTS", format="1J", array=spec.astype("int32"))
-        col4 = fits.Column(
-            name="COUNT_RATE", format="1D", array=spec / self.parameters["exp_time"]
-        )
+        col4 = fits.Column(name="COUNT_RATE", format="1D", array=spec / self.parameters["exp_time"])
 
         coldefs = fits.ColDefs([col1, col2, col3, col4])
 
@@ -417,9 +403,7 @@ class EventList:
                 else:
                     energy = d["eobs"][keep]
                     flux = (
-                        np.sum(energy * erg_per_keV)
-                        / self.parameters["exp_time"]
-                        / self.parameters["area"]
+                        np.sum(energy * erg_per_keV) / self.parameters["exp_time"] / self.parameters["area"]
                     )
                     emin = energy.min()
                     emax = energy.max()

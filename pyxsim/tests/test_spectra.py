@@ -27,9 +27,7 @@ def test_apec():
     ec, em, _ = ef(6.0)
 
     assert_allclose(c + 0.3 * m, (spec2.flux * spec2.de)[eidxs].value.sum())
-    assert_allclose(
-        ec + 0.3 * em, (spec2.emid * spec2.flux * spec2.de)[eidxs].value.sum()
-    )
+    assert_allclose(ec + 0.3 * em, (spec2.emid * spec2.flux * spec2.de)[eidxs].value.sum())
 
 
 def test_igm():
@@ -63,14 +61,10 @@ def test_igm():
     ec, em, _ = ef(1.0, 0.01)
 
     assert_allclose(c + 0.3 * m, (spec2.flux * spec2.de)[eidxs].value.sum())
-    assert_allclose(
-        ec + 0.3 * em, (spec2.emid * spec2.flux * spec2.de)[eidxs].value.sum()
-    )
+    assert_allclose(ec + 0.3 * em, (spec2.emid * spec2.flux * spec2.de)[eidxs].value.sum())
 
     c2, m2, _ = pf(2.0, 0.01)
     ec2, em2, _ = ef(2.0, 0.01)
 
     assert_allclose(c2 + 0.3 * m2, (spec4.flux * spec4.de)[eidxs].value.sum())
-    assert_allclose(
-        ec2 + 0.3 * em2, (spec4.emid * spec4.flux * spec4.de)[eidxs].value.sum()
-    )
+    assert_allclose(ec2 + 0.3 * em2, (spec4.emid * spec4.flux * spec4.de)[eidxs].value.sum())

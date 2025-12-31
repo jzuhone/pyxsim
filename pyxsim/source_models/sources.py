@@ -47,9 +47,7 @@ class SourceModel:
         if parallel_capable:
             self.pbar = ParallelProgressBar("Processing cells/particles ")
         else:
-            self.pbar = tqdm(
-                leave=True, total=self.tot_num_cells, desc="Processing cells/particles "
-            )
+            self.pbar = tqdm(leave=True, total=self.tot_num_cells, desc="Processing cells/particles ")
 
     def setup_model(self, mode, data_source, redshift):
         # This needs to be implemented for every
@@ -79,9 +77,7 @@ class SourceModel:
     def compute_radius(self, chunk, cut=None):
         if cut is None:
             cut = ...
-        pos = np.array(
-            [np.ravel(chunk[self.p_fields[i]].to_value("kpc"))[cut] for i in range(3)]
-        )
+        pos = np.array([np.ravel(chunk[self.p_fields[i]].to_value("kpc"))[cut] for i in range(3)])
         for i in range(3):
             if self.periodicity[i]:
                 tfl = pos[i] < self.le[i]
@@ -126,9 +122,7 @@ class SourceModel:
                 try:
                     dist = ds.quan(*dist)
                 except (RuntimeError, TypeError):
-                    raise TypeError(
-                        "dist should be a YTQuantity or a (value, unit) tuple!"
-                    ) from e
+                    raise TypeError("dist should be a YTQuantity or a (value, unit) tuple!") from e
             angular_scale = dist / ds.quan(1.0, "radian")
         dist_fac = 1.0 / (4.0 * np.pi * dist * dist)
         if per_sa:
@@ -147,10 +141,7 @@ class SourceModel:
     def _get_inverse_volume(self, ds, ftype):
         from yt.geometry.particle_geometry_handler import ParticleIndex
 
-        if (
-            not isinstance(ds.index, ParticleIndex)
-            and ("index", "cell_volume") in ds.derived_field_list
-        ):
+        if not isinstance(ds.index, ParticleIndex) and ("index", "cell_volume") in ds.derived_field_list:
 
             def _idV(data):
                 return 1.0 / data["index", "cell_volume"]
@@ -355,9 +346,7 @@ class SourceModel:
         emin = e0 - 0.5 * de
         emax = e0 + 0.5 * de
 
-        return self.make_source_fields(
-            ds, emin, emax, band_name=line_name, force_override=force_override
-        )
+        return self.make_source_fields(ds, emin, emax, band_name=line_name, force_override=force_override)
 
     def make_intensity_fields(
         self,
@@ -424,9 +413,7 @@ class SourceModel:
         validators = [ValidateParameter("axis", {"axis": [0, 1, 2]})]
 
         if redshift == 0.0 and dist is None:
-            raise ValueError(
-                "Either 'redshift' must be > 0.0 or 'dist' must " "not be None!"
-            )
+            raise ValueError("Either 'redshift' must be > 0.0 or 'dist' must not be None!")
 
         spectral_norm = 1.0
 
@@ -439,9 +426,7 @@ class SourceModel:
 
         idV_func = self._get_inverse_volume(ds, ftype)
 
-        dist_fac, redshift = self._make_dist_fac(
-            ds, redshift, dist, cosmology, per_sa=True
-        )
+        dist_fac, redshift = self._make_dist_fac(ds, redshift, dist, cosmology, per_sa=True)
 
         emin_src = emin * (1.0 + redshift)
         emax_src = emax * (1.0 + redshift)

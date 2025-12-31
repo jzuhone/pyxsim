@@ -153,15 +153,11 @@ class PowerLawSourceModel(SourceModel):
         spectral_norm = 1.0
         self.setup_model("spectrum", data_source, redshift)
         for chunk in data_source.chunks([], "io"):
-            chunk_data = self.process_data(
-                "spectrum", chunk, spectral_norm, shifting=shifting, ebins=ebins
-            )
+            chunk_data = self.process_data("spectrum", chunk, spectral_norm, shifting=shifting, ebins=ebins)
             if chunk_data is not None:
                 spec += chunk_data
         self.cleanup_model("spectrum")
-        return self._make_spectrum(
-            data_source.ds, ebins, spec, redshift, dist, cosmology
-        )
+        return self._make_spectrum(data_source.ds, ebins, spec, redshift, dist, cosmology)
 
     def process_data(
         self,
@@ -174,7 +170,6 @@ class PowerLawSourceModel(SourceModel):
         fluxf=None,
         shifting=False,
     ):
-
         num_cells = check_num_cells(self.ftype, chunk)
 
         if num_cells == 0:
@@ -213,7 +208,6 @@ class PowerLawSourceModel(SourceModel):
             raise ValueError('The "luminosity_field" must be in units of power!')
 
         if mode in ["photons", "photon_rate", "photon_intensity"]:
-
             Nph = (ef / shift) ** (1.0 - alpha) - (ei / shift) ** (1.0 - alpha)
             Nph[alpha == 1] = np.log(ef / ei)
             Nph *= K * etoalpha

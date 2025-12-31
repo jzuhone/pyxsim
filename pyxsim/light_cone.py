@@ -125,9 +125,7 @@ class XrayLightCone(LightCone):
             c = output["projection_center"] * dw + ds.domain_left_edge
             le = c.copy()
             re = c.copy()
-            width = ds.quan(aw * output["box_width_per_angle"], "unitary").to(
-                "code_length"
-            )
+            width = ds.quan(aw * output["box_width_per_angle"], "unitary").to("code_length")
             depth = dw[ax].to("code_length") * output["box_depth_fraction"]
             le[ax] -= 0.5 * depth
             re[ax] += 0.5 * depth

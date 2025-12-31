@@ -32,9 +32,7 @@ def plaw_fit(alpha_sim, check_dir, prng=None):
         prng = bms.prng
 
     def _power_law_luminosity(field, data):
-        norm = data.ds.quan(
-            1.3e-26, "erg/s"
-        )  # this seems small, but only because it is per-cell
+        norm = data.ds.quan(1.3e-26, "erg/s")  # this seems small, but only because it is per-cell
         return norm * data["cell_mass"] / (1.0 * mp)
 
     ds.add_field(
@@ -54,20 +52,14 @@ def plaw_fit(alpha_sim, check_dir, prng=None):
 
     sphere = ds.sphere("c", (100.0, "kpc"))
 
-    plaw_model = PowerLawSourceModel(
-        1.0, 0.01, 11.0, ("gas", "plaw_lum"), alpha_sim, prng=prng
-    )
+    plaw_model = PowerLawSourceModel(1.0, 0.01, 11.0, ("gas", "plaw_lum"), alpha_sim, prng=prng)
 
     make_photons("plaw_photons.h5", sphere, redshift, A, exp_time, plaw_model)
 
     D_A = cosmo.angular_diameter_distance(0.0, redshift).to_value("cm")
     dist_fac = 1.0 / (4.0 * np.pi * D_A * D_A * (1.0 + redshift) ** 3)
-    norm_sim = float((sphere["plaw_lum"].to("keV/s")).sum() * dist_fac) * (
-        1.0 + redshift
-    )
-    norm_sim *= (2.0 - alpha_sim) / (
-        11.0 ** (2.0 - alpha_sim) - 0.01 ** (2.0 - alpha_sim)
-    )
+    norm_sim = float((sphere["plaw_lum"].to("keV/s")).sum() * dist_fac) * (1.0 + redshift)
+    norm_sim *= (2.0 - alpha_sim) / (11.0 ** (2.0 - alpha_sim) - 0.01 ** (2.0 - alpha_sim))
 
     project_photons(
         "plaw_photons.h5",
@@ -83,9 +75,7 @@ def plaw_fit(alpha_sim, check_dir, prng=None):
     spec = Spectrum.from_powerlaw(alpha_sim, redshift, norm_sim, 0.2, 10.0, 5000)
     spec.apply_foreground_absorption(nH_sim, model="wabs")
 
-    pvalue = events_ks_testing(
-        "plaw_events.h5", spec, exp_time.value, A.value, check_dir
-    )
+    pvalue = events_ks_testing("plaw_events.h5", spec, exp_time.value, A.value, check_dir)
 
     assert pvalue > 0.05
 
@@ -106,9 +96,7 @@ def test_power_law_fields():
     angular_scale = 1.0 / cosmo.angular_scale(0.0, redshift).to("cm/arcsec")
 
     def _power_law_luminosity(field, data):
-        norm = data.ds.quan(
-            1.3e-26, "erg/s"
-        )  # this seems small, but only because it is per-cell
+        norm = data.ds.quan(1.3e-26, "erg/s")  # this seems small, but only because it is per-cell
         return norm * data["cell_mass"] / (1.0 * mp)
 
     ds.add_field(
@@ -159,9 +147,7 @@ def test_power_law_fields():
     eflux = (sphere[int_fields1[0]] * sphere["cell_volume"]).sum() * angular_scale**2
     pflux = (sphere[int_fields1[1]] * sphere["cell_volume"]).sum() * angular_scale**2
 
-    dist_fac = (
-        1.0 / (4.0 * np.pi * cosmo.luminosity_distance(0.0, redshift).to("cm") ** 2).v
-    )
+    dist_fac = 1.0 / (4.0 * np.pi * cosmo.luminosity_distance(0.0, redshift).to("cm") ** 2).v
     shift = np.sqrt(1.0 - vtot**2) / (1.0 - vlos)
 
     elumi = (
@@ -184,9 +170,7 @@ def test_power_law_fields():
         / (1.0 - alpha1)
     )
 
-    spec = plaw_model1.make_spectrum(
-        sphere, 0.5, 7.0, 3000, redshift=redshift, normal=[0.0, 0.0, 1.0]
-    )
+    spec = plaw_model1.make_spectrum(sphere, 0.5, 7.0, 3000, redshift=redshift, normal=[0.0, 0.0, 1.0])
 
     assert_allclose(eflux.v, (shift**4) * elumi * dist_fac)
     assert_allclose(eflux.v, np.sum(spec.energy_flux.value * spec.de.value))
@@ -253,9 +237,7 @@ def test_power_law_spectrum():
     redshift = 0.2
 
     def _power_law_luminosity(field, data):
-        norm = data.ds.quan(
-            1.3e-26, "erg/s"
-        )  # this seems small, but only because it is per-cell
+        norm = data.ds.quan(1.3e-26, "erg/s")  # this seems small, but only because it is per-cell
         return norm * data["cell_mass"] / (1.0 * mp)
 
     ds.add_field(
@@ -272,9 +254,7 @@ def test_power_law_spectrum():
     plaw_model = PowerLawSourceModel(1.0, 0.01, 11.0, "hard_emission", alpha)
 
     lum_scaled = (
-        lum
-        * (6.0 ** (2.0 - alpha) - 0.1 ** (2.0 - alpha))
-        / (11.0 ** (2.0 - alpha) - 0.01 ** (2.0 - alpha))
+        lum * (6.0 ** (2.0 - alpha) - 0.1 ** (2.0 - alpha)) / (11.0 ** (2.0 - alpha) - 0.01 ** (2.0 - alpha))
     )
     spec0 = CountRateSpectrum.from_powerlaw(alpha, 0.0, 1.0, 0.1, 6.0, 1000)
     spec0.rescale_flux(lum_scaled, flux_type="energy")
@@ -286,10 +266,7 @@ def test_power_law_spectrum():
 
     lum_scaled2 = (
         lum
-        * (
-            (6.0 * (1.0 + redshift)) ** (2.0 - alpha)
-            - (0.1 * (1.0 + redshift)) ** (2.0 - alpha)
-        )
+        * ((6.0 * (1.0 + redshift)) ** (2.0 - alpha) - (0.1 * (1.0 + redshift)) ** (2.0 - alpha))
         / (11.0 ** (2.0 - alpha) - 0.01 ** (2.0 - alpha))
     )
     spec2 = Spectrum.from_powerlaw(alpha, redshift, 1.0, 0.1, 6.0, 1000)
@@ -299,10 +276,6 @@ def test_power_law_spectrum():
     assert_allclose(spec2.flux.value, spec3.flux.value, rtol=1.0e-6)
 
     shift = np.sqrt(1.0 - vtot**2) / (1.0 - vlos)
-    spec4 = plaw_model.make_spectrum(
-        sphere, 0.1, 6.0, 1000, redshift=redshift, normal=[0.0, 0.0, 1.0]
-    )
+    spec4 = plaw_model.make_spectrum(sphere, 0.1, 6.0, 1000, redshift=redshift, normal=[0.0, 0.0, 1.0])
 
-    assert_allclose(
-        spec2.flux.value * (shift ** (2.0 + alpha)), spec4.flux.value, rtol=1.0e-6
-    )
+    assert_allclose(spec2.flux.value * (shift ** (2.0 + alpha)), spec4.flux.value, rtol=1.0e-6)

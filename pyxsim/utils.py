@@ -81,9 +81,7 @@ def validate_parameters(first, second, skip=None):
             ):
                 check_equal = np.char.equal(v1, v2).all()
             else:
-                check_equal = np.allclose(
-                    np.array(v1), np.array(v2), rtol=0.0, atol=1.0e-10
-                )
+                check_equal = np.allclose(np.array(v1), np.array(v2), rtol=0.0, atol=1.0e-10)
             if not check_equal:
                 raise RuntimeError(
                     f"The values for the parameter '{k1}' in the two inputs"
@@ -126,9 +124,8 @@ def merge_files(input_files, output_file, overwrite=False, add_exposure_times=Fa
     from pathlib import Path
 
     if Path(output_file).exists() and not overwrite:
-        raise IOError(
-            f"Cannot overwrite existing file {output_file}. "
-            "If you want to do this, set overwrite=True."
+        raise OSError(
+            f"Cannot overwrite existing file {output_file}. If you want to do this, set overwrite=True."
         )
 
     f_in = h5py.File(input_files[0], "r")
@@ -179,9 +176,7 @@ def merge_files(input_files, output_file, overwrite=False, add_exposure_times=Fa
 def _parse_abund_table(abund_table):
     if not isinstance(abund_table, str):
         if len(abund_table) != 30:
-            raise RuntimeError(
-                "User-supplied abundance tables must be 30 elements long!"
-            )
+            raise RuntimeError("User-supplied abundance tables must be 30 elements long!")
         atable = np.concatenate([[0.0], np.array(abund_table)])
     else:
         if abund_table not in abund_tables:
@@ -246,9 +241,7 @@ def compute_H_abund(abund_table):
 def compute_zsolar(abund_table):
     atable = _parse_abund_table(abund_table)
     if abund_table not in abund_tables:
-        raise KeyError(
-            f"Abundance table {abund_table} not found! Options are: {list(abund_tables.keys())}"
-        )
+        raise KeyError(f"Abundance table {abund_table} not found! Options are: {list(abund_tables.keys())}")
     elems = atomic_weights * atable
     return elems[3:].sum() / elems.sum()
 

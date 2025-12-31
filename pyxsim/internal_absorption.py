@@ -104,9 +104,7 @@ def make_column_density_map(
             w[2] = (ndepth - i) * dz
             bc = re - 0.5 * (ndepth - i) * dz * L
             dk = ds.disk(bc, L, w[0], 0.5 * w[2])
-            img = off_axis_projection(
-                dk, center, L, w, (nwidth, nwidth), field, north_vector=north_vector
-            )
+            img = off_axis_projection(dk, center, L, w, (nwidth, nwidth), field, north_vector=north_vector)
             nH[:, :, i] = np.asarray(img)
             pbar.update()
 
