@@ -417,7 +417,7 @@ class CloudyCIESpectralModel(Atable1DSpectralModel):
         self.model_vers = cgen.model_vers
 
 
-class IGMSpectralModel(ThermalSpectralModel):
+class PionSpectralModel(ThermalSpectralModel):
     _logT = True
     r"""
     A spectral model for a thermal plasma including photoionization and
