@@ -27,7 +27,7 @@ class XrayLightCone(LightCone):
     ):
         if seed is None:
             seed = time.time()
-        super(XrayLightCone, self).__init__(
+        super().__init__(
             parameter_filename,
             simulation_type,
             near_redshift,
@@ -60,27 +60,27 @@ class XrayLightCone(LightCone):
 
         Parameters
         ----------
-        photon_prefix : string
+        photon_prefix : str
             The prefix of the filename(s) containing the photon list. If run in
             serial, the filename will be "{photon_prefix}.lc{i}.h5", where i
             iterates over the elements of the light cone solution. If run in
             parallel, the filenames will be "{photon_prefix}.lc{i}.{mpi_rank}.h5".
-        event_prefix : string
+        event_prefix : str
             The prefix of the filename(s) which will be written to contain the
             event list. If run in serial, the filename will be "{event_prefix}.h5",
             if run in parallel, the filename will be "{event_prefix}.{mpi_rank}.h5".
-        area : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`
+        area : float, (value, unit) tuple, unyt_quantity, or Quantity
             The collecting area to determine the number of events. If units are
             not specified, it is assumed to be in cm^2.
-        exp_time : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`
+        exp_time : float, (value, unit) tuple, unyt_quantity, or Quantity
             The exposure time to determine the number of events. If units are
             not specified, it is assumed to be in seconds.
-        angular_width : float, (value, unit) tuple, or :class:`~yt.units.yt_array.YTQuantity`
+        angular_width : float, (value, unit) tuple, unyt_quantity, or Quantity
             The angular width of the light cone simulation. If units are not
             specified, it is assumed to be in degrees.
         source_model : :class:`~pyxsim.source_models.sources.SourceModel`
             A source model used to generate the events.
-        sky_center : array-like
+        sky_center : array_like
             Center RA, Dec of the events in degrees.
         parameters : dict, optional
             A dictionary of parameters to be passed for the source model to use,
@@ -90,13 +90,13 @@ class XrayLightCone(LightCone):
             be assumed:
             ['velocity_x', 'velocity_y', 'velocity_z'] for grid datasets
             ['particle_velocity_x', 'particle_velocity_y', 'particle_velocity_z'] for particle datasets
-        absorb_model : string
+        absorb_model : str
             A model for foreground galactic absorption, to simulate the absorption
             of events before being detected. Known options are "wabs" and "tbabs".
         nH : float, optional
             The foreground column density in units of 10^22 cm^{-2}. Only used if
             absorption is applied.
-        no_shifting : boolean, optional
+        no_shifting : bool, optional
             If set, the photon energies will not be Doppler shifted.
         sigma_pos : float, optional
             Apply a gaussian smoothing operation to the sky positions of the

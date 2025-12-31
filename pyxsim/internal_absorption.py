@@ -36,9 +36,9 @@ def make_column_density_map(
         The origin of the photon spatial coordinates. Accepts "c", "max", or
         a coordinate. If array-like and without units, it is assumed to be in
         units of kpc.
-    width : float, tuple, or unyt_quantity
+    width : float, tuple, unyt_quantity, or Quantity
         The width of the cube in kpc. If a float, will assume units of kpc.
-    depth : float, tuple, or unyt_quantity
+    depth : float, tuple, unyt_quantity, or Quantity
         The width of the cube in kpc. If a float, will assume units of kpc.
     nwidth : integer
         The number of cells on a side in both of the sky directions of the

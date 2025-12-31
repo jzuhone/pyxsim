@@ -116,7 +116,7 @@ class SourceModel:
         else:
             redshift = 0.0  # Only for local sources!
             try:
-                # normal behaviour, if dist is a YTQuantity
+                # normal behavior, if dist is a YTQuantity
                 dist = ds.quan(dist.value, dist.units)
             except AttributeError as e:
                 try:
@@ -182,16 +182,16 @@ class SourceModel:
         ----------
         ds : :class:`~yt.data_objects.static_output.Dataset`
             The loaded yt dataset to make the fields for.
-        emin : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
+        emin : float, (value, unit) tuple, unyt_quantity, or Quantity
             The minimum energy in the band in the source frame.
             If a float, it is assumed to be in keV.
-        emax : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
+        emax : float, (value, unit) tuple, unyt_quantity, or Quantity
             The minimum energy in the band in the source frame.
             If a float, it is assumed to be in keV.
-        force_override : boolean, optional
+        force_override : bool, optional
             If True, override a pre-existing field with the same name.
             Default: False
-        band_name : string, optional
+        band_name : str, optional
             The name to give to the energy band in the field. If None,
             it is set to "{emin}_{emax}_keV". Default: None
 
@@ -323,10 +323,10 @@ class SourceModel:
         ----------
         ds : :class:`~yt.data_objects.static_output.Dataset`
             The loaded yt dataset to make the fields for.
-        e0 : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
+        e0 : float, (value, unit) tuple, unyt_quantity, or Quantity
             The line centroid in the source frame. If a float, it is
             assumed to be in keV.
-        de : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
+        de : float, (value, unit) tuple, unyt_quantity, or Quantity
             The width of the band in the source frame. If a float, it is
             assumed to be in keV.
         band_name : string
@@ -376,15 +376,15 @@ class SourceModel:
         ----------
         ds : :class:`~yt.data_objects.static_output.Dataset`
             The loaded yt dataset to make the fields for.
-        emin : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
+        emin : float, (value, unit) tuple, unyt_quantity, or Quantity
             The minimum energy in the band in the observer frame. If a float,
             it is assumed to be in keV.
-        emax : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
+        emax : float, (value, unit) tuple, unyt_quantity, or Quantity
             The maximum energy in the band in the observer frame. If a float,
             it is assumed to be in keV.
         redshift : float, optional
             The redshift of the source. Default: 0.0
-        dist : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
+        dist : float, (value, unit) tuple, unyt_quantity, or Quantity
             The angular diameter distance, used for nearby sources. This may be
             optionally supplied instead of it being determined from the
             *redshift* and given *cosmology*. If units are not specified, it is
@@ -526,10 +526,10 @@ class SourceModel:
         ----------
         ds : :class:`~yt.data_objects.static_output.Dataset`
             The loaded yt dataset to make the fields for.
-        e0 : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
+        e0 : float, (value, unit) tuple, unyt_quantity, or Quantity
             The line centroid in the observer frame. If a float, it is
             assumed to be in keV.
-        de : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
+        de : float, (value, unit) tuple, unyt_quantity, or Quantity
             The width of the band in the observer frame. If a float,
             it is assumed to be in keV.
         band_name : string
@@ -537,7 +537,7 @@ class SourceModel:
             "O_VII", "O_VIII", "Ne_IX", etc.
         redshift : float, optional
             The redshift of the source. Default: 0.0
-        dist : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
+        dist : float, (value, unit) tuple, unyt_quantity, or Quantity
             The angular diameter distance, used for nearby sources. This may be
             optionally supplied instead of it being determined from the
             *redshift* and given *cosmology*. If units are not specified, it is

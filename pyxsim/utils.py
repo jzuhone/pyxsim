@@ -69,7 +69,7 @@ def validate_parameters(first, second, skip=None):
     keys2.sort()
     if keys1 != keys2:
         raise RuntimeError("The two inputs do not have the same parameters!")
-    for k1, k2 in zip(keys1, keys2):
+    for k1, k2 in zip(keys1, keys2, strict=True):
         if k1 not in skip:
             v1 = first[k1][()]
             v2 = first[k2][()]

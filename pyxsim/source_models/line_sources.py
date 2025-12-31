@@ -22,14 +22,14 @@ class LineSourceModel(SourceModel):
 
     Parameters
     ----------
-    e0 : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
+    e0 : float, (value, unit) tuple, unyt_quantity, or Quantity
         The location of the emission line in energy in the rest frame of the
         source. If units are not given, they are assumed to be in keV.
     emission_field : string or (ftype, fname) tuple
         The field corresponding to the photon count rate per cell or particle,
         in the rest frame of the source, which serves as the normalization for
         the line. Must be in counts/s.
-    sigma : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
+    sigma : float, (value, unit) tuple, unyt_quantity, or Quantity
         The standard intrinsic deviation of the emission line (not from Doppler
         broadening, which is handled in the projection step). Units of
         velocity or energy are accepted. If units are not given, they
@@ -120,10 +120,10 @@ class LineSourceModel(SourceModel):
         ----------
         data_source : :class:`~yt.data_objects.data_containers.YTSelectionContainer`
             The data source from which the photons will be generated.
-        emin : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
+        emin : float, (value, unit) tuple, unyt_quantity, or Quantity
             The minimum energy in the band. If a float, it is assumed to be
             in keV.
-        emax : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
+        emax : float, (value, unit) tuple, unyt_quantity, or Quantity
             The minimum energy in the band. If a float, it is assumed to be
             in keV.
         nbins : integer
@@ -131,7 +131,7 @@ class LineSourceModel(SourceModel):
         redshift : float, optional
             If greater than 0, we assume that the spectrum should be created in
             the observer frame at a distance given by the cosmology. Default: 0.0
-        dist : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`, optional
+        dist : float, (value, unit) tuple, unyt_quantity, or Quantity, optional
             The distance to a nearby source, if redshift = 0.0. If a float, it
             is assumed to be in units of kpc.
         cosmology : :class:`~yt.utilities.cosmology.Cosmology`, optional

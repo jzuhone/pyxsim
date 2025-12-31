@@ -16,13 +16,13 @@ class PowerLawSourceModel(SourceModel):
 
     Parameters
     ----------
-    e0 : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
+    e0 : float, (value, unit) tuple, unyt_quantity, or Quantity
         The reference energy of the power law, in the rest frame of the source.
         If units are not given, they are assumed to be in keV.
-    emin : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
+    emin : float, (value, unit) tuple, unyt_quantity, or Quantity
         The minimum energy of the photons to be generated, in the rest frame of
         the source. If units are not given, they are assumed to be in keV.
-    emax : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
+    emax : float, (value, unit) tuple, unyt_quantity, or Quantity
         The maximum energy of the photons to be generated, in the rest frame of
         the source. If units are not given, they are assumed to be in keV.
     luminosity_field : string or (ftype, fname) tuple
@@ -109,10 +109,10 @@ class PowerLawSourceModel(SourceModel):
         ----------
         data_source : :class:`~yt.data_objects.data_containers.YTSelectionContainer`
             The data source from which the photons will be generated.
-        emin : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
+        emin : float, (value, unit) tuple, unyt_quantity, or Quantity
             The minimum energy in the band. If a float, it is assumed to be
             in keV.
-        emax : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
+        emax : float, (value, unit) tuple, unyt_quantity, or Quantity
             The minimum energy in the band. If a float, it is assumed to be
             in keV.
         nbins : integer
@@ -120,7 +120,7 @@ class PowerLawSourceModel(SourceModel):
         redshift : float, optional
             If greater than 0, we assume that the spectrum should be created in
             the observer frame at a distance given by the cosmology. Default: 0.0
-        dist : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity, optional
+        dist : float, (value, unit) tuple, unyt_quantity, or :class:`~astropy.units.Quantity, optional
             The distance to a nearby source, if redshift = 0.0. If a float, it
             is assumed to be in units of kpc.
         cosmology : :class:`~yt.utilities.cosmology.Cosmology`, optional
@@ -204,8 +204,8 @@ class PowerLawSourceModel(SourceModel):
 
         try:
             K = chunk[self.luminosity_field].to_value("keV/s") / K_fac
-        except UnitConversionError:
-            raise ValueError('The "luminosity_field" must be in units of power!')
+        except UnitConversionError as e:
+            raise ValueError('The "luminosity_field" must be in units of power!') from e
 
         if mode in ["photons", "photon_rate", "photon_intensity"]:
             Nph = (ef / shift) ** (1.0 - alpha) - (ei / shift) ** (1.0 - alpha)

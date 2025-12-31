@@ -141,10 +141,10 @@ def make_photons(
         The data source from which the photons will be generated.
     redshift : float
         The cosmological redshift for the photons.
-    area : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
+    area : float, (value, unit) tuple, unyt_quantity, or Quantity
         The collecting area to determine the number of photons. If units are
         not specified, it is assumed to be in cm^2.
-    exp_time : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
+    exp_time : float, (value, unit) tuple, unyt_quantity, or Quantity
         The exposure time to determine the number of photons. If units are
         not specified, it is assumed to be in seconds.
     source_model : :class:`~pyxsim.source_models.sources.SourceModel`
@@ -161,7 +161,7 @@ def make_photons(
         a coordinate. If array-like and without units, it is assumed to be in
         units of kpc. If not specified, pyxsim attempts to use the "center"
         field parameter of the data_source.
-    dist : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`, optional
+    dist : float, (value, unit) tuple, unyt_quantity, or Quantity, optional
         The angular diameter distance, used for nearby sources. This may be
         optionally supplied instead of it being determined from the
         *redshift* and given *cosmology*. If units are not specified, it is
