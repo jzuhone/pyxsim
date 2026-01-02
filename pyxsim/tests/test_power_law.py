@@ -260,7 +260,7 @@ def test_power_law_spectrum():
     spec0.rescale_flux(lum_scaled, flux_type="energy")
     spec1 = plaw_model.make_spectrum(sphere, 0.1, 6.0, 1000)
 
-    assert_allclose(spec0.flux.value, spec1.flux.value, rtol=1.0e-6)
+    assert_allclose(spec0.rate.value, spec1.rate.value, rtol=1.0e-6)
 
     D_L = cosmo.luminosity_distance(0.0, redshift).to_value("cm")
 

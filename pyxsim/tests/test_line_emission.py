@@ -177,9 +177,9 @@ def test_line_emission_spectra():
         return np.sqrt(np.average((x - np.average(x, weights=w)) ** 2, weights=w))
 
     spec1 = line_model.make_spectrum(sphere, 1.0, 6.0, 5000)
-    assert_allclose(np.average(spec1.emid.value, weights=spec1.flux.value), location.v)
-    assert_allclose(weight_std(spec1.emid.value, spec1.flux.value), sigma_E.v, rtol=1.0e-3)
-    assert_allclose(np.sum(spec1.flux.value * spec1.de.value), dm_E.v)
+    assert_allclose(np.average(spec1.emid.value, weights=spec1.rate.value), location.v)
+    assert_allclose(weight_std(spec1.emid.value, spec1.rate.value), sigma_E.v, rtol=1.0e-3)
+    assert_allclose(np.sum(spec1.rate.value * spec1.de.value), dm_E.v)
 
     spec2 = line_model.make_spectrum(sphere, 1.0, 6.0, 5000, redshift=redshift)
     D_A = cosmo.angular_diameter_distance(0.0, redshift).to_value("cm")
