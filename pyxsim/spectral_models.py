@@ -8,9 +8,9 @@ from soxs.constants import K_per_keV, elem_names
 from soxs.spectra import (
     CIEGenerator,
     CloudyCIEGenerator,
+    CloudyPionGenerator,
     MekalGenerator,
     OneACX2Generator,
-    PionGenerator,
     get_tbabs_absorb,
     get_wabs_absorb,
 )
@@ -472,7 +472,7 @@ class PionSpectralModel(ThermalSpectralModel):
         var_elem=None,
         model_vers=None,
     ):
-        self.igen = PionGenerator(
+        self.igen = CloudyPionGenerator(
             emin,
             emax,
             nbins,
