@@ -302,7 +302,7 @@ def test_beta_model_spectrum():
 
     spec4 = thermal_model.make_spectrum(sphere, 0.2, 6.0, 2000)
 
-    assert_allclose(spec3.flux.value, spec4.flux.value)
+    assert_allclose(spec3.flux.value, spec4.rate.value)
 
     spec5 = agen.get_spectrum(kT_sim, Z_sim, redshift, norm2).regrid_spectrum(
         0.2, 6.0, 2000, vlos=-vlos * ckms

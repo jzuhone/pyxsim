@@ -4,7 +4,7 @@ import tempfile
 
 import numpy as np
 from numpy.testing import assert_allclose
-from soxs import CountRateSpectrum, Spectrum
+from soxs import Spectrum
 from soxs.constants import keV_per_erg
 from unyt import mp
 from yt.units.yt_array import YTQuantity
@@ -256,11 +256,11 @@ def test_power_law_spectrum():
     lum_scaled = (
         lum * (6.0 ** (2.0 - alpha) - 0.1 ** (2.0 - alpha)) / (11.0 ** (2.0 - alpha) - 0.01 ** (2.0 - alpha))
     )
-    spec0 = CountRateSpectrum.from_powerlaw(alpha, 0.0, 1.0, 0.1, 6.0, 1000)
+    spec0 = Spectrum.from_powerlaw(alpha, 0.0, 1.0, 0.1, 6.0, 1000)
     spec0.rescale_flux(lum_scaled, flux_type="energy")
     spec1 = plaw_model.make_spectrum(sphere, 0.1, 6.0, 1000)
 
-    assert_allclose(spec0.rate.value, spec1.rate.value, rtol=1.0e-6)
+    assert_allclose(spec0.flux.value, spec1.rate.value, rtol=1.0e-6)
 
     D_L = cosmo.luminosity_distance(0.0, redshift).to_value("cm")
 

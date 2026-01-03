@@ -10,7 +10,7 @@ answer_dir = soxs_cfg.get("soxs", "soxs_answer_dir")
 
 # constants
 K_per_keV = (1.0 * u.keV).to_value("K", "thermal")
-cm_per_mpc = (1.0 * u.kpc).to_value("cm")
+cm_per_mpc = (1.0 * u.Mpc).to_value("cm")
 mass_hydrogen_grams = u.mass_hydrogen.to_value("g")
 me_over_mp = (u.electron_mass / u.proton_mass).to_value("dimensionless")
 
