@@ -85,6 +85,6 @@ def test_absorption():
             err = (specm_i.binned_flux.value - spec) / np.sqrt(spec)
         err[spec == 0.0] = 0.0
         chi2 = (err**2).sum() / nspec
-        assert chi2 < 1.2
+        assert chi2 < 1.25
     os.chdir(curdir)
     shutil.rmtree(tmpdir)

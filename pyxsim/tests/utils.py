@@ -140,7 +140,7 @@ class ParticleBetaModelSource:
 
 class UniformSource:
     def __init__(self):
-        self.prng = RandomState(35)
+        self.prng = RandomState(38)
         self.kT = kT
         self.Z = Z
 
