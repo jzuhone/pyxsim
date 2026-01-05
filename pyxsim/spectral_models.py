@@ -337,7 +337,7 @@ class CXSpectralModel:
         h_spec, he_spec = self.cxgen.make_table(self.ions, 10**self.v_mid, zobs)
         self.h_spec = h_spec
         self.he_spec = he_spec
-        self.si = SpectralInterpolatorCX(self.v_mid, self.he_spec, self.he_spec)
+        self.si = SpectralInterpolatorCX(self.v_mid, self.h_spec, self.he_spec)
 
     def get_spectrum(self, coll):
         coll = np.atleast_1d(coll)
