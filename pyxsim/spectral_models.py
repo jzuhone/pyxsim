@@ -6,6 +6,7 @@ import numpy as np
 from scipy.interpolate import interp1d
 from soxs.constants import K_per_keV, elem_names
 from soxs.spectra import (
+    ACX2Generator,
     CIEGenerator,
     CloudyCIEGenerator,
     CloudyPionGenerator,
@@ -292,33 +293,61 @@ class CXSpectralModel:
         nbins,
         vmin,
         vmax,
+        Zmet,
         nbins_v,
-        var_elem,
+        var_elem=None,
         collntype=1,
         acx_model=8,
         recomb_type=1,
         binscale="linear",
         abund_table="angr",
     ):
-        self.cxgen = OneACX2Generator(
-            emin,
-            emax,
-            nbins,
-            collntype=collntype,
-            acx_model=acx_model,
-            recomb_type=recomb_type,
-            binscale=binscale,
-            abund_table=abund_table,
-        )
-        self.model_vers = self.cxgen.model_vers
         self.var_elem_names = []
         self.var_ion_names = []
         self.ions = []
-        for elem in var_elem:
-            e, ion = elem.split("^")
-            self.var_elem_names.append(e)
-            self.var_ion_names.append(elem)
-            self.ions.append((elem_names.index(e), int(ion)))
+        if var_elem is not None:
+            for elem in var_elem:
+                if "^" in elem:
+                    e, ion = elem.split("^")
+                    self.var_elem_names.append(e)
+                    self.var_ion_names.append(elem)
+                    self.ions.append((elem_names.index(e), int(ion)))
+                else:
+                    self.var_elem_names.append(elem)
+        if not self.ions:
+            self.ions = [(None,) * 2]
+        else:
+            if len(self.ions) != len(self.var_elem_names):
+                raise RuntimeError(
+                    'All "var_elem" elements must either '
+                    "be specific ionic species, or elements, "
+                    "but not a mix of both!"
+                )
+
+        if len(self.var_ion_names) > 0:
+            self.cxgen = OneACX2Generator(
+                emin,
+                emax,
+                nbins,
+                collntype=collntype,
+                acx_model=acx_model,
+                recomb_type=recomb_type,
+                binscale=binscale,
+                abund_table=abund_table,
+            )
+        else:
+            self.cxgen = ACX2Generator(
+                emin,
+                emax,
+                nbins,
+                collntype=collntype,
+                acx_model=acx_model,
+                recomb_type=recomb_type,
+                binscale=binscale,
+                var_elem=var_elem,
+                abund_table=abund_table,
+            )
+        self.model_vers = self.cxgen.model_vers
         self.vmin = np.log10(vmin)
         self.vmax = np.log10(vmax)
         self.nbins_v = nbins_v
@@ -668,7 +697,7 @@ class AbsorptionModel:
         ----------
         eobs : array_like
             The energies of the photons in keV.
-        prng : integer, :class:`~numpy.random.RandomState` object or :mod:`~numpy.random`, optional
+        prng : integer, numpy.random.RandomState object or numpy.random, optional
             A pseudo-random number generator. Typically will only be specified
             if you have a reason to generate the same set of random numbers, such as for a
             test. Default is the :mod:`numpy.random` module.
