@@ -9,18 +9,26 @@ Version 4.5.0
 This version of pyXSIM contains significant new features, and some
 backwards-incompatible changes.
 
-* Charge exchange
-* Trace abundances
+* Support for simulating emission from charge exchange interactions using the
+  `ACX2 model <https://acx2.readthedocs.io/>`_ has been added. See
+  :ref:`charge-exchange` for details.
+* It is now possible to set a single abundance for "trace elements" in
+  :class:`~pyxsim.source_models.thermal_sources.CIESourceModel` instances,
+  when using either the APEC or SPEX models. See :ref:`trace-abundances` for details.
 * Support for Doppler shifting of intensity fields and spectra created from data
   objects has been added. See :ref:`intensity-fields` and :ref:`xray-spectra`
   for more details.
-* Absorption
+* Absorption by neutral gas internal to a source has been implemented when
+  projecting photon lists. See :ref:`internal-absorption` for details.
 * The :class:`~pyxsim.source_models.power_law_sources.PowerLawSourceModel` no
   longer takes an ``emission_field`` argument in units of counts/s/keV, but
   instead takes a ``luminosity_field`` argument in units of power (e.g. W, erg/s,
   keV/s, etc.). See :ref:`powerlaw-sources` for more details. This is a
   backwards-incompatible change.
-* No-sky option
+* The option to save projected photon positions in event lists as relative to
+  the origin of the source in physical coordinates (in dimensions of length),
+  instead of sky coordinates, has been added. See the options in
+  :ref:`project-photons` for details.
 
 Version 4.4.3
 -------------

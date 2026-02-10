@@ -9,6 +9,8 @@ as real observed data. Event lists can be produced from photon list datasets by
 projecting along a particular axis. They can also be used to produce other
 useful data products.
 
+.. _project-photons:
+
 Creating a New Event List by Projecting from a Photon List
 ----------------------------------------------------------
 
@@ -63,6 +65,9 @@ photon lists are. The arguments are:
   RA, Dec positions are computed using simple linear offsets, Default: ``False``.
 * ``save_los`` (optional): If ``True``, save the line-of-sight positions along
   the projection axis in units of kpc to the events list. Default: ``False``.
+* ``phys_coord`` (optional): If ``True``, save the plane-of-sky coordinates of
+  the photons in Cartesian coordinates in units of kpc, instead of projected
+  sky coordinates in degrees. Default: False
 * ``prng`` (optional): An integer seed, pseudo-random number generator,
   :class:`~numpy.random.RandomState` object, or :mod:`~numpy.random` (the
   default). Use this if you have a reason to generate the same set of random

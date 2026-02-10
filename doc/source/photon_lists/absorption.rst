@@ -4,14 +4,14 @@ Absorption Internal to a Source
 ===============================
 
 It is trivial to include the effects of foreground Galactic
-absorption in mock observations of a 3D source using pyXSIM,
-since we assume that there is one value of the neutral hydrogen
-column density (in cm\ :sup:`-2`) for the entire source.
-
-Including the effects of absorption internal to such a source,
-however, is more challenging. This requires knowing the total
-column density of neutral hydrogen along the line of sight between
-the observer and each point in the source.
+absorption from the Milky Way in mock observations of a 3D source
+using pyXSIM, since we assume that there is one value of the
+neutral hydrogen column density (in cm\ :sup:`-2`) in between
+the observer and the source. Including the effects of absorption
+internal to such a source, however, is more challenging. This
+requires knowing the total column density of neutral hydrogen
+along the line of sight between the observer and each point in
+the source.
 
 pyXSIM implements a simple method for including the effects of
 internal absorption in a source for use when projecting a photon
