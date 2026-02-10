@@ -18,12 +18,14 @@ backwards-incompatible changes.
 * Support for Doppler shifting of intensity fields and spectra created from data
   objects has been added. See :ref:`intensity-fields` and :ref:`xray-spectra`
   for more details.
-* Absorption by neutral gas internal to a source has been implemented when
-  projecting photon lists. See :ref:`internal-absorption` for details.
+* A simple model for absorption by neutral gas internal to a source has been
+  implemented for projecting photon lists. See :ref:`internal-absorption` for
+  details.
 * The :class:`~pyxsim.source_models.power_law_sources.PowerLawSourceModel` no
   longer takes an ``emission_field`` argument in units of counts/s/keV, but
   instead takes a ``luminosity_field`` argument in units of power (e.g. W, erg/s,
-  keV/s, etc.). See :ref:`powerlaw-sources` for more details. This is a
+  keV/s, etc.), which gives the total power within the band specified when
+  constructing the model. See :ref:`powerlaw-sources` for more details. This is a
   backwards-incompatible change.
 * The option to save projected photon positions in event lists as relative to
   the origin of the source in physical coordinates (in dimensions of length),
