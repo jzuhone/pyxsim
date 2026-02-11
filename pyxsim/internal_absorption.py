@@ -93,9 +93,10 @@ def make_column_density_map(
         for i in range(ndepth):
             lei[id] = le[id] + i * dz
             box = ds.box(lei, re)
-            prj = ds.proj(field, normal, center=center, data_source=box)
-            frb = prj.to_frb(width, nwidth)
-            nH[:, :, i] = frb[field].d
+            if box[field].size > 0:
+                prj = ds.proj(field, normal, center=center, data_source=box)
+                frb = prj.to_frb(width, nwidth)
+                nH[:, :, i] = frb[field].d
             pbar.update()
         ytLogger.setLevel(old_level)
     else:
@@ -104,8 +105,11 @@ def make_column_density_map(
             w[2] = (ndepth - i) * dz
             bc = re - 0.5 * (ndepth - i) * dz * L
             dk = ds.disk(bc, L, w[0], 0.5 * w[2])
-            img = off_axis_projection(dk, center, L, w, (nwidth, nwidth), field, north_vector=north_vector)
-            nH[:, :, i] = np.asarray(img)
+            if dk[field].size > 0:
+                img = off_axis_projection(
+                    dk, center, L, w, (nwidth, nwidth), field, north_vector=north_vector
+                )
+                nH[:, :, i] = np.asarray(img)
             pbar.update()
 
     pbar.close()
