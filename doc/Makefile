@@ -50,6 +50,9 @@ help:
 .PHONY: clean
 clean:
 	rm -rf $(BUILDDIR)/*
+	rm -rf source/cookbook/*.fits
+	rm -rf source/cookbook/*.h5
+	rm -rf source/cookbook/*.pi
 
 .PHONY: html
 html:
