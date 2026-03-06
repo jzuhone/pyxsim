@@ -29,6 +29,12 @@ if [[ ${mode} == "testing" ]]; then
     echo "soxs_answer_dir = ${GITHUB_WORKSPACE}/${ANSWER_VER}" >> $HOME/.config/soxs/soxs.cfg
     cat $HOME/.config/soxs/soxs.cfg
 
+    if ! [[ ${whichos} == "windows-latest" ]]; then
+      # Set location of ATOMDB data
+      mkdir -p $HOME/atomdb
+      echo "USERID = 00000000" > $HOME/atomdb/userdata
+    fi
+
 fi
 
 # Install dependencies using mamba and pip
@@ -36,15 +42,7 @@ fi
 eval "$(micromamba shell hook --shell bash)"
 micromamba shell init --shell bash --root-prefix=~/micromamba
 micromamba activate test-env
-
 micromamba install --yes -c conda-forge numpy pytest pip astropy scipy cython h5py yt
-
-# Install dependencies using mamba and pip
-
-eval "$(micromamba shell hook --shell bash)"
-micromamba shell init --shell bash --root-prefix=~/micromamba
-micromamba activate test-env
-micromamba install --yes numpy pytest pip h5py astropy nose cython scipy yt
 
 git clone https://github.com/lynx-x-ray-observatory/soxs
 cd soxs
@@ -56,6 +54,10 @@ if [[ ${mode} == "wheels" ]]; then
 fi
 
 if [[ ${mode} == "testing" ]]; then
-  # Install pyxsim
+  # Install pyxsim and (optionally) pyatomdb
   python -m pip install -e .
+  if ! [[ ${whichos} == "windows-latest" || ${pyver} == "3.11" ]]; then
+    python -m pip install pyatomdb
+    python -m pip install git+https://github.com/AtomDB/ACX2.git
+  fi
 fi
