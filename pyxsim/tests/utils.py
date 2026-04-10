@@ -110,26 +110,27 @@ class ParticleBetaModelSource:
 
         bbox = np.array([[-0.5, 0.5], [-0.5, 0.5], [-0.5, 0.5]])
 
-        data = {}
-        data["io", "density"] = (dens, "g/cm**3")
-        data["io", "temperature"] = (temp, "K")
-        data["io", "particle_position_x"] = (
-            radius * np.sin(theta) * np.cos(phi),
-            "code_length",
-        )
-        data["io", "particle_position_y"] = (
-            radius * np.sin(theta) * np.sin(phi),
-            "code_length",
-        )
-        data["io", "particle_position_z"] = (radius * np.cos(theta), "code_length")
-        data["io", "particle_velocity_x"] = (np.zeros(num_particles), "cm/s")
-        data["io", "particle_velocity_y"] = (np.zeros(num_particles), "cm/s")
-        data["io", "particle_velocity_z"] = (velz, "cm/s")
-        data["io", "particle_mass"] = (pmass, "g")
-        data["io", "smoothing_length"] = (
-            0.01 * np.ones(num_particles) / (2.0 * R),
-            "code_length",
-        )
+        data = {
+            ("io", "density"): (dens, "g/cm**3"),
+            ("io", "temperature"): (temp, "K"),
+            ("io", "particle_position_x"): (
+                radius * np.sin(theta) * np.cos(phi),
+                "code_length",
+            ),
+            ("io", "particle_position_y"): (
+                radius * np.sin(theta) * np.sin(phi),
+                "code_length",
+            ),
+            ("io", "particle_position_z"): (radius * np.cos(theta), "code_length"),
+            ("io", "particle_velocity_x"): (np.zeros(num_particles), "cm/s"),
+            ("io", "particle_velocity_y"): (np.zeros(num_particles), "cm/s"),
+            ("io", "particle_velocity_z"): (velz, "cm/s"),
+            ("io", "particle_mass"): (pmass, "g"),
+            ("io", "smoothing_length"): (
+                0.01 * np.ones(num_particles) / (2.0 * R),
+                "code_length",
+            ),
+        }
         self.ds = load_particles(
             data,
             length_unit=(2 * R, "Mpc"),
@@ -160,6 +161,55 @@ class UniformSource:
                 0.76 * 0.9 * me_over_mp * np.ones(ddims),
                 "dimensionless",
             ),
+            "velocity_x": (np.zeros(ddims), "cm/s"),
+            "velocity_y": (np.zeros(ddims), "cm/s"),
+            "velocity_z": (np.zeros(ddims), "cm/s"),
+        }
+        self.ds = load_uniform_grid(
+            data,
+            ddims,
+            length_unit=(2 * R, "Mpc"),
+            nprocs=64,
+            bbox=bbox,
+        )
+
+
+class CXSource:
+    def __init__(self):
+        self.prng = RandomState(38)
+        self.kT = kT
+        self.Z = Z
+
+        self.nx = 64
+        ddims = (self.nx, self.nx, self.nx)
+
+        x, y, z = np.mgrid[-R : R : self.nx * 1j, -R : R : self.nx * 1j, -R : R : self.nx * 1j]
+
+        r = np.sqrt(x**2 + y**2 + z**2)
+
+        dens = 0.1 * rho_c * np.ones(ddims)
+        temp = 4.0 * K_per_keV * np.ones(ddims)
+        h0 = np.zeros(ddims)
+        h1 = 0.76 * np.ones(ddims)
+        he0 = np.zeros(ddims)
+        ye = 0.5 * 1.76 * me_over_mp * np.ones(ddims)
+
+        dens[r <= 0.5 * R] *= 100.0
+        temp[r <= 0.5 * R] /= 100.0
+        h0[r <= 0.5 * R] = 0.684
+        h1[r <= 0.5 * R] = 0.076
+        he0[r <= 0.5 * R] = 0.216
+        ye[r <= 0.5 * R] = 0.5 * 1.076 * me_over_mp
+
+        bbox = np.array([[-0.5, 0.5], [-0.5, 0.5], [-0.5, 0.5]])
+
+        data = {
+            "density": (dens, "g/cm**3"),
+            "temperature": (temp, "K"),
+            "H_p0_fraction": (h0, "dimensionless"),
+            "H_p1_fraction": (h1, "dimensionless"),
+            "He_p0_fraction": (he0, "dimensionless"),
+            "El_fraction": (ye, "dimensionless"),
             "velocity_x": (np.zeros(ddims), "cm/s"),
             "velocity_y": (np.zeros(ddims), "cm/s"),
             "velocity_z": (np.zeros(ddims), "cm/s"),

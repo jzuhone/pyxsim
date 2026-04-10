@@ -42,7 +42,7 @@ def interp1d_spec(np.ndarray[np.float64_t, ndim=2] ctable,
     for i in range(nt):
         x_i = x_is[i]
         for j in range(ne):
-            coutput[i, j] = ctable[x_i, j] * xm[i] + ctable[x_i+1, j] * xp[i]
+            coutput[i, j] = ctable[x_i, j] * xm[i] + ctable[x_i + 1, j] * xp[i]
             moutput[i, j] = mtable[x_i, j] * xm[i] + mtable[x_i + 1, j] * xp[i]
     if do_var:
         for i in range(nt):
@@ -71,6 +71,7 @@ def interp2d_spec(np.ndarray[np.float64_t, ndim=2] ctable,
                   np.ndarray[np.float64_t, ndim=1] y_bins,
                   np.ndarray[np.int32_t, ndim=1] y_is,
                   bint do_var):
+
     cdef double x, dx_inv, y, dy_inv
     cdef int i, x_i, j, k, nelem, y_i
     cdef int z1, z2, z3, z4
@@ -122,6 +123,7 @@ def interp2d_spec(np.ndarray[np.float64_t, ndim=2] ctable,
                             mtable[z2, j] * xm[i] * yp[i] + \
                             mtable[z3, j] * xp[i] * ym[i] + \
                             mtable[z4, j] * xp[i] * yp[i]
+
     if do_var:
         for i in range(nt):
             x_i = x_is[i]
@@ -146,38 +148,93 @@ def interp2d_spec(np.ndarray[np.float64_t, ndim=2] ctable,
 @cython.cdivision(True)
 @cython.wraparound(False)
 @cython.boundscheck(False)
-def interp_cx_spec(np.ndarray[np.float64_t, ndim=3] h_table,
-                   np.ndarray[np.float64_t, ndim=3] he_table,
+def interp_cx_spec(np.ndarray[np.float64_t, ndim=3] mtable,
+                   np.ndarray[np.float64_t, ndim=4] vtable,
                    np.ndarray[np.float64_t, ndim=1] x_vals,
                    np.ndarray[np.float64_t, ndim=1] x_bins,
-                   np.ndarray[np.int32_t, ndim=1] x_is):
-    cdef double x, dx_inv
-    cdef int i, x_i, j, k, nelem
+                   np.ndarray[np.int32_t, ndim=1] x_is,
+                   np.ndarray[np.float64_t, ndim=1] y_vals,
+                   np.ndarray[np.float64_t, ndim=1] y_bins,
+                   np.ndarray[np.int32_t, ndim=1] y_is,
+                   bint do_var):
+
+    cdef double x, dx_inv, y, dy_inv
+    cdef int i, x_i, j, k, nelem, y_i
     cdef int nt = x_vals.shape[0]
-    cdef int ne = h_table.shape[2]
-    cdef np.ndarray[np.float64_t, ndim=1] xp, xm
-    cdef np.ndarray[np.float64_t, ndim=3] h_output, he_output
+    cdef int nc = y_vals.shape[0]
+    cdef int ne = mtable.shape[2]
+    cdef int ntbins = x_bins.shape[0]
+    cdef np.ndarray[np.float64_t, ndim=1] xp, xm, yp, ym
+    cdef np.ndarray[np.float64_t, ndim=3] moutput
+    cdef np.ndarray[np.float64_t, ndim=4] voutput
 
-    nelem = <int>h_table.shape[0]
-    h_output = np.zeros((nelem, nt, ne))
-    he_output = np.zeros((nelem, nt, ne))
+    if nt > 1:
+        moutput = np.zeros((2, nc, ne))
+    if do_var:
+        nelem = <int>vtable.shape[1]
+        voutput = np.zeros((2, nelem, nc, ne))
+    else:
+        nelem = 0
 
-    xp = np.zeros(nt)
-    xm = np.zeros(nt)
+    xp = np.zeros(nc)
+    xm = np.zeros(nc)
+    yp = np.zeros(nc)
+    ym = np.zeros(nc)
 
-    for i in range(nt):
-        x_i = x_is[i]
-        x = x_vals[i]
-        dx_inv = 1.0 / (x_bins[x_i+1] - x_bins[x_i])
-        xp[i] = (x - x_bins[x_i]) * dx_inv
-        xm[i] = (x_bins[x_i+1] - x) * dx_inv
-    for i in range(nt):
-        x_i = x_is[i]
-        for k in range(nelem):
-            for j in range(ne):
-                h_output[k, i, j] = h_table[k, x_i, j] * xm[i] + \
-                                    h_table[k, x_i + 1, j] * xp[i]
-                he_output[k, i, j] = he_table[k, x_i, j] * xm[i] + \
-                                     he_table[k, x_i + 1, j] * xp[i]
+    for i in range(nc):
+        if nt > 1:
+            x_i = x_is[i]
+            x = x_vals[i]
+            dx_inv = 1.0 / (x_bins[x_i+1] - x_bins[x_i])
+            xp[i] = (x - x_bins[x_i]) * dx_inv
+            xm[i] = (x_bins[x_i+1] - x) * dx_inv
+        else:
+            xp[i] = 1.0
+            xm[i] = 1.0
+        y_i = y_is[i]
+        y = y_vals[i]
+        dy_inv = 1.0 / (y_bins[y_i+1] - y_bins[y_i])
+        yp[i] = (y - y_bins[y_i]) * dy_inv
+        ym[i] = (y_bins[y_i+1] - y) * dy_inv
 
-    return h_output, he_output
+    if nt > 1:
+        for i in range(nc):
+            x_i = x_is[i]
+            y_i = y_is[i]
+            z1 = ntbins*y_i + x_i
+            z2 = z1 + ntbins
+            z3 = z1 + 1
+            z4 = z2 + 1
+            for d in range(2):
+                for j in range(ne):
+                    moutput[d, i, j] = mtable[d, z1, j] * xm[i] * ym[i] + \
+                                       mtable[d, z2, j] * xm[i] * yp[i] + \
+                                       mtable[d, z3, j] * xp[i] * ym[i] + \
+                                       mtable[d, z4, j] * xp[i] * yp[i]
+
+    if do_var:
+        for i in range(nc):
+            if nt == 1:
+                x_i = 0
+            else:
+                x_i = x_is[i]
+            y_i = y_is[i]
+            z1 = ntbins * y_i + x_i
+            z2 = z1 + ntbins
+            z3 = z1 + 1
+            z4 = z2 + 1
+            for d in range(2):
+                for k in range(nelem):
+                    for j in range(ne):
+                        voutput[d, k, i, j] = vtable[d, k, z1, j] * xm[i] * ym[i] + \
+                                              vtable[d, k, z2, j] * xm[i] * yp[i]
+                        if nt > 1:
+                            voutput[d, k, i, j] += vtable[d, k, z3, j] * xp[i] * ym[i] + \
+                                                   vtable[d, k, z4, j] * xp[i] * yp[i]
+
+    if nt == 1:
+        return None, voutput
+    elif do_var:
+        return moutput, voutput
+    else:
+        return moutput, None

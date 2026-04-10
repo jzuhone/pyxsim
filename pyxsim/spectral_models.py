@@ -11,7 +11,6 @@ from soxs.spectra import (
     CloudyCIEGenerator,
     CloudyPionGenerator,
     MekalGenerator,
-    OneACX2Generator,
     get_tbabs_absorb,
     get_wabs_absorb,
 )
@@ -85,23 +84,32 @@ class SpectralInterpolator2D:
 
 
 class SpectralInterpolatorCX:
-    def __init__(self, vbins, h_spec, he_spec):
+    def __init__(self, kT_bins, vbins, mspec, vspec):
+        self.kT_bins = kT_bins.astype("float64")
         self.vbins = vbins.astype("float64")
-        self.h_spec = h_spec
-        self.he_spec = he_spec
+        self.mspec = mspec
+        self.vspec = vspec
 
-    def __call__(self, v_vals):
-        x_i = (np.digitize(v_vals, self.vbins) - 1).astype("int32")
-        if np.any((x_i == -1) | (x_i == len(self.vbins) - 1)):
-            x_i = np.minimum(np.maximum(x_i, 0), len(self.vbins) - 2)
-        h_vals, he_vals = interp_cx_spec(
-            self.h_spec,
-            self.he_spec,
+    def __call__(self, kT_vals, v_vals):
+        if kT_vals.size > 1:
+            x_i = (np.digitize(kT_vals, self.kT_bins) - 1).astype("int32")
+            if np.any((x_i == -1) | (x_i == len(self.kT_bins) - 1)):
+                x_i = np.minimum(np.maximum(x_i, 0), len(self.kT_bins) - 2)
+        else:
+            x_i = np.array([-1], dtype="int32")
+        y_i = (np.digitize(v_vals, self.vbins) - 1).astype("int32")
+        if np.any((y_i == -1) | (y_i == len(self.vbins) - 1)):
+            y_i = np.minimum(np.maximum(y_i, 0), len(self.vbins) - 2)
+        return interp_cx_spec(
+            self.mspec,
+            self.vspec,
+            kT_vals,
+            self.kT_bins,
+            x_i,
             v_vals,
             self.vbins,
-            x_i,
+            y_i,
         )
-        return h_vals, he_vals
 
 
 class ThermalSpectralModel:
@@ -293,8 +301,10 @@ class CXSpectralModel:
         nbins,
         vmin,
         vmax,
-        Zmet,
         nbins_v,
+        kT_min,
+        kT_max,
+        nbins_kT,
         var_elem=None,
         collntype=1,
         acx_model=8,
@@ -304,6 +314,7 @@ class CXSpectralModel:
     ):
         self.var_elem_names = []
         self.var_ion_names = []
+        self.elems = []
         self.ions = []
         if var_elem is not None:
             for elem in var_elem:
@@ -314,9 +325,8 @@ class CXSpectralModel:
                     self.ions.append((elem_names.index(e), int(ion)))
                 else:
                     self.var_elem_names.append(elem)
-        if not self.ions:
-            self.ions = [(None,) * 2]
-        else:
+                    self.elems.append(elem_names.index(elem))
+        if len(self.ions) > 0:
             if len(self.ions) != len(self.var_elem_names):
                 raise RuntimeError(
                     'All "var_elem" elements must either '
@@ -324,35 +334,32 @@ class CXSpectralModel:
                     "but not a mix of both!"
                 )
 
-        if len(self.var_ion_names) > 0:
-            self.cxgen = OneACX2Generator(
-                emin,
-                emax,
-                nbins,
-                collntype=collntype,
-                acx_model=acx_model,
-                recomb_type=recomb_type,
-                binscale=binscale,
-                abund_table=abund_table,
-            )
-        else:
-            self.cxgen = ACX2Generator(
-                emin,
-                emax,
-                nbins,
-                collntype=collntype,
-                acx_model=acx_model,
-                recomb_type=recomb_type,
-                binscale=binscale,
-                var_elem=var_elem,
-                abund_table=abund_table,
-            )
+        self.cxgen = ACX2Generator(
+            emin,
+            emax,
+            nbins,
+            collntype=collntype,
+            acx_model=acx_model,
+            recomb_type=recomb_type,
+            binscale=binscale,
+            var_elem=var_elem,
+            abund_table=abund_table,
+        )
+
+        self.nei = self.cxgen._one_ion
         self.model_vers = self.cxgen.model_vers
+        self.kT_min = np.log10(kT_min)
+        self.kT_max = np.log10(kT_max)
+        self.nbins_kT = nbins_kT
+        self.kT_bins = np.linspace(self.kT_min, self.kT_max, self.nbins_kT + 1)
+        self.kT_mid = 0.5 * (self.kT_bins[:-1] + self.kT_bins[1:])
+        self.dkT = np.diff(self.kT_bins)[0]
         self.vmin = np.log10(vmin)
         self.vmax = np.log10(vmax)
         self.nbins_v = nbins_v
         self.v_bins = np.linspace(self.vmin, self.vmax, self.nbins_v + 1)
         self.v_mid = 0.5 * (self.v_bins[:-1] + self.v_bins[1:])
+        self.dv = np.diff(self.v_bins)[0]
         self.nbins = self.cxgen.nbins
         self.ebins = self.cxgen.ebins
         self.emid = self.cxgen.emid
@@ -363,32 +370,73 @@ class CXSpectralModel:
         self.num_elements = self.cxgen.num_elements
 
     def prepare_spectrum(self, zobs):
-        h_spec, he_spec = self.cxgen.make_table(self.ions, 10**self.v_mid, zobs)
-        self.h_spec = h_spec
-        self.he_spec = he_spec
-        self.si = SpectralInterpolatorCX(self.v_mid, self.h_spec, self.he_spec)
+        self.mtable, self.vtable = self.cxgen.make_table(
+            zobs, self.ions, self.elems, 10**self.kT_mid, 10**self.v_mid
+        )
+        self.si = SpectralInterpolatorCX(self.kT_bins, self.v_bins, self.mtable, self.vtable)
 
-    def get_spectrum(self, coll):
+    def get_spectrum(self, kT, coll):
+        kT = np.atleast_1d(kT)
         coll = np.atleast_1d(coll)
-        return self.si(coll)
+        return self.si(kT, coll)
 
     def make_fluxf(self, emin, emax, energy=False):
         eidxs = (self.ebins[:-1] > emin) & (self.ebins[1:] < emax)
         emid = self.emid[eidxs]
+        mflux = None
+        vflux = None
         if energy:
-            h_flux = (self.h_spec[:, :, eidxs] * emid).sum(axis=-1)
-            he_flux = (self.he_spec[:, :, eidxs] * emid).sum(axis=-1)
+            if self.mtable:
+                mflux = (self.mtable[..., eidxs] * emid).sum(axis=-1)
+            if self.vtable:
+                vflux = (self.vtable[..., eidxs] * emid).sum(axis=-1)
         else:
-            h_flux = self.h_spec[:, :, eidxs].sum(axis=-1)
-            he_flux = self.he_spec[:, :, eidxs].sum(axis=-1)
-        h_f = interp1d(self.v_mid, h_flux, axis=1, fill_value=0.0, assume_sorted=True, copy=False)
-        he_f = interp1d(self.v_mid, he_flux, axis=1, fill_value=0.0, assume_sorted=True, copy=False)
+            if self.mtable:
+                mflux = self.mtable[..., eidxs].sum(axis=-1)
+            if self.vtable:
+                vflux = self.vtable[..., eidxs].sum(axis=-1)
 
-        def _fluxf(v):
-            logv = np.log10(v)
-            return h_f(logv), he_f(logv)
+        if self.nei:
+            vf = interp1d(self.v_mid, vflux, axis=2, fill_value=0.0, assume_sorted=True, copy=False)
+
+            def _fluxf(v):
+                logv = np.atleast_1d(np.log10(v))
+                return None, vf(logv)
+
+        else:
+
+            def _fluxf(kT, v):
+                logT = np.atleast_1d(np.log10(kT))
+                logv = np.atleast_1d(np.log10(v))
+                return self._get_flux_cx(logT, logv, mflux, vflux)
 
         return _fluxf
+
+    def _get_flux_cx(self, lkT, lvel, mf, vf):
+        tidxs = np.searchsorted(self.kT_bins, lkT) - 1
+        vidxs = np.searchsorted(self.v_bins, lvel) - 1
+        dT = (lkT - self.kT_bins[tidxs]) / self.dkT
+        dv = (lvel - self.v_bins[vidxs]) / self.dv
+        idx1 = np.ravel_multi_index((vidxs + 1, tidxs + 1), (self.nbins_v, self.nbins_kT))
+        idx2 = np.ravel_multi_index((vidxs + 1, tidxs), (self.nbins_v, self.nbins_kT))
+        idx3 = np.ravel_multi_index((vidxs, tidxs + 1), (self.nbins_v, self.nbins_kT))
+        idx4 = np.ravel_multi_index((vidxs, tidxs), (self.nbins_v, self.nbins_kT))
+        dx1 = dT * dv
+        dx2 = dv - dx1
+        dx3 = dT - dx1
+        dx4 = 1.0 + dx1 - dT - dv
+        mflux = dx1[np.newaxis, :] * mf[:, idx1]
+        mflux += dx2[np.newaxis, :] * mf[:, idx2]
+        mflux += dx3[np.newaxis, :] * mf[:, idx3]
+        mflux += dx4[np.newaxis, :] * mf[:, idx4]
+        if vf is not None:
+            vflux = dx1[np.newaxis, np.newaxis, :] * vf[:, :, idx1]
+            vflux += dx2[np.newaxis, np.newaxis, :] * vf[:, :, idx2]
+            vflux += dx3[np.newaxis, np.newaxis, :] * vf[:, :, idx3]
+            vflux += dx4[np.newaxis, np.newaxis, :] * vf[:, :, idx4]
+        else:
+            vflux = None
+        return mflux, vflux
 
 
 class Atable1DSpectralModel(ThermalSpectralModel):

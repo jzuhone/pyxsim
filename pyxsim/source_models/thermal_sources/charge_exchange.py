@@ -129,7 +129,8 @@ class CXSourceModel(ThermalSourceModel):
         nbins,
         collnpar,
         h_r_number_density,
-        he_d_fraction,
+        h_d_number_density,
+        he_d_number_density,
         Zmet,
         var_elem=None,
         acx_model=8,
@@ -142,6 +143,7 @@ class CXSourceModel(ThermalSourceModel):
         h_fraction=None,
         kT_min=0.01,
         kT_max=64.0,
+        nbins_kT=100,
         max_density=None,
         min_entropy=None,
         method="invert_cdf",
@@ -154,8 +156,10 @@ class CXSourceModel(ThermalSourceModel):
             nbins,
             vmin,
             vmax,
-            Zmet,
             nbins_v,
+            kT_min,
+            kT_max,
+            nbins_kT,
             collntype=2,
             acx_model=acx_model,
             recomb_type=recomb_type,
@@ -183,7 +187,8 @@ class CXSourceModel(ThermalSourceModel):
         )
         self.collnpar = collnpar
         self.h_r_number_density = h_r_number_density
-        self.he_d_fraction = he_d_fraction
+        self.h_d_number_density = h_d_number_density
+        self.he_d_number_density = he_d_number_density
         self.collntype = 2
         self.acx_model = acx_model
         self.recomb_type = recomb_type
@@ -331,7 +336,8 @@ class CXNEISourceModel(CXSourceModel):
         nbins,
         collnpar,
         h_r_number_density,
-        he_d_fraction,
+        h_d_number_density,
+        he_d_number_density,
         var_elem,
         acx_model=8,
         recomb_type=1,
@@ -355,7 +361,8 @@ class CXNEISourceModel(CXSourceModel):
             nbins,
             collnpar,
             h_r_number_density,
-            he_d_fraction,
+            h_d_number_density,
+            he_d_number_density,
             0.0,
             var_elem=var_elem,
             acx_model=acx_model,
