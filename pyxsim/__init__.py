@@ -17,7 +17,6 @@ from pyxsim.photon_list import (
 )
 from pyxsim.source_models import (
     CIESourceModel,
-    CXSourceModel,
     IGMSourceModel,
     LineSourceModel,
     NEISourceModel,
