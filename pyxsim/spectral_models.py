@@ -4,21 +4,19 @@ Photon emission and absoprtion models.
 
 import numpy as np
 from scipy.interpolate import interp1d
-from soxs.constants import K_per_keV, elem_names
+from soxs.constants import K_per_keV
 from soxs.spectra import (
-    ACX2Generator,
     CIEGenerator,
     CloudyCIEGenerator,
     CloudyPionGenerator,
     MekalGenerator,
-    OneACX2Generator,
     get_tbabs_absorb,
     get_wabs_absorb,
 )
 from soxs.utils import parse_prng, regrid_spectrum
 from yt.units.yt_array import YTArray, YTQuantity
 
-from pyxsim.lib.interpolate import interp1d_spec, interp2d_spec, interp_cx_spec
+from pyxsim.lib.interpolate import interp1d_spec, interp2d_spec
 
 
 class SpectralInterpolator1D:
@@ -82,26 +80,6 @@ class SpectralInterpolator2D:
             self.do_var,
         )
         return c_vals, m_vals, v_vals
-
-
-class SpectralInterpolatorCX:
-    def __init__(self, vbins, h_spec, he_spec):
-        self.vbins = vbins.astype("float64")
-        self.h_spec = h_spec
-        self.he_spec = he_spec
-
-    def __call__(self, v_vals):
-        x_i = (np.digitize(v_vals, self.vbins) - 1).astype("int32")
-        if np.any((x_i == -1) | (x_i == len(self.vbins) - 1)):
-            x_i = np.minimum(np.maximum(x_i, 0), len(self.vbins) - 2)
-        h_vals, he_vals = interp_cx_spec(
-            self.h_spec,
-            self.he_spec,
-            v_vals,
-            self.vbins,
-            x_i,
-        )
-        return h_vals, he_vals
 
 
 class ThermalSpectralModel:
@@ -283,112 +261,6 @@ class TableCIEModel(ThermalSpectralModel):
         self.metal_spec = metal_spec
         self.var_spec = var_spec
         self.si = SpectralInterpolator1D(self.Tvals, self.cosmic_spec, self.metal_spec, self.var_spec)
-
-
-class CXSpectralModel:
-    def __init__(
-        self,
-        emin,
-        emax,
-        nbins,
-        vmin,
-        vmax,
-        Zmet,
-        nbins_v,
-        var_elem=None,
-        collntype=1,
-        acx_model=8,
-        recomb_type=1,
-        binscale="linear",
-        abund_table="angr",
-    ):
-        self.var_elem_names = []
-        self.var_ion_names = []
-        self.ions = []
-        if var_elem is not None:
-            for elem in var_elem:
-                if "^" in elem:
-                    e, ion = elem.split("^")
-                    self.var_elem_names.append(e)
-                    self.var_ion_names.append(elem)
-                    self.ions.append((elem_names.index(e), int(ion)))
-                else:
-                    self.var_elem_names.append(elem)
-        if not self.ions:
-            self.ions = [(None,) * 2]
-        else:
-            if len(self.ions) != len(self.var_elem_names):
-                raise RuntimeError(
-                    'All "var_elem" elements must either '
-                    "be specific ionic species, or elements, "
-                    "but not a mix of both!"
-                )
-
-        if len(self.var_ion_names) > 0:
-            self.cxgen = OneACX2Generator(
-                emin,
-                emax,
-                nbins,
-                collntype=collntype,
-                acx_model=acx_model,
-                recomb_type=recomb_type,
-                binscale=binscale,
-                abund_table=abund_table,
-            )
-        else:
-            self.cxgen = ACX2Generator(
-                emin,
-                emax,
-                nbins,
-                collntype=collntype,
-                acx_model=acx_model,
-                recomb_type=recomb_type,
-                binscale=binscale,
-                var_elem=var_elem,
-                abund_table=abund_table,
-            )
-        self.model_vers = self.cxgen.model_vers
-        self.vmin = np.log10(vmin)
-        self.vmax = np.log10(vmax)
-        self.nbins_v = nbins_v
-        self.v_bins = np.linspace(self.vmin, self.vmax, self.nbins_v + 1)
-        self.v_mid = 0.5 * (self.v_bins[:-1] + self.v_bins[1:])
-        self.nbins = self.cxgen.nbins
-        self.ebins = self.cxgen.ebins
-        self.emid = self.cxgen.emid
-        self.atable = self.cxgen.atable
-        self.de = np.diff(self.ebins)
-        self.model = self.cxgen.model
-        self.collntype = self.cxgen.collntype
-        self.num_elements = self.cxgen.num_elements
-
-    def prepare_spectrum(self, zobs):
-        h_spec, he_spec = self.cxgen.make_table(self.ions, 10**self.v_mid, zobs)
-        self.h_spec = h_spec
-        self.he_spec = he_spec
-        self.si = SpectralInterpolatorCX(self.v_mid, self.h_spec, self.he_spec)
-
-    def get_spectrum(self, coll):
-        coll = np.atleast_1d(coll)
-        return self.si(coll)
-
-    def make_fluxf(self, emin, emax, energy=False):
-        eidxs = (self.ebins[:-1] > emin) & (self.ebins[1:] < emax)
-        emid = self.emid[eidxs]
-        if energy:
-            h_flux = (self.h_spec[:, :, eidxs] * emid).sum(axis=-1)
-            he_flux = (self.he_spec[:, :, eidxs] * emid).sum(axis=-1)
-        else:
-            h_flux = self.h_spec[:, :, eidxs].sum(axis=-1)
-            he_flux = self.he_spec[:, :, eidxs].sum(axis=-1)
-        h_f = interp1d(self.v_mid, h_flux, axis=1, fill_value=0.0, assume_sorted=True, copy=False)
-        he_f = interp1d(self.v_mid, he_flux, axis=1, fill_value=0.0, assume_sorted=True, copy=False)
-
-        def _fluxf(v):
-            logv = np.log10(v)
-            return h_f(logv), he_f(logv)
-
-        return _fluxf
 
 
 class Atable1DSpectralModel(ThermalSpectralModel):

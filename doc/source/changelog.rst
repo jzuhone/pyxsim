@@ -9,9 +9,6 @@ Version 4.5.0
 This version of pyXSIM contains significant new features, and some
 backwards-incompatible changes.
 
-* Support for simulating emission from charge exchange interactions using the
-  `ACX2 model <https://acx2.readthedocs.io/>`_ has been added. See
-  :ref:`charge-exchange` for details.
 * It is now possible to set a single abundance for "trace elements" in
   :class:`~pyxsim.source_models.thermal_sources.CIESourceModel` instances,
   when using either the APEC or SPEX models. See :ref:`trace-abundances` for details.

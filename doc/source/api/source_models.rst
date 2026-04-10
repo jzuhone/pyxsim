@@ -15,12 +15,6 @@ Source Models API
 .. autoclass:: pyxsim.source_models.thermal_sources.photoionization.PionSourceModel
     :members: make_spectrum
 
-.. autoclass:: pyxsim.source_models.thermal_sources.charge_exchange.CXSourceModel
-    :members: make_spectrum
-
-.. autoclass:: pyxsim.source_models.thermal_sources.charge_exchange.CXNEISourceModel
-    :members: make_spectrum
-
 .. autoclass:: pyxsim.source_models.power_law_sources.PowerLawSourceModel
     :members: make_spectrum
     :undoc-members:
