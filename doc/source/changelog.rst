@@ -6,7 +6,7 @@ ChangeLog
 Version 4.5.0
 -------------
 
-This version of pyXSIM contains significant new features, and some
+This version of pyXSIM contains a few significant new features, and some
 backwards-incompatible changes.
 
 * It is now possible to set a single abundance for "trace elements" in

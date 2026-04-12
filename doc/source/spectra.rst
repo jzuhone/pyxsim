@@ -114,6 +114,7 @@ volume element before adding it to the total summed spectrum.
     spec_obs2 = plaw_model.make_spectrum(sp, emin, emax, nbins, redshift=0.05,
                                          normal=[3.0, -0.2, 1.0])
 
+An example of how the Doppler shifting works is in the cookbook example `Thermal_Emission`.
 
 .. note::
 
