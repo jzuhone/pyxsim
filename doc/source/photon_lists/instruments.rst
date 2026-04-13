@@ -9,7 +9,7 @@ external packages. The supported software packages are:
 
 * `MARX <https://space.mit.edu/ASC/MARX/>`_
 * `SIMX <https://hea-www.cfa.harvard.edu/simx/>`_
-* `SIXTE <https://https://www.sternwarte.uni-erlangen.de/research/sixte/>`_
+* `SIXTE <https://www.sternwarte.uni-erlangen.de/research/sixte/>`_
 * `SOXS <https://hea-www.cfa.harvard.edu/soxs>`_
 
 MARX

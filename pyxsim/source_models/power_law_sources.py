@@ -120,7 +120,7 @@ class PowerLawSourceModel(SourceModel):
         redshift : float, optional
             If greater than 0, we assume that the spectrum should be created in
             the observer frame at a distance given by the cosmology. Default: 0.0
-        dist : float, (value, unit) tuple, unyt_quantity, or :class:`~astropy.units.Quantity, optional
+        dist : float, (value, unit) tuple, unyt_quantity, or :class:`~astropy.units.Quantity`, optional
             The distance to a nearby source, if redshift = 0.0. If a float, it
             is assumed to be in units of kpc.
         cosmology : :class:`~yt.utilities.cosmology.Cosmology`, optional

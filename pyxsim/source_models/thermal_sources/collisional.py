@@ -219,108 +219,108 @@ class CIESourceModel(ThermalSourceModel):
 
 class NEISourceModel(CIESourceModel):
     """
-      Initialize a source model from a thermal spectrum, using the
-      APEC NEI tables from https://www.atomdb.org. Note that for this
-      class a set of specific element fields must be supplied. This should
-      really only be used with simulation data which include the appropriate
-      NEI calculations.
+    Initialize a source model from a thermal spectrum, using the
+    APEC NEI tables from https://www.atomdb.org. Note that for this
+    class a set of specific element fields must be supplied. This should
+    really only be used with simulation data which include the appropriate
+    NEI calculations.
 
-      Parameters
-      ----------
-      emin : float
-          The minimum energy for the spectrum in keV.
-      emax : float
-          The maximum energy for the spectrum in keV.
-      nbins : integer
-          The number of channels in the spectrum.
-      var_elem : dict
-          Abundances of ions. Each dictionary value, specified by the ionic
-          symbol, corresponds to the abundance of that symbol. If a float, it is
-          understood to be constant and in solar units. If a string or tuple of
-          strings, it is assumed to be a spatially varying field.
-      binscale : string, optional
-          The scale of the energy binning: "linear" or "log".
-          Default: "linear"
-      temperature_field : string or (ftype, fname) tuple, optional
-          The yt temperature field to use for the thermal modeling. Must have
-          units of Kelvin. Default: ("gas","temperature")
-      emission_measure_field : string or (ftype, fname) tuple, optional
-          The yt emission measure field to use for the thermal modeling. Must
-          have units of cm^-3. Default: ("gas","emission_measure")
-      h_fraction : float, string, or tuple of strings, optional
-          The hydrogen mass fraction. If a float, assumes a constant mass
-          fraction of hydrogen throughout. If a string or tuple of strings,
-          is taken to be the name of the hydrogen fraction field. Default is
-          whatever value is appropriate for the chosen abundance table.
-      kT_min : float, optional
-          The default minimum temperature in keV to compute emission for.
-          Default: 0.025
-      kT_max : float, optional
-          The default maximum temperature in keV to compute emission for.
-          Default: 64.0
-      max_density : float, (value, unit) tuple, unyt_quantity, or Quantity
-          The maximum density of the cells or particles to use when generating
-          photons. If a float, the units are assumed to be g/cm**3.
-          Default: None, meaning no maximum density.
-      min_entropy : float, (value, unit) tuple, unyt_quantity, or Quantity
-          The minimum entropy of the cells or particles to use when generating
-          photons. If a float, the units are assumed to be keV*cm**2.
-          Default: None, meaning no minimum entropy.
-      method : string, optional
-          The method used to generate the photon energies from the spectrum:
-          "invert_cdf": Invert the cumulative distribution function of the spectrum.
-          "accept_reject": Acceptance-rejection method using the spectrum.
-          The first method should be sufficient for most cases.
-      thermal_broad : boolean, optional
-          Whether the spectral lines should be thermally
-          broadened. Default: True
+    Parameters
+    ----------
+    emin : float
+        The minimum energy for the spectrum in keV.
+    emax : float
+        The maximum energy for the spectrum in keV.
+    nbins : integer
+        The number of channels in the spectrum.
+    var_elem : dict
+        Abundances of ions. Each dictionary value, specified by the ionic
+        symbol, corresponds to the abundance of that symbol. If a float, it is
+        understood to be constant and in solar units. If a string or tuple of
+        strings, it is assumed to be a spatially varying field.
+    binscale : string, optional
+        The scale of the energy binning: "linear" or "log".
+        Default: "linear"
+    temperature_field : string or (ftype, fname) tuple, optional
+        The yt temperature field to use for the thermal modeling. Must have
+        units of Kelvin. Default: ("gas","temperature")
+    emission_measure_field : string or (ftype, fname) tuple, optional
+        The yt emission measure field to use for the thermal modeling. Must
+        have units of cm^-3. Default: ("gas","emission_measure")
+    h_fraction : float, string, or tuple of strings, optional
+        The hydrogen mass fraction. If a float, assumes a constant mass
+        fraction of hydrogen throughout. If a string or tuple of strings,
+        is taken to be the name of the hydrogen fraction field. Default is
+        whatever value is appropriate for the chosen abundance table.
+    kT_min : float, optional
+        The default minimum temperature in keV to compute emission for.
+        Default: 0.025
+    kT_max : float, optional
+        The default maximum temperature in keV to compute emission for.
+        Default: 64.0
+    max_density : float, (value, unit) tuple, unyt_quantity, or Quantity
+        The maximum density of the cells or particles to use when generating
+        photons. If a float, the units are assumed to be g/cm**3.
+        Default: None, meaning no maximum density.
+    min_entropy : float, (value, unit) tuple, unyt_quantity, or Quantity
+        The minimum entropy of the cells or particles to use when generating
+        photons. If a float, the units are assumed to be keV*cm**2.
+        Default: None, meaning no minimum entropy.
+    method : string, optional
+        The method used to generate the photon energies from the spectrum:
+        "invert_cdf": Invert the cumulative distribution function of the spectrum.
+        "accept_reject": Acceptance-rejection method using the spectrum.
+        The first method should be sufficient for most cases.
+    thermal_broad : boolean, optional
+        Whether the spectral lines should be thermally
+        broadened. Default: True
     model_root : string, optional
-          The directory root where the model files are stored. If not provided,
-          a default location known to pyXSIM is used.
-      model_vers : string, optional
-          The version identifier string for the model files, e.g.
-          "2.0.2". Default is "3.0.9".
-      nolines : boolean, optional
-          Turn off lines entirely for generating emission.
-          Default: False
-      abund_table : string or array_like, optional
-          The abundance table to be used for solar abundances.
-          Either a string corresponding to a built-in table or an array
-          of 30 floats corresponding to the abundances of each element
-          relative to the abundance of H. Default is "angr".
-          Built-in options are:
-          "angr" : from Anders E. & Grevesse N. (1989, Geochimica et
-          Cosmochimica Acta 53, 197)
-          "aspl" : from Asplund M., Grevesse N., Sauval A.J. & Scott
-          P. (2009, ARAA, 47, 481)
-          "wilm" : from Wilms, Allen & McCray (2000, ApJ 542, 914
-          except for elements not listed which are given zero abundance)
-          "lodd" : from Lodders, K (2003, ApJ 591, 1220)
-          "feld" : from Feldman U. (Physica Scripta, 46, 202)
-          "cl17.03" : the abundance table used in Cloudy v17.03.
-      prng : integer or :class:`~numpy.random.RandomState` object
-          A pseudo-random number generator. Typically will only be specified
-          if you have a reason to generate the same set of random numbers,
-          such as for a test. Default is to use the :mod:`numpy.random` module.
+        The directory root where the model files are stored. If not provided,
+        a default location known to pyXSIM is used.
+    model_vers : string, optional
+        The version identifier string for the model files, e.g.
+        "2.0.2". Default is "3.0.9".
+    nolines : boolean, optional
+        Turn off lines entirely for generating emission.
+        Default: False
+    abund_table : string or array_like, optional
+        The abundance table to be used for solar abundances.
+        Either a string corresponding to a built-in table or an array
+        of 30 floats corresponding to the abundances of each element
+        relative to the abundance of H. Default is "angr".
+        Built-in options are:
+        "angr" : from Anders E. & Grevesse N. (1989, Geochimica et
+        Cosmochimica Acta 53, 197)
+        "aspl" : from Asplund M., Grevesse N., Sauval A.J. & Scott
+        P. (2009, ARAA, 47, 481)
+        "wilm" : from Wilms, Allen & McCray (2000, ApJ 542, 914
+        except for elements not listed which are given zero abundance)
+        "lodd" : from Lodders, K (2003, ApJ 591, 1220)
+        "feld" : from Feldman U. (Physica Scripta, 46, 202)
+        "cl17.03" : the abundance table used in Cloudy v17.03.
+    prng : integer or :class:`~numpy.random.RandomState` object
+        A pseudo-random number generator. Typically will only be specified
+        if you have a reason to generate the same set of random numbers,
+        such as for a test. Default is to use the :mod:`numpy.random` module.
 
-      Examples
-      --------
-      >>> var_elem = {
-      ...     "H^0":  ("flash", "h   "),
-      ...     "He^0": ("flash", "he  "),
-      ...     "He^1": ("flash", "he1 "),
-      ...     "He^2": ("flash", "he2 "),
-      ...     "O^0":  ("flash", "o   "),
-      ...     "O^1":  ("flash", "o1  "),
-      ...     "O^2":  ("flash", "o2  "),
-      ...     "O^3":  ("flash", "o3  "),
-      ...     "O^4":  ("flash", "o4  "),
-      ...     "O^5":  ("flash", "o5  "),
-      ...     "O^6":  ("flash", "o6  "),
-      ...     "O^7":  ("flash", "o7  "),
-      ...     "O^8":  ("flash", "o8  ")
-      ... }
-      >>> source_model = NEISourceModel(0.1, 10.0, 10000, var_elem)
+    Examples
+    --------
+    >>> var_elem = {
+    ...     "H^0":  ("flash", "h   "),
+    ...     "He^0": ("flash", "he  "),
+    ...     "He^1": ("flash", "he1 "),
+    ...     "He^2": ("flash", "he2 "),
+    ...     "O^0":  ("flash", "o   "),
+    ...     "O^1":  ("flash", "o1  "),
+    ...     "O^2":  ("flash", "o2  "),
+    ...     "O^3":  ("flash", "o3  "),
+    ...     "O^4":  ("flash", "o4  "),
+    ...     "O^5":  ("flash", "o5  "),
+    ...     "O^6":  ("flash", "o6  "),
+    ...     "O^7":  ("flash", "o7  "),
+    ...     "O^8":  ("flash", "o8  ")
+    ... }
+    >>> source_model = NEISourceModel(0.1, 10.0, 10000, var_elem)
     """
 
     _nei = True
