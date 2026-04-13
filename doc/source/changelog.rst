@@ -10,7 +10,7 @@ This version of pyXSIM contains a few significant new features, and some
 backwards-incompatible changes.
 
 * It is now possible to set a single abundance for "trace elements" in
-  :class:`~pyxsim.source_models.thermal_sources.CIESourceModel` instances,
+  :class:`~pyxsim.source_models.thermal_sources.collisional.CIESourceModel` instances,
   when using either the APEC or SPEX models. See :ref:`trace-abundances` for details.
 * Support for Doppler shifting of intensity fields and spectra created from data
   objects has been added. See :ref:`intensity-fields` and :ref:`xray-spectra`

@@ -32,7 +32,7 @@ like this:
 
     spec_src = plaw_model.make_spectrum(sp, emin, emax, nbins)
 
-The resulting spectrum ``spec_src`` is a :class:`~soxs.spectrum.CountRateSpectrum`
+The resulting spectrum ``spec_src`` is a :class:`~soxs.spectra.base.CountRateSpectrum`
 object, which has a number of methods in SOXS that can be used to analyze and visualize
 it.
 
@@ -54,7 +54,7 @@ by default from yt, usually the one associated with the dataset:
 
     spec_obs = plaw_model.make_spectrum(sp, emin, emax, nbins, redshift=redshift)
 
-The resulting spectrum ``spec_obs`` is a :class:`~soxs.spectrum.Spectrum` object, which
+The resulting spectrum ``spec_obs`` is a :class:`~soxs.spectra.base.Spectrum` object, which
 has a number of methods in SOXS that can be used to analyze and visualize it.
 
 If you want to choose a different cosmology, specify a yt

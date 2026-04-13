@@ -51,10 +51,10 @@ in turn below.
 Thermal Sources in Collisional Ionization Equilbrium (CIE)
 ==========================================================
 
-The :class:`~pyxsim.source_models.thermal_sources.CIESourceModel` class
+The :class:`~pyxsim.source_models.thermal_sources.collisional.CIESourceModel` class
 simulates thermal emission under the assumption of collisional ionization
 equilibrium (CIE). By default, setting up a
-:class:`~pyxsim.source_models.thermal_sources.CIESourceModel` object requires
+:class:`~pyxsim.source_models.thermal_sources.collisional.CIESourceModel` object requires
 the following arguments:
 
 * ``model``: The specific CIE model to use. Options are ``"apec"``, ``"spex"``,
@@ -144,7 +144,7 @@ The abundance parameters discussed so far assume abundance of a particular
 element or a number of elements relative to the Solar value. Underlying this
 are the values of the Solar abundances themselves. It is possible to change the
 Solar abundance table in pyXSIM via the optional ``abund_table`` argument to
-:class:`~pyxsim.source_models.thermal_sources.CIESourceModel`. By default,
+:class:`~pyxsim.source_models.thermal_sources.collisional.CIESourceModel`. By default,
 pyXSIM assumes the `Anders & Grevesse 1989 <http://adsabs.harvard.edu/abs/1989GeCoA..53..197A>`_
 abundances corresponding to a setting of ``"angr"`` for this parameter, but it
 is possible to use other tables of solar abundances. tables included
@@ -193,10 +193,10 @@ and Zn. An example:
 Variable Abundances
 +++++++++++++++++++
 
-As noted above, by default :class:`~pyxsim.source_models.CIESourceModel` assumes
+As noted above, by default :class:`~pyxsim.source_models.collisional.CIESourceModel` assumes
 all abundances besides H, He, and perhaps some trace elements are set by the single
 value or yt field provided by the ``Zmet`` parameter. However, more fine-grained
-control is possible. :class:`~pyxsim.source_models.CIESourceModel` accepts a
+control is possible. :class:`~pyxsim.source_models.collisional.CIESourceModel` accepts a
 ``var_elem`` optional argument to specify which elements should be allowed to vary
 freely. The syntax is the same as for ``Zmet``, in that each element set can be a
 single floating-point value or a yt field name corresponding to a field in the
@@ -243,7 +243,7 @@ Examples
 ++++++++
 
 Here, we will show several examples of constructing
-:class:`~pyxsim.source_models.thermal_models.CIESourceModel` objects.
+:class:`~pyxsim.source_models.thermal_models.collisional.CIESourceModel` objects.
 
 An example where we use the default parameters, and a constant
 metallicity:
@@ -306,13 +306,13 @@ Non-Equilibrium Ionization
 ==========================
 
 pyXSIM has support for emission from plasmas in a non-equilibrium ionization
-state in the :class:`~pyxsim.source_models.thermal_sources.NEISourceModel`.
+state in the :class:`~pyxsim.source_models.thermal_sources.collisional.NEISourceModel`.
 In this case, it is assumed that the NEI calculation for the various ionization
 states has been carried out in your simulation code, so that you have fields
 available for each element and ionization state that you want to generate
 emission from.
 
-To use :class:`~pyxsim.source_models.thermal_sources.NEISourceModel`, one must
+To use :class:`~pyxsim.source_models.thermal_sources.collisional.NEISourceModel`, one must
 first create a dictionary mapping elements in their different ionization states
 to the corresponding fields in your dataset as seen from yt, or single
 floating-point values. The ionization states in the keys of this dictionary
@@ -340,8 +340,8 @@ Here is an example from a FLASH dataset:
                 "O^8": ("flash", "o8  ")
                }
 
-Unlike the :class:`~pyxsim.source_models.thermal_sources.CIESourceModel`, for
-the :class:`~pyxsim.source_models.thermal_sources.NEISourceModel` source all
+Unlike the :class:`~pyxsim.source_models.thermal_sources.collisional.CIESourceModel`, for
+the :class:`~pyxsim.source_models.thermal_sources.collisional.NEISourceModel` source all
 elements and ionizations must be specified in the ``var_elem`` dictionary,
 which is now required. There is no separate ``Zmet`` which can be set. The
 required arguments are:
@@ -354,8 +354,8 @@ required arguments are:
   should be specified.
 
 All other optional keyword arguments are the same as in the
-:class:`~pyxsim.source_models.thermal_sources.CIESourceModel`, see above for
-details. The :class:`~pyxsim.source_models.thermal_sources.NEISourceModel`
+:class:`~pyxsim.source_models.thermal_sources.collisional.CIESourceModel`, see above for
+details. The :class:`~pyxsim.source_models.thermal_sources.collisional.NEISourceModel`
 is currently only compatible with the ``"apec"`` emission model. An example
 invocation is:
 
@@ -371,7 +371,7 @@ in ``var_elem``.
 Photoionization Source Model
 ============================
 
-The :class:`~pyxsim.source_models.thermal_sources.PionSourceModel` is
+The :class:`~pyxsim.source_models.thermal_sources.photoionization.PionSourceModel` is
 a source model for a thermal plasma including photoionization and
 resonant scattering from the CXB (in addition to collisional ionization), based on
 `Khabibullin & Churazov 2019 <https://ui.adsabs.harvard.edu/abs/2019MNRAS.482.4972K/>`_
@@ -394,8 +394,8 @@ Cloudy-based CIE model is used to compute the spectrum. This model assumes the
 abundance tables from Feldman 1992 (``"feld"``) and currently cannot be changed
 to another.
 
-The arguments for :class:`~pyxsim.source_models.thermal_sources.PionSourceModel`
-are very similar to :class:`~pyxsim.source_models.thermal_sources.CIESourceModel`.
+The arguments for :class:`~pyxsim.source_models.thermal_sources.photoionization.PionSourceModel`
+are very similar to :class:`~pyxsim.source_models.thermal_sources.collisional.CIESourceModel`.
 Required arguments are:
 
 * ``emin``: The minimum energy for the spectrum in keV.
@@ -404,7 +404,7 @@ Required arguments are:
 * ``Zmet``: The metallicity. Either a floating-point number for a constant
   metallicity, or the name of a yt field for a spatially-varying metallicity.
 
-For the :class:`~pyxsim.source_models.thermal_sources.PionSourceModel`, He is
+For the :class:`~pyxsim.source_models.thermal_sources.photoionization.PionSourceModel`, He is
 fixed at abundance table value, and all higher elements up Zn to included in
 ``Zmet``. Optional arguments are:
 
