@@ -44,7 +44,7 @@ class LineSourceModel(SourceModel):
     --------
     >>> location = (3.5, "keV")
     >>> sigma = (1000., "km/s")
-    >>> line_model = LineSourceModel(location, "dark_matter_density_squared", sigma=sigma)
+    >>> line_model = LineSourceModel(location, "dark_matter_density_squared", sigma)
     """
 
     def __init__(self, e0, emission_field, sigma, prng=None):
