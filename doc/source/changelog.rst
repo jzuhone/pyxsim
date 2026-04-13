@@ -16,7 +16,7 @@ backwards-incompatible changes.
   objects has been added. See :ref:`intensity-fields` and :ref:`xray-spectra`
   for more details.
 * A simple model for absorption by neutral gas internal to a source has been
-  implemented for projecting photon lists. See :ref:`internal-absorption` for
+  implemented for projecting photon lists. See :ref:`absorption` for
   details.
 * The :class:`~pyxsim.source_models.power_law_sources.PowerLawSourceModel` no
   longer takes an ``emission_field`` argument in units of counts/s/keV, but
@@ -221,7 +221,7 @@ Version 3.0.0
 
 This major update to pyXSIM contains a number of updates, including some
 backwards-incompatible changes to the API. To figure out how to transfer
-your code to version 3.x, please read :ref:`v2_to_v3`.
+your code to version 3.x.
 
 * A brand-new paradigm for generating photon lists and event lists has been
   created. In the new scheme, one does not create ``PhotonList`` and ``EventList``
@@ -350,7 +350,7 @@ This is a major new release of pyXSIM, which fixes bugs, adds a number of new fe
 but most importantly, implements a simpler API in many aspects. A number of the changes
 in this version are backwards-incompatible with previous versions, and where applicable
 is noted below. A useful summary of the API changes with some code examples can be
-found at :ref:`v1_to_v2`.
+found in the older version documentation.
 
 The largest (and largely hidden) change in this release is the outsourcing of
 much of pyXSIM's capabilities to `SOXS <http://hea-www.cfa.harvard.edu/~jzuhone/soxs>`_,
@@ -367,8 +367,8 @@ New features:
   cosmological simulations.
 * A module has been added to generate X-ray photons from a population of X-ray
   binaries, both low-mass and high-mass. This assumes as input a simulation with star
-  particles which have masses, ages, and metallicities. See :ref:`xray-binaries` for
-  more information. This is an experimental feature which should be considered in "beta".
+  particles which have masses, ages, and metallicities. This is an experimental feature
+  which should be considered in "beta".
 * A minor feature, but methods and functions that accept arguments such as ``area`` and
   ``exp_time`` which accept values with unit information can now accept
   :class:`~astropy.units.Quantity` instances.
@@ -432,7 +432,7 @@ The following interrelated changes arise from a refactor of :class:`~pyxsim.even
   so that all events are still written to the file.
 * The methods for generating events from point sources and backgrounds have been removed
   from :class:`~pyxsim.event_list.EventList` and now exist as "source generators" which
-  return new event lists. See :ref:`source-generators` for more information.
+  return new event lists.
 
 Other changes:
 
