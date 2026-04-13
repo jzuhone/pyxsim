@@ -19,6 +19,8 @@ from pyxsim.utils import (
     sanitize_normal,
 )
 
+keV_per_K = unyt_quantity(1.0, "K").to_value("keV", "thermal")
+
 
 class ThermalSourceModel(SourceModel):
     _density_dependence = False
@@ -301,6 +303,15 @@ class ThermalSourceModel(SourceModel):
     def make_fluxf(self, emin, emax, energy=False):
         return self.spectral_model.make_fluxf(emin, emax, energy=energy)
 
+    def prepare_yt_data(self, chunk):
+        out_chunk = {
+            "density": np.ravel(chunk[self.density_field].d),
+            "kT": np.ravel(keV_per_K * chunk[self.temperature_field].d),
+            "entropy": np.ravel(chunk[self.entropy_field].d),
+            "emission_measure": chunk[self.emission_measure_field].d,
+        }
+        return out_chunk
+
     def process_data(
         self,
         mode,
@@ -319,7 +330,7 @@ class ThermalSourceModel(SourceModel):
 
         shifted_intensity = mode.endswith("intensity") and shifting
 
-        orig_shape = chunk[self.temperature_field].shape
+        orig_shape = chunk["kT"].shape
         if len(orig_shape) == 0:
             orig_ncells = 0
         else:
@@ -335,23 +346,23 @@ class ThermalSourceModel(SourceModel):
         cut = True
 
         if self.max_density is not None:
-            cut &= np.ravel(chunk[self.density_field]) < self.max_density
+            cut &= chunk["density"] < self.max_density
         if self.min_entropy is not None:
-            cut &= np.ravel(chunk[self.entropy_field]) > self.min_entropy
-        kT = np.ravel(chunk[self.temperature_field].to_value("keV", "thermal"))
+            cut &= chunk["entropy"] > self.min_entropy
+        kT = keV_per_K * chunk["temperature"]
         cut &= (kT >= self.kT_min) & (kT <= self.kT_max)
 
-        cell_nrm = np.ravel(chunk[self.emission_measure_field].d * spectral_norm)
+        cell_nrm = chunk["emission_measure"] * spectral_norm
 
         if self.nh_field is not None:
-            nH = np.ravel(chunk[self.nh_field].d)
+            nH = chunk[self.nh_field]
         else:
             nH = None
 
         if isinstance(self.h_fraction, Number):
             X_H = self.h_fraction
         else:
-            X_H = np.ravel(chunk[self.h_fraction].d)
+            X_H = chunk[self.h_fraction]
 
         num_cells = cut.sum()
 
@@ -404,7 +415,7 @@ class ThermalSourceModel(SourceModel):
                 fac = self.Zconvert
                 if str(mZ.units) != "Zsun":
                     fac /= X_H
-                metalZ = np.ravel(mZ.d * fac)[cut]
+                metalZ = mZ[cut] * fac
 
         elemZ = None
         if self.num_var_elem > 0:
@@ -418,7 +429,7 @@ class ThermalSourceModel(SourceModel):
                     fac = self.mconvert[key]
                     if str(eZ.units) != "Zsun":
                         fac /= X_H
-                    elemZ[j, :] = np.ravel(eZ.d * fac)[cut]
+                    elemZ[j, :] = eZ[cut] * fac
 
         if self.observer == "internal" and mode == "photons":
             r2 = self.compute_radius(chunk, cut=cut)

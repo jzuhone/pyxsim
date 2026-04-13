@@ -332,7 +332,7 @@ class NEISourceModel(CIESourceModel):
         nbins,
         var_elem,
         binscale="linear",
-        temperature_field=("gas", "temperature"),
+        temperature_field=("gas", "kT"),
         emission_measure_field=("gas", "emission_measure"),
         h_fraction=None,
         kT_min=0.025,
