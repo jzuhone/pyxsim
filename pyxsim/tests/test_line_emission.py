@@ -5,9 +5,9 @@ import tempfile
 import h5py
 import numpy as np
 from numpy.testing import assert_allclose
+from unyt import clight
 from yt.units.yt_array import YTArray, YTQuantity
 from yt.utilities.cosmology import Cosmology
-from yt.utilities.physical_constants import clight
 
 from pyxsim import LineSourceModel, make_photons
 from pyxsim.tests.utils import BetaModelSource
@@ -27,11 +27,7 @@ def test_line_emission():
     ds = bms.ds
 
     def _dm_emission(field, data):
-        return (
-            (data["gas", "dark_matter_density"] / m_chi) ** 2
-            * data["cell_volume"]
-            * cross_section
-        )
+        return (data["gas", "dark_matter_density"] / m_chi) ** 2 * data["cell_volume"] * cross_section
 
     ds.add_field(
         ("gas", "dm_emission"),
@@ -50,13 +46,9 @@ def test_line_emission():
 
     sphere = ds.sphere("c", (100.0, "kpc"))
 
-    line_model = LineSourceModel(
-        location, "dm_emission", sigma=("stream", "dark_matter_dispersion"), prng=32
-    )
+    line_model = LineSourceModel(location, "dm_emission", sigma=("stream", "dark_matter_dispersion"), prng=32)
 
-    n_photons, n_cells = make_photons(
-        "my_photons.h5", sphere, redshift, A, exp_time, line_model
-    )
+    n_photons, n_cells = make_photons("my_photons.h5", sphere, redshift, A, exp_time, line_model)
 
     D_A = cosmo.angular_diameter_distance(0.0, redshift).to("cm")
 
@@ -73,9 +65,7 @@ def test_line_emission():
     sig = sigma_E / (1.0 + redshift)
 
     assert np.abs(loc - E.mean()) < 1.645 * sig / np.sqrt(n_E)
-    assert (
-        np.abs(E.std() ** 2 - sig * sig) < 1.645 * np.sqrt(2 * (n_E - 1)) * sig**2 / n_E
-    )
+    assert np.abs(E.std() ** 2 - sig * sig) < 1.645 * np.sqrt(2 * (n_E - 1)) * sig**2 / n_E
     assert np.abs(n_E - n_E_pred) < 1.645 * np.sqrt(n_E)
 
     os.chdir(curdir)
@@ -83,15 +73,19 @@ def test_line_emission():
 
 
 def test_line_emission_fields():
-    bms = BetaModelSource()
+    cosmo = Cosmology()
+
+    vtot = vlos = 0.5
+    v_s = YTQuantity(vlos, "c").to_value("cm/s")
+    bms = BetaModelSource(no_broad=True, v_s=v_s)
     ds = bms.ds
 
+    redshift = 0.2
+
+    angular_scale = 1.0 / cosmo.angular_scale(0.0, redshift).to("cm/arcsec")
+
     def _dm_emission(field, data):
-        return (
-            (data["gas", "dark_matter_density"] / m_chi) ** 2
-            * data["cell_volume"]
-            * cross_section
-        )
+        return (data["gas", "dark_matter_density"] / m_chi) ** 2 * data["cell_volume"] * cross_section
 
     ds.add_field(
         ("gas", "dm_emission"),
@@ -108,7 +102,7 @@ def test_line_emission_fields():
 
     dm_E = (sphere["dm_emission"]).sum()
 
-    line_model1 = LineSourceModel(location, "dm_emission")
+    line_model1 = LineSourceModel(location, "dm_emission", (1.0, "eV"))
 
     line_fields1 = line_model1.make_source_fields(ds, 0.5, 7.0)
     assert_allclose(sphere[line_fields1[1]].sum().to("keV/s"), dm_E * location)
@@ -119,9 +113,7 @@ def test_line_emission_fields():
     for field in line_fields2:
         assert_allclose(sphere[field].sum(), 0.0)
 
-    line_model2 = LineSourceModel(
-        location, "dm_emission", sigma=("stream", "dark_matter_dispersion")
-    )
+    line_model2 = LineSourceModel(location, "dm_emission", ("stream", "dark_matter_dispersion"))
 
     del sphere[line_fields1[-2]]
     del sphere[line_fields1[1]]
@@ -133,20 +125,33 @@ def test_line_emission_fields():
     line_fields4 = line_model2.make_source_fields(ds, 0.1, 3.5)
     de = sigma_E / np.sqrt(2.0 * np.pi)
 
-    assert_allclose(
-        sphere[line_fields4[1]].sum().to("keV/s"), dm_E * (0.5 * location - de)
-    )
-    assert_allclose(
-        (sphere[line_fields4[-2]] * sphere["cell_volume"]).sum(), 0.5 * dm_E
-    )
+    assert_allclose(sphere[line_fields4[1]].sum().to("keV/s"), dm_E * (0.5 * location - de))
+    assert_allclose((sphere[line_fields4[-2]] * sphere["cell_volume"]).sum(), 0.5 * dm_E)
     assert_allclose(sphere[line_fields4[-1]].sum(), 0.5 * dm_E)
+
+    sphere.set_field_parameter("axis", 2)
+
+    int_fields = line_model2.make_intensity_fields(ds, 0.5, 7.0, redshift=redshift)
+
+    dist_fac = 1.0 / (4.0 * np.pi * cosmo.luminosity_distance(0.0, redshift).to("cm") ** 2).v
+    shift = np.sqrt(1.0 - vtot**2) / (1.0 - vlos)
+
+    eflux = (sphere[int_fields[0]] * sphere["cell_volume"]).sum() * angular_scale**2
+    pflux = (sphere[int_fields[1]] * sphere["cell_volume"]).sum() * angular_scale**2
+
+    assert_allclose(eflux.v, (shift**4) * location.to_value("erg") * dm_E.v * dist_fac)
+    assert_allclose(pflux.v, (1.0 + redshift) * (shift**3) * dm_E.v * dist_fac)
 
 
 def test_line_emission_spectra():
     cosmo = Cosmology()
 
-    bms = BetaModelSource()
+    vtot = vlos = 0.5
+    v_s = YTQuantity(vlos, "c").to_value("cm/s")
+    bms = BetaModelSource(no_broad=True, v_s=v_s)
     ds = bms.ds
+
+    redshift = 0.2
 
     def _dm_emission(field, data):
         return data["index", "ones"] * data.ds.quan(1.0e40, "1/s")
@@ -166,27 +171,48 @@ def test_line_emission_spectra():
     sigma = YTQuantity(1000.0, "km/s")
     sigma_E = (location * sigma / clight).in_units("keV")
 
-    line_model = LineSourceModel(location, "dm_emission", sigma=sigma)
+    line_model = LineSourceModel(location, "dm_emission", sigma)
 
     def weight_std(x, w):
         return np.sqrt(np.average((x - np.average(x, weights=w)) ** 2, weights=w))
 
     spec1 = line_model.make_spectrum(sphere, 1.0, 6.0, 5000)
-    assert_allclose(np.average(spec1.emid.value, weights=spec1.flux.value), location.v)
-    assert_allclose(
-        weight_std(spec1.emid.value, spec1.flux.value), sigma_E.v, rtol=1.0e-3
-    )
-    assert_allclose(np.sum(spec1.flux.value * spec1.de.value), dm_E.v)
+    assert_allclose(np.average(spec1.emid.value, weights=spec1.rate.value), location.v)
+    assert_allclose(weight_std(spec1.emid.value, spec1.rate.value), sigma_E.v, rtol=1.0e-3)
+    assert_allclose(np.sum(spec1.rate.value * spec1.de.value), dm_E.v)
 
-    spec2 = line_model.make_spectrum(sphere, 1.0, 6.0, 5000, redshift=0.2)
-    D_A = cosmo.angular_diameter_distance(0.0, 0.2).to_value("cm")
+    spec2 = line_model.make_spectrum(sphere, 1.0, 6.0, 5000, redshift=redshift)
+    D_A = cosmo.angular_diameter_distance(0.0, redshift).to_value("cm")
 
-    dist_fac = 1.0 / (4.0 * np.pi * (D_A * 1.2) ** 2)
+    dist_fac = 1.0 / (4.0 * np.pi * (D_A * (1.0 + redshift)) ** 2)
 
     assert_allclose(
-        np.average(spec2.emid.value, weights=spec2.flux.value), location.v / 1.2
+        np.average(spec2.emid.value, weights=spec2.flux.value),
+        location.v / (1.0 + redshift),
     )
     assert_allclose(
-        weight_std(spec2.emid.value, spec2.flux.value), sigma_E.v / 1.2, rtol=1.0e-3
+        weight_std(spec2.emid.value, spec2.flux.value),
+        sigma_E.v / (1.0 + redshift),
+        rtol=1.0e-4,
     )
-    assert_allclose(np.sum(spec2.flux.value * spec2.de.value), dm_E.v * dist_fac / 1.2)
+    assert_allclose(np.sum(spec2.flux.value * spec2.de.value), dm_E.v * dist_fac / (1.0 + redshift))
+
+    spec3 = line_model.make_spectrum(sphere, 1.0, 6.0, 5000, redshift=redshift, normal=[0.0, 0.0, 1.0])
+
+    shift = np.sqrt(1.0 - vtot**2) / (1.0 - vlos)
+
+    assert_allclose(
+        np.average(spec3.emid.value, weights=spec3.flux.value),
+        location.v * shift / (1.0 + redshift),
+    )
+
+    assert_allclose(
+        weight_std(spec3.emid.value, spec3.flux.value),
+        sigma_E.v * shift / (1.0 + redshift),
+        rtol=1.0e-4,
+    )
+
+    assert_allclose(
+        np.sum(spec3.flux.value * spec3.de.value),
+        dm_E.v * dist_fac * shift**3 / (1.0 + redshift),
+    )

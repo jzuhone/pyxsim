@@ -9,6 +9,8 @@ as real observed data. Event lists can be produced from photon list datasets by
 projecting along a particular axis. They can also be used to produce other
 useful data products.
 
+.. _project-photons:
+
 Creating a New Event List by Projecting from a Photon List
 ----------------------------------------------------------
 
@@ -32,12 +34,12 @@ photon lists are. The arguments are:
 * ``sky_center``: Central RA, Dec of the events in degrees.
 * ``absorb_model`` (optional): A string representing a model for foreground
   galactic absorption. The two models included in pyXSIM for absorption are:
-  ``"wabs"`` (`Wisconsin (Morrison and McCammon; ApJ 270, 119) <http://adsabs.harvard.edu/abs/1983ApJ...270..119M>`_),
-  and ``"tbabs"`` (`Tuebingen-Boulder (Wilms, J., Allen, A., & McCray, R. 2000, ApJ, 542, 914) <http://adsabs.harvard.edu/abs/2000ApJ...542..914W>`_).
+  ``"wabs"``, `Wisconsin (Morrison and McCammon; ApJ 270, 119) <http://adsabs.harvard.edu/abs/1983ApJ...270..119M>`_,
+  and ``"tbabs"``, `Tuebingen-Boulder (Wilms, J., Allen, A., & McCray, R. 2000, ApJ, 542, 914) <http://adsabs.harvard.edu/abs/2000ApJ...542..914W>`_.
   The default is no absorption--if an absorption model is chosen, the ``nH``
   parameter must also be set.
 * ``nH`` (optional): The foreground galactic column density in units of
-  :math:`10^{22} \rm{atoms} \rm{cm}^{-2}`, for use when one is applying
+  10\ :sup:`22` atoms cm :sup:`-2`, for use when one is applying
   foreground galactic absorption.
 * ``abund_table`` (optional): The abundance table to be used for abundances in the
   TBabs absorption model. Default is set in the SOXS configuration file, the default
@@ -63,6 +65,9 @@ photon lists are. The arguments are:
   RA, Dec positions are computed using simple linear offsets, Default: ``False``.
 * ``save_los`` (optional): If ``True``, save the line-of-sight positions along
   the projection axis in units of kpc to the events list. Default: ``False``.
+* ``phys_coord`` (optional): If ``True``, save the plane-of-sky coordinates of
+  the photons in Cartesian coordinates in units of kpc, instead of projected
+  sky coordinates in degrees. Default: False
 * ``prng`` (optional): An integer seed, pseudo-random number generator,
   :class:`~numpy.random.RandomState` object, or :mod:`~numpy.random` (the
   default). Use this if you have a reason to generate the same set of random

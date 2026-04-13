@@ -13,7 +13,7 @@ single rest-frame energy :math:`E_0`:
     \varepsilon(E) = A\delta(E-E_0)
 
 In the latter case, the emission is represented by a Gaussian with mean
-:math:`E_0` and standard deviation :math:`\sigma_E`:
+E\ :sub:`0` and standard deviation σ\ :sub:`E`:
 
 .. math::
 
@@ -21,12 +21,13 @@ In the latter case, the emission is represented by a Gaussian with mean
 
 When creating a :class:`~pyxsim.source_models.LineSourceModel`, it is
 initialized with the line rest-frame energy ``e0`` and an ``emission_field``
-field specification that represents the normalization :math:`A` in the equations
-above, which must be in units of counts/s. Optionally, the line may be broadened
-by passing in a ``sigma`` parameter, which can be a field specification or
-``YTQuantity``, corresponding to either a spatially varying field or a single
-constant value. In either case, ``sigma`` may have units of energy or velocity;
-if the latter, it will be converted to a broadening in energy units via
+field specification that represents the normalization A in the equations above,
+which must be in units of counts s\ :sup`-1`, the total count rate of the line for
+the volume or mass element. Optionally, the line may be broadened by passing in a
+``sigma`` parameter, which can be a field specification or ``YTQuantity``,
+corresponding to either a spatially varying field or a single constant value. In
+either case, ``sigma`` may have units of energy or velocity; if the latter, it
+will be converted to a broadening in energy units via
 :math:`\sigma_E = \sigma_v\frac{E_0}{c}`.
 
 .. note::

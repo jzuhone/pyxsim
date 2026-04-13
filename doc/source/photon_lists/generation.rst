@@ -41,7 +41,7 @@ The arguments taken by :func:`~pyxsim.photon_list.make_photons` are as follows:
   angular diameter and luminosity distances to the source given a ``cosmology``,
   which determines the number of photons.
 * ``area``: The collecting area to determine the number of photons. If units are
-  not specified, it is assumed to be in :math:`cm^2`.
+  not specified, it is assumed to be in cm\ :sup:`2`.
 * ``exp_time``: The exposure time to determine the number of photons. If units
   are not specified, it is assumed to be in seconds.
 * ``source_model`` : A :class:`~pyxsim.source_models.SourceModel` used to
@@ -61,9 +61,9 @@ The arguments taken by :func:`~pyxsim.photon_list.make_photons` are as follows:
 * ``cosmology`` (optional): A :class:`~yt.utilities.cosmology.Cosmology` object
   which supplies cosmological informaton. If the ``data_source`` has
   cosmological parameters, they will be used, otherwise a
-  :math:`\Lambda{\rm CDM}` cosmology with the following parameters are assumed:
-  :math:`H_0` = 71 km/s/Mpc, :math:`\Omega_m` = 0.27,
-  :math:`\Omega_\Lambda` = 0.73.
+  ΛCDM cosmology with the following parameters are assumed:
+  H\ :sub:`0` = 71 km s\ :sup:`-1` Mpc\ :sup:`-1`, Ω\ :sub:`m` = 0.27, and
+  Ω\ :sub:`Λ` = 0.73.
 * ``velocity_fields`` (optional): A list of fields to use for the velocity to
   Doppler-shift the photons. If not specified, the following will be assumed:
   ``['velocity_x', 'velocity_y', 'velocity_z']`` for grid datasets, and

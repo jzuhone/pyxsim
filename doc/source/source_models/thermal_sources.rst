@@ -106,7 +106,7 @@ parameters which can be set:
   generating photons. By "entropy" we here mean :math:`S = k_BTn_e^{-2/3}`, where
   :math:`k_BT` is the gas temperature and :math:`n_e` is the electron number
   density. If a float, the units are assumed to be keV*cm**2. It can also be a
-``YTQuantity`` or a float, string tuple such as ``(10.0, "keV*cm**2")`` Default:
+  ``YTQuantity`` or a float, string tuple such as ``(10.0, "keV*cm**2")`` Default:
   None, meaning no minimum entropy.
 * ``method``: The method used to generate the photon energies from the spectrum.
   Either ``"invert_cdf"``,
@@ -227,6 +227,18 @@ the model being used:
 * ``"mekal"``: Can vary He, C, N, O, Ne, Na, Mg, Al, Si, S, Ar, Ca, Fe, Ni
 * ``"cloudy"``: Can vary C, N, O, Ne, Fe, S, Si, Ca, and Mg
 
+.. _trace-abund:
+
+Trace Abundances
+++++++++++++++++
+
+If the ``model`` chosen for the ``CIESourceModel`` object is either ``"apec"``
+or ``"spex"``, then it possible to set the overall solar abundance for the
+"trace elements" of Li, Be, B, F, Na, P, Cl, K, Sc, Ti, V, Cr, Mn, Co, Cu, and
+Zn, using the ``trace_abund`` keyword argument, where the value is in units of
+solar metallicity. ``trace_abund`` is set to 1.0 by default. Any trace abundances
+treated as variable using the ``var_elem`` argument will not be set by ``trace_abund``.
+
 Examples
 ++++++++
 
@@ -280,6 +292,13 @@ Turning off line emission for the ``"apec"`` model:
 
     thermal_model = pyxsim.CIESourceModel("apec", 0.1, 20.0, 10000, 0.3,
                                           prng=25, nolines=True)
+
+Setting a trace abundance for the ``"spex"`` model:
+
+.. code-block:: python
+
+    thermal_model = pyxsim.CIESourceModel("spex", 0.1, 20.0, 10000, 0.3,
+                                          trace_abund=0.8)
 
 .. _nei:
 
@@ -349,12 +368,12 @@ in ``var_elem``.
 
 .. _igm-source-model:
 
-IGM Source Model
-================
+Photoionization Source Model
+============================
 
-The :class:`~pyxsim.source_models.thermal_sources.IGMSourceModel` is
+The :class:`~pyxsim.source_models.thermal_sources.PionSourceModel` is
 a source model for a thermal plasma including photoionization and
-resonant scattering from the CXB, based on
+resonant scattering from the CXB (in addition to collisional ionization), based on
 `Khabibullin & Churazov 2019 <https://ui.adsabs.harvard.edu/abs/2019MNRAS.482.4972K/>`_
 and `Churazov et al. 2001 <https://ui.adsabs.harvard.edu/abs/2001MNRAS.323...93C/>`_.
 Because of the included effects of photoionization and resonant
@@ -375,7 +394,7 @@ Cloudy-based CIE model is used to compute the spectrum. This model assumes the
 abundance tables from Feldman 1992 (``"feld"``) and currently cannot be changed
 to another.
 
-The arguments for :class:`~pyxsim.source_models.thermal_sources.IGMSourceModel`
+The arguments for :class:`~pyxsim.source_models.thermal_sources.PionSourceModel`
 are very similar to :class:`~pyxsim.source_models.thermal_sources.CIESourceModel`.
 Required arguments are:
 
@@ -385,7 +404,7 @@ Required arguments are:
 * ``Zmet``: The metallicity. Either a floating-point number for a constant
   metallicity, or the name of a yt field for a spatially-varying metallicity.
 
-For the :class:`~pyxsim.source_models.thermal_sources.IGMSourceModel`, He is
+For the :class:`~pyxsim.source_models.thermal_sources.PionSourceModel`, He is
 fixed at abundance table value, and all higher elements up Zn to included in
 ``Zmet``. Optional arguments are:
 
@@ -426,7 +445,7 @@ fixed at abundance table value, and all higher elements up Zn to included in
 * ``var_elem``: Optionally used to specify the abundances of specific elements,
   whether via floating-point numbers or yt fields. A dictionary of elements and
   values should be specified. See :ref:`var-abund` below for more details.
-* ``model_vers``: The version of the IGM tables to use in the calculations.
+* ``model_vers``: The version of the Pion tables to use in the calculations.
   Options are:
   "4_lo": Tables computed from Cloudy using a continuum resolution of 0.1 with
   a range of 0.05 to 10 keV.
@@ -442,23 +461,23 @@ fixed at abundance table value, and all higher elements up Zn to included in
 Examples
 ++++++++
 
-A simple invocation of the IGM model using a single metallicity field, and
+A simple invocation of the Pion model using a single metallicity field, and
 log-spaced energy binning:
 
 .. code-block:: python
 
-    source_model = pyxsim.IGMSourceModel(0.1, 5.0, 1000,
-                                         ("gas","metallicity"), binscale="log")
+    source_model = pyxsim.PionSourceModel(0.1, 5.0, 1000,
+                                          ("gas","metallicity"), binscale="log")
 
 Turning on resonant scattering, assuming 30% of the CXB photons are scattered:
 
 .. code-block:: python
 
-    source_model = pyxsim.IGMSourceModel(0.1, 5.0, 1000,
-                                         ("gas","metallicity"),
-                                         resonant_scattering=True,
-                                         cxb_factor=0.3,
-                                         binscale="log")
+    source_model = pyxsim.PionSourceModel(0.1, 5.0, 1000,
+                                          ("gas","metallicity"),
+                                          resonant_scattering=True,
+                                          cxb_factor=0.3,
+                                          binscale="log")
 
 Specifying the abundances of C, N, and Fe separately:
 
@@ -468,12 +487,12 @@ Specifying the abundances of C, N, and Fe separately:
                 "N": ("gas", "N_fraction"),
                 "Fe": ("gas", "Fe_fraction")}
 
-    source_model = pyxsim.IGMSourceModel(0.1, 5.0, 1000,
-                                         ("gas","metallicity"),
-                                         resonant_scattering=True,
-                                         cxb_factor=0.3,
-                                         binscale="log",
-                                         var_elem=var_elem)
+    source_model = pyxsim.PionSourceModel(0.1, 5.0, 1000,
+                                          ("gas","metallicity"),
+                                          resonant_scattering=True,
+                                          cxb_factor=0.3,
+                                          binscale="log",
+                                          var_elem=var_elem)
 
 .. _hot-gas-filter:
 
@@ -504,20 +523,20 @@ to specify a maximum density above which no emission should be calculated with t
 
 .. code-block:: python
 
-        source_model = pyxsim.IGMSourceModel(0.1, 5.0, 1000,
-                                             ("gas","metallicity"),
-                                             max_density=(5.0e-25, "g/cm**3"),
-                                             binscale="log")
+        source_model = pyxsim.PionSourceModel(0.1, 5.0, 1000,
+                                              ("gas","metallicity"),
+                                              max_density=(5.0e-25, "g/cm**3"),
+                                              binscale="log")
 
 Or to specify a minimum entropy below which no emission should be calculated, with
 the ``min_entropy`` keyword argument:
 
 .. code-block:: python
 
-        source_model = pyxsim.IGMSourceModel(0.1, 5.0, 1000,
-                                             ("gas","metallicity"),
-                                             max_density=(10.0, "keV*cm**2"),
-                                             binscale="log")
+        source_model = pyxsim.PionSourceModel(0.1, 5.0, 1000,
+                                              ("gas","metallicity"),
+                                              max_density=(10.0, "keV*cm**2"),
+                                              binscale="log")
 
 yt-based Filtering
 ++++++++++++++++++

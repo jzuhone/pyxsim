@@ -72,6 +72,7 @@ class EventList:
         self.num_files = len(self.filenames)
         self.tot_num_events = np.sum(self.num_events)
         self.observer = self.parameters.get("observer", "external")
+        self._data = {}
 
     def write_fits_file(self, fitsfile, fov, nx, overwrite=False):
         """
@@ -85,7 +86,7 @@ class EventList:
         ----------
         fitsfile : string
             The name of the event file to write.
-        fov : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
+        fov : float, (value, unit) tuple, unyt_quantity, or Quantity
             The field of view of the event file. If units are not
             provided, they are assumed to be in arcminutes.
         nx : integer
@@ -128,13 +129,11 @@ class EventList:
                 y.append(yy[keep])
 
         mylog.info(
-            "Threw out %d events because they fell outside the " "field of view.",
+            "Threw out %d events because they fell outside the field of view.",
             self.tot_num_events - n_events,
         )
 
-        col_e = fits.Column(
-            name="ENERGY", format="E", unit="eV", array=np.concatenate(e) * 1000.0
-        )
+        col_e = fits.Column(name="ENERGY", format="E", unit="eV", array=np.concatenate(e) * 1000.0)
         col_x = fits.Column(name="X", format="D", unit="pixel", array=np.concatenate(x))
         col_y = fits.Column(name="Y", format="D", unit="pixel", array=np.concatenate(y))
 
@@ -178,25 +177,29 @@ class EventList:
 
         fits.HDUList(hdulist).writeto(fitsfile, overwrite=overwrite)
 
+    def __getitem__(self, item):
+        if item not in self._data:
+            values = []
+            for fn in self.filenames:
+                with h5py.File(fn, "r") as f:
+                    d = f["data"]
+                    values.append(d[item][()])
+                self._data[item] = np.concatenate(values)
+        return self._data[item]
+
     def get_data(self, i):
         with h5py.File(self.filenames[i]) as f:
             d = f["data"]
             if self.num_events[i] > 0:
                 if self.observer == "internal":
-                    c = SkyCoord(
-                        d["xsky"][()], d["ysky"][()], unit="deg", frame="galactic"
-                    )
+                    c = SkyCoord(d["xsky"][()], d["ysky"][()], unit="deg", frame="galactic")
                     ra = c.icrs.ra.value
                     dec = c.icrs.dec.value
                 else:
                     ra = d["xsky"][()]
                     dec = d["ysky"][()]
                 energy = d["eobs"][()]
-                flux = (
-                    np.sum(energy * erg_per_keV)
-                    / self.parameters["exp_time"]
-                    / self.parameters["area"]
-                )
+                flux = np.sum(energy * erg_per_keV) / self.parameters["exp_time"] / self.parameters["area"]
             else:
                 ra = np.array([])
                 dec = np.array([])
@@ -246,9 +249,7 @@ class EventList:
             else:
                 mylog.warning("No events found in file %s, so skipping.", fn)
 
-    def write_fits_image(
-        self, imagefile, fov, nx, emin=None, emax=None, overwrite=False
-    ):
+    def write_fits_image(self, imagefile, fov, nx, emin=None, emax=None, overwrite=False):
         r"""
         Generate an image by binning X-ray counts and write it to a FITS file.
 
@@ -256,7 +257,7 @@ class EventList:
         ----------
         imagefile : string
             The name of the image file to write.
-        fov : float, (value, unit) tuple, :class:`~yt.units.yt_array.YTQuantity`, or :class:`~astropy.units.Quantity`
+        fov : float, (value, unit) tuple, unyt_quantity, or Quantity
             The field of view of the image. If units are not provided, they
             are assumed to be in arcminutes.
         nx : integer
@@ -341,14 +342,10 @@ class EventList:
                 d = f["data"]
                 spec += np.histogram(d["eobs"][:], bins=ebins)[0]
 
-        col1 = fits.Column(
-            name="CHANNEL", format="1J", array=np.arange(nchan).astype("int32") + 1
-        )
+        col1 = fits.Column(name="CHANNEL", format="1J", array=np.arange(nchan).astype("int32") + 1)
         col2 = fits.Column(name="ENERGY", format="1D", array=emid.astype("float64"))
         col3 = fits.Column(name="COUNTS", format="1J", array=spec.astype("int32"))
-        col4 = fits.Column(
-            name="COUNT_RATE", format="1D", array=spec / self.parameters["exp_time"]
-        )
+        col4 = fits.Column(name="COUNT_RATE", format="1D", array=spec / self.parameters["exp_time"])
 
         coldefs = fits.ColDefs([col1, col2, col3, col4])
 
@@ -383,3 +380,50 @@ class EventList:
         hdulist = fits.HDUList([fits.PrimaryHDU(), tbhdu])
 
         hdulist.writeto(specfile, overwrite=overwrite)
+
+    def _filter(self, prefix, keep_condition):
+        new_fns = [f"{prefix}_{fn}" for fn in self.filenames]
+        for i, fn in enumerate(self.filenames):
+            f = h5py.File(fn, "r")
+            d = f["data"]
+            x = d["xsky"][()]
+            y = d["ysky"][()]
+            keep = keep_condition(x, y)
+            nkeep = keep.sum()
+            with h5py.File(new_fns[i], "w") as fnew:
+                f.copy("parameters", fnew)
+                f.copy("info", fnew)
+                dnew = fnew.create_group("data")
+                for key in d:
+                    dnew.create_dataset(key, data=d[key][keep])
+                if nkeep == 0:
+                    flux = 0.0
+                    emin = np.nan
+                    emax = np.nan
+                else:
+                    energy = d["eobs"][keep]
+                    flux = (
+                        np.sum(energy * erg_per_keV) / self.parameters["exp_time"] / self.parameters["area"]
+                    )
+                    emin = energy.min()
+                    emax = energy.max()
+                fnew["parameters"]["flux"][()] = flux
+                fnew["parameters"]["emin"][()] = emin
+                fnew["parameters"]["emin"][()] = emax
+                fnew["info"].attrs["filenames"] = new_fns
+            f.close()
+
+    def filter_circle(self, prefix, center, radius):
+        def keep_condition(x, y):
+            r2 = (x - center[0]) ** 2 + (y - center[1]) ** 2
+            return r2 <= radius * radius
+
+        self._filter(prefix, keep_condition)
+
+    def filter_rectangle(self, prefix, left_edge, right_edge):
+        def keep_condition(x, y):
+            keep = (x >= left_edge[0]) & (x < right_edge[0])
+            keep &= (y >= left_edge[1]) & (y < right_edge[1])
+            return keep
+
+        self._filter(prefix, keep_condition)

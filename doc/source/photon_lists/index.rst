@@ -15,5 +15,6 @@ instrument models.
     generation
     event_lists
     instruments
+    absorption
     light_cone
     allsky

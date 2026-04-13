@@ -3,6 +3,32 @@
 ChangeLog
 =========
 
+Version 4.5.0
+-------------
+
+This version of pyXSIM contains a few significant new features, and some
+backwards-incompatible changes.
+
+* It is now possible to set a single abundance for "trace elements" in
+  :class:`~pyxsim.source_models.thermal_sources.CIESourceModel` instances,
+  when using either the APEC or SPEX models. See :ref:`trace-abundances` for details.
+* Support for Doppler shifting of intensity fields and spectra created from data
+  objects has been added. See :ref:`intensity-fields` and :ref:`xray-spectra`
+  for more details.
+* A simple model for absorption by neutral gas internal to a source has been
+  implemented for projecting photon lists. See :ref:`internal-absorption` for
+  details.
+* The :class:`~pyxsim.source_models.power_law_sources.PowerLawSourceModel` no
+  longer takes an ``emission_field`` argument in units of counts/s/keV, but
+  instead takes a ``luminosity_field`` argument in units of power (e.g. W, erg/s,
+  keV/s, etc.), which gives the total power within the band specified when
+  constructing the model. See :ref:`powerlaw-sources` for more details. This is a
+  backwards-incompatible change.
+* The option to save projected photon positions in event lists as relative to
+  the origin of the source in physical coordinates (in dimensions of length),
+  instead of sky coordinates, has been added. See the options in
+  :ref:`project-photons` for details.
+
 Version 4.4.3
 -------------
 
@@ -215,7 +241,7 @@ your code to version 3.x, please read :ref:`v2_to_v3`.
   keV to 0.025 keV.
 * The ``max_density`` keyword argument to
   :class:`~pyxsim.source_models.ThermalSourceModel` has had its default value
-  set to :math:`5 \times 10^{-25} g cm^{-3}`; previously it was ``None``.
+  set to 5 × 10\ :sup:`25` g cm\ :sup:`-3`; previously it was ``None``.
 * The X-ray binaries source generator has been dropped from pyXSIM.
 * The background and point-source source generators have been removed, as this
   functionality can now be used within SOXS.
@@ -238,9 +264,9 @@ This version contains bug fixes and minor enhancements.
   HDF5 dataset data using the ``.value`` attribute.
 * This version supports both the ``yt`` 3.x series and the ``yt`` 4.0 beta
   version.
-* Previous versions of pyXSIM scaled thermal emission by :math:`n_en_{H+}`,
-  where :math:`n_{H+}` is the number density of free protons. However, the
-  correct scaling is :math:`n_en_{H}`, where :math:`n_{H}` is the number
+* Previous versions of pyXSIM scaled thermal emission by n\ :sub:`e`n\ :sub:`H+`,
+  where n\ :sub:`H+` is the number density of free protons. However, the
+  correct scaling is n\ :sub:`e`n\ :sub:`H`, where n\ :sub:`H` is the number
   density of hydrogen. This has been fixed.
 * A bug which occurred when variable individual elements were used in the
   :class:`~pyxsim.source_models.ThermalSourceModel` has been fixed.
@@ -460,9 +486,10 @@ Version 1.2.3
 This is a bugfix release.
 
 * Gadget binary (non-HDF5) datasets are now supported.
-* Make sure that SPH datasets assume fully ionized gas if an ``ElectronAbundance`` field is not present.
-* The normalization of the power-law and line emission models was incorrect by a factor of :math:`1/(1+z)`.
-  This has been fixed.
+* Make sure that SPH datasets assume fully ionized gas if an ``ElectronAbundance``
+  field is not present.
+* The normalization of the power-law and line emission models was incorrect by a
+  factor of 1/(1+z). This has been fixed.
 
 Version 1.2.2
 -------------

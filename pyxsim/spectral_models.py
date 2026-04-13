@@ -5,12 +5,13 @@ Photon emission and absoprtion models.
 import numpy as np
 from scipy.interpolate import interp1d
 from soxs.constants import K_per_keV
-from soxs.spectra import get_tbabs_absorb, get_wabs_absorb
-from soxs.thermal_spectra import (
+from soxs.spectra import (
     CIEGenerator,
     CloudyCIEGenerator,
-    IGMGenerator,
+    CloudyPionGenerator,
     MekalGenerator,
+    get_tbabs_absorb,
+    get_wabs_absorb,
 )
 from soxs.utils import parse_prng, regrid_spectrum
 from yt.units.yt_array import YTArray, YTQuantity
@@ -106,12 +107,8 @@ class ThermalSpectralModel:
         else:
             cosmic_flux = self.cosmic_spec[:, eidxs].sum(axis=-1)
             metal_flux = self.metal_spec[:, eidxs].sum(axis=-1)
-        cf = interp1d(
-            self.Tvals, cosmic_flux, fill_value=0.0, assume_sorted=True, copy=False
-        )
-        mf = interp1d(
-            self.Tvals, metal_flux, fill_value=0.0, assume_sorted=True, copy=False
-        )
+        cf = interp1d(self.Tvals, cosmic_flux, fill_value=0.0, assume_sorted=True, copy=False)
+        mf = interp1d(self.Tvals, metal_flux, fill_value=0.0, assume_sorted=True, copy=False)
         if self.var_spec is not None:
             if energy:
                 var_flux = (self.var_spec[:, :, eidxs] * emid).sum(axis=-1)
@@ -155,26 +152,26 @@ class TableCIEModel(ThermalSpectralModel):
         is thermally broadening lines, it is recommended that
         this value result in an energy resolution per channel
         of roughly 1 eV or smaller.
-    binscale : string, optional
+    binscale : str, optional
         The scale of the energy binning: "linear" or "log".
         Default: "linear"
     var_elem : list of strings, optional
         The names of elements to allow to vary freely
         from the single abundance parameter. Default:
         None
-    model_root : string, optional
+    model_root : str, optional
         The directory root where the model files are stored. If
         not provided, the default SOXS-provided files are used.
-    model_vers : string, optional
+    model_vers : str, optional
         The version identifier string for the APEC files, e.g.
         "3.0.3". Default: 3.0.9
-    thermal_broad : boolean, optional
+    thermal_broad : bool, optional
         Whether the spectral lines should be thermally
         broadened. Default: True
-    nolines : boolean, optional
+    nolines : bool, optional
         Turn off lines entirely for generating spectra.
         Default: False
-    abund_table : string or array_like, optional
+    abund_table : str or array_like, optional
         The abundance table to be used for solar abundances.
         Either a string corresponding to a built-in table or an array
         of 30 floats corresponding to the abundances of each element
@@ -187,7 +184,13 @@ class TableCIEModel(ThermalSpectralModel):
         "wilm" : from Wilms, Allen & McCray (2000, ApJ 542, 914
         except for elements not listed which are given zero abundance)
         "lodd" : from Lodders, K (2003, ApJ 591, 1220)
-    nei : boolean, optional
+    trace_abund : float, optional
+        The abundance to give to trace elements (Li, Be, B, F, Na, P,
+        Cl, K, Sc, Ti, V, Cr, Mn, Co, Cu, Zn), relative to solar. Any
+        trace element that has an abundance already set using var_elem
+        will not be considered here. By default, trace element abundances
+        are set at 1 solar, similar to the behavior of XSPEC.
+    nei : bool, optional
         If True, use the non-equilibrium ionization tables. Only available
         for the "apec" model. Default: False
 
@@ -212,6 +215,7 @@ class TableCIEModel(ThermalSpectralModel):
         thermal_broad=True,
         nolines=False,
         abund_table="angr",
+        trace_abund=1.0,
         nei=False,
     ):
         self.cgen = CIEGenerator(
@@ -226,6 +230,7 @@ class TableCIEModel(ThermalSpectralModel):
             broadening=thermal_broad,
             nolines=nolines,
             abund_table=abund_table,
+            trace_abund=trace_abund,
             nei=nei,
         )
         self.nbins = self.cgen.nbins
@@ -238,9 +243,7 @@ class TableCIEModel(ThermalSpectralModel):
         self.kT_min = kT_min
         self.kT_max = kT_max
         self.idx_min = max(np.searchsorted(self.cgen.Tvals, kT_min) - 1, 0)
-        self.idx_max = min(
-            np.searchsorted(self.cgen.Tvals, kT_max) + 1, self.cgen.nT - 1
-        )
+        self.idx_max = min(np.searchsorted(self.cgen.Tvals, kT_max) + 1, self.cgen.nT - 1)
         self.Tvals = self.cgen.Tvals[self.idx_min : self.idx_max]
         self.nT = self.Tvals.size
         self.dTvals = np.diff(self.Tvals)
@@ -257,9 +260,7 @@ class TableCIEModel(ThermalSpectralModel):
         self.cosmic_spec = cosmic_spec
         self.metal_spec = metal_spec
         self.var_spec = var_spec
-        self.si = SpectralInterpolator1D(
-            self.Tvals, self.cosmic_spec, self.metal_spec, self.var_spec
-        )
+        self.si = SpectralInterpolator1D(self.Tvals, self.cosmic_spec, self.metal_spec, self.var_spec)
 
 
 class Atable1DSpectralModel(ThermalSpectralModel):
@@ -280,26 +281,16 @@ class Atable1DSpectralModel(ThermalSpectralModel):
     def prepare_spectrum(self, zobs):
         eidxs, ne, ebins, emid, de = self.sgen._get_energies(zobs)
         cosmic_spec, metal_spec, var_spec = self.sgen._get_table(ne, eidxs, zobs)
-        self.cosmic_spec = 1.0e-14 * regrid_spectrum(
-            self.ebins, ebins, cosmic_spec, clip_neg=False
-        )
-        self.metal_spec = 1.0e-14 * regrid_spectrum(
-            self.ebins, ebins, metal_spec, clip_neg=False
-        )
+        self.cosmic_spec = 1.0e-14 * regrid_spectrum(self.ebins, ebins, cosmic_spec, clip_neg=False)
+        self.metal_spec = 1.0e-14 * regrid_spectrum(self.ebins, ebins, metal_spec, clip_neg=False)
         if var_spec is not None:
-            var_spec = 1.0e-14 * regrid_spectrum(
-                self.ebins, ebins, var_spec, clip_neg=False
-            )
+            var_spec = 1.0e-14 * regrid_spectrum(self.ebins, ebins, var_spec, clip_neg=False)
         self.var_spec = var_spec
-        self.si = SpectralInterpolator1D(
-            self.Tvals, self.cosmic_spec, self.metal_spec, self.var_spec
-        )
+        self.si = SpectralInterpolator1D(self.Tvals, self.cosmic_spec, self.metal_spec, self.var_spec)
 
 
 class MekalSpectralModel(Atable1DSpectralModel):
-    def __init__(
-        self, emin, emax, nbins, binscale="linear", var_elem=None, abund_table="angr"
-    ):
+    def __init__(self, emin, emax, nbins, binscale="linear", var_elem=None, abund_table="angr"):
         mgen = MekalGenerator(
             emin,
             emax,
@@ -335,7 +326,7 @@ class CloudyCIESpectralModel(Atable1DSpectralModel):
         self.model_vers = cgen.model_vers
 
 
-class IGMSpectralModel(ThermalSpectralModel):
+class PionSpectralModel(ThermalSpectralModel):
     _logT = True
     r"""
     A spectral model for a thermal plasma including photoionization and
@@ -359,7 +350,7 @@ class IGMSpectralModel(ThermalSpectralModel):
         The maximum energy for the spectral model.
     nbins : integer
         The number of bins in the spectral model.
-    resonant_scattering : boolean, optional
+    resonant_scattering : bool, optional
         Whether or not to include the effects of resonant scattering
         from CXB photons. Default: False
     cxb_factor : float, optional
@@ -382,7 +373,7 @@ class IGMSpectralModel(ThermalSpectralModel):
         var_elem=None,
         model_vers=None,
     ):
-        self.igen = IGMGenerator(
+        self.igen = CloudyPionGenerator(
             emin,
             emax,
             nbins,
@@ -425,16 +416,10 @@ class IGMSpectralModel(ThermalSpectralModel):
         """
         eidxs, ne, ebins, emid, de = self.igen._get_energies(zobs)
         cosmic_spec, metal_spec, var_spec = self.igen._get_table(ne, eidxs, zobs)
-        self.cosmic_spec = 1.0e-14 * regrid_spectrum(
-            self.ebins, ebins, cosmic_spec, clip_neg=False
-        )
-        self.metal_spec = 1.0e-14 * regrid_spectrum(
-            self.ebins, ebins, metal_spec, clip_neg=False
-        )
+        self.cosmic_spec = 1.0e-14 * regrid_spectrum(self.ebins, ebins, cosmic_spec, clip_neg=False)
+        self.metal_spec = 1.0e-14 * regrid_spectrum(self.ebins, ebins, metal_spec, clip_neg=False)
         if var_spec is not None:
-            var_spec = 1.0e-14 * regrid_spectrum(
-                self.ebins, ebins, var_spec, clip_neg=False
-            )
+            var_spec = 1.0e-14 * regrid_spectrum(self.ebins, ebins, var_spec, clip_neg=False)
         self.var_spec = var_spec
         self.cie_model.prepare_spectrum(zobs)
         self.si = SpectralInterpolator2D(
@@ -510,9 +495,7 @@ class IGMSpectralModel(ThermalSpectralModel):
             n_igm = use_igm.sum()
             if n_igm > 0:
                 nHi = nH[use_igm]
-                c1, m1, v1 = self._get_flux_2d(
-                    kT[use_igm], nHi, cosmic_flux, metal_flux, var_flux
-                )
+                c1, m1, v1 = self._get_flux_2d(kT[use_igm], nHi, cosmic_flux, metal_flux, var_flux)
                 cflux[use_igm] = c1 / nHi
                 mflux[use_igm] = m1 / nHi
                 if self.var_spec is not None:
@@ -558,16 +541,24 @@ class AbsorptionModel:
     _name = ""
 
     def __init__(self, nH, energy, cross_section):
-        self.nH = YTQuantity(nH * 1.0e22, "cm**-2")
+        self._nH = nH
         self.emid = YTArray(energy, "keV")
         self.sigma = YTArray(cross_section, "cm**2")
+
+    @property
+    def nH(self):
+        return YTQuantity(self._nH, "1.0e22*cm**-2")
+
+    @nH.setter
+    def nH(self, value):
+        self._nH = value
 
     def get_absorb(self, e):
         """
         Get the absorption spectrum.
         """
         sigma = np.interp(e, self.emid, self.sigma, left=0.0, right=0.0)
-        return np.exp(-sigma * self.nH)
+        return np.exp(-sigma * self._nH)
 
     def absorb_photons(self, eobs, prng=None):
         r"""
@@ -578,7 +569,7 @@ class AbsorptionModel:
         ----------
         eobs : array_like
             The energies of the photons in keV.
-        prng : integer, :class:`~numpy.random.RandomState` object or :mod:`~numpy.random`, optional
+        prng : integer, numpy.random.RandomState object or numpy.random, optional
             A pseudo-random number generator. Typically will only be specified
             if you have a reason to generate the same set of random numbers, such as for a
             test. Default is the :mod:`numpy.random` module.
@@ -610,12 +601,12 @@ class TBabsModel(AbsorptionModel):
     _name = "tbabs"
 
     def __init__(self, nH, abund_table="angr"):
-        self.nH = YTQuantity(nH, "1.0e22*cm**-2")
+        super().__init__(nH, [], [])
         self.abund_table = abund_table
 
     def get_absorb(self, e):
         e = np.array(e)
-        return get_tbabs_absorb(e, self.nH.v, abund_table=self.abund_table)
+        return get_tbabs_absorb(e, self._nH, abund_table=self.abund_table)
 
 
 class WabsModel(AbsorptionModel):
@@ -636,12 +627,12 @@ class WabsModel(AbsorptionModel):
     _name = "wabs"
 
     def __init__(self, nH, abund_table="angr"):
-        self.nH = YTQuantity(nH, "1.0e22*cm**-2")
+        super().__init__(nH, [], [])
         self.abund_table = abund_table
 
     def get_absorb(self, e):
         e = np.array(e)
-        return get_wabs_absorb(e, self.nH.v)
+        return get_wabs_absorb(e, self._nH)
 
 
 absorb_models = {"wabs": WabsModel, "tbabs": TBabsModel}

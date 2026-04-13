@@ -50,7 +50,7 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinx.ext.napoleon",
     "sphinx.ext.autosummary",
-    "nbsphinx",
+    # "nbsphinx",
 ]
 
 numpydoc_show_class_members = False
@@ -89,7 +89,7 @@ release = "4.4.3"
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+language = "en"
 
 # There are two options for replacing |today|: either, you set today to some
 # non-false value, then it is used:
@@ -234,14 +234,10 @@ htmlhelp_basename = "pyxsimdoc"
 intersphinx_mapping = {
     "python": ("https://docs.python.org/", None),
     "yt": ("https://yt-project.org/doc/", None),
+    "unyt": ("https://unyt.readthedocs.io/en/stable/", None),
     "numpy": ("https://numpy.org/doc/stable/", None),
     "soxs": ("https://hea-www.cfa.harvard.edu/soxs/", None),
     "astropy": ("https://docs.astropy.org/en/stable/", None),
 }
 
-# def remove_module_docstring(app, what, name, obj, options, lines):
-#    if what == "module" and name in ["photon_list","event_list"]:
-#        del lines[:]
-
-# def setup(app):
-#    app.connect("autodoc-process-docstring", remove_module_docstring)
+python_use_unqualified_type_names = True

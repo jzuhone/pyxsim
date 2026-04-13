@@ -1,7 +1,7 @@
 import soxs
 from numpy.testing import assert_allclose
 
-from pyxsim.spectral_models import IGMSpectralModel, TableCIEModel
+from pyxsim.spectral_models import PionSpectralModel, TableCIEModel
 
 
 def test_apec():
@@ -27,19 +27,17 @@ def test_apec():
     ec, em, _ = ef(6.0)
 
     assert_allclose(c + 0.3 * m, (spec2.flux * spec2.de)[eidxs].value.sum())
-    assert_allclose(
-        ec + 0.3 * em, (spec2.emid * spec2.flux * spec2.de)[eidxs].value.sum()
-    )
+    assert_allclose(ec + 0.3 * em, (spec2.emid * spec2.flux * spec2.de)[eidxs].value.sum())
 
 
 def test_igm():
-    imod = IGMSpectralModel(0.2, 3.0, 1000)
+    imod = PionSpectralModel(0.2, 3.0, 1000)
     imod.prepare_spectrum(0.05)
 
     icspec, imspec, _ = imod.get_spectrum(1.0, 0.01)
     spec = icspec + 0.3 * imspec
 
-    igen = soxs.IGMGenerator(0.2, 3.0, 1000)
+    igen = soxs.CloudyPionGenerator(0.2, 3.0, 1000)
     spec2 = igen.get_spectrum(1.0, 0.01, 0.3, 0.05, 1.0e-14)
 
     assert_allclose(spec[0, :], spec2.flux.value * spec2.de.value)
@@ -63,14 +61,10 @@ def test_igm():
     ec, em, _ = ef(1.0, 0.01)
 
     assert_allclose(c + 0.3 * m, (spec2.flux * spec2.de)[eidxs].value.sum())
-    assert_allclose(
-        ec + 0.3 * em, (spec2.emid * spec2.flux * spec2.de)[eidxs].value.sum()
-    )
+    assert_allclose(ec + 0.3 * em, (spec2.emid * spec2.flux * spec2.de)[eidxs].value.sum())
 
     c2, m2, _ = pf(2.0, 0.01)
     ec2, em2, _ = ef(2.0, 0.01)
 
     assert_allclose(c2 + 0.3 * m2, (spec4.flux * spec4.de)[eidxs].value.sum())
-    assert_allclose(
-        ec2 + 0.3 * em2, (spec4.emid * spec4.flux * spec4.de)[eidxs].value.sum()
-    )
+    assert_allclose(ec2 + 0.3 * em2, (spec4.emid * spec4.flux * spec4.de)[eidxs].value.sum())

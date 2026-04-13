@@ -54,7 +54,6 @@ Table of Contents
    :maxdepth: 2
 
    installing
-   v3_to_v4
    basic_concepts
    source_models/index
    xray_fields

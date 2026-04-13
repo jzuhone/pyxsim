@@ -35,7 +35,7 @@ following parameters:
   The default is no absorption--if an absorption model is chosen, the ``nH``
   parameter must also be set.
 * ``nH`` (optional): The foreground galactic column density in units of
-  :math:`10^{22} \rm{atoms} \rm{cm}^{-2}`, for use when one is applying
+  10\ :sup:`22` atoms cm\ :sup:`-2`, for use when one is applying
   foreground galactic absorption.
 * ``abund_table`` (optional): The abundance table to be used for abundances in the
   TBabs absorption model. Default is set in the SOXS configuration file, the default

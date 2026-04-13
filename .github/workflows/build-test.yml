@@ -44,6 +44,7 @@ jobs:
               with:
                   submodules: recursive
                   fetch-depth: 0
+
             - uses: mamba-org/setup-micromamba@v2
               with:
                   micromamba-version: '2.0.5-0' # any version from https://github.com/mamba-org/micromamba-releases
@@ -54,11 +55,19 @@ jobs:
                   create-args: >-
                       python=${{ matrix.python-version }}
                       numpy=${{ matrix.numpy-version }}
+
             - name: Install dependencies and pyxsim
-              shell: bash
+              shell: bash -el {0}
               env:
                   mode: testing
+                  pyver: ${{ matrix.python-version }}
+                  npver: ${{ matrix.numpy-version }}
+                  whichos: ${{ matrix.os }}
               run: source ./tests/ci_install.sh
             - name: Run Tests
               shell: bash -el {0}
-              run: micromamba activate test-env; python -m pytest -vv pyxsim/tests
+              env:
+                pyver: ${{ matrix.python-version }}
+                npver: ${{ matrix.numpy-version }}
+                whichos: ${{ matrix.os }}
+              run: source ./tests/run_tests.sh

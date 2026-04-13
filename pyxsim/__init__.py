@@ -8,6 +8,7 @@ except PackageNotFoundError:
 
 
 from pyxsim.event_list import EventList
+from pyxsim.internal_absorption import make_column_density_map
 from pyxsim.photon_list import (
     PhotonList,
     make_photons,
@@ -19,6 +20,7 @@ from pyxsim.source_models import (
     IGMSourceModel,
     LineSourceModel,
     NEISourceModel,
+    PionSourceModel,
     PowerLawSourceModel,
 )
 from pyxsim.utils import (
