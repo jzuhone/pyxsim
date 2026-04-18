@@ -303,13 +303,48 @@ class ThermalSourceModel(SourceModel):
     def make_fluxf(self, emin, emax, energy=False):
         return self.spectral_model.make_fluxf(emin, emax, energy=energy)
 
-    def prepare_yt_data(self, chunk):
+    def prepare_yt_data(self, chunk, mode, shifting):
         out_chunk = {
-            "density": np.ravel(chunk[self.density_field].d),
-            "kT": np.ravel(keV_per_K * chunk[self.temperature_field].d),
-            "entropy": np.ravel(chunk[self.entropy_field].d),
-            "emission_measure": chunk[self.emission_measure_field].d,
+            "density": np.ravel(chunk[self.density_field].to_value("g/cm**3")),
+            "kT": np.ravel(keV_per_K * chunk[self.temperature_field].to_value("keV")),
+            "entropy": np.ravel(chunk[self.entropy_field].to_value("keV*cm**2")),
+            "emission_measure": np.ravel(chunk[self.emission_measure_field].to_value("cm**-3")),
         }
+        num_cells = out_chunk["density"].size
+        if mode in ["spectrum", "intensity", "photon_intensity"] and shifting:
+            out_chunk["beta2"] = np.ravel(chunk[self.ftype, "velocity_magnitude"].to_value("c")) ** 2
+        if self.nh_field is not None:
+            out_chunk["H_nuclei_density"] = np.ravel(chunk[self.nh_field].d)
+        if isinstance(self.h_fraction, Number):
+            X_H = self.h_fraction
+        else:
+            X_H = chunk[self.h_fraction]
+        if self._nei:
+            out_chunk["metallicity"] = np.zeros(num_cells)
+            elem_keys = self.var_ion_keys
+        else:
+            elem_keys = self.var_elem_keys
+            if isinstance(self.Zmet, Number):
+                out_chunk["metallicity"] = self.Zmet * np.ones(num_cells)
+            else:
+                out_chunk["metallicity"] = np.ravel(chunk[self.Zmet].d)
+                fac = self.Zconvert
+                if str(chunk[self.Zmet].units) != "Zsun":
+                    fac /= X_H
+                out_chunk["metallicity"] *= fac
+
+        if self.num_var_elem > 0:
+            for key in elem_keys:
+                value = self.var_elem[key]
+                if isinstance(value, Number):
+                    out_chunk[f"{key}_abundance"] = value * np.ones(num_cells)
+                else:
+                    eZ = np.ravel(chunk[value].d)
+                    fac = self.mconvert[key]
+                    if str(chunk[value].units) != "Zsun":
+                        fac /= X_H
+                    out_chunk[f"{key}_abundance"] = eZ * fac
+
         return out_chunk
 
     def process_data(
@@ -351,18 +386,10 @@ class ThermalSourceModel(SourceModel):
             cut &= chunk["entropy"] > self.min_entropy
         kT = keV_per_K * chunk["temperature"]
         cut &= (kT >= self.kT_min) & (kT <= self.kT_max)
-
+        metalZ = chunk["metallicity"]
         cell_nrm = chunk["emission_measure"] * spectral_norm
 
-        if self.nh_field is not None:
-            nH = chunk[self.nh_field]
-        else:
-            nH = None
-
-        if isinstance(self.h_fraction, Number):
-            X_H = self.h_fraction
-        else:
-            X_H = chunk[self.h_fraction]
+        nH = chunk.get("H_nuclei_density", None)
 
         num_cells = cut.sum()
 
@@ -375,19 +402,6 @@ class ThermalSourceModel(SourceModel):
         elif num_cells == 0:
             # Here, we have no active cells, and so we
             # return an array of zeros with the original shape.
-            # But yt needs to know that we may depend on various
-            # fields, so we check for them here. Very hacky!
-            if not isinstance(self.Zmet, Number):
-                _ = chunk[self.Zmet]
-            if self.num_var_elem > 0:
-                elem_keys = self.var_ion_keys if self._nei else self.var_elem_keys
-                for key in elem_keys:
-                    value = self.var_elem[key]
-                    if not isinstance(value, Number):
-                        _ = chunk[value]
-            # We also need to do this for the velocity fields if we use them
-            if mode in ["spectrum", "intensity", "photon_intensity"] and shifting:
-                _ = chunk[self.ftype, "velocity_magnitude"]
             return np.zeros(orig_shape)
 
         if mode in ["spectrum", "intensity", "photon_intensity"] and shifting:
@@ -397,39 +411,13 @@ class ThermalSourceModel(SourceModel):
 
         kT = kT[cut]
         cell_nrm = cell_nrm[cut]
-        if nH is not None:
-            nH = nH[cut]
-
-        if not isinstance(X_H, Number):
-            X_H = X_H[cut]
-
-        if self._nei:
-            metalZ = np.zeros(num_cells)
-            elem_keys = self.var_ion_keys
-        else:
-            elem_keys = self.var_elem_keys
-            if isinstance(self.Zmet, Number):
-                metalZ = self.Zmet * np.ones(num_cells)
-            else:
-                mZ = chunk[self.Zmet]
-                fac = self.Zconvert
-                if str(mZ.units) != "Zsun":
-                    fac /= X_H
-                metalZ = mZ[cut] * fac
-
-        elemZ = None
+        metalZ = metalZ[cut]
         if self.num_var_elem > 0:
             elemZ = np.zeros((self.num_var_elem, num_cells))
-            for j, key in enumerate(elem_keys):
-                value = self.var_elem[key]
-                if isinstance(value, Number):
-                    elemZ[j, :] = value
-                else:
-                    eZ = chunk[value]
-                    fac = self.mconvert[key]
-                    if str(eZ.units) != "Zsun":
-                        fac /= X_H
-                    elemZ[j, :] = eZ[cut] * fac
+            for i, key in enumerate(chunk.elem_keys):
+                elemZ[i] = chunk[f"{key}_abundance"][cut]
+        if nH:
+            nH = nH[cut]
 
         if self.observer == "internal" and mode == "photons":
             r2 = self.compute_radius(chunk, cut=cut)
