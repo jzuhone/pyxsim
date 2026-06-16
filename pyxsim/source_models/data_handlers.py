@@ -2,9 +2,8 @@ import numpy as np
 
 
 class YTDataHandler:
-    def __init__(self, in_chunk):
-        self.in_chunk = in_chunk
-        self.out_chunk = {}
+    def return_chunk(self, source_model, chunk):
+        self.out_chunk = source_model.return_chunk(chunk)
 
     def __getitem__(self, key):
         if key[1] not in self.out_chunk:
