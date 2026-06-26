@@ -9,6 +9,7 @@ import h5py
 import numpy as np
 from astropy.coordinates import SkyCoord
 from astropy.io import fits
+from pathlib import Path
 from soxs.constants import erg_per_keV
 
 from pyxsim.utils import mylog, parse_value
@@ -32,8 +33,9 @@ class EventList:
         if filespec.endswith(".h5"):
             try:
                 with h5py.File(filespec, "r") as f:
+                    loc = Path(filespec).parent
                     if "info" in f and "filenames" in f["info"].attrs:
-                        filenames = list(f["info"].attrs["filenames"])
+                        filenames = [loc / fn for fn in f["info"].attrs["filenames"]]
                     else:
                         filenames = glob(filespec)
             except OSError:
