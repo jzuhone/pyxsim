@@ -9,7 +9,7 @@ from yt.data_objects.static_output import Dataset
 
 from pyxsim.lib.spectra import line_spectrum
 from pyxsim.source_models.sources import SourceModel
-from pyxsim.utils import isunitful, mylog, parse_value, sanitize_normal
+from pyxsim.utils import isunitful, mylog, parse_value
 
 gx = np.linspace(-7, 7, 10000)
 gcdf = norm.cdf(gx)
@@ -96,76 +96,6 @@ class LineSourceModel(SourceModel):
             ")",
         ]
         return "".join(rets)
-
-    def make_spectrum(
-        self,
-        data_source,
-        emin,
-        emax,
-        nbins,
-        redshift=0.0,
-        dist=None,
-        cosmology=None,
-        normal=None,
-    ):
-        """
-        Using all the data in a yt data container, make a count rate spectrum in the source frame,
-        or a spectrum in the observer frame.
-
-        Parameters
-        ----------
-        data_source : :class:`~yt.data_objects.data_containers.YTSelectionContainer`
-            The data source from which the photons will be generated.
-        emin : float, (value, unit) tuple, unyt_quantity, or Quantity
-            The minimum energy in the band. If a float, it is assumed to be
-            in keV.
-        emax : float, (value, unit) tuple, unyt_quantity, or Quantity
-            The minimum energy in the band. If a float, it is assumed to be
-            in keV.
-        nbins : integer
-            The number of bins in the spectrum.
-        redshift : float, optional
-            If greater than 0, we assume that the spectrum should be created in
-            the observer frame at a distance given by the cosmology. Default: 0.0
-        dist : float, (value, unit) tuple, unyt_quantity, or Quantity, optional
-            The distance to a nearby source, if redshift = 0.0. If a float, it
-            is assumed to be in units of kpc.
-        cosmology : :class:`~yt.utilities.cosmology.Cosmology`, optional
-            Cosmological information. If not supplied, we try to get the
-            cosmology from the dataset. Otherwise, LCDM with the default yt
-            parameters is assumed.
-        normal : integer, string, or array-like, optional
-            This is a line-of-sight direction along which the spectrum will be
-            Doppler shifted using the velocity field in the object. This is
-            only an option if the spectrum is calculated in the observer frame.
-            Options are one of "x", "y", "z", 0, 1, 2, or an 3-element array-like
-            object of floats to specify an off-axis normal vector.
-
-        Returns
-        -------
-        :class:`~soxs.spectra.CountRateSpectrum` or :class:`~soxs.spectra.Spectrum`,
-        depending on how the method is invoked.
-        """
-        normal = sanitize_normal(normal)
-        if normal is not None:
-            if redshift == 0.0 and dist is None:
-                raise RuntimeError(
-                    "Cannot use a normal vector for the line-of-sight "
-                    "when a redshift or the distance is not specified! not specified or the distance "
-                )
-            data_source.set_field_parameter("axis", normal)
-        shifting = normal is not None
-        ebins = np.linspace(emin, emax, nbins + 1)
-        spec = np.zeros(nbins)
-        spectral_norm = 1.0
-        self.setup_model("spectrum", data_source, redshift)
-        for chunk in data_source.chunks([], "io"):
-            chunk_data = self.process_data("spectrum", chunk, spectral_norm, shifting=shifting, ebins=ebins)
-            if chunk_data is not None:
-                spec += chunk_data
-        if self.pbar:
-            self.pbar.close()
-        return self._make_spectrum(data_source.ds, ebins, spec, redshift, dist, cosmology)
 
     def _process_chunk(self, chunk, mode, shifting):
         out_chunk = {"emission_field": chunk[self.emission_field].to_value("1/s")}
