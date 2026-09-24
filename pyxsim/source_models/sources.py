@@ -38,7 +38,7 @@ class SourceModel:
     ):
         return self._process_data(
             mode,
-            self._process_chunk(chunk),
+            self._process_chunk(chunk, mode, shifting),
             spectral_norm,
             ebins=ebins,
             emin=emin,

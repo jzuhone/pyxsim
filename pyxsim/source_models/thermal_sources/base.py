@@ -307,7 +307,7 @@ class ThermalSourceModel(SourceModel):
     def _process_chunk(self, chunk, mode, shifting):
         out_chunk = {
             "density": np.ravel(chunk[self.density_field].to_value("g/cm**3")),
-            "kT": np.ravel(keV_per_K * chunk[self.temperature_field].to_value("keV")),
+            "kT": np.ravel(keV_per_K * chunk[self.temperature_field].to_value("K")),
             "entropy": np.ravel(chunk[self.entropy_field].to_value("keV*cm**2")),
             "emission_measure": np.ravel(chunk[self.emission_measure_field].to_value("cm**-3")),
         }
@@ -386,7 +386,7 @@ class ThermalSourceModel(SourceModel):
             cut &= chunk["density"] < self.max_density
         if self.min_entropy is not None:
             cut &= chunk["entropy"] > self.min_entropy
-        kT = keV_per_K * chunk["temperature"]
+        kT = chunk["kT"]
         cut &= (kT >= self.kT_min) & (kT <= self.kT_max)
         metalZ = chunk["metallicity"]
         cell_nrm = chunk["emission_measure"] * spectral_norm
