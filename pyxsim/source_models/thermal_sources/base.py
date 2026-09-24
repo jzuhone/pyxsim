@@ -304,7 +304,7 @@ class ThermalSourceModel(SourceModel):
     def make_fluxf(self, emin, emax, energy=False):
         return self.spectral_model.make_fluxf(emin, emax, energy=energy)
 
-    def prepare_yt_data(self, chunk, mode, shifting):
+    def _process_chunk(self, chunk, mode, shifting):
         out_chunk = {
             "density": np.ravel(chunk[self.density_field].to_value("g/cm**3")),
             "kT": np.ravel(keV_per_K * chunk[self.temperature_field].to_value("keV")),
@@ -313,7 +313,8 @@ class ThermalSourceModel(SourceModel):
         }
         num_cells = out_chunk["density"].size
         if mode in ["spectrum", "intensity", "photon_intensity"] and shifting:
-            out_chunk["beta2"] = np.ravel(chunk[self.ftype, "velocity_magnitude"].to_value("c")) ** 2
+            out_chunk["velocity_magnitude"] = np.ravel(chunk[self.ftype, "velocity_magnitude"].to_value("c"))
+            out_chunk["velocity_los"] = np.ravel(chunk[self.ftype, "velocity_los"].to_value("c"))
         if self.nh_field is not None:
             out_chunk["H_nuclei_density"] = np.ravel(chunk[self.nh_field].d)
         if isinstance(self.h_fraction, Number):
@@ -348,7 +349,7 @@ class ThermalSourceModel(SourceModel):
 
         return out_chunk
 
-    def process_data(
+    def _process_data(
         self,
         mode,
         chunk,
@@ -413,9 +414,10 @@ class ThermalSourceModel(SourceModel):
         kT = kT[cut]
         cell_nrm = cell_nrm[cut]
         metalZ = metalZ[cut]
+        elem_keys = self.var_ion_keys if self._nei else self.var_elem_keys
         if self.num_var_elem > 0:
             elemZ = np.zeros((self.num_var_elem, num_cells))
-            for i, key in enumerate(chunk.elem_keys):
+            for i, key in enumerate(elem_keys):
                 elemZ[i] = chunk[f"{key}_abundance"][cut]
         if nH:
             nH = nH[cut]

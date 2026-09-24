@@ -21,6 +21,7 @@ class SourceModel:
     def __init__(self, prng=None):
         self.spectral_norm = None
         self.redshift = None
+        self.data_handler = None
         self.prng = parse_prng(prng)
         self.observer = "external"
 
@@ -29,13 +30,38 @@ class SourceModel:
         mode,
         chunk,
         spectral_norm,
+        ebins=None,
         emin=None,
         emax=None,
         fluxf=None,
         shifting=False,
     ):
-        # This needs to be implemented for every
-        # source model specifically
+        return self._process_data(
+            mode,
+            self._process_chunk(chunk),
+            spectral_norm,
+            ebins=ebins,
+            emin=emin,
+            emax=emax,
+            fluxf=fluxf,
+            shifting=shifting,
+        )
+
+    def _process_chunk(self, chunk, mode, shifting):
+        return chunk
+
+    def _process_data(
+        self,
+        mode,
+        chunk,
+        spectral_norm,
+        ebins=None,
+        emin=None,
+        emax=None,
+        fluxf=None,
+        shifting=False,
+    ):
+        # Must be implemented by the individual source types
         pass
 
     def setup_pbar(self, data_source, field):
@@ -86,12 +112,11 @@ class SourceModel:
                 pos[:, tfr] -= self.dw[i]
         return np.sum((pos - self.c[:, np.newaxis]) ** 2, axis=0) * cm2_per_kpc2
 
-    def compute_shift(self, chunk, cut=None, particle_type=False):
+    def compute_shift(self, chunk, cut=None):
         if cut is None:
             cut = ...
-        prefix = "particle_" if particle_type else ""
-        beta_n = chunk[self.ftype, f"{prefix}velocity_los"].to_value("c")[cut]
-        beta2 = chunk[self.ftype, f"{prefix}velocity_magnitude"].to_value("c")[cut] ** 2
+        beta_n = chunk["velocity_los"][cut]
+        beta2 = chunk["velocity_magnitude"][cut] ** 2
         return np.sqrt(1.0 - beta2) / (1.0 - beta_n)
 
     def make_fluxf(self, emin, emax, energy=False):
@@ -157,6 +182,31 @@ class SourceModel:
         else:
             raise RuntimeError("No way to compute inverse volume")
         return _idV
+
+    def make_spectrum_field(self, ds, emin, emax, nbins, force_override=False):
+        spectral_norm = 1.0
+        redshift = 0.0
+
+        self.setup_model("spectrum", ds, redshift)
+
+        ftype = self.ftype
+
+        ebins = np.linspace(emin, emax, nbins + 1)
+
+        idV_func = self._get_inverse_volume(ds, ftype)
+
+        def _emissivity_field(data):
+            spec = self.process_data("spectrum", data, spectral_norm, shifting=False, ebins=ebins)
+            return data.ds.arr(spec * idV_func(data), "cm**-3/s")
+
+        ds.add_field(
+            (ftype, "photon_emissivity_spectrum"),
+            _emissivity_field,
+            sampling_type="local",
+            units="cm**-3/s",
+            force_override=force_override,
+        )
+        return (ftype, "photon_emissivity_spectrum")
 
     def make_source_fields(self, ds, emin, emax, force_override=False, band_name=None):
         """

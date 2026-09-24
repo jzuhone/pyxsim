@@ -9,7 +9,7 @@ from yt.data_objects.static_output import Dataset
 
 from pyxsim.lib.spectra import line_spectrum
 from pyxsim.source_models.sources import SourceModel
-from pyxsim.utils import check_num_cells, isunitful, mylog, parse_value, sanitize_normal
+from pyxsim.utils import isunitful, mylog, parse_value, sanitize_normal
 
 gx = np.linspace(-7, 7, 10000)
 gcdf = norm.cdf(gx)
@@ -167,7 +167,18 @@ class LineSourceModel(SourceModel):
             self.pbar.close()
         return self._make_spectrum(data_source.ds, ebins, spec, redshift, dist, cosmology)
 
-    def process_data(
+    def _process_chunk(self, chunk, mode, shifting):
+        out_chunk = {"emission_field": chunk[self.emission_field].to_value("1/s")}
+        if isinstance(self.sigma, unyt_quantity):
+            out_chunk["sigma"] = self.sigma.value * np.ones_like(out_chunk["emission_field"])
+        else:
+            out_chunk["sigma"] = (chunk[self.sigma] * self.e0 / clight).to_value("keV")
+        if mode in ["spectrum", "intensity", "photon_intensity"] and shifting:
+            out_chunk["velocity_magnitude"] = chunk[self.ftype, "velocity_magnitude"].to_value("c")
+            out_chunk["velocity_los"] = chunk[self.ftype, "velocity_los"].to_value("c")
+        return out_chunk
+
+    def _process_data(
         self,
         mode,
         chunk,
@@ -178,7 +189,7 @@ class LineSourceModel(SourceModel):
         fluxf=None,
         shifting=False,
     ):
-        num_cells = check_num_cells(self.ftype, chunk)
+        num_cells = chunk["emission_field"].size
 
         if num_cells == 0:
             if mode in ["photons", "spectrum"]:
@@ -186,25 +197,18 @@ class LineSourceModel(SourceModel):
             else:
                 return np.array([])
 
-        norm_field = chunk[self.emission_field]
-
         if mode in ["spectrum", "intensity", "photon_intensity"] and shifting:
             shift = self.compute_shift(chunk)
         else:
-            shift = np.ones_like(norm_field.d)
-
-        if isinstance(self.sigma, unyt_quantity):
-            sigma = self.sigma.value * np.ones_like(norm_field.d)
-        else:
-            sigma = (chunk[self.sigma] * self.e0 / clight).to_value("keV")
+            shift = np.ones_like(chunk["emission_field"])
 
         if mode == "photons":
-            F = norm_field * spectral_norm * self.scale_factor
+            F = chunk[self.emission_field] * spectral_norm * self.scale_factor
             if self.observer == "internal":
                 r2 = self.compute_radius(chunk)
                 F /= r2
 
-            number_of_photons = self.prng.poisson(lam=F.in_cgs().d)
+            number_of_photons = self.prng.poisson(lam=F)
 
             energies = self.e0 * np.ones(number_of_photons.sum())
 
@@ -215,7 +219,7 @@ class LineSourceModel(SourceModel):
                     dE = (
                         self.prng.normal(
                             loc=0.0,
-                            scale=sigma[i],
+                            scale=chunk["sigma"][i],
                             size=number_of_photons[i],
                         )
                         * self.e0.uq
@@ -237,10 +241,10 @@ class LineSourceModel(SourceModel):
                 num_cells,
                 float(self.e0),
                 ee,
-                sigma,
+                chunk["sigma"],
                 gx,
                 gpdf,
-                norm_field.d,
+                chunk["emission_field"],
                 shift,
                 self.pbar,
             )
@@ -250,11 +254,13 @@ class LineSourceModel(SourceModel):
         else:
             xlo = emin - self.e0.value
             xhi = emax - self.e0.value
-            xhis = xhi / sigma
-            xlos = xlo / sigma
+            xhis = xhi / chunk["sigma"]
+            xlos = xlo / chunk["sigma"]
             fac = (norm.cdf(xhis) - norm.cdf(xlos)) * shift * shift * shift
             if mode in ["luminosity", "intensity"]:
                 fac = self.e0.value * fac
-                fac -= sigma * (np.exp(-0.5 * xhis**2) - np.exp(-0.5 * xlos**2)) / np.sqrt(2.0 * np.pi)
+                fac -= (
+                    chunk["sigma"] * (np.exp(-0.5 * xhis**2) - np.exp(-0.5 * xlos**2)) / np.sqrt(2.0 * np.pi)
+                )
                 fac *= shift
-            return fac * norm_field
+            return fac * chunk["emission_field"]

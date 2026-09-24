@@ -156,7 +156,21 @@ class PowerLawSourceModel(SourceModel):
             self.pbar.close()
         return self._make_spectrum(data_source.ds, ebins, spec, redshift, dist, cosmology)
 
-    def process_data(
+    def _process_chunk(self, chunk, mode, shifting):
+        try:
+            out_chunk = {"luminosity_field": chunk[self.luminosity_field].to_value("keV/s")}
+        except UnitConversionError as e:
+            raise ValueError('The "luminosity_field" must be in units of power!') from e
+        if isinstance(self.alpha, float):
+            out_chunk["spectral_index"] = self.alpha * np.ones_like(out_chunk["luminosity_field"])
+        else:
+            out_chunk["spectral_index"] = chunk[self.alpha]
+        if mode in ["spectrum", "intensity", "photon_intensity"] and shifting:
+            out_chunk["velocity_magnitude"] = chunk[self.ftype, "velocity_magnitude"].to_value("c")
+            out_chunk["velocity_los"] = chunk[self.ftype, "velocity_los"].to_value("c")
+        return out_chunk
+
+    def _process_data(
         self,
         mode,
         chunk,
@@ -178,12 +192,9 @@ class PowerLawSourceModel(SourceModel):
         if mode in ["spectrum", "intensity", "photon_intensity"] and shifting:
             shift = self.compute_shift(chunk)
         else:
-            shift = np.ones_like(chunk[self.luminosity_field].d)
+            shift = np.ones_like(chunk["luminosity_field"])
 
-        if isinstance(self.alpha, float):
-            alpha = self.alpha * np.ones_like(chunk[self.luminosity_field].d)
-        else:
-            alpha = chunk[self.alpha].d
+        alpha = chunk["spectral_index"]
 
         if emin is not None and emax is not None:
             ei = emin
@@ -199,10 +210,7 @@ class PowerLawSourceModel(SourceModel):
         if np.any(alpha != 2):
             K_fac[alpha != 2] /= 2.0 - alpha[alpha != 2]
 
-        try:
-            K = chunk[self.luminosity_field].to_value("keV/s") / K_fac
-        except UnitConversionError as e:
-            raise ValueError('The "luminosity_field" must be in units of power!') from e
+        K = chunk["luminosity_field"] / K_fac
 
         if mode in ["photons", "photon_rate", "photon_intensity"]:
             Nph = (ef / shift) ** (1.0 - alpha) - (ei / shift) ** (1.0 - alpha)
