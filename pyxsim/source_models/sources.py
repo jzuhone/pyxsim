@@ -94,11 +94,6 @@ class SourceModel:
         beta2 = chunk[self.ftype, f"{prefix}velocity_magnitude"].to_value("c")[cut] ** 2
         return np.sqrt(1.0 - beta2) / (1.0 - beta_n)
 
-    def cleanup_model(self, mode):
-        # This needs to be implemented for every
-        # source model specifically
-        pass
-
     def make_fluxf(self, emin, emax, energy=False):
         # This needs to be implemented for every
         # source model specifically

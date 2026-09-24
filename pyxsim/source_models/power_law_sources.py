@@ -86,10 +86,6 @@ class PowerLawSourceModel(SourceModel):
         ]
         return "".join(rets)
 
-    def cleanup_model(self, mode):
-        if mode == "spectrum":
-            self.pbar.close()
-
     def make_spectrum(
         self,
         data_source,
@@ -156,7 +152,8 @@ class PowerLawSourceModel(SourceModel):
             chunk_data = self.process_data("spectrum", chunk, spectral_norm, shifting=shifting, ebins=ebins)
             if chunk_data is not None:
                 spec += chunk_data
-        self.cleanup_model("spectrum")
+        if self.pbar:
+            self.pbar.close()
         return self._make_spectrum(data_source.ds, ebins, spec, redshift, dist, cosmology)
 
     def process_data(

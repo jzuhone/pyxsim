@@ -297,7 +297,8 @@ class ThermalSourceModel(SourceModel):
             if chunk_data is not None:
                 spec += chunk_data
         spec /= np.diff(ebins)
-        self.cleanup_model("spectrum")
+        if self.pbar:
+            self.pbar.close()
         return self._make_spectrum(data_source.ds, ebins, spec, redshift, dist, cosmology)
 
     def make_fluxf(self, emin, emax, energy=False):
@@ -525,7 +526,3 @@ class ThermalSourceModel(SourceModel):
             return spec
         else:
             return np.resize(ret, orig_shape)
-
-    def cleanup_model(self, mode):
-        if mode in ["spectrum", "photons"]:
-            self.pbar.close()

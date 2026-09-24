@@ -466,7 +466,8 @@ def make_photons(
 
     f.close()
 
-    source_model.cleanup_model("photons")
+    if source_model.pbar:
+        source_model.pbar.close()
 
     all_nphotons = comm.mpi_allreduce(n_photons)
     all_ncells = comm.mpi_allreduce(n_cells)
