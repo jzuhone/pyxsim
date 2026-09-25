@@ -9,6 +9,7 @@ from yt.data_objects.static_output import Dataset
 from yt.utilities.exceptions import YTFieldNotFound
 
 from pyxsim.lib.spectra import make_band, shift_spectrum
+from pyxsim.source_models.data_handlers import find_data_handler
 from pyxsim.source_models.sources import SourceModel
 from pyxsim.utils import (
     _parse_abund_table,
@@ -147,6 +148,7 @@ class ThermalSourceModel(SourceModel):
     def setup_model(self, mode, data_source, redshift):
         self._efluxf = None
         self._pfluxf = None
+        self.data_handler = find_data_handler(data_source)
         if isinstance(data_source, Dataset):
             ds = data_source
         else:
@@ -160,12 +162,12 @@ class ThermalSourceModel(SourceModel):
             "default_species_fields='ionized' in the call "
             "to yt.load(), set them up using Trident, or "
             "set the field manually."
-            self.emission_measure_field = ds._get_field_info(self.emission_measure_field).name
-            ftype = self.emission_measure_field[0]
+            self.emission_measure_field = self.data_handler.get_field_info(self.emission_measure_field)
+            ftype = self.emission_measure_field.name[0]
         except YTFieldNotFound as e:
             raise RuntimeError(err_msg) from e
-        self.temperature_field = ds._get_field_info(self.temperature_field).name
-        fields = [self.emission_measure_field, self.temperature_field]
+        self.temperature_field = self.data_handler.get_field_info(self.temperature_field)
+        fields = [self.emission_measure_field.name, self.temperature_field.name]
         self.ftype = ftype
         self.redshift = redshift
         if not self._nei and not isinstance(self.Zmet, Number):
@@ -245,21 +247,30 @@ class ThermalSourceModel(SourceModel):
 
     def _process_chunk(self, chunk, mode, shifting):
         out_chunk = {
-            "density": np.ravel(chunk[self.density_field].to_value("g/cm**3")),
-            "kT": np.ravel(keV_per_K * chunk[self.temperature_field].to_value("K")),
-            "entropy": np.ravel(chunk[self.entropy_field].to_value("keV*cm**2")),
-            "emission_measure": np.ravel(chunk[self.emission_measure_field].to_value("cm**-3")),
+            "orig_shape": chunk[self.density_field].shape,
+            "density": np.ravel(self.data_handler.process_array(chunk[self.density_field], "g/cm**3")),
+            "kT": np.ravel(keV_per_K * self.data_handler.process_array(chunk[self.temperature_field], "K")),
+            "entropy": np.ravel(self.data_handler.process_array(chunk[self.entropy_field], "keV*cm**2")),
+            "emission_measure": np.ravel(
+                self.data_handler.process_array(chunk[self.emission_measure_field], "cm**-3")
+            ),
         }
         num_cells = out_chunk["density"].size
         if mode in ["spectrum", "intensity", "photon_intensity"] and shifting:
-            out_chunk["velocity_magnitude"] = np.ravel(chunk[self.ftype, "velocity_magnitude"].to_value("c"))
-            out_chunk["velocity_los"] = np.ravel(chunk[self.ftype, "velocity_los"].to_value("c"))
+            out_chunk["velocity_magnitude"] = self.data_handler.process_array(
+                chunk[self.ftype, "velocity_magnitude"], "c"
+            )
+            out_chunk["velocity_los"] = self.data_handler.process_array(
+                chunk[self.ftype, "velocity_los"], "c"
+            )
         if self.nh_field is not None:
-            out_chunk["H_nuclei_density"] = np.ravel(chunk[self.nh_field].d)
+            out_chunk["H_nuclei_density"] = np.ravel(
+                self.data_handler.process_array(chunk[self.nh_field], "1/cm**3")
+            )
         if isinstance(self.h_fraction, Number):
             X_H = self.h_fraction
         else:
-            X_H = chunk[self.h_fraction]
+            X_H = np.ravel(self.data_handler.process_array(chunk[self.h_fraction]))
         if self._nei:
             out_chunk["metallicity"] = np.zeros(num_cells)
             elem_keys = self.var_ion_keys
@@ -268,7 +279,7 @@ class ThermalSourceModel(SourceModel):
             if isinstance(self.Zmet, Number):
                 out_chunk["metallicity"] = self.Zmet * np.ones(num_cells)
             else:
-                out_chunk["metallicity"] = np.ravel(chunk[self.Zmet].d)
+                out_chunk["metallicity"] = np.ravel(self.data_handler.process_array(chunk[self.Zmet]))
                 fac = self.Zconvert
                 if str(chunk[self.Zmet].units) != "Zsun":
                     fac /= X_H
@@ -280,12 +291,11 @@ class ThermalSourceModel(SourceModel):
                 if isinstance(value, Number):
                     out_chunk[f"{key}_abundance"] = value * np.ones(num_cells)
                 else:
-                    eZ = np.ravel(chunk[value].d)
+                    eZ = np.ravel(self.data_handler.process_array(chunk[value]))
                     fac = self.mconvert[key]
                     if str(chunk[value].units) != "Zsun":
                         fac /= X_H
                     out_chunk[f"{key}_abundance"] = eZ * fac
-
         return out_chunk
 
     def _process_data(
@@ -305,7 +315,7 @@ class ThermalSourceModel(SourceModel):
 
         shifted_intensity = mode.endswith("intensity") and shifting
 
-        orig_shape = chunk["kT"].shape
+        orig_shape = chunk["orig_shape"]
         if len(orig_shape) == 0:
             orig_ncells = 0
         else:

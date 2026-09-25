@@ -290,3 +290,7 @@ def check_num_cells(ftype, obj):
     else:
         test_field = (ftype, "particle_ones")
     return obj[test_field].size
+
+
+class DummyDataSource:
+    pass

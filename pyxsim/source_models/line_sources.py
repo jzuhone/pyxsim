@@ -5,7 +5,6 @@ from scipy.stats import norm
 from soxs.utils import parse_prng
 from unyt import clight
 from unyt.array import unyt_quantity
-from yt.data_objects.static_output import Dataset
 
 from pyxsim.lib.spectra import line_spectrum
 from pyxsim.source_models.sources import SourceModel
@@ -70,43 +69,43 @@ class LineSourceModel(SourceModel):
         self.pbar = None
 
     def setup_model(self, mode, data_source, redshift):
-        if isinstance(data_source, Dataset):
-            ds = data_source
-        else:
-            ds = data_source.ds
-        self.scale_factor = 1.0 / (1.0 + redshift)
-        self.emission_field = ds._get_field_info(self.emission_field).name
+        super().setup_model(mode, data_source, redshift)
+        self.emission_field = self.data_handler.get_field_info(self.emission_field)
         if not isinstance(self.sigma, (Number, unyt_quantity)):
-            self.sigma = ds._get_field_info(self.sigma).name
-            if self.emission_field[0] != self.sigma[0]:
+            self.sigma = self.data_handler.get_field_info(self.sigma)
+            if self.emission_field.name[0] != self.sigma.name[0]:
                 mylog.warning(
                     "The 'emission_field' %s and the 'sigma' field %s do not have the same field type!",
                     self.emission_field,
                     self.sigma,
                 )
-        self.ftype = self.emission_field[0]
+        self.ftype = self.emission_field.name[0]
         if mode == "spectrum":
-            self.setup_pbar(data_source, self.emission_field)
+            self.setup_pbar(data_source, self.emission_field.name[0])
 
     def __repr__(self):
         rets = [
             "LineSourceModel(\n",
             f"    e0={self.e0}\n",
-            f"    emission_field={self.emission_field}\n",
+            f"    emission_field={self.emission_field.name[0]}\n",
             f"    sigma={self.sigma}\n",
             ")",
         ]
         return "".join(rets)
 
     def _process_chunk(self, chunk, mode, shifting):
-        out_chunk = {"emission_field": chunk[self.emission_field].to_value("1/s")}
+        out_chunk = {"emission_field": self.data_handler.process_array(chunk[self.emission_field], "1/s")}
         if isinstance(self.sigma, unyt_quantity):
             out_chunk["sigma"] = self.sigma.value * np.ones_like(out_chunk["emission_field"])
         else:
-            out_chunk["sigma"] = (chunk[self.sigma] * self.e0 / clight).to_value("keV")
+            out_chunk["sigma"] = self.data_handler.process_array(chunk[self.sigma] * self.e0 / clight, "keV")
         if mode in ["spectrum", "intensity", "photon_intensity"] and shifting:
-            out_chunk["velocity_magnitude"] = chunk[self.ftype, "velocity_magnitude"].to_value("c")
-            out_chunk["velocity_los"] = chunk[self.ftype, "velocity_los"].to_value("c")
+            out_chunk["velocity_magnitude"] = self.data_handler.process_array(
+                chunk[self.ftype, "velocity_magnitude"], "c"
+            )
+            out_chunk["velocity_los"] = self.data_handler.process_array(
+                chunk[self.ftype, "velocity_los"], "c"
+            )
         return out_chunk
 
     def _process_data(

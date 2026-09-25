@@ -10,6 +10,7 @@ from yt.utilities.parallel_tools.parallel_analysis_interface import (
     parallel_objects,
 )
 
+from pyxsim.source_models.data_handlers import find_data_handler
 from pyxsim.utils import ParallelProgressBar, parse_value, sanitize_normal
 
 cm2_per_kpc2 = unyt_quantity(1.0, "kpc**2").to_value("cm**2")
@@ -73,9 +74,10 @@ class SourceModel:
             self.pbar = tqdm(leave=True, total=self.tot_num_cells, desc="Processing cells/particles ")
 
     def setup_model(self, mode, data_source, redshift):
-        # This needs to be implemented for every
-        # source model specifically
-        pass
+        # This needs to be implemented in detail for every
+        # source model specifically and call this method
+        self.data_handler = find_data_handler(data_source)
+        self.scale_factor = 1.0 / (1.0 + redshift)
 
     def set_pv(
         self,

@@ -3,7 +3,6 @@ from numbers import Number
 import numpy as np
 from soxs.utils import parse_prng
 from unyt.exceptions import UnitConversionError
-from yt.data_objects.static_output import Dataset
 
 from pyxsim.lib.spectra import power_law_spectrum
 from pyxsim.source_models.sources import SourceModel
@@ -57,14 +56,10 @@ class PowerLawSourceModel(SourceModel):
         self.pbar = None
 
     def setup_model(self, mode, data_source, redshift):
-        if isinstance(data_source, Dataset):
-            ds = data_source
-        else:
-            ds = data_source.ds
-        self.scale_factor = 1.0 / (1.0 + redshift)
-        self.luminosity_field = ds._get_field_info(self.luminosity_field).name
+        super().setup_model(mode, data_source, redshift)
+        self.luminosity_field = self.data_handler.ds._get_field_info(self.luminosity_field).name
         if not isinstance(self.alpha, Number):
-            self.alpha = ds._get_field_info(self.alpha).name
+            self.alpha = self.data_handler.ds._get_field_info(self.alpha).name
             if self.luminosity_field[0] != self.alpha[0]:
                 mylog.warning(
                     "The 'luminosity_field' %s and the 'alpha' field %s do not have the same field type!",
@@ -89,16 +84,22 @@ class PowerLawSourceModel(SourceModel):
 
     def _process_chunk(self, chunk, mode, shifting):
         try:
-            out_chunk = {"luminosity_field": chunk[self.luminosity_field].to_value("keV/s")}
+            out_chunk = {
+                "luminosity_field": self.data_handler.process_array(chunk[self.luminosity_field], "keV/s")
+            }
         except UnitConversionError as e:
             raise ValueError('The "luminosity_field" must be in units of power!') from e
         if isinstance(self.alpha, float):
             out_chunk["spectral_index"] = self.alpha * np.ones_like(out_chunk["luminosity_field"])
         else:
-            out_chunk["spectral_index"] = chunk[self.alpha]
+            out_chunk["spectral_index"] = self.data_handler.process_array(chunk[self.alpha])
         if mode in ["spectrum", "intensity", "photon_intensity"] and shifting:
-            out_chunk["velocity_magnitude"] = chunk[self.ftype, "velocity_magnitude"].to_value("c")
-            out_chunk["velocity_los"] = chunk[self.ftype, "velocity_los"].to_value("c")
+            out_chunk["velocity_magnitude"] = self.data_handler.process_array(
+                chunk[self.ftype, "velocity_magnitude"], "c"
+            )
+            out_chunk["velocity_los"] = self.data_handler.process_array(
+                chunk[self.ftype, "velocity_los"], "c"
+            )
         return out_chunk
 
     def _process_data(
