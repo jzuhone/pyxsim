@@ -46,9 +46,9 @@ class PowerLawSourceModel(SourceModel):
     """
 
     def __init__(self, e0, emin, emax, luminosity_field, alpha, prng=None):
-        self.e0 = parse_value(e0, "keV")
-        self.emin = parse_value(emin, "keV")
-        self.emax = parse_value(emax, "keV")
+        self.e0 = parse_value(e0, "keV").value
+        self.emin = parse_value(emin, "keV").value
+        self.emax = parse_value(emax, "keV").value
         self.luminosity_field = luminosity_field
         self.alpha = alpha
         self.prng = parse_prng(prng)
@@ -131,12 +131,12 @@ class PowerLawSourceModel(SourceModel):
             ei = emin
             ef = emax
         else:
-            ei = self.emin.v
-            ef = self.emax.v
+            ei = self.emin
+            ef = self.emax
 
-        etoalpha = self.e0.v**alpha
-        K_fac = self.emax.v ** (2.0 - alpha) - self.emin.v ** (2.0 - alpha)
-        K_fac[alpha == 2] = np.log(self.emax.v / self.emin.v)
+        etoalpha = self.e0**alpha
+        K_fac = self.emax ** (2.0 - alpha) - self.emin ** (2.0 - alpha)
+        K_fac[alpha == 2] = np.log(self.emax / self.emin)
         K_fac *= etoalpha
         if np.any(alpha != 2):
             K_fac[alpha != 2] /= 2.0 - alpha[alpha != 2]
@@ -199,7 +199,7 @@ class PowerLawSourceModel(SourceModel):
 
         elif mode == "spectrum":
             inv_sf = 1.0 / self.scale_factor
-            emid = 0.5 * (ebins[1:] + ebins[:-1]) * inv_sf / self.e0.v
+            emid = 0.5 * (ebins[1:] + ebins[:-1]) * inv_sf / self.e0
 
             spec = power_law_spectrum(num_cells, emid, alpha, K, shift, self.pbar)
 

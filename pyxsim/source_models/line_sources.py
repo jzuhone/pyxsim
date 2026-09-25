@@ -14,6 +14,8 @@ gx = np.linspace(-7, 7, 10000)
 gcdf = norm.cdf(gx)
 gpdf = norm.pdf(gx)
 
+ckms = clight.to_value("km/s")
+
 
 class LineSourceModel(SourceModel):
     r"""
@@ -49,17 +51,16 @@ class LineSourceModel(SourceModel):
     def __init__(self, e0, emission_field, sigma, prng=None):
         from unyt.exceptions import UnitConversionError
 
-        self.e0 = parse_value(e0, "keV")
+        self.e0 = parse_value(e0, "keV").value
         if isinstance(sigma, Number):
-            self.sigma = parse_value(sigma, "keV")
+            self.sigma = parse_value(sigma, "keV").value
         elif isunitful(sigma):
             # The broadening is constant
             try:
-                self.sigma = parse_value(sigma, "km/s")
-                self.sigma *= self.e0 / clight
-                self.sigma.convert_to_units("keV")
+                self.sigma = parse_value(sigma, "km/s").value
+                self.sigma *= self.e0 / ckms
             except UnitConversionError:
-                self.sigma = parse_value(sigma, "keV")
+                self.sigma = parse_value(sigma, "keV").value
         else:
             # Should be a field name
             self.sigma = sigma
@@ -95,8 +96,8 @@ class LineSourceModel(SourceModel):
 
     def _process_chunk(self, chunk, mode, shifting):
         out_chunk = {"emission_field": self.data_handler.process_array(chunk[self.emission_field], "1/s")}
-        if isinstance(self.sigma, unyt_quantity):
-            out_chunk["sigma"] = self.sigma.value * np.ones_like(out_chunk["emission_field"])
+        if isinstance(self.sigma, Number):
+            out_chunk["sigma"] = self.sigma * np.ones_like(out_chunk["emission_field"])
         else:
             out_chunk["sigma"] = self.data_handler.process_array(chunk[self.sigma] * self.e0 / clight, "keV")
         if mode in ["spectrum", "intensity", "photon_intensity"] and shifting:
@@ -145,13 +146,10 @@ class LineSourceModel(SourceModel):
             for i in range(num_cells):
                 if number_of_photons[i] > 0:
                     end_e = start_e + number_of_photons[i]
-                    dE = (
-                        self.prng.normal(
-                            loc=0.0,
-                            scale=chunk["sigma"][i],
-                            size=number_of_photons[i],
-                        )
-                        * self.e0.uq
+                    dE = self.prng.normal(
+                        loc=0.0,
+                        scale=chunk["sigma"][i],
+                        size=number_of_photons[i],
                     )
                     energies[start_e:end_e] += dE
                     start_e = end_e
@@ -181,13 +179,13 @@ class LineSourceModel(SourceModel):
             return spec
 
         else:
-            xlo = emin - self.e0.value
-            xhi = emax - self.e0.value
+            xlo = emin - self.e0
+            xhi = emax - self.e0
             xhis = xhi / chunk["sigma"]
             xlos = xlo / chunk["sigma"]
             fac = (norm.cdf(xhis) - norm.cdf(xlos)) * shift * shift * shift
             if mode in ["luminosity", "intensity"]:
-                fac = self.e0.value * fac
+                fac = self.e0 * fac
                 fac -= (
                     chunk["sigma"] * (np.exp(-0.5 * xhis**2) - np.exp(-0.5 * xlos**2)) / np.sqrt(2.0 * np.pi)
                 )
