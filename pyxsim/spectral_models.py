@@ -14,9 +14,9 @@ from soxs.spectra import (
     get_wabs_absorb,
 )
 from soxs.utils import parse_prng, regrid_spectrum
-from yt.units.yt_array import YTArray, YTQuantity
 
 from pyxsim.lib.interpolate import interp1d_spec, interp2d_spec
+from pyxsim.utils import parse_value
 
 
 class SpectralInterpolator1D:
@@ -541,24 +541,16 @@ class AbsorptionModel:
     _name = ""
 
     def __init__(self, nH, energy, cross_section):
-        self._nH = nH
-        self.emid = YTArray(energy, "keV")
-        self.sigma = YTArray(cross_section, "cm**2")
-
-    @property
-    def nH(self):
-        return YTQuantity(self._nH, "1.0e22*cm**-2")
-
-    @nH.setter
-    def nH(self, value):
-        self._nH = value
+        self.nH = nH
+        self.emid = parse_value(energy, "keV").value
+        self.sigma = parse_value(cross_section, "cm**2").value
 
     def get_absorb(self, e):
         """
         Get the absorption spectrum.
         """
         sigma = np.interp(e, self.emid, self.sigma, left=0.0, right=0.0)
-        return np.exp(-sigma * self._nH)
+        return np.exp(-sigma * self.nH)
 
     def absorb_photons(self, eobs, prng=None):
         r"""
@@ -606,7 +598,7 @@ class TBabsModel(AbsorptionModel):
 
     def get_absorb(self, e):
         e = np.array(e)
-        return get_tbabs_absorb(e, self._nH, abund_table=self.abund_table)
+        return get_tbabs_absorb(e, self.nH, abund_table=self.abund_table)
 
 
 class WabsModel(AbsorptionModel):
@@ -632,7 +624,7 @@ class WabsModel(AbsorptionModel):
 
     def get_absorb(self, e):
         e = np.array(e)
-        return get_wabs_absorb(e, self._nH)
+        return get_wabs_absorb(e, self.nH)
 
 
 absorb_models = {"wabs": WabsModel, "tbabs": TBabsModel}
