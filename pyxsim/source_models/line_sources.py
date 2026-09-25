@@ -117,7 +117,6 @@ class LineSourceModel(SourceModel):
         ebins=None,
         emin=None,
         emax=None,
-        fluxf=None,
         shifting=False,
     ):
         num_cells = chunk["emission_field"].size

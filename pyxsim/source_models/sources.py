@@ -33,7 +33,6 @@ class SourceModel:
         ebins=None,
         emin=None,
         emax=None,
-        fluxf=None,
         shifting=False,
     ):
         return self._process_data(
@@ -43,7 +42,6 @@ class SourceModel:
             ebins=ebins,
             emin=emin,
             emax=emax,
-            fluxf=fluxf,
             shifting=shifting,
         )
 
@@ -58,7 +56,6 @@ class SourceModel:
         ebins=None,
         emin=None,
         emax=None,
-        fluxf=None,
         shifting=False,
     ):
         # Must be implemented by the individual source types
@@ -118,11 +115,6 @@ class SourceModel:
         beta_n = chunk["velocity_los"][cut]
         beta2 = chunk["velocity_magnitude"][cut] ** 2
         return np.sqrt(1.0 - beta2) / (1.0 - beta_n)
-
-    def make_fluxf(self, emin, emax, energy=False):
-        # This needs to be implemented for every
-        # source model specifically
-        pass
 
     def _make_dist_fac(self, ds, redshift, dist, cosmology, per_sa=False):
         if dist is None:
@@ -343,8 +335,6 @@ class SourceModel:
         )
         count_rate_dname = lum_dname.replace("\rm{{L}}", "\rm{{R}}")
 
-        efluxf = self.make_fluxf(emin, emax, energy=True)
-
         def _luminosity_field(field, data):
             return data.ds.arr(
                 self.process_data(
@@ -353,7 +343,6 @@ class SourceModel:
                     spectral_norm,
                     emin=emin.value,
                     emax=emax.value,
-                    fluxf=efluxf,
                 ),
                 "keV/s",
             )
@@ -380,8 +369,6 @@ class SourceModel:
             force_override=force_override,
         )
 
-        pfluxf = self.make_fluxf(emin, emax, energy=False)
-
         def _count_rate_field(field, data):
             return data.ds.arr(
                 self.process_data(
@@ -390,7 +377,6 @@ class SourceModel:
                     spectral_norm,
                     emin=emin.value,
                     emax=emax.value,
-                    fluxf=pfluxf,
                 ),
                 "photons/s",
             )
@@ -549,13 +535,6 @@ class SourceModel:
         ei_name = (ftype, f"xray_intensity_{band_name}")
         ei_dname = rf"I_{{X}} ({emin.value:.2f}-{emax.value:.2f} keV)"
 
-        if no_doppler:
-            efluxf = self.make_fluxf(emin_src, emax_src, energy=True)
-            pfluxf = self.make_fluxf(emin_src, emax_src, energy=False)
-        else:
-            efluxf = None
-            pfluxf = None
-
         def _intensity_field(field, data):
             ret = data.ds.arr(
                 self.process_data(
@@ -564,7 +543,6 @@ class SourceModel:
                     spectral_norm,
                     emin=emin_src.value,
                     emax=emax_src.value,
-                    fluxf=efluxf,
                     shifting=not no_doppler,
                 ),
                 "keV/s",
@@ -592,7 +570,6 @@ class SourceModel:
                     spectral_norm,
                     emin=emin_src.value,
                     emax=emax_src.value,
-                    fluxf=pfluxf,
                     shifting=not no_doppler,
                 ),
                 "photons/s",

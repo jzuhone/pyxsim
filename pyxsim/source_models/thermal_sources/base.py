@@ -111,8 +111,8 @@ class ThermalSourceModel(SourceModel):
         self.bin_edges = np.log10(self.ebins) if self.binscale == "log" else self.ebins
         self.nbins = self.emid.size
         self.model_vers = self.spectral_model.model_vers
-        self.efluxf = None
-        self.pfluxf = None
+        self._efluxf = None
+        self._pfluxf = None
 
     def _prep_repr(self):
         class_name = self.__class__.__name__
@@ -145,6 +145,8 @@ class ThermalSourceModel(SourceModel):
         return ret
 
     def setup_model(self, mode, data_source, redshift):
+        self._efluxf = None
+        self._pfluxf = None
         if isinstance(data_source, Dataset):
             ds = data_source
         else:
@@ -229,8 +231,17 @@ class ThermalSourceModel(SourceModel):
         if mode in ["photons", "spectrum"]:
             self.setup_pbar(data_source, self.temperature_field)
 
-    def make_fluxf(self, emin, emax, energy=False):
-        return self.spectral_model.make_fluxf(emin, emax, energy=energy)
+    def fluxf(self, mode):
+        if mode in ["luminosity", "intensity"]:
+            if self._efluxf is None:
+                self._efluxf = self.spectral_model.make_fluxf(self.emin, self.emax, energy=True)
+            return self._efluxf
+        elif mode in ["photon_rate", "photon_intensity"]:
+            if self._pfluxf is None:
+                self._pfluxf = self.spectral_model.make_fluxf(self.emin, self.emax, energy=False)
+            return self._pfluxf
+        else:
+            raise NotImplementedError
 
     def _process_chunk(self, chunk, mode, shifting):
         out_chunk = {
@@ -285,7 +296,6 @@ class ThermalSourceModel(SourceModel):
         ebins=None,
         emin=None,
         emax=None,
-        fluxf=None,
         shifting=False,
     ):
         if mode == "spectrum":
@@ -434,9 +444,9 @@ class ThermalSourceModel(SourceModel):
 
             else:
                 if self._density_dependence:
-                    cflux, mflux, vflux = fluxf(kTi, nHi)
+                    cflux, mflux, vflux = self.fluxf(mode)(kTi, nHi)
                 else:
-                    cflux, mflux, vflux = fluxf(kTi)
+                    cflux, mflux, vflux = self.fluxf(mode)(kTi)
                 tot_flux = cflux
                 tot_flux += metalZ[ibegin:iend] * mflux
                 if self.num_var_elem > 0:

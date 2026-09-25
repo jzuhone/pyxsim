@@ -109,7 +109,6 @@ class PowerLawSourceModel(SourceModel):
         ebins=None,
         emin=None,
         emax=None,
-        fluxf=None,
         shifting=False,
     ):
         num_cells = chunk["luminosity_field"].size
