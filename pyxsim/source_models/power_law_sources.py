@@ -54,6 +54,7 @@ class PowerLawSourceModel(SourceModel):
         self.alpha = alpha
         self.prng = parse_prng(prng)
         self.ftype = None
+        self.pbar = None
 
     def setup_model(self, mode, data_source, redshift):
         if isinstance(data_source, Dataset):

@@ -67,6 +67,7 @@ class LineSourceModel(SourceModel):
         self.emission_field = emission_field
         self.prng = parse_prng(prng)
         self.ftype = None
+        self.pbar = None
 
     def setup_model(self, mode, data_source, redshift):
         if isinstance(data_source, Dataset):
@@ -133,7 +134,7 @@ class LineSourceModel(SourceModel):
             shift = np.ones_like(chunk["emission_field"])
 
         if mode == "photons":
-            F = chunk[self.emission_field] * spectral_norm * self.scale_factor
+            F = chunk["emission_field"] * spectral_norm * self.scale_factor
             if self.observer == "internal":
                 r2 = self.compute_radius(chunk)
                 F /= r2
