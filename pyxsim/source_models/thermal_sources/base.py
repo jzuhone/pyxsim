@@ -5,11 +5,9 @@ from more_itertools import chunked
 from soxs.constants import atomic_weights, elem_names, metal_elem
 from soxs.utils import parse_prng
 from unyt.array import unyt_quantity
-from yt.data_objects.static_output import Dataset
 from yt.utilities.exceptions import YTFieldNotFound
 
 from pyxsim.lib.spectra import make_band, shift_spectrum
-from pyxsim.source_models.data_handlers import find_data_handler
 from pyxsim.source_models.sources import SourceModel
 from pyxsim.utils import (
     _parse_abund_table,
@@ -65,17 +63,9 @@ class ThermalSourceModel(SourceModel):
         self.var_elem_keys = var_elem_keys
         self.trace_abund = None  # Will be set by the subclass
         if max_density is not None:
-            if not isinstance(max_density, unyt_quantity):
-                if isinstance(max_density, tuple):
-                    max_density = unyt_quantity(max_density[0], max_density[1])
-                else:
-                    max_density = unyt_quantity(max_density, "g/cm**3")
+            max_density = parse_value(max_density, "g/cm**3").value
         if min_entropy is not None:
-            if not isinstance(min_entropy, unyt_quantity):
-                if isinstance(min_entropy, tuple):
-                    min_entropy = unyt_quantity(min_entropy[0], min_entropy[1])
-                else:
-                    min_entropy = unyt_quantity(min_entropy, "keV*cm**2")
+            min_entropy = parse_value(min_entropy, "keV*cm**2").value
         self.temperature_field = temperature_field
         self.emission_measure_field = emission_measure_field
         self.density_field = None  # Will be determined later
@@ -146,13 +136,9 @@ class ThermalSourceModel(SourceModel):
         return ret
 
     def setup_model(self, mode, data_source, redshift):
+        super().setup_model(mode, data_source, redshift)
         self._efluxf = None
         self._pfluxf = None
-        self.data_handler = find_data_handler(data_source)
-        if isinstance(data_source, Dataset):
-            ds = data_source
-        else:
-            ds = data_source.ds
         try:
             err_msg = f"The {self.emission_measure_field} field is not "
             "found, probably because the individual fields "
@@ -171,7 +157,7 @@ class ThermalSourceModel(SourceModel):
         self.ftype = ftype
         self.redshift = redshift
         if not self._nei and not isinstance(self.Zmet, Number):
-            zfield = ds._get_field_info(self.Zmet)
+            zfield = self.data_handler.get_field_info(self.Zmet)
             Z_units = str(zfield.units)
             self.Zmet = zfield.name
             fields.append(self.Zmet)
@@ -191,7 +177,7 @@ class ThermalSourceModel(SourceModel):
                     else:
                         elem = key
                     n_elem = elem_names.index(elem)
-                    vfield = ds._get_field_info(value)
+                    vfield = self.data_handler.get_field_info(value)
                     fields.append(vfield.name)
                     m_units = str(vfield.units)
                     self.var_elem[key] = vfield.name
@@ -203,10 +189,10 @@ class ThermalSourceModel(SourceModel):
                     else:
                         raise RuntimeError(f"I don't understand units of {m_units} for element {key}!")
         if self.nh_field is not None:
-            self.nh_field = ds._get_field_info(self.nh_field).name
+            self.nh_field = self.data_handler.get_field_info(self.nh_field).name
             fields.append(self.nh_field)
         if not isinstance(self.h_fraction, Number):
-            self.h_fraction = ds._get_field_info(self.h_fraction).name
+            self.h_fraction = self.data_handler.get_field_info(self.h_fraction).name
             fields.append(self.h_fraction)
         if self.h_r_number_density is not None:
             fields.append(self.h_r_number_density)
