@@ -168,7 +168,3 @@ class PionSourceModel(ThermalSourceModel):
         strs["resonant_scattering"] = self.resonant_scattering
         strs["cxb_factor"] = self.cxb_factor
         return class_name, strs
-
-
-class IGMSourceModel(PionSourceModel):
-    pass
