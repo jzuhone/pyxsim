@@ -11,9 +11,8 @@ class DataHandler:
 
 
 class YTDataHandler(DataHandler):
-    def __init__(self, data_source):
-        self.data_source = data_source
-        self.ds = data_source.ds
+    def __init__(self, ds):
+        self.ds = ds
 
     def get_field_info(self, field):
         fi = self.ds._get_field_info(field)
@@ -26,8 +25,8 @@ class YTDataHandler(DataHandler):
             return array.d
 
 
-def find_data_handler(data_source):
-    if isinstance(getattr(data_source, "ds", None), YTDataset):
-        return YTDataHandler(data_source)
+def find_data_handler(ds):
+    if isinstance(ds, YTDataset):
+        return YTDataHandler(ds)
     else:
         raise NotImplementedError("Data source not supported")

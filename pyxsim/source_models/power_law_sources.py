@@ -53,10 +53,9 @@ class PowerLawSourceModel(SourceModel):
         self.alpha = alpha
         self.prng = parse_prng(prng)
         self.ftype = None
-        self.pbar = None
 
-    def setup_model(self, mode, data_source, redshift):
-        super().setup_model(mode, data_source, redshift)
+    def setup_model(self, mode, ds, redshift):
+        super().setup_model(mode, ds, redshift)
         self.luminosity_field = self.data_handler.ds._get_field_info(self.luminosity_field).name
         if not isinstance(self.alpha, Number):
             self.alpha = self.data_handler.ds._get_field_info(self.alpha).name
@@ -67,8 +66,7 @@ class PowerLawSourceModel(SourceModel):
                     self.alpha,
                 )
         self.ftype = self.luminosity_field[0]
-        if mode == "spectrum":
-            self.setup_pbar(data_source, self.luminosity_field)
+        self.pbar_field = self.luminosity_field
 
     def __repr__(self):
         rets = [

@@ -66,11 +66,9 @@ class LineSourceModel(SourceModel):
             self.sigma = sigma
         self.emission_field = emission_field
         self.prng = parse_prng(prng)
-        self.ftype = None
-        self.pbar = None
 
-    def setup_model(self, mode, data_source, redshift):
-        super().setup_model(mode, data_source, redshift)
+    def setup_model(self, mode, ds, redshift):
+        super().setup_model(mode, ds, redshift)
         self.emission_field = self.data_handler.get_field_info(self.emission_field)
         if not isinstance(self.sigma, (Number, unyt_quantity)):
             self.sigma = self.data_handler.get_field_info(self.sigma)
@@ -81,8 +79,7 @@ class LineSourceModel(SourceModel):
                     self.sigma,
                 )
         self.ftype = self.emission_field.name[0]
-        if mode == "spectrum":
-            self.setup_pbar(data_source, self.emission_field.name[0])
+        self.pbar_field = self.emission_field
 
     def __repr__(self):
         rets = [

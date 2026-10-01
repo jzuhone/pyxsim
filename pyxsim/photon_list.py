@@ -313,7 +313,7 @@ def make_photons(
     le, re = find_object_bounds(data_source)
     c = parameters["center"].to_value("kpc")
 
-    source_model.setup_model("photons", data_source, redshift)
+    source_model.setup_model("photons", data_source.ds, redshift)
 
     p_fields, v_fields, w_field = determine_fields(ds, source_model.ftype, point_sources)
 
@@ -397,6 +397,8 @@ def make_photons(
         )
 
     f.flush()
+
+    source_model.setup_pbar(data_source, source_model.pbar_field)
 
     for chunk in parallel_objects(data_source.chunks([], "io")):
         chunk_data = source_model.process_data("photons", chunk, spectral_norm)

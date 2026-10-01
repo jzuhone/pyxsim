@@ -25,6 +25,9 @@ class SourceModel:
         self.data_handler = None
         self.prng = parse_prng(prng)
         self.observer = "external"
+        self.pbar_field = None
+        self.pbar = None
+        self.ftype = None
 
     def process_data(
         self,
@@ -73,10 +76,10 @@ class SourceModel:
         else:
             self.pbar = tqdm(leave=True, total=self.tot_num_cells, desc="Processing cells/particles ")
 
-    def setup_model(self, mode, data_source, redshift):
+    def setup_model(self, mode, ds, redshift):
         # This needs to be implemented in detail for every
         # source model specifically and call this method
-        self.data_handler = find_data_handler(data_source)
+        self.data_handler = find_data_handler(ds)
         self.scale_factor = 1.0 / (1.0 + redshift)
 
     def set_pv(
@@ -204,7 +207,8 @@ class SourceModel:
         ebins = np.linspace(emin, emax, nbins + 1)
         spec = np.zeros(nbins)
         spectral_norm = 1.0
-        self.setup_model("spectrum", data_source, redshift)
+        self.setup_model("spectrum", data_source.ds, redshift)
+        self.setup_pbar(data_source, self.pbar_field)
         for chunk in data_source.chunks([], "io"):
             chunk_data = self.process_data("spectrum", chunk, spectral_norm, shifting=shifting, ebins=ebins)
             if chunk_data is not None:

@@ -76,7 +76,7 @@ class ThermalSourceModel(SourceModel):
         self.max_density = max_density
         self.min_entropy = min_entropy
         self.tot_num_cells = 0  # Will be determined later
-        self.ftype = "gas"
+        self.ftype = None
         self.binscale = binscale
         self.abund_table = abund_table
         self.method = method
@@ -88,7 +88,6 @@ class ThermalSourceModel(SourceModel):
         self.nH_min = nH_min
         self.nH_max = nH_max
         self.redshift = None
-        self.pbar = None
         self.Zconvert = 1.0
         self.mconvert = {}
         self.abund_table = abund_table
@@ -135,8 +134,8 @@ class ThermalSourceModel(SourceModel):
         ret += ")\n"
         return ret
 
-    def setup_model(self, mode, data_source, redshift):
-        super().setup_model(mode, data_source, redshift)
+    def setup_model(self, mode, ds, redshift):
+        super().setup_model(mode, ds, redshift)
         self._efluxf = None
         self._pfluxf = None
         try:
@@ -148,12 +147,12 @@ class ThermalSourceModel(SourceModel):
             "default_species_fields='ionized' in the call "
             "to yt.load(), set them up using Trident, or "
             "set the field manually."
-            self.emission_measure_field = self.data_handler.get_field_info(self.emission_measure_field)
-            ftype = self.emission_measure_field.name[0]
+            self.emission_measure_field = self.data_handler.get_field_info(self.emission_measure_field).name
+            ftype = self.emission_measure_field[0]
         except YTFieldNotFound as e:
             raise RuntimeError(err_msg) from e
-        self.temperature_field = self.data_handler.get_field_info(self.temperature_field)
-        fields = [self.emission_measure_field.name, self.temperature_field.name]
+        self.temperature_field = self.data_handler.get_field_info(self.temperature_field).name
+        fields = [self.emission_measure_field, self.temperature_field]
         self.ftype = ftype
         self.redshift = redshift
         if not self._nei and not isinstance(self.Zmet, Number):
@@ -216,8 +215,7 @@ class ThermalSourceModel(SourceModel):
         if self.he_d_fraction is not None:
             mylog.info("Using he_d_fraction '%s'.", self.he_d_fraction)
         self.spectral_model.prepare_spectrum(redshift)
-        if mode in ["photons", "spectrum"]:
-            self.setup_pbar(data_source, self.temperature_field)
+        self.pbar_field = self.temperature_field
 
     def fluxf(self, mode):
         if mode in ["luminosity", "intensity"]:
