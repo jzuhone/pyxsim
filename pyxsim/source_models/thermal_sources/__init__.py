@@ -1,2 +1,2 @@
 from .collisional import CIESourceModel, NEISourceModel
-from .photoionization import IGMSourceModel, PionSourceModel
+from .photoionization import PionSourceModel
