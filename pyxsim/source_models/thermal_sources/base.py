@@ -217,14 +217,14 @@ class ThermalSourceModel(SourceModel):
         self.spectral_model.prepare_spectrum(redshift)
         self.pbar_field = self.temperature_field
 
-    def fluxf(self, mode):
+    def fluxf(self, mode, emin, emax):
         if mode in ["luminosity", "intensity"]:
             if self._efluxf is None:
-                self._efluxf = self.spectral_model.make_fluxf(self.emin, self.emax, energy=True)
+                self._efluxf = self.spectral_model.make_fluxf(emin, emax, energy=True)
             return self._efluxf
         elif mode in ["photon_rate", "photon_intensity"]:
             if self._pfluxf is None:
-                self._pfluxf = self.spectral_model.make_fluxf(self.emin, self.emax, energy=False)
+                self._pfluxf = self.spectral_model.make_fluxf(emin, emax, energy=False)
             return self._pfluxf
         else:
             raise NotImplementedError
@@ -438,9 +438,9 @@ class ThermalSourceModel(SourceModel):
 
             else:
                 if self._density_dependence:
-                    cflux, mflux, vflux = self.fluxf(mode)(kTi, nHi)
+                    cflux, mflux, vflux = self.fluxf(mode, emin, emax)(kTi, nHi)
                 else:
-                    cflux, mflux, vflux = self.fluxf(mode)(kTi)
+                    cflux, mflux, vflux = self.fluxf(mode, emin, emax)(kTi)
                 tot_flux = cflux
                 tot_flux += metalZ[ibegin:iend] * mflux
                 if self.num_var_elem > 0:
